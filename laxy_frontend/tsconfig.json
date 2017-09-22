@@ -1,0 +1,20 @@
+{
+    "compilerOptions": {
+        "outDir": "./built/",
+        "sourceMap": true,
+        "strict": true,
+        "noImplicitReturns": true,
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "target": "es5",
+        "allowSyntheticDefaultImports": true,
+        "lib": [
+            "dom",
+            "es5",
+            "es2015.promise"
+        ]
+    },
+    "include": [
+        "./src/**/*"
+    ]
+}

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <link rel="stylesheet"
+          href="//fonts.googleapis.com/css?family=Roboto:300,400,500,700,400italic">
+    <link rel="stylesheet"
+          href="//fonts.googleapis.com/icon?family=Material+Icons">
+    <!--    <link rel="stylesheet" href="vue-material/dist/vue-material.css">-->
+    <!--<link rel="stylesheet"-->
+    <!--href="https://unpkg.com/vue-material/dist/vue-material.css">-->
+    <!--<script src="//unpkg.com/vue"></script>-->
+    <!--<script src="//unpkg.com/vue-material"></script>-->
+    <title>Laxy</title>
+</head>
+<body>
+<div id="app">
+    <md-toolbar>
+        <md-button class="md-icon-button" @click="toggleLeftSidenav">
+            <md-icon>menu</md-icon>
+        </md-button>
+        <h1 class="md-title">Laxy</h1>&nbsp;
+        <h2 class="md-subheading">(not Galaxy)</h2>
+        <span style="flex: 1"></span>
+
+
+        <div v-show="logged_in">
+            <md-menu md-size="4" md-direction="bottom left" ref="avatarMenu">
+                <md-button class="md-fab md-raised" md-menu-trigger>
+                    <md-avatar>
+                        <img src="http://i.pravatar.cc/64" alt="Avatar">
+                    </md-avatar>
+                </md-button>
+                <md-menu-content>
+                    <div class="author-card">
+                        <div class="author-card-info">
+                            <md-subheader>{{ user_fullname }}</md-subheader>
+                            <md-menu-item @selected="openProfile">Profile</md-menu-item>
+                            <md-menu-item @selected="logout">Logout</md-menu-item>
+                        </div>
+                    </div>
+                </md-menu-content>
+            </md-menu>
+        </div>
+        <div v-show="!logged_in">
+            <!--<md-icon class="md-primary">account_circle</md-icon>-->
+            <md-button @click="login()" class="md-raised md-primary">Sign in
+            </md-button>
+        </div>
+
+    </md-toolbar>
+
+    <md-sidenav class="md-left" ref="leftSidenav" @open="open('Left')"
+                @close="close('Left')">
+        <md-toolbar class="md-large">
+            <h3 class="md-title">Protocols</h3>
+        </md-toolbar>
+        <md-list md-dense>
+            <md-list-item>
+                <router-link to="/rnaseq">
+                    <span v-on:click="toggleLeftSidenav()">RNASeq</span>
+                </router-link>
+            </md-list-item>
+        </md-list>
+    </md-sidenav>
+
+    <router-view></router-view>
+
+</div>
+<script src="dist/bundle.js"></script>
+</body>
+<style>
+    .placeholder {
+      color: black;
+      background-color: seashell;
+    }
+</style>
+</html>
