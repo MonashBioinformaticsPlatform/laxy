@@ -4,29 +4,33 @@
   "description": "",
   "main": "main.js",
   "scripts": {
+    "build": "webpack",
     "watch": "webpack --watch",
     "dev:": "webpack-dev-server --port 9997 --open --content-base ./ && python3 ../manage.py runserver 9998",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "webpack-dev-server --port 9997 --open --content-base ./"
+    "start": "webpack-dev-server --port 9997 --open --content-base ./",
+    "start_public_demo": "webpack-dev-server --port 4000 --host 0.0.0.0 --content-base ./"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@types/axios": "^0.14.0",
     "@types/js-cookie": "^2.0.28",
-    "@types/lodash": "^4.14.71",
+    "@types/lodash": "^4.14.77",
     "babel-core": "^6.26.0",
     "css-loader": "^0.28.1",
+    "extract-text-webpack-plugin": "^3.0.1",
     "file-loader": "^0.11.2",
     "style-loader": "^0.18.2",
     "ts-loader": "^2.0.3",
     "tslint": "^5.5.0",
-    "typescript": "^2.4.2",
+    "typescript": "^2.5.3",
+    "vue-class-component": "^5.0.2",
     "vue-loader": "^13.0.5",
     "vue-material": "^0.7.4",
     "vue-template-compiler": "^2.4.4",
     "webpack": "^3.6.0",
-    "webpack-dev-server": "^2.6.1",
+    "webpack-dev-server": "^2.9.1",
     "webpack-shell-plugin": "^0.5.0"
   },
   "dependencies": {
@@ -38,6 +42,6 @@
     "vue-markdown": "^2.2.4",
     "vue-moment": "^2.0.2",
     "vue-router": "^2.7.0",
-    "vue2-dropzone": "^2.3.5"
+    "vue2-dropzone": "^2.3.6"
   }
 }

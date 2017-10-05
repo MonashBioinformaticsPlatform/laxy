@@ -132,87 +132,64 @@
 
     import axios, {AxiosResponse} from 'axios';
     import Vue, {ComponentOptions} from "vue";
+    import Component from 'vue-class-component';
 
-    interface InputFilesForm extends Vue {
-        sources: [{ type: string, text: string }],
-        selected_source: string,
-        ena_id: string,
-        sra_id: string,
-        url_input: string,
-        cloudstor_link_password: string,
-        email_username(): any,
-        email_domain(): any,
-        sftp_otp(): any,
-        daysInFuture(days: number): Date,
-        user_email: string,
-        sftp_upload_host: string,
-        sftp_upload_path: string,
-        sftp_upload_credentials: string,
-        dataset_name: string,
-        password_valid_days: number,
-        password_expiry: Date,
-        dataset_name_invalid: boolean,
-    }
+    @Component({ props: {}})
+    export default class InputFilesForm extends Vue {
 
-    export default {
-        props: {},
-        data() {
-            return {
-                sources: [
-                    {type: 'ENA', text: 'European Nucleotide Archive at EBI-EMBL (ENA)'},
-                    {type: 'SRA', text: 'Sequence Read Archive at NCBI (SRA)'},
-                    {type: 'URL', text: 'URL'},
-                    {type: 'CLOUDSTOR', text: 'CloudStor'},
-                    {type: 'SFTP_UPLOAD', text: 'SFTP upload'},
-                ],
-                selected_source: 'SFTP_UPLOAD',
-                ena_id: '',
-                sra_id: '',
-                url_input: '',
-                cloudstor_link_password: '',
-                user_email: 'my.username@example.com',
-                sftp_upload_host: 'laxy.erc.monash.edu',
-                sftp_upload_path: '',
-                sftp_upload_credentials: '',
-                dataset_name: '',
-                password_valid_days: 2,
-                password_expiry: this.daysInFuture(2),
-                dataset_name_invalid: false,
+        sources: object = [
+            {type: 'ENA', text: 'European Nucleotide Archive at EBI-EMBL (ENA)'},
+            {type: 'SRA', text: 'Sequence Read Archive at NCBI (SRA)'},
+            {type: 'URL', text: 'URL'},
+            {type: 'CLOUDSTOR', text: 'CloudStor'},
+            {type: 'SFTP_UPLOAD', text: 'SFTP upload'},
+        ];
+        selected_source: string = 'SFTP_UPLOAD';
+        ena_id: string = '';
+        sra_id: string = '';
+        url_input: string = '';
+        cloudstor_link_password: string = '';
+        user_email: string = 'my.username@example.com';
+        sftp_upload_host: string = 'laxy.erc.monash.edu';
+        sftp_upload_path: string = '';
+        sftp_upload_credentials: string = '';
+        dataset_name: string = '';
+        password_valid_days: number = 2;
+        password_expiry: Date = this.daysInFuture(2);
+        dataset_name_invalid: boolean = false;
+
+        email_username() {
+            return this.user_email.split('@')[0];
+        }
+
+        email_domain() {
+            return this.user_email.split('@')[1];
+        }
+
+        sftp_otp() {
+            return Math.random().toString(36).substring(7);
+        }
+
+        generateSFTPUploadCredentials(): void {
+            if (!this.dataset_name) {
+                this.dataset_name_invalid = true;
+            } else {
+                let username = this.email_username();
+                let domain = this.email_domain();
+                let otp = this.sftp_otp();
+                this.sftp_upload_path = `${this.dataset_name}`;
+                this.sftp_upload_credentials = `${username}_${domain}:${otp}@${this.sftp_upload_host}/${this.sftp_upload_path}/`;
+
+                // this.$emit('stepDone');
             }
-        },
-        methods: {
-            email_username: function() {
-                return this.user_email.split('@')[0];
-            },
-            email_domain: function() {
-                return this.user_email.split('@')[1];
-            },
-            sftp_otp: function() {
-                return Math.random().toString(36).substring(7);
-            },
-            generateSFTPUploadCredentials(): void {
-                if (!this.dataset_name) {
-                    this.dataset_name_invalid = true;
-                } else {
-                    let username = this.email_username();
-                    let domain = this.email_domain();
-                    let otp = this.sftp_otp();
-                    this.sftp_upload_path = `${this.dataset_name}`;
-                    this.sftp_upload_credentials = `${username}_${domain}:${otp}@${this.sftp_upload_host}/${this.sftp_upload_path}/`;
+        }
 
-                    this.$emit('stepDone');
-                }
-            },
-            daysInFuture(days: number): Date {
-                let now = new Date();
-                now.setDate(now.getDate() + days);
-                return now;
-            }
-        },
-        computed: {
-        },
-        watch: {},
-    } as ComponentOptions<InputFilesForm>;
+        daysInFuture(days: number): Date {
+            let now = new Date();
+            now.setDate(now.getDate() + days);
+            return now;
+        }
+    };
 
 </script>
 
