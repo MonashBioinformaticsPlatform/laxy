@@ -22,6 +22,7 @@ Vue.component('vue-markdown', VueMarkdown);
 */
 
 import FrontPage from './components/FrontPage.vue';
+import FileBrowser from './components/FileBrowser.vue';
 import RNASeqSetup from './components/RNASeqSetup.vue';
 import InputDataForm from './components/InputFilesForm.vue';
 Vue.component('input-files-form', InputDataForm);
@@ -33,6 +34,11 @@ const router = new VueRouter({
       path: '/',
       name: 'front',
       component: FrontPage,
+    },
+    {
+      path: '/files',
+      name: 'files',
+      component: FileBrowser,
     },
     {
       path: '/rnaseq',

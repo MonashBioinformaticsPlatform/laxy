@@ -11,10 +11,20 @@
     <!--href="https://unpkg.com/vue-material/dist/vue-material.css">-->
     <!--<script src="//unpkg.com/vue"></script>-->
     <!--<script src="//unpkg.com/vue-material"></script>-->
+    <style>
+        [v-cloak] {
+            display: none;
+        }
+
+        [v-cloak]::before {
+            content: "<i>loading…</i>"
+        }
+    </style>
     <title>Laxy</title>
 </head>
 <body>
 <div id="app">
+    <div v-cloak>
     <md-toolbar>
         <md-button class="md-icon-button" @click="toggleLeftSidenav">
             <md-icon>menu</md-icon>
@@ -57,6 +67,11 @@
         </md-toolbar>
         <md-list md-dense>
             <md-list-item>
+                <router-link to="/files">
+                    <span v-on:click="toggleLeftSidenav()">Files</span>
+                </router-link>
+            </md-list-item>
+            <md-list-item>
                 <router-link to="/rnaseq">
                     <span v-on:click="toggleLeftSidenav()">RNASeq</span>
                 </router-link>
@@ -65,14 +80,18 @@
     </md-sidenav>
 
     <router-view></router-view>
-
+    </div>
 </div>
 <script src="dist/bundle.js"></script>
 </body>
 <style>
     .placeholder {
-      color: black;
-      background-color: seashell;
+        color: black;
+        background-color: seashell;
+    }
+
+    .md-layout {
+        margin: 8px;
     }
 </style>
 </html>

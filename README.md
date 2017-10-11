@@ -6,6 +6,7 @@
 cd laxy_frontend
 npm install
 npm run start
+open http://localhost:9997/
 ```
 
 ## Creating the UML diagram(s) for the Django models
