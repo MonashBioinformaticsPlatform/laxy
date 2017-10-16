@@ -5,11 +5,12 @@
   "main": "main.js",
   "scripts": {
     "build": "webpack",
-    "watch": "webpack --watch",
-    "dev:": "webpack-dev-server --port 9997 --open --content-base ./ && python3 ../manage.py runserver 9998",
+    "watch": "webpack -d --watch --progress",
+    "dev:": "webpack-dev-server -d --progress --watch --port 9997 --open --content-base ./ && python3 ../manage.py runserver 9998",
+    "django": "python3 ../manage.py runserver 9998",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "webpack-dev-server --port 9997 --open --content-base ./",
-    "start_public_demo": "webpack-dev-server --port 4000 --host 0.0.0.0 --content-base ./"
+    "start": "webpack-dev-server --watch --progress --port 9997 --open --content-base ./",
+    "public_demo": "webpack-dev-server --port 4000 --host 0.0.0.0 --content-base ./"
   },
   "author": "",
   "license": "ISC",
