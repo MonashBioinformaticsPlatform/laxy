@@ -5,7 +5,7 @@ import 'vue-material/dist/vue-material.css';
 
 import 'es6-promise';
 
-import Vue, {ComponentOptions} from "vue";
+import Vue, {ComponentOptions} from 'vue';
 import VueRouter from 'vue-router';
 const VueMaterial = require('vue-material');
 const VueMoment = require('vue-moment');  // for date formatting

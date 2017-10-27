@@ -18,17 +18,29 @@
                     </md-input-container>
 
                     <div id="ena_form" v-if="selected_source == 'ENA'">
-                        <md-input-container>
+                        <md-input-container v-for="(accession, i) in ena_ids" :key="i">
                             <label>Accession</label>
-                            <md-input v-model="ena_id"></md-input>
+                            <md-input v-model="accession.accession"></md-input>
+                            <md-button class="md-icon-button" @click="ena_ids.splice(i, 1)">
+                                <md-icon>delete</md-icon>
+                            </md-button>
                         </md-input-container>
+                        <md-button class="md-fab md-mini" @click="ena_ids.push({accession: ''})">
+                            <md-icon>add</md-icon>
+                        </md-button>
                     </div>
 
                     <div id="sra_form" v-if="selected_source == 'SRA'">
-                        <md-input-container>
+                        <md-input-container v-for="(accession, i) in sra_ids" :key="i">
                             <label>Accession</label>
-                            <md-input v-model="sra_id"></md-input>
+                            <md-input v-model="accession.accession"></md-input>
+                            <md-button class="md-icon-button" @click="sra_ids.splice(i, 1)">
+                                <md-icon>delete</md-icon>
+                            </md-button>
                         </md-input-container>
+                        <md-button class="md-fab md-mini" @click="sra_ids.push({accession: ''})">
+                            <md-icon>add</md-icon>
+                        </md-button>
                     </div>
 
                     <div id="url_form" v-if="selected_source == 'URL'">
@@ -83,11 +95,15 @@
                 <md-whiteframe md-elevation="5" style="padding: 16px; min-height: 100%;">
                     <div v-if="selected_source == 'ENA'">The <a href="http://www.ebi.ac.uk/ena">European Nucleotide Archive (ENA)</a>
                         at
-                        EMBL-EBI stores publicly available raw sequencing data from high-throughput sequencing platforms
+                        EMBL-EBI stores publicly available raw sequencing data from high-throughput sequencing platforms.
+                        <br/><br/>
+                        Example accession: <code>PRJNA214799</code>.
                     </div>
                     <div v-if="selected_source == 'SRA'">
                         The <a href="https://www.ncbi.nlm.nih.gov/sra">Sequence Read Archive (SRA)</a> at NCBI
                         stores publicly available raw sequencing data from high-throughput sequencing platforms.
+                        <br/><br/>
+                        Example accessions: <code v-for="i in _.range(78, 85)">SRR9500{{i}}<span v-if="i < 84">, </span></code>
                     </div>
                     <div v-if="selected_source == 'URL'">
                         If your raw read FASTQ data exists at a particular URL, you can paste it here.
@@ -140,7 +156,11 @@
     import axios, {AxiosResponse} from 'axios';
     import Vue, {ComponentOptions} from 'vue';
     import Component from 'vue-class-component';
-    import { Emit, Inject, Model, Prop, Provide, Watch } from 'vue-property-decorator'
+    import {Emit, Inject, Model, Prop, Provide, Watch} from 'vue-property-decorator'
+
+    interface DbAccession {
+        accession: string;
+    }
 
     @Component({props: {}})
     export default class InputFilesForm extends Vue {
@@ -152,9 +172,9 @@
             {type: 'CLOUDSTOR', text: 'CloudStor'},
             {type: 'SFTP_UPLOAD', text: 'SFTP upload'},
         ];
-        selected_source: string = 'SFTP_UPLOAD';
-        ena_id: string = '';
-        sra_id: string = '';
+        selected_source: string = 'SRA';
+        ena_ids: DbAccession[] = [{accession: ''} as DbAccession];
+        sra_ids: DbAccession[] = [{accession: ''} as DbAccession];
         url_input: string = '';
         cloudstor_link_password: string = '';
         user_email: string = 'my.username@example.com';
@@ -165,6 +185,11 @@
         password_valid_days: number = 2;
         password_expiry: Date = this.daysInFuture(2);
         dataset_name_invalid: boolean = false;
+
+        // for lodash in templates
+        get _() {
+            return _;
+        }
 
         email_username() {
             return this.user_email.split('@')[0];
@@ -200,24 +225,43 @@
 
         // TODO: We might want to use: https://validatejs.org/#validators-url instead
         isValidURL(url: string): boolean {
-           const valid_protocols = ['http:', 'https:', 'ftp:'];
-           const a = document.createElement('a');
-           a.href = url;
-           return (a.host != null &&
-                   a.host != window.location.host &&
-                   _.includes(valid_protocols, a.protocol)
-           );
+            const valid_protocols = ['http:', 'https:', 'ftp:'];
+            const a = document.createElement('a');
+            a.href = url;
+            return (a.host != null &&
+                    a.host != window.location.host &&
+                    _.includes(valid_protocols, a.protocol)
+            );
         }
 
         isCloudStorURL(url: string): boolean {
-           const valid_protocols = ['https:'];
-           const a = document.createElement('a');
-           a.href = url;
-           return (a.host != null &&
-                   a.host != window.location.host &&
-                   _.includes(valid_protocols, a.protocol) &&
-                   a.host == 'cloudstor.aarnet.edu.au'
-           );
+            const valid_protocols = ['https:'];
+            const a = document.createElement('a');
+            a.href = url;
+            return (a.host != null &&
+                    a.host != window.location.host &&
+                    _.includes(valid_protocols, a.protocol) &&
+                    a.host == 'cloudstor.aarnet.edu.au'
+            );
+        }
+
+        addToENAList(accession: string) {
+            this.ena_ids.push({accession: accession} as DbAccession);
+        }
+
+        addToSRAList(accession: string) {
+            this.sra_ids.push({accession: accession} as DbAccession);
+        }
+
+
+        validateENAId(accession: DbAccession) {
+            // https://www.ebi.ac.uk/ena/submit/accession-number-formats
+            return (accession.accession.trim().length >= 9);
+        }
+
+        validateSRAId(accession: DbAccession) {
+            // https://www.ncbi.nlm.nih.gov/books/NBK56913/#search.why_does_sra_have_so_many_differe
+            return (accession.accession.trim().length >= 9);
         }
 
         @Watch('selected_source')
@@ -225,29 +269,27 @@
             this.$emit('dataSourceChanged');
         }
 
-        @Watch('ena_id', { immediate: true })
-        onENAIdChanged(newVal: string, oldVal: string) {
-            // validate newVal
-            // https://www.ebi.ac.uk/ena/submit/accession-number-formats
-            if (newVal.trim().length >= 9) {
+        @Watch('ena_ids', {immediate: true, deep: true})
+        onENAIdChanged(newVal: DbAccession[], oldVal: DbAccession[]) {
+            // validate every accession in newVal
+            if (_.every(_.map(newVal, this.validateENAId))) {
                 this.$emit('stepDone');
             } else {
                 this.$emit('invalidData');
             }
         }
 
-        @Watch('sra_id', { immediate: true })
-        onSRAIdChanged(newVal: string, oldVal: string) {
-            // validate newVal
-            // https://www.ncbi.nlm.nih.gov/books/NBK56913/#search.why_does_sra_have_so_many_differe
-            if (newVal.trim().length >= 9) {
+        @Watch('sra_ids', {immediate: true, deep: true})
+        onSRAIdChanged(newVal: DbAccession[], oldVal: DbAccession[]) {
+            // every accession in newVal
+            if (_.every(_.map(newVal, this.validateSRAId))) {
                 this.$emit('stepDone');
             } else {
                 this.$emit('invalidData');
             }
         }
 
-        @Watch('url_input', { immediate: true })
+        @Watch('url_input', {immediate: true})
         onURLInputChanged(newVal: string, oldVal: string) {
             if (this.selected_source == 'URL' &&
                     this.isValidURL(newVal)) {
