@@ -25,7 +25,7 @@
                                 </md-table-cell>
                                 <md-table-cell>
                                 <md-layout md-align="end">
-                                  <md-button class="md-icon-button" @click="file.checked = false;">
+                                  <md-button class="md-icon-button" @click="file.selected = false;">
                                   <md-icon>cancel</md-icon>
                                   <md-tooltip md-direction="top">Deselect all</md-tooltip>
                                 </md-button>
@@ -35,6 +35,15 @@
                             </md-table-body>
                         </md-table>
                 </md-whiteframe>
+            </md-layout>
+            <md-layout>
+               <!-- <tree></tree> -->
+                <ul id="demo">
+                  <vue-tree-item
+                    class="item"
+                    :model="exampleTreeData">
+                  </vue-tree-item>
+                </ul>
             </md-layout>
             <md-layout md-gutter>
                 <md-layout md-column md-flex="33">
@@ -80,10 +89,14 @@
                             </md-layout>
                             <md-list-item v-for="file in selected_fileset.files"
                                           :key="file.id">
-                                <md-checkbox v-model="file.checked"
+                                <md-checkbox v-model="file.selected"
+                                             v-if="file.type == 'file'"
                                              class="md-primary">
-                                    &nbsp; {{ file.name }}
+                                    &nbsp;{{ file.name }}
                                 </md-checkbox>
+                                <div v-if="file.type == 'folder'">
+                                    <md-icon class="md-primary">folder</md-icon><span class="folder-name">{{ file.name }}</span>
+                                </div>
                             </md-list-item>
                         </md-list>
                     </div>
@@ -109,91 +122,46 @@
     import Vue, {ComponentOptions} from 'vue';
     import VueMaterial from 'vue-material';
     import Component from 'vue-class-component';
-    import { Emit, Inject, Model, Prop, Provide, Watch } from 'vue-property-decorator'
+    import { Emit, Inject, Model, Prop, Provide, Watch } from 'vue-property-decorator';
 
-    interface DataFile {
-        id: string,
-        name: string,
-        checked: boolean,
-        pair?: DataFile,
-    }
+    import { TreeNode, DataFile, FileSet } from '../tree.ts';
+    import * as dummy from '../dummyTreeData.ts';
 
-    interface FileSet {
-        id: string,
-        name: string,
-        files: Array<DataFile>,
-        selected: boolean;
-    }
-
-//    interface FileBrowser extends Vue {
-//        filesets: Array<FileSet>,
-//        selected_fileset: FileSet,
-//    }
-    const dummyFileListOne: Array<DataFile> = [
-        {
-            id: '1rgerhfkejwrbf1',
-            name: 'ChookSample1_R1.fastq.gz',
-            checked: false
-        },
-        {
-            id: '2rgerhfkejwrbf2',
-            name: 'ChookSample1_R2.fastq.gz',
-            checked: false
-        },
-        {
-            id: '3rgerhfkejwrbf3',
-            name: 'ChookSample2_R1.fastq.gz',
-            checked: false
-        },
-        {
-            id: '4rgerhfkejwrbf4',
-            name: 'ChookSample2_R2.fastq.gz',
-            checked: false
-        },
-    ];
-
-    const dummyFileListTwo: Array<DataFile> = [
-        {id: '1sdfa', name: 'XYZZY_1.fastq.gz', checked: false},
-        {id: '2dfgdfg', name: 'XYZZY_2.fastq.gz', checked: false},
-
-    ];
-
-    const dummyFileListThree: Array<DataFile> = [
-        {id: '1sdfwdf', name: 'Sample3_C_rep1_R1.fastq.gz', checked: false},
-        {id: '2dffdgds', name: 'Sample3_C_rep1_R2.fastq.gz', checked: false},
-        {id: '3dfgsefg', name: 'Sample4_C_rep2_R1.fastq.gz', checked: false},
-        {id: '4dfsfhsf', name: 'Sample4_C_rep2_R2.fastq.gz', checked: false},
-        {id: '5dfgsefg', name: 'Sample5_T_rep1_R1.fastq.gz', checked: false},
-        {id: '6dfsfhsf', name: 'Sample5_T_rep1_R2.fastq.gz', checked: false},
-        {id: '7dffjefg', name: 'Sample5_T_rep2_R1.fastq.gz', checked: false},
-        {id: '8dfsfhsf', name: 'Sample5_T_rep2_R2.fastq.gz', checked: false},
-    ];
-    const dummyFileSetData: Array<FileSet> = [
-        {
-            id: "1dfbsegdfgvdrgasef",
-            name: "Chicken Teeth RNAseq study",
-            files: dummyFileListOne,
-            selected: true,
-        },
-        {
-            id: "2gewrgsrtgstrgergesfw",
-            name: "Single replicate Unicorn transcriptome",
-            files: dummyFileListTwo,
-            selected: false,
-        },
-        {
-            id: "3erwgresrtgsrtgwgwbt",
-            name: "Sea Kelpie single cell",
-            files: dummyFileListThree,
-            selected: false,
-        },
-    ];
+    const exampleTreeData = {
+        name: 'My Tree',
+        children: [
+            {name: 'hello'},
+            {name: 'wat'},
+            {
+                name: 'child folder',
+                children: [
+                    {
+                        name: 'child folder',
+                        children: [
+                            {name: 'hello'},
+                            {name: 'wat'}
+                        ]
+                    },
+                    {name: 'hello'},
+                    {name: 'wat'},
+                    {
+                        name: 'child folder',
+                        children: [
+                            {name: 'hello'},
+                            {name: 'wat'}
+                        ]
+                    }
+                ]
+            }
+        ]
+    };
 
     @Component({props: {}})
     export default class FileBrowser extends Vue {
 
-        filesets: Array<FileSet> = dummyFileSetData;
-        selected_fileset: FileSet; // = dummyFileSetData[0];
+        filesets: Array<FileSet> = dummy.fileSetData;
+        selected_fileset: FileSet; // = dummy.fileSetData[0];
+        exampleTreeData: object = dummy.nestedFileSet; // dummy.folderOne; // exampleTreeData;
 
         created() {
             this.onSelectFileset(this.filesets[0], null);
@@ -216,7 +184,7 @@
             const selected: Array<DataFile> = [];
             for (let fs of this.filesets) {
                 for (let f of fs.files) {
-                    if (f.checked) {
+                    if (f.selected) {
                         selected.push(f);
                     }
                 }
@@ -227,15 +195,21 @@
 
         selectAll() {
             for (let file of this.selected_fileset.files) {
-                file.checked = true;
+                file.selected = true;
             }
         }
 
         deselectAll() {
             for (let file of this.selected_fileset.files) {
-                file.checked = false;
+                file.selected = false;
             }
         }
     };
 
 </script>
+
+<style>
+    .folder-name {
+        padding-left: 8px;
+    }
+</style>

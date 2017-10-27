@@ -5,7 +5,7 @@ import 'vue-material/dist/vue-material.css';
 
 import 'es6-promise';
 
-import Vue, {ComponentOptions} from "vue";
+import Vue, {ComponentOptions} from 'vue';
 import VueRouter from 'vue-router';
 const VueMaterial = require('vue-material');
 const VueMoment = require('vue-moment');  // for date formatting
@@ -26,6 +26,14 @@ import FileBrowser from './components/FileBrowser.vue';
 import RNASeqSetup from './components/RNASeqSetup.vue';
 import InputDataForm from './components/InputFilesForm.vue';
 Vue.component('input-files-form', InputDataForm);
+
+import MdTree from './components/MdTree.vue';
+import MdTreeNode from './components/MdTreeNode.vue';
+Vue.component('tree', MdTree);
+Vue.component('tree-node', MdTreeNode);
+
+import VueTreeExample from './components/VueTreeExample.vue';
+Vue.component('vue-tree-item', VueTreeExample);
 
 const router = new VueRouter({
   routes: [

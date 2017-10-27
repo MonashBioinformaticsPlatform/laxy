@@ -44,6 +44,7 @@
     "es6-promise": "^4.1.1",
     "js-cookie": "^2.1.4",
     "lodash": "^4.17.4",
+    "tree-model": "^1.0.6",
     "vue": "^2.4.4",
     "vue-markdown": "^2.2.4",
     "vue-moment": "^2.0.2",
