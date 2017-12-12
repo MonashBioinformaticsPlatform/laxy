@@ -14,3 +14,11 @@ open http://localhost:9997/
 ```bash
 ./manage.py graph_models --pygraphviz -a -g -o docs/models_uml.png
 ```
+
+## Backend
+
+DRF CoreAPI docs: http://localhost:8000/coreapi/
+Swagger docs: http://localhost:8000/swagger/
+OpenAPI JSON: http://localhost:8000/swagger/?format=openapi
+drf_docs docs: http://localhost:8000/drfdocs/
+drf_openapi docs: http://localhost:8000/api/v1/schema/ (not yet working)
