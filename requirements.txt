@@ -1,0 +1,28 @@
+django
+django-extensions
+django-rest-framework
+django-rest-swagger
+# drf_openapi
+-e git+https://github.com/limdauto/drf_openapi.git#egg=drf_openapi
+djangorestframework-jwt
+django-reversion
+django-braces
+
+celery
+django-celery-results
+django-celery-beat
+
+requests
+backoff
+boto3
+basehash
+pyjwt
+
+# sudo apt-get install postgresql postgresql-server-dev-all
+psycopg2
+django-jsonfield
+
+# Authentication
+django-allauth
+# django-auth-adfs
+# https://github.com/NIF-au/django-rapid-connect-demo
