@@ -17,8 +17,40 @@ open http://localhost:9997/
 
 ## Backend
 
+### Setup
+
+```bash
+# Copy the example settings environment and edit as required
+cp .env_example .env
+vi .env
+
+./manage.py migrate
+./manage.py makemigrations django_celery_results
+./manage.py makemigrations laxy_backend
+./manage.py migrate --fake-initial
+./manage.py createinitialrevisions
+./manage.py makemigrations
+./manage.py migrate
+
+./manage.py createsuperuser
+```
+
+OpenAPI / Swagger API (via drf_openapi): 
+* Docs: http://localhost:8000/swagger/v1/
+* JSON: http://localhost:8000/swagger/v1/?format=openapi
+
 DRF CoreAPI docs: http://localhost:8000/coreapi/
-Swagger docs: http://localhost:8000/swagger/
-OpenAPI JSON: http://localhost:8000/swagger/?format=openapi
-drf_docs docs: http://localhost:8000/drfdocs/
-drf_openapi docs: http://localhost:8000/api/v1/schema/ (not yet working)
+
+### Docker
+
+#### Development
+
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+```
+
+#### Production
+
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```

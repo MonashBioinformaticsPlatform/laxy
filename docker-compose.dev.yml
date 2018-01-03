@@ -1,0 +1,36 @@
+version: '3'
+services:
+
+  django:
+    environment:
+      - LAXY_DEBUG=yes
+    volumes:
+      - .:/app
+    # Django app is publicly accessible without reverse proxy
+    ports:
+      - "8001:8001"
+    command: bash -c "python3 manage.py makemigrations &&
+                      python3 manage.py migrate &&
+                      python3 manage.py runserver 0.0.0.0:8001"
+
+  celeryd:
+    volumes:
+      - .:/app
+
+  flower:
+    image: laxy:latest
+    environment:
+      - FLOWER_BASIC_AUTH=user:pass
+    ports:
+      - "5556:5556"
+    volumes:
+      - .:/app
+
+  nginx:
+    image: nginx
+    restart: always
+    ports:
+       # dev
+       - "8002:80"
+    volumes:
+      - ./laxy_frontend:/usr/share/nginx/html

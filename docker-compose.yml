@@ -1,0 +1,66 @@
+version: '3'
+
+services:
+  django:
+    build: .
+    image: laxy:latest
+    working_dir: /app
+    environment:
+      - LAXY_DATABASE_URL=postgres://postgres:postgres@db:5432
+      - LAXY_BROKER_URL=amqp://guest@rabbitmq
+    command: bash -c "python3 manage.py runserver 0.0.0.0:8001"
+#    ports:
+#      - "8001:8001"
+    links:
+      - db
+      - celeryd
+
+  db:
+    image: postgres
+#    expose:
+#      - "5432:5432"
+
+  rabbitmq:
+    image: rabbitmq
+#   expose:
+#     - "5672:5672"
+#     - "15672:15672"
+
+  celeryd:
+    image: laxy:latest
+    working_dir: /app
+#    environment:
+#     - BROKER_URL=amqp://guest@rabbitmq
+    command: bash -c "celery -A laxy worker -B -E -l info --broker=amqp://guest@rabbitmq"
+    links:
+      - db
+      - rabbitmq
+
+  flower:
+    image: laxy:latest
+    environment:
+      - LAXY_DEBUG=no
+#     - FLOWER_BASIC_AUTH=user:pass
+    ports:
+      - "5556:5556"
+    working_dir: /app
+    command: bash -c "sleep 10 && celery -A laxy flower --port=5556 --broker=amqp://guest@rabbitmq"
+    links:
+      - db
+      - rabbitmq
+      - celeryd
+
+  nginx:
+    image: nginx
+    restart: always
+#    ports:
+#       # production
+#       - "80:80"
+#       # dev
+#       - "8002:80"
+#   networks
+#      - private
+#    volumes:
+#       - static:/usr/share/nginx/html:ro
+    links:
+      - django
