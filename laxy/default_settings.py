@@ -11,20 +11,97 @@ https://docs.djangoproject.com/en/1.11/ref/settings/
 """
 
 import os
+from datetime import timedelta
+from pathlib import Path
+from django.core.exceptions import ImproperlyConfigured
+import environ
 
-# Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from laxy.utils import get_secret_key
+
+APP_ENV_PREFIX = 'LAXY_'
+
+
+class PrefixedEnv(environ.Env):
+    """
+    Like environ.Env, except it adds the given prefix to the keys of each
+    default environment variable specified upon instantiation.
+
+    This means you can omit the prefix everywhere in settings.py /
+    default_settings.py, but use the prefix in .env and actual environment
+    variables.
+    """
+    def __init__(self, prefix, **scheme):
+        # Add prefix to dictionary keys
+        self.scheme = dict([('%s%s' % (prefix, k), v)
+                            for k, v in scheme.items()])
+
+
+# Build paths inside the project like this: app_root.path('templates')
+app_root = environ.Path(__file__) - 2
+BASE_DIR = str(app_root)
+envfile = app_root.path('.env')
+environ.Env.read_env(envfile())  # read the .env file
+
+default_env = PrefixedEnv(
+    APP_ENV_PREFIX,
+    DEBUG=(bool, False),
+    AWS_ACCESS_KEY_ID=(str, None),
+    AWS_SECRET_ACCESS_KEY=(str, None),
+    ALLOWED_HOSTS=(list, []),
+    BROKER_URL=(str, 'amqp://'),
+    EMAIL_HOST_URL=('email_url', ''),
+    EMAIL_HOST_USER=(str, ''),
+    EMAIL_HOST_PASSWORD=(str, ''),
+    STATIC_ROOT=(str, str(app_root.path('static')())),
+    STATIC_URL=(str, '/static/'),
+    MEDIA_ROOT=(str, str(app_root.path('uploads')())),
+    MEDIA_URL=(str, 'uploads/'),
+)
+
+
+def env(env_key=None, default=environ.Env.NOTSET):
+    return default_env('%s%s' % (APP_ENV_PREFIX, env_key), default=default)
+
+
+DEBUG = env('DEBUG')
+
+AWS_ACCESS_KEY_ID = env('AWS_ACCESS_KEY_ID')
+
+AWS_SECRET_ACCESS_KEY = env('AWS_SECRET_ACCESS_KEY')
+
+ALLOWED_HOSTS = env('ALLOWED_HOSTS')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.11/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'it0!1vg87mhmvos$e#+9^2g4z6my1=np5^cnxr6#+**54hi(q%'
+# SECRET_KEY = 'it0!1vg87mhmvos$e#+9^2g4z6my1=np5^cnxr6#+**54hi(q%'
+
+try:
+    SECRET_KEY = env('SECRET_KEY')
+except ImproperlyConfigured:
+    SECRET_KEY = get_secret_key()
+
+# SECRET_KEY = get_secret_key()
+
+# Database
+# https://docs.djangoproject.com/en/1.11/ref/settings/#databases
+DATABASES = {
+    'default': default_env.db('DATABASE_URL', default='sqlite:///db.sqlite3')
+}
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
+
+MEDIA_ROOT = str(env('MEDIA_ROOT'))
+MEDIA_URL = str(env('MEDIA_URL'))
+
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/1.11/howto/static-files/
+STATIC_URL = str(env('STATIC_URL'))
+STATIC_ROOT = str(env('STATIC_ROOT'))
 
 # Application definition
 
@@ -40,11 +117,10 @@ INSTALLED_APPS = [
     'django_celery_beat',
     'rest_framework',
     'rest_framework.authtoken',
-    'rest_framework_swagger',
-    'rest_framework_docs',
     'drf_openapi',
     'reversion',
-    'laxy_backend.apps.LaxyBackendConfig',
+    # 'laxy_backend.apps.LaxyBackendConfig',
+    'laxy_backend',
 ]
 
 MIDDLEWARE = [
@@ -62,7 +138,7 @@ ROOT_URLCONF = 'laxy.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'templates')]
+        'DIRS': [app_root.path('templates')]
         ,
         'APP_DIRS': True,
         'OPTIONS': {
@@ -77,36 +153,47 @@ TEMPLATES = [
 ]
 
 REST_FRAMEWORK = {
-    'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.URLPathVersioning'
+    'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.URLPathVersioning',
+    'DEFAULT_PERMISSION_CLASSES': (
+            # 'rest_framework.permissions.AllowAny',
+            # 'rest_framework.permissions.IsAdminUser',
+            'rest_framework.permissions.IsAuthenticated',
+            # Use Django's standard `django.contrib.auth` permissions,
+            # or allow read-only access for unauthenticated users.
+            # 'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly',
+    ),
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_jwt.authentication.JSONWebTokenAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+    ),
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.JSONRenderer',
+    ),
+    # http://www.django-rest-framework.org/api-guide/pagination/#cursorpagination
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.CursorPagination',
+    'PAGE_SIZE': 100,
 }
 
 WSGI_APPLICATION = 'laxy.wsgi.application'
 
-# Database
-# https://docs.djangoproject.com/en/1.11/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    }
-}
-
 # Password validation
 # https://docs.djangoproject.com/en/1.11/ref/settings/#auth-password-validators
 
+_pwlib = 'django.contrib.auth.password_validation.'
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        'NAME': _pwlib + 'UserAttributeSimilarityValidator',
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'NAME': _pwlib + 'MinimumLengthValidator',
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        'NAME': _pwlib + 'CommonPasswordValidator',
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        'NAME': _pwlib + 'NumericPasswordValidator',
     },
 ]
 
@@ -123,9 +210,41 @@ USE_L10N = True
 
 USE_TZ = True
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/1.11/howto/static-files/
-
-STATIC_URL = '/static/'
-
 CELERY_RESULT_BACKEND = 'django-db'
+
+JWT_AUTH = {
+    # 'JWT_ENCODE_HANDLER':
+    # 'rest_framework_jwt.utils.jwt_encode_handler',
+    #
+    # 'JWT_DECODE_HANDLER':
+    # 'rest_framework_jwt.utils.jwt_decode_handler',
+    #
+    # 'JWT_PAYLOAD_HANDLER':
+    # 'rest_framework_jwt.utils.jwt_payload_handler',
+    #
+    # 'JWT_PAYLOAD_GET_USER_ID_HANDLER':
+    # 'rest_framework_jwt.utils.jwt_get_user_id_from_payload_handler',
+    #
+    # 'JWT_PAYLOAD_GET_USERNAME_HANDLER':
+    # 'rest_framework_jwt.utils.jwt_get_username_from_payload_handler',
+
+    # 'JWT_RESPONSE_PAYLOAD_HANDLER':
+    # 'rest_framework_jwt.utils.jwt_response_payload_handler',
+
+    'JWT_SECRET_KEY': SECRET_KEY,
+    'JWT_ALGORITHM': 'HS256',
+    'JWT_VERIFY': True,
+    'JWT_VERIFY_EXPIRATION': True,
+    'JWT_LEEWAY': 0,
+    'JWT_EXPIRATION_DELTA': timedelta(days=4),
+    'JWT_AUDIENCE': None,
+    'JWT_ISSUER': None,
+
+    'JWT_ALLOW_REFRESH': True,
+    'JWT_REFRESH_EXPIRATION_DELTA': timedelta(days=7),
+
+    'JWT_AUTH_HEADER_PREFIX': 'Bearer',
+}
+'''
+See https://getblimp.github.io/django-rest-framework-jwt/
+'''

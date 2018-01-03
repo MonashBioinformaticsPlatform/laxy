@@ -44,7 +44,10 @@ coverage.xml
 # Django stuff:
 *.log
 local_settings.py
-settings.py
+
+# All our settings overrides come from .env, so commiting settings.py
+# is considered safe for this project
+# settings.py
 
 # Flask stuff:
 instance/
