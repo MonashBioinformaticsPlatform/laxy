@@ -1,18 +1,18 @@
-from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
+# from __future__ import (absolute_import, division,
+#                         print_function, unicode_literals)
 
 # from builtins import (ascii, bytes, chr, dict, filter, hex, input,
 #                       int, map, next, oct, open, pow, range, round,
 #                       str, super, zip)
 
-from collections import OrderedDict
+from collections import OrderedDict, Sequence
 from datetime import datetime
 import uuid
 import base64
 from django.conf import settings
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
-from django.db import models
+from django.db import models, transaction
 from django.core.validators import URLValidator
 from django.db.models import Model, CharField, TextField, UUIDField, \
     URLField, ForeignKey, BooleanField, IntegerField, DateTimeField
@@ -23,13 +23,17 @@ from rest_framework.authtoken.models import Token
 
 from django.db import connection
 
-
+from .cfncluster import generate_cluster_stack_name
 from .util import generate_uuid, generate_secret_key
 
 if 'postgres' not in settings.DATABASES['default']['ENGINE']:
     from jsonfield import JSONField
 else:
     from django.contrib.postgres.fields import JSONField
+
+
+def unique(l):
+    return list(set(l))
 
 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
@@ -56,7 +60,9 @@ class URLFieldExtra(URLField):
 
 
 class UserProfile(models.Model):
-    user = models.ForeignKey(User, blank=False, related_name='profile')
+    user = models.ForeignKey(User, on_delete=models.CASCADE,
+                                   blank=False,
+                                   related_name='profile')
     # favorite_color = models.CharField(default='2196F3', max_length=6)
 
 
@@ -92,7 +98,7 @@ class ComputeResource(UUIDModel):
     STATUS_OFFLINE = 'offline'
     # resource is being decommissioned and shouldn't be used. permanent.
     STATUS_TERMINATING = 'terminating'
-    # resource has been decommissioned and won't be available. permananet.
+    # resource has been decommissioned and won't be available. permanent.
     STATUS_DECOMMISSIONED = 'decommissioned'
 
     COMPUTE_STATUS_CHOICES = ((STATUS_CREATED, 'object_created'),
@@ -143,6 +149,10 @@ class ComputeResource(UUIDModel):
 
 @reversion.register()
 class Job(UUIDModel):
+    """
+    Represents a processing job (typically a long running remote job managed
+    by a Celery task queue).
+    """
     STATUS_CREATED = 'created'
     STATUS_STARTING = 'starting'
     STATUS_RUNNING = 'running'
@@ -158,7 +168,9 @@ class Job(UUIDModel):
                           (STATUS_COMPLETE, 'complete'),
                           )
 
-    owner = ForeignKey(User, related_name='jobs')
+    owner = ForeignKey(User, on_delete=models.SET_NULL,
+                             null=True,
+                             related_name='jobs')
     secret = CharField(max_length=255,
                        blank=True,
                        null=True,
@@ -167,8 +179,14 @@ class Job(UUIDModel):
                        choices=JOB_STATUS_CHOICES,
                        default=STATUS_CREATED)
     exit_code = IntegerField(blank=True, null=True)
-    data_origin = URLFieldExtra(max_length=255)
     params = JSONField()  # django-jsonfield or native Postgres
+
+    input_files = ForeignKey('FileSet', null=True, blank=True,
+                             related_name='jobs_as_input',
+                             on_delete=models.CASCADE)
+    output_files = ForeignKey('FileSet', null=True, blank=True,
+                              related_name='jobs_as_output',
+                              on_delete=models.CASCADE)
 
     compute_resource = ForeignKey(ComputeResource,
                                   blank=True,
@@ -184,7 +202,7 @@ class Job(UUIDModel):
     def done(self):
         """
         Returns True if the job has finished, either successfully
-        or unsucessfully.
+        or unsuccessfully.
 
         :return: True if job is no longer running.
         :rtype: bool
@@ -193,26 +211,15 @@ class Job(UUIDModel):
                 self.status == Job.STATUS_CANCELLED or
                 self.status == Job.STATUS_FAILED)
 
-    def _generate_cluster_stack_name(self):
-        """
-        Generate a name for a compute cluster resource.
-
-        Since this becomes an AWS (or OpenStack?) Stack name via CloudFormation
-        it can only contain alphanumeric characters (upper and lower) and hyphens
-        and cannot be longer than 128 characters.
-
-        :param job: A Job instance (with ComputeResource assigned)
-        :type job: Job
-        :return: A cluster ID to use as the stack name.
-        :rtype: str
-        """
-        return 'cluster-%s----%s' % (self.compute_resource.id, self.id)
-
     def save(self, *args, **kwargs):
         super(Job, self).save(*args, **kwargs)
+
+        # For a single-use ('disposable') ComputeResource associated with a
+        # single job, we automatically name the resource based on the associated
+        # job UUID.
         compute = self.compute_resource
-        if compute and compute.disposable and not compute.stack_name:
-            compute.stack_name = self._generate_cluster_stack_name()
+        if compute and compute.disposable and not compute.name:
+            compute.name = generate_cluster_stack_name(self)
             compute.save()
 
 
@@ -252,15 +259,22 @@ class File(UUIDModel):
 
     # The filename. Equivalent to path.basename(location) in most cases
     name = CharField(max_length=2048)
-    # Any hash supported by hashlib, and xxhash
-    checksum = CharField(max_length=255)  # md5:11fca9c1f654078189ad040b1132654c
-    owner = ForeignKey(User, related_name='files')
+    # Any hash supported by hashlib, and xxhash, in the format:
+    # hashtype:th3actualh4shits3lf
+    # eg: md5:11fca9c1f654078189ad040b1132654c
+    checksum = CharField(max_length=255, blank=True, null=True)
+    owner = ForeignKey(User, on_delete=models.CASCADE, related_name='files')
     # The URL to the file. Could be file://, https://, s3://, sftp://
     location = URLFieldExtra(max_length=2048)
     origin = URLFieldExtra(max_length=2048)
-    job = ForeignKey(Job,
-                     on_delete=models.CASCADE,
-                     related_name='files')
+
+    # There is no direct link from File->Job, instead we use FileSet->Job.
+    # This way, Files represent a single unique file (on disk, or at a URL),
+    # and FileSets can represent a set of files used
+    # as input/output of a Job.
+    # job = ForeignKey(Job,
+    #                  on_delete=models.CASCADE,
+    #                  related_name='files')
 
     def to_dict(self):
         return OrderedDict(name=self.name,
@@ -278,8 +292,100 @@ class FileSet(UUIDModel):
     files - The files in this FileSet.
 
     """
+
     name = CharField(max_length=2048)
-    # TODO: Using ManyToManyField here is going to create lots of intermediate
-    # tables. A better option here might just be a list in a JSONField, or a
-    # Postgres specific ArrayField
-    files = models.ManyToManyField(File)
+    owner = ForeignKey(User,
+                       on_delete=models.CASCADE,
+                       related_name='filesets')
+
+    # Using a ManyToManyField here is going to create lots of intermediate
+    # tables, so we just use a JSONField instead
+    # (or maybe Postgres ArrayField, Django-MySQL ListCharField ?)
+    # files = models.ManyToManyField(File)
+
+    # a list of file ids eg ['2VSd4mZvmYX0OXw07dGfnV', '3XSd4mZvmYX0OXw07dGfmZ']
+    files = JSONField(default=list())
+    job = ForeignKey(Job,
+                     on_delete=models.CASCADE,
+                     related_name='files',
+                     null=True,
+                     blank=True)
+
+    @transaction.atomic
+    def add(self, files, save=True):
+        """
+        Add a File or Files to the FileSet. Takes a File object or it's ID,
+        or a list of Files or IDs.
+
+        :param file: The File object or it's ID, or a list of these.
+        :type file: File | str | Sequence[File] | Sequence[str]
+        :return: None
+        :rtype: NoneType
+        """
+        if isinstance(files, str):
+            files = [files]
+        elif isinstance(files, File):
+            if save:
+                files.save()
+            files = [files.id]
+        elif isinstance(files, Sequence):
+            _files = []
+            for f in files:
+                if isinstance(f, str):
+                    _files.append(f)
+                elif isinstance(f, File):
+                    _files.append(f.id)
+                    if save:
+                        f.save()
+                else:
+                    raise ValueError(
+                        "You must provide a File, a list or Files, "
+                        "a string ID or a list of string IDs")
+            files = _files
+        # if isinstance(files, Sequence) and \
+        #    all([isinstance(f, str) for f in files]):
+        #     files = files
+        # if isinstance(files, Sequence) and \
+        #    all([isinstance(f, File) for f in files]):
+        #     files = [f.id for f in files]
+        else:
+            raise ValueError("You must provide a File, a list or Files, "
+                             "a string ID or a list of string IDs")
+
+        # we ensure all IDs in the list are unique
+        files = unique(files)
+
+        if File.objects.filter(id__in=files).count() != len(files):
+            raise ValueError("One or more File IDs do not exist.")
+
+        self.files.extend(files)
+        self.files = sorted(unique(self.files))  # remove any duplicates
+        if save:
+            self.save()
+
+    @transaction.atomic
+    def remove(self, files, save=True, delete=False):
+        if not isinstance(files, Sequence):
+            files = [files]
+
+        for f in files:
+            if isinstance(f, File):
+                self.files.remove(f.id)
+            elif isinstance(f, str):
+                self.files.remove(f)
+
+            if delete:
+                f = File.objects.get(id=getattr(f, 'id', str(f)))
+                f.delete()
+
+        if save:
+            self.save()
+
+    def get_files(self):
+        """
+        Return all the File object associated with this FileSet.
+
+        :return: The File object in this FileSet (as a Django QuerySet).
+        :rtype: django.models.query.QuerySet(File)
+        """
+        return File.objects.filter(id__in=self.files)

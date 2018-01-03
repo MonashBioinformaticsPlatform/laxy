@@ -2,20 +2,22 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.schemas import SchemaGenerator
-from rest_framework.renderers import JSONRenderer
-from rest_framework_swagger.renderers import SwaggerUIRenderer, OpenAPIRenderer
+from rest_framework.renderers import JSONRenderer, SchemaJSRenderer, CoreJSONRenderer
+
+from drf_openapi.utils import view_config
 
 
 class JSONView(APIView):
-    renderer_classes = (JSONRenderer,
-                        SwaggerUIRenderer,
-                        OpenAPIRenderer,)
+    # renderer_classes = (JSONRenderer, SchemaJSRenderer, CoreJSONRenderer,)
+    # renderer_classes = (CoreJSONRenderer,)
+    renderer_classes = (JSONRenderer,)
+    api_docs_visible_to = 'public'
 
-    def get(self, request):
-        generator = SchemaGenerator()
-        schema = generator.get_schema(request=request)
-
-        return Response(schema)
+    # def get(self, request):
+    #     generator = SchemaGenerator()
+    #     schema = generator.get_schema(request=request)
+    #
+    #     return Response(schema)
 
     def get_obj(self, uuid):
         try:

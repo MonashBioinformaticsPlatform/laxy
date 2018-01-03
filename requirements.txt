@@ -1,28 +1,43 @@
-django
-django-extensions
-django-rest-framework
-django-rest-swagger
-# drf_openapi
--e git+https://github.com/limdauto/drf_openapi.git#egg=drf_openapi
-djangorestframework-jwt
-django-reversion
-django-braces
-
-celery
-django-celery-results
-django-celery-beat
+gunicorn
 
 requests
 backoff
 boto3
 basehash
 pyjwt
+pydash
 
-# sudo apt-get install postgresql postgresql-server-dev-all
-psycopg2
+# Base Django packages
+django
+django-extensions
+django-reversion
 django-jsonfield
+# For LoginRequiredMixin, CsrfExemptMixin
+django-braces
+django-environ
+# django-tus
 
 # Authentication
 django-allauth
 # django-auth-adfs
 # https://github.com/NIF-au/django-rapid-connect-demo
+
+# Django REST Framework, and some optional extra packages
+djangorestframework
+markdown
+django-filter
+django-guardian
+coreapi
+djangorestframework-jwt
+# drf_openapi
+-e git+https://github.com/limdauto/drf_openapi.git#egg=drf_openapi
+
+# Celery task queue
+celery
+flower
+django-celery-results
+django-celery-beat
+
+# Postgres packages
+# sudo apt-get install postgresql postgresql-server-dev-all
+psycopg2

@@ -11,7 +11,7 @@ def url_safe_base64_uuid():
 
 
 def url_safe_base62_uuid():
-    return base62().encode(uuid.uuid4().int).decode('ascii')
+    return base62().encode(uuid.uuid4().int)
 
 
 def generate_uuid():
@@ -20,7 +20,7 @@ def generate_uuid():
 
 def generate_secret_key(length=255):
     return ''.join(
-        [random.choice(string.letters + string.digits) for _ in range(length)]
+        [random.choice(string.ascii_letters + string.digits) for _ in range(length)]
     )
 
 

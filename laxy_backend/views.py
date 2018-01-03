@@ -12,7 +12,7 @@ from collections import OrderedDict
 from django.conf import settings
 from django.shortcuts import render
 from django.contrib.sites.shortcuts import get_current_site
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.contrib.auth import views as auth_views
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
@@ -26,13 +26,21 @@ from rest_framework import generics
 from rest_framework import status
 
 from rest_framework.response import Response
+# from django.http import HttpResponse, JsonResponse
+
 from rest_framework.views import APIView
 from rest_framework.renderers import JSONRenderer
 from rest_framework.authtoken.models import Token
-from rest_framework.authentication import TokenAuthentication, \
-    SessionAuthentication, BasicAuthentication
-from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
+from rest_framework.authentication import (TokenAuthentication,
+                                           SessionAuthentication,
+                                           BasicAuthentication)
+from rest_framework.permissions import (AllowAny,
+                                        IsAuthenticated,
+                                        IsAdminUser,
+                                        DjangoObjectPermissions)
 from rest_framework_jwt.authentication import JSONWebTokenAuthentication
+
+from drf_openapi.utils import view_config
 
 from celery import shared_task
 from celery import chain, group
@@ -41,7 +49,7 @@ import reversion
 
 from braces.views import LoginRequiredMixin, CsrfExemptMixin
 
-# from .jwt_helpers import get_jwt_user_header_dict, make_jwt_header_dict
+from .jwt_helpers import get_jwt_user_header_dict
 from .models import Job, ComputeResource
 from .serializers import JobSerializer, ComputeResourceSerializer
 
@@ -141,6 +149,7 @@ class ComputeResourceCreate(PostMixin,
 
     queryset = Meta.model.objects.all()
     serializer_class = Meta.serializer
+    permission_classes = (IsAdminUser,)
 
     @method_decorator(csrf_exempt)
     def post(self, request):
@@ -166,6 +175,10 @@ class JobView(JSONView):
 
     queryset = Meta.model.objects.all()
     serializer_class = Meta.serializer
+
+    # TODO: Only the user that created the job should be able to view
+    # and modify the job
+    # permission_classes = (DjangoObjectPermissions,)
 
     def get(self, request, job_id):
         """
@@ -236,6 +249,7 @@ class JobView(JSONView):
 
             job = self.get_obj(job_id)
             if (job.done and
+                job.compute_resource and
                 job.compute_resource.disposable and
                 not job.compute_resource.running_jobs()):
                     task_data = dict(job_id=job_id)
@@ -401,10 +415,9 @@ class JobCreate(JSONView):
 
         parameters:
             - name: input_files
-              description: <-- Won't work in Swagger web UI since I'm treated as
-                           a string ? A JSON list of SampleFiles.
+              description: A JSON list of Files objects.
               required: true
-              type: SampleFile
+              type: File
               paramType: $ref
         """
         request._dont_enforce_csrf_checks = True
