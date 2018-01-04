@@ -1,9 +1,20 @@
 import pydash
 from django.db import transaction
 from rest_framework import serializers
+from rest_framework.status import (HTTP_400_BAD_REQUEST,
+                                   HTTP_401_UNAUTHORIZED,
+                                   HTTP_403_FORBIDDEN,
+                                   HTTP_404_NOT_FOUND)
 from rest_framework.fields import CurrentUserDefault
 
 from . import models
+
+standard_error_codes = {
+    HTTP_400_BAD_REQUEST: 'Bad Request',
+    HTTP_401_UNAUTHORIZED: 'Unauthorized',
+    HTTP_403_FORBIDDEN: 'Forbidden',
+    HTTP_404_NOT_FOUND: 'Not Found',
+}
 
 
 class BaseModelSerializer(serializers.ModelSerializer):
@@ -23,6 +34,7 @@ class FileSerializer(BaseModelSerializer):
         model = models.File
         fields = '__all__'
         read_only_fields = ('id',)
+        error_status_codes = standard_error_codes
 
 
 class ComputeResourceSerializer(BaseModelSerializer):
@@ -35,6 +47,7 @@ class ComputeResourceSerializer(BaseModelSerializer):
         # not actually required for id since editable=False on model
         read_only_fields = ('id',)
         depth = 1
+        error_status_codes = standard_error_codes
 
 
 class JobSerializer(BaseModelSerializer):
@@ -62,6 +75,7 @@ class JobSerializer(BaseModelSerializer):
         # not actually required for id since editable=False on model
         read_only_fields = ('id',)
         depth = 1
+        error_status_codes = standard_error_codes
 
     @transaction.atomic
     def create(self, validated_data):

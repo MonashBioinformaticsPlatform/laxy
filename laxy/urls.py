@@ -15,7 +15,7 @@ from rest_framework_jwt.views import (obtain_jwt_token,
 
 from rest_framework.documentation import include_docs_urls
 
-from .openapi import PublicOpenAPISchemaView
+from .openapi import LaxyOpenAPISchemaView
 
 
 urlpatterns = [
@@ -31,14 +31,16 @@ urlpatterns = [
     re_path(r'^jwt/verify-token/', verify_jwt_token, name='jwt-verify-token'),
 
     ## re_path(r'^', include(router.urls)),
-    re_path(r'^coreapi/', include_docs_urls(title='Laxy API')),
+    # re_path(r'^coreapi/', include_docs_urls(title='Laxy API',
+    #                                         authentication_classes=[],
+    #                                         permission_classes=[])),
 
     re_path(r'^api-auth/', include('rest_framework.urls',
                                    namespace='rest_framework')),
 
     # re_path(r'^api/(?P<version>(v1|v2))/', include('drf_openapi.urls')),
     re_path(r'^swagger/(?P<version>(v1|v2))/',
-            PublicOpenAPISchemaView.as_view(title='Laxy API'),
+            LaxyOpenAPISchemaView.as_view(),
             name='api_schema'),
 
     re_path(r'^', include('laxy_backend.urls')),

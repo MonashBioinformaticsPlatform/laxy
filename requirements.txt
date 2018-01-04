@@ -6,6 +6,7 @@ boto3
 basehash
 pyjwt
 pydash
+pyyaml
 
 # Base Django packages
 django

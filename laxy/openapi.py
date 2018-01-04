@@ -4,6 +4,7 @@ from rest_framework.renderers import CoreJSONRenderer
 from drf_openapi.codec import OpenAPIRenderer, SwaggerUIRenderer
 
 from rest_framework import response, permissions
+from .openapi_yaml import OpenAPIYamlRenderer
 
 
 class PublicOpenApiSchemaGenerator(OpenApiSchemaGenerator):
@@ -25,11 +26,12 @@ class PublicOpenApiSchemaGenerator(OpenApiSchemaGenerator):
     def __init__(self, version, title=None, url=None, description=None,
                  patterns=None, urlconf=None):
         self.version = version
-        super(PublicOpenApiSchemaGenerator, self).__init__(title,
-                                                           url,
-                                                           description,
-                                                           patterns,
-                                                           urlconf)
+        super(PublicOpenApiSchemaGenerator, self).__init__(version,
+                                                           title=title,
+                                                           url=url,
+                                                           description=description,
+                                                           patterns=patterns,
+                                                           urlconf=urlconf)
 
     def has_view_permissions(self, path, method, view):
         """
@@ -71,19 +73,40 @@ class PublicOpenAPISchemaView(SchemaView):
     the OpenAPI/Swagger JSON schema output (when the ?format=openapi query
     string is provided).
 
-    This version uses PublicOpenApiSchemaGenerator to show all endpoints,
-    irrespective of the permissions associated with them.
+    This version shows all endpoints, irrespective of authentication
+    requirements or permissions associated with them.
     """
     # OpenAPI / Swagger schema is publicly readable
     permission_classes = (permissions.AllowAny,)
     renderer_classes = (CoreJSONRenderer,
                         SwaggerUIRenderer,
-                        OpenAPIRenderer,)
+                        OpenAPIRenderer,
+                        OpenAPIYamlRenderer,)
+    description = 'The Laxy API docs.'
 
     def get(self, request, version):
         generator = PublicOpenApiSchemaGenerator(
             version=version,
             url=self.url,
-            title=self.title
+            title=self.title,
+            description=self.description,
         )
+        # The alternative to using PublicOpenApiSchemaGenerator would be to
+        # simply set public=True when getting the schema, and then all API
+        # endpoints will be shown irrespective of authentication state.
+        # Then we can use the standard OpenApiSchemaGenerator class instead.
+        # return response.Response(generator.get_schema(request, public=True))
+
         return response.Response(generator.get_schema(request))
+
+
+class LaxyOpenAPISchemaView(PublicOpenAPISchemaView):
+    title = 'Laxy API'
+    description = \
+"""
+This is the Laxy API documentation.
+
+The YAML version is at: [{api_url}]({api_url})
+
+_YMMV_.
+""".format(api_url='?format=yaml')

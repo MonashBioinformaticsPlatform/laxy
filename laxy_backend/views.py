@@ -91,15 +91,14 @@ class ComputeResourceView(GetMixin,
         """
         Returns info about a ComputeResource, specified by UUID.
 
+        <!--
         :param request: The request object.
-        :type request:
+        :type request: django.http.HttpRequest
         :param uuid: The URL-encoded UUID.
         :type uuid: str
         :return: The response object.
-        :rtype:
-        ---
-
-        serializer: ComputeResourceSerializer
+        :rtype: rest_framework.response.Response
+        -->
         """
         return super(ComputeResourceView, self).get(request, uuid)
 
@@ -108,12 +107,14 @@ class ComputeResourceView(GetMixin,
 
         PATCH: https://tools.ietf.org/html/rfc5789
 
+        <!--
         :param request:
-        :type request:
-        :param uuid:
-        :type uuid:
+        :type request: django.http.HttpRequest
+        :param uuid: The compute resource UUID.
+        :type uuid: str
         :return:
-        :rtype:
+        :rtype: rest_framework.response.Response
+        -->
         """
         obj = self.get_obj(uuid)
         if obj is None:
@@ -151,18 +152,19 @@ class ComputeResourceCreate(PostMixin,
     serializer_class = Meta.serializer
     permission_classes = (IsAdminUser,)
 
+    @view_config(request_serializer=ComputeResourceSerializer,
+                 response_serializer=ComputeResourceSerializer)
     @method_decorator(csrf_exempt)
     def post(self, request):
         """
         Create a new ComputeResource. UUIDs are autoassigned.
 
+        <!--
         :param request: The request object.
-        :type request:
+        :type request: django.http.HttpRequest
         :return: The response object.
-        :rtype:
-        ---
-
-        serializer: ComputeResourceSerializer
+        :rtype: rest_framework.response.Response
+        -->
         """
 
         return super(ComputeResourceCreate, self).post(request)
@@ -184,15 +186,14 @@ class JobView(JSONView):
         """
         Returns info about a Job, specified by Job ID (UUID).
 
+        <!--
         :param request: The request object.
-        :type request:
+        :type request: django.http.HttpRequest
         :param job_id: The URL-encoded UUID.
         :type job_id: str
         :return: The response object.
-        :rtype:
-        ---
-
-        serializer: JobSerializer
+        :rtype: rest_framework.response.Response
+        -->
         """
         obj = self.get_obj(job_id)
         if obj is None:
@@ -216,15 +217,14 @@ class JobView(JSONView):
 
         PATCH: https://tools.ietf.org/html/rfc5789
 
+        <!--
         :param request:
-        :type request:
-        :param job_id:
-        :type job_id:
+        :type request: django.http.HttpRequest
+        :param job_id: The job UUID.
+        :type job_id: str
         :return:
-        :rtype:
-        ---
-
-        serializer: JobSerializer
+        :rtype: rest_framework.response.Response
+        -->
         """
 
         job = self.get_obj(job_id)
@@ -263,15 +263,14 @@ class JobView(JSONView):
     def delete(self, request, job_id):
         """
 
-        :param request:
-        :type request:
-        :param job_id:
-        :type job_id:
-        :return:
-        :rtype:
-        ---
-
-        serializer: JobSerializer
+        <!--
+        :param request: The request object.
+        :type request: django.http.HttpRequest
+        :param job_id: A job UUID.
+        :type job_id: str
+        :return: The response object.
+        :rtype: rest_framework.response.Response
+        -->
         """
         job = self.get_obj(job_id)
         if job is None:
@@ -296,7 +295,7 @@ class JobView(JSONView):
 
         :param job_id: The Job UUID
         :type job_id: str
-        :param subpath: The relative path inside the job (pseduo)=-)directory
+        :param subpath: The relative path inside the job (pseudo)directory
                         (eg under {bucket}/{job_id}/)
         :type subpath: str
         :param expires_in: Expiry time, in seconds from 'now'.
@@ -405,20 +404,12 @@ class JobCreate(JSONView):
         """
         Create a new Job. UUIDs are autoassigned.
 
+        <!--
         :param request: The request object.
-        :type request:
+        :type request: django.http.HttpRequest
         :return: The response object.
-        :rtype:
-        ---
-
-        serializer: JobSerializer
-
-        parameters:
-            - name: input_files
-              description: A JSON list of Files objects.
-              required: true
-              type: File
-              paramType: $ref
+        :rtype: rest_framework.response.Response
+        -->
         """
         request._dont_enforce_csrf_checks = True
 
