@@ -52,7 +52,6 @@ services:
 
   nginx:
     image: nginx
-    restart: always
 #    ports:
 #       # production
 #       - "80:80"

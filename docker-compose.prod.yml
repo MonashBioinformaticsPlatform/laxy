@@ -9,6 +9,7 @@ volumes:
 services:
 
   django:
+    restart: always
     environment:
       - LAXY_DEBUG=no
       - LAXY_STATIC_ROOT=/usr/share/nginx/html/backend
@@ -31,21 +32,24 @@ services:
                       gunicorn laxy.wsgi -b 0.0.0.0:8001"
 
   db:
+    restart: always
     networks:
       - private
 
   rabbitmq:
+    restart: always
     networks:
       - private
 
   celeryd:
+    restart: always
     volumes:
       - .:/app
     networks:
       - private
 
   flower:
-    image: laxy:latest
+    restart: always
     environment:
       - FLOWER_BASIC_AUTH=user:pass
     ports:
@@ -56,7 +60,6 @@ services:
       - .:/app
 
   nginx:
-    image: nginx
     restart: always
     ports:
       # production

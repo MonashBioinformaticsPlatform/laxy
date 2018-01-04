@@ -49,6 +49,11 @@ DRF CoreAPI docs: http://localhost:8000/coreapi/
 docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
 ```
 
+##### To manually restart just the `django` service without bringing the whole stack down/up
+```bash
+docker-compose restart django
+```
+
 #### Production
 
 ```bash

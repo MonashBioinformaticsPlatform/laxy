@@ -18,7 +18,6 @@ services:
       - .:/app
 
   flower:
-    image: laxy:latest
     environment:
       - FLOWER_BASIC_AUTH=user:pass
     ports:
@@ -27,8 +26,6 @@ services:
       - .:/app
 
   nginx:
-    image: nginx
-    restart: always
     ports:
        # dev
        - "8002:80"
