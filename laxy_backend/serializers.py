@@ -1,20 +1,19 @@
 import pydash
 from django.db import transaction
 from rest_framework import serializers
-from rest_framework.status import (HTTP_400_BAD_REQUEST,
-                                   HTTP_401_UNAUTHORIZED,
-                                   HTTP_403_FORBIDDEN,
-                                   HTTP_404_NOT_FOUND)
+from rest_framework import status
 from rest_framework.fields import CurrentUserDefault
+from http.client import responses as response_code_messages
 
 from . import models
 
-standard_error_codes = {
-    HTTP_400_BAD_REQUEST: 'Bad Request',
-    HTTP_401_UNAUTHORIZED: 'Unauthorized',
-    HTTP_403_FORBIDDEN: 'Forbidden',
-    HTTP_404_NOT_FOUND: 'Not Found',
-}
+default_status_codes = (400, 401, 403, 404)
+
+
+def status_codes(*codes):
+    if not codes:
+        codes = default_status_codes
+    return dict([(c, response_code_messages[c]) for c in codes])
 
 
 class BaseModelSerializer(serializers.ModelSerializer):
@@ -34,7 +33,7 @@ class FileSerializer(BaseModelSerializer):
         model = models.File
         fields = '__all__'
         read_only_fields = ('id',)
-        error_status_codes = standard_error_codes
+        error_status_codes = status_codes()
 
 
 class ComputeResourceSerializer(BaseModelSerializer):
@@ -47,7 +46,23 @@ class ComputeResourceSerializer(BaseModelSerializer):
         # not actually required for id since editable=False on model
         read_only_fields = ('id',)
         depth = 1
-        error_status_codes = standard_error_codes
+        error_status_codes = status_codes()
+
+
+class ComputeResourcePostResponse(ComputeResourceSerializer):
+    gateway_server = serializers.CharField(required=False,
+                                           max_length=255)
+
+    class Meta(ComputeResourceSerializer.Meta):
+        error_status_codes = status_codes(*default_status_codes, 201)
+
+
+class ComputeResourcePatchResponse(ComputeResourceSerializer):
+    gateway_server = serializers.CharField(required=False,
+                                           max_length=255)
+
+    class Meta(ComputeResourceSerializer.Meta):
+        error_status_codes = status_codes(*default_status_codes, 204)
 
 
 class JobSerializer(BaseModelSerializer):
@@ -75,7 +90,7 @@ class JobSerializer(BaseModelSerializer):
         # not actually required for id since editable=False on model
         read_only_fields = ('id',)
         depth = 1
-        error_status_codes = standard_error_codes
+        error_status_codes = status_codes()
 
     @transaction.atomic
     def create(self, validated_data):

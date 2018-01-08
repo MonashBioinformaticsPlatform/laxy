@@ -30,6 +30,7 @@ class PrefixedEnv(environ.Env):
     default_settings.py, but use the prefix in .env and actual environment
     variables.
     """
+
     def __init__(self, prefix, **scheme):
         # Add prefix to dictionary keys
         self.scheme = dict([('%s%s' % (prefix, k), v)
@@ -155,12 +156,12 @@ TEMPLATES = [
 REST_FRAMEWORK = {
     'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.URLPathVersioning',
     'DEFAULT_PERMISSION_CLASSES': (
-            # 'rest_framework.permissions.AllowAny',
-            # 'rest_framework.permissions.IsAdminUser',
-            'rest_framework.permissions.IsAuthenticated',
-            # Use Django's standard `django.contrib.auth` permissions,
-            # or allow read-only access for unauthenticated users.
-            # 'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly',
+        # 'rest_framework.permissions.AllowAny',
+        # 'rest_framework.permissions.IsAdminUser',
+        'rest_framework.permissions.IsAuthenticated',
+        # Use Django's standard `django.contrib.auth` permissions,
+        # or allow read-only access for unauthenticated users.
+        # 'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly',
     ),
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_jwt.authentication.JSONWebTokenAuthentication',
@@ -175,6 +176,26 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.CursorPagination',
     'PAGE_SIZE': 100,
 }
+
+# TODO: Apparently drf_openapi doesn't honor this setting.
+#       File an issue ? Query on gitter chat ?
+# SWAGGER_SETTINGS = {'SECURITY_DEFINITIONS': {
+#     'basic': {'type': 'basic'}},
+#     'api_key': {
+#         'type': 'apiKey',
+#         'name': 'api_key',
+#         'in': 'header'
+#     }
+# }
+# '''
+# Used as extra information to generate the OpenAPI documentation / schema.
+#
+# These should match the authentication types available
+# (eg from REST_FRAMEWORK.DEFAULT_AUTHENTICATION_CLASSES)
+#
+# See https://django-rest-swagger.readthedocs.io/en/latest/settings/ and
+# https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md#security-definitions-object
+# '''
 
 WSGI_APPLICATION = 'laxy.wsgi.application'
 

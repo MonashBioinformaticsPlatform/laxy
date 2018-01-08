@@ -1,10 +1,10 @@
 from drf_openapi.views import SchemaView
 from drf_openapi.entities import OpenApiSchemaGenerator
 from rest_framework.renderers import CoreJSONRenderer
-from drf_openapi.codec import OpenAPIRenderer, SwaggerUIRenderer
+from drf_openapi.codec import OpenAPIRenderer
 
 from rest_framework import response, permissions
-from .openapi_yaml import OpenAPIYamlRenderer
+from .openapi_renderers import OpenAPIYamlRenderer, SwaggerUIRenderer
 
 
 class PublicOpenApiSchemaGenerator(OpenApiSchemaGenerator):
@@ -109,4 +109,4 @@ This is the Laxy API documentation.
 The YAML version is at: [{api_url}]({api_url})
 
 _YMMV_.
-""".format(api_url='?format=yaml')
+""".format(api_url='?format=yaml-openapi')
