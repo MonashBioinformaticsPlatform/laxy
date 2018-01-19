@@ -8,7 +8,11 @@
 from collections import OrderedDict, Sequence
 from datetime import datetime
 import uuid
+from pathlib import Path
+from urllib.parse import urlparse
 import base64
+from basehash import base62
+import xxhash
 from django.conf import settings
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
@@ -27,7 +31,7 @@ from .cfncluster import generate_cluster_stack_name
 from .util import generate_uuid, generate_secret_key
 
 if 'postgres' not in settings.DATABASES['default']['ENGINE']:
-    from jsonfield import JSONField
+    from jsonfield import JSONField as JSONField
 else:
     from django.contrib.postgres.fields import JSONField
 
@@ -61,8 +65,8 @@ class URLFieldExtra(URLField):
 
 class UserProfile(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE,
-                                   blank=False,
-                                   related_name='profile')
+                             blank=False,
+                             related_name='profile')
     # favorite_color = models.CharField(default='2196F3', max_length=6)
 
 
@@ -109,12 +113,28 @@ class ComputeResource(UUIDModel):
                               (STATUS_TERMINATING, 'terminating'),
                               (STATUS_DECOMMISSIONED, 'decommissioned'),
                               )
-
+    owner = ForeignKey(User,
+                       blank=True,
+                       null=True,
+                       on_delete=models.CASCADE,
+                       related_name='compute_resources')
     status = CharField(max_length=64,
                        choices=COMPUTE_STATUS_CHOICES,
                        default=STATUS_CREATED)
 
-    type = CharField(max_length=255, default='cfncluster')
+    # type = CharField(max_length=255, blank=True)
+    '''
+    The host `type` is used for logic around how the host is used 
+    (deployment, job submission, decommissioning).
+    eg, values might be 'cfncluster', 'ssh' or 'slurm'.
+    
+    WIP: This was historically only ever 'cfncluster' in the original prototype.
+    We will re-enable it when it actually has a use.
+    Maybe this could be better expressed as a set of tags, or a name
+    corresponding to a host management utility class (plugable) for each 
+    type of host.
+    '''
+
     host = CharField(max_length=255, blank=True, null=True)
     gateway_server = CharField(max_length=255, blank=True, null=True)
     disposable = BooleanField(default=True)
@@ -168,9 +188,10 @@ class Job(UUIDModel):
                           (STATUS_COMPLETE, 'complete'),
                           )
 
-    owner = ForeignKey(User, on_delete=models.SET_NULL,
-                             null=True,
-                             related_name='jobs')
+    owner = ForeignKey(User,
+                       on_delete=models.SET_NULL,
+                       null=True,
+                       related_name='jobs')
     secret = CharField(max_length=255,
                        blank=True,
                        null=True,
@@ -179,7 +200,8 @@ class Job(UUIDModel):
                        choices=JOB_STATUS_CHOICES,
                        default=STATUS_CREATED)
     exit_code = IntegerField(blank=True, null=True)
-    params = JSONField()  # django-jsonfield or native Postgres
+    # django-jsonfield or native Postgres
+    params = JSONField(default=OrderedDict)
 
     input_files = ForeignKey('FileSet', null=True, blank=True,
                              related_name='jobs_as_input',
@@ -258,15 +280,15 @@ class File(UUIDModel):
     """
 
     # The filename. Equivalent to path.basename(location) in most cases
-    name = CharField(max_length=2048)
+    _name = CharField(db_column='name', max_length=2048, blank=True, null=True)
     # Any hash supported by hashlib, and xxhash, in the format:
     # hashtype:th3actualh4shits3lf
     # eg: md5:11fca9c1f654078189ad040b1132654c
     checksum = CharField(max_length=255, blank=True, null=True)
     owner = ForeignKey(User, on_delete=models.CASCADE, related_name='files')
     # The URL to the file. Could be file://, https://, s3://, sftp://
-    location = URLFieldExtra(max_length=2048)
-    origin = URLFieldExtra(max_length=2048)
+    location = URLFieldExtra(max_length=2048, blank=False, null=False)
+    # origin = URLFieldExtra(max_length=2048)
 
     # There is no direct link from File->Job, instead we use FileSet->Job.
     # This way, Files represent a single unique file (on disk, or at a URL),
@@ -275,6 +297,21 @@ class File(UUIDModel):
     # job = ForeignKey(Job,
     #                  on_delete=models.CASCADE,
     #                  related_name='files')
+
+    @property
+    def name(self):
+        if self._name:
+            return self._name
+        else:
+            fn = Path(urlparse(self.location).path).name
+            # TODO: If fn is empty, we could still grab the filename
+            #       from the utils.find_filename_and_size_from_url,
+            #       (only upon creation, or when location changes)
+            return fn
+
+    @name.setter
+    def name(self, value):
+        self._name = value
 
     def to_dict(self):
         return OrderedDict(name=self.name,
@@ -303,8 +340,12 @@ class FileSet(UUIDModel):
     # (or maybe Postgres ArrayField, Django-MySQL ListCharField ?)
     # files = models.ManyToManyField(File)
 
-    # a list of file ids eg ['2VSd4mZvmYX0OXw07dGfnV', '3XSd4mZvmYX0OXw07dGfmZ']
+    # a list of File ids eg ['2VSd4mZvmYX0OXw07dGfnV', '3XSd4mZvmYX0OXw07dGfmZ']
     files = JSONField(default=list())
+
+    # TODO: a list of FileSet ids (effectively like subdirectories) ?
+    # filesets = JSONField(default=list())
+
     job = ForeignKey(Job,
                      on_delete=models.CASCADE,
                      related_name='files',
@@ -383,7 +424,7 @@ class FileSet(UUIDModel):
 
     def get_files(self):
         """
-        Return all the File object associated with this FileSet.
+        Return all the File objects associated with this FileSet.
 
         :return: The File object in this FileSet (as a Django QuerySet).
         :rtype: django.models.query.QuerySet(File)
