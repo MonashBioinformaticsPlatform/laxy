@@ -115,6 +115,10 @@ class PostMixin:
         serializer = self.Meta.serializer(data=request.data)
         if serializer.is_valid():
             obj = serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            # 200 status code since we include the resulting entity in the body
+            # We'd do 201 if we only returned a link to the entity in the body
+            # and a Location header.
+            # https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/201
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
