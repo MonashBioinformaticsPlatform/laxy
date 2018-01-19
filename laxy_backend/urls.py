@@ -19,6 +19,8 @@ from django.contrib import admin
 from rest_framework import routers
 from rest_framework.urlpatterns import format_suffix_patterns
 from laxy_backend.views import (JobView, JobCreate,
+                                FileCreate, FileView,
+                                FileSetCreate, FileSetView,
                                 ComputeResourceView, ComputeResourceCreate,
                                 view_user_profile)
 
@@ -65,21 +67,31 @@ api_urls = [
     #     name='event'),
 
     re_path(r'job/(?P<job_id>[a-zA-Z0-9\-_]+)/$',
-        JobView.as_view(),
-        name='job'),
+            JobView.as_view(),
+            name='job'),
     re_path(r'job/$',
-        JobCreate.as_view(),
-        name='create_job'),
+            JobCreate.as_view(),
+            name='create_job'),
+    re_path(r'file/$',
+            FileCreate.as_view(),
+            name='create_file'),
+    re_path(r'fileset/(?P<uuid>[a-zA-Z0-9\-_]+)/$',
+            FileView.as_view()),
+    re_path(r'fileset/$',
+            FileSetCreate.as_view(),
+            name='create_file'),
+    re_path(r'file/(?P<uuid>[a-zA-Z0-9\-_]+)/$',
+            FileSetView.as_view()),
     re_path(
         r'compute_resource/(?P<uuid>[a-zA-Z0-9\-_]+)/$',
         ComputeResourceView.as_view(),
         name='compute_resource'),
     re_path(r'compute_resource/$',
-        ComputeResourceCreate.as_view(),
-        name='compute_resource'),
+            ComputeResourceCreate.as_view(),
+            name='compute_resource'),
     re_path(r'event/$',
-        Events.as_view(),
-        name='event'),
+            Events.as_view(),
+            name='event'),
 ]
 
 urlpatterns = [

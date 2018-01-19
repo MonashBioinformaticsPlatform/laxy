@@ -50,8 +50,15 @@ import reversion
 from braces.views import LoginRequiredMixin, CsrfExemptMixin
 
 from .jwt_helpers import get_jwt_user_header_dict
-from .models import Job, ComputeResource
-from .serializers import JobSerializer, ComputeResourceSerializer
+from .models import Job, ComputeResource, File, FileSet
+from .serializers import (PatchSerializerResponse,
+                          JobSerializerResponse,
+                          JobSerializerRequest,
+                          ComputeResourceSerializer,
+                          FileSerializer,
+                          FileSerializerPostRequest,
+                          FileSetSerializer,
+                          FileSetSerializerPostRequest)
 
 from . import tasks
 
@@ -74,6 +81,138 @@ def sh_bool(boolean):
         return 'yes'
     else:
         return 'no'
+
+
+class FileCreate(PostMixin,
+                 JSONView):
+    class Meta:
+        model = File
+        serializer = FileSerializer
+
+    queryset = Meta.model.objects.all()
+    serializer_class = Meta.serializer
+    # TODO: Only the user that created the file should be able to view
+    # and modify the job
+    # permission_classes = (DjangoObjectPermissions,)
+
+    @view_config(request_serializer=FileSerializerPostRequest,
+                 response_serializer=FileSerializer)
+    @method_decorator(csrf_exempt)
+    def post(self, request):
+        """
+        Create a new File. UUIDs are autoassigned.
+
+        <!--
+        :param request: The request object.
+        :type request: django.http.HttpRequest
+        :return: The response object.
+        :rtype: rest_framework.response.Response
+        -->
+        """
+
+        return super(FileCreate, self).post(request)
+
+
+class FileView(GetMixin,
+               DeleteMixin,
+               PatchMixin,
+               JSONView):
+    class Meta:
+        model = File
+        serializer = FileSerializer
+
+    queryset = Meta.model.objects.all()
+    serializer_class = Meta.serializer
+    # TODO: Only the user that created the file should be able to view
+    # and modify the job
+    # permission_classes = (DjangoObjectPermissions,)
+
+    @view_config(response_serializer=FileSerializer)
+    def get(self, request, uuid):
+        """
+        Returns info about a File, specified by UUID.
+
+        <!--
+        :param request: The request object.
+        :type request: django.http.HttpRequest
+        :param uuid: The URL-encoded UUID.
+        :type uuid: str
+        :return: The response object.
+        :rtype: rest_framework.response.Response
+        -->
+        """
+        return super(FileView, self).get(request, uuid)
+
+    @view_config(request_serializer=FileSerializer,
+                 response_serializer=PatchSerializerResponse)
+    def patch(self, request, uuid):
+        return super(FileView, self).patch(request, uuid)
+
+
+class FileSetCreate(PostMixin,
+                    JSONView):
+    class Meta:
+        model = FileSet
+        serializer = FileSetSerializer
+
+    queryset = Meta.model.objects.all()
+    serializer_class = Meta.serializer
+    # TODO: Only the user that created the file should be able to view
+    # and modify the job
+    # permission_classes = (DjangoObjectPermissions,)
+
+    @view_config(request_serializer=FileSetSerializerPostRequest,
+                 response_serializer=FileSetSerializer)
+    @method_decorator(csrf_exempt)
+    def post(self, request):
+        """
+        Create a new FileSet. UUIDs are autoassigned.
+
+        <!--
+        :param request: The request object.
+        :type request: django.http.HttpRequest
+        :return: The response object.
+        :rtype: rest_framework.response.Response
+        -->
+        """
+
+        return super(FileSetCreate, self).post(request)
+
+
+class FileSetView(GetMixin,
+                  DeleteMixin,
+                  PatchMixin,
+                  JSONView):
+    class Meta:
+        model = FileSet
+        serializer = FileSetSerializer
+
+    queryset = Meta.model.objects.all()
+    serializer_class = Meta.serializer
+    # TODO: Only the user that created the file should be able to view
+    # and modify the job
+    # permission_classes = (DjangoObjectPermissions,)
+
+    @view_config(response_serializer=FileSetSerializer)
+    def get(self, request, uuid):
+        """
+        Returns info about a FileSet, specified by UUID.
+
+        <!--
+        :param request: The request object.
+        :type request: django.http.HttpRequest
+        :param uuid: The URL-encoded UUID.
+        :type uuid: str
+        :return: The response object.
+        :rtype: rest_framework.response.Response
+        -->
+        """
+        return super(FileSetView, self).get(request, uuid)
+
+    @view_config(request_serializer=FileSetSerializer,
+                 response_serializer=PatchSerializerResponse)
+    def patch(self, request, uuid):
+        return super(FileSetView, self).patch(request, uuid)
 
 
 class ComputeResourceView(GetMixin,
@@ -102,6 +241,8 @@ class ComputeResourceView(GetMixin,
         """
         return super(ComputeResourceView, self).get(request, uuid)
 
+    @view_config(request_serializer=ComputeResourceSerializer,
+                 response_serializer=PatchSerializerResponse)
     def patch(self, request, uuid):
         """
 
@@ -173,7 +314,7 @@ class ComputeResourceCreate(PostMixin,
 class JobView(JSONView):
     class Meta:
         model = Job
-        serializer = JobSerializer
+        serializer = JobSerializerResponse
 
     queryset = Meta.model.objects.all()
     serializer_class = Meta.serializer
@@ -182,7 +323,8 @@ class JobView(JSONView):
     # and modify the job
     # permission_classes = (DjangoObjectPermissions,)
 
-    def get(self, request, job_id):
+    @view_config(response_serializer=JobSerializerResponse)
+    def get(self, request, job_id, version=None):
         """
         Returns info about a Job, specified by Job ID (UUID).
 
@@ -212,7 +354,9 @@ class JobView(JSONView):
 
         return Response(data, status=status.HTTP_200_OK)
 
-    def patch(self, request, job_id):
+    @view_config(request_serializer=JobSerializerRequest,
+                 response_serializer=PatchSerializerResponse)
+    def patch(self, request, job_id, version=None):
         """
 
         PATCH: https://tools.ietf.org/html/rfc5789
@@ -260,7 +404,7 @@ class JobView(JSONView):
         return Response(serializer.errors,
                         status=status.HTTP_400_BAD_REQUEST)
 
-    def delete(self, request, job_id):
+    def delete(self, request, job_id, version=None):
         """
 
         <!--
@@ -318,7 +462,7 @@ class JobView(JSONView):
 class JobCreate(JSONView):
     class Meta:
         model = Job
-        serializer = JobSerializer
+        serializer = JobSerializerRequest
 
     queryset = Meta.model.objects.all()
     serializer_class = Meta.serializer
@@ -400,6 +544,8 @@ class JobCreate(JSONView):
     #             args=({'compute_resource_id': job_id},))
 
     @method_decorator(csrf_exempt)
+    @view_config(request_serializer=JobSerializerRequest,
+                 response_serializer=JobSerializerResponse)
     def post(self, request):
         """
         Create a new Job. UUIDs are autoassigned.
@@ -419,19 +565,17 @@ class JobCreate(JSONView):
             job = serializer.save()
 
             if not job.compute_resource:
-                compute = ComputeResource(
-                    gateway_server=settings.CLUSTER_MANAGEMENT_HOST)
-                compute.save()
-                job.compute_resource = compute
+                job.compute_resource = _get_default_compute_resource()
                 job.save()
 
             job_id = job.id
 
-            # HACK: TEsting
+            # HACK: Testing
             # job_id = '1ddIMaKJ9PY8Kug0dW1ubO'
 
             # callback_url = request.build_absolute_uri(
             #     reverse('laxy_backend:job', args=[job_id]))
+
             # the request header called "Authorization"
             auth_token = request.META.get(
                 'HTTP_AUTHORIZATION',
@@ -540,6 +684,13 @@ def _get_or_create_drf_token(user):
         token = Token.objects.create(user=user)
 
     return token
+
+
+def _get_default_compute_resource():
+    compute = ComputeResource(
+        gateway_server=getattr(settings, 'CLUSTER_MANAGEMENT_HOST'))
+    compute.save()
+    return compute
 
 
 @login_required()

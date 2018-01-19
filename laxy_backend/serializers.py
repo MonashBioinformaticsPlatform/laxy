@@ -28,12 +28,49 @@ class BaseModelSerializer(serializers.ModelSerializer):
             return obj.id
 
 
+class PatchSerializerResponse(BaseModelSerializer):
+    """
+    A generic PATCH response serializer, which should generally be 204 status
+    code on success with no response body.
+    """
+
+    class Meta(BaseModelSerializer.Meta):
+        # a dummy model, just so we can supply Meta.model
+        class UUIDOnlyModel(models.UUIDModel):
+            pass
+
+        model = UUIDOnlyModel
+        fields = ()
+        error_status_codes = status_codes(*default_status_codes, 204)
+
+
+class EventSerializer(BaseModelSerializer):
+    event_type = serializers.CharField(required=True, max_length=255)
+    object_id = serializers.CharField(required=True, max_length=24)
+    content_type = serializers.CharField(required=True, max_length=255)
+
+
 class FileSerializer(BaseModelSerializer):
     class Meta:
         model = models.File
         fields = '__all__'
-        read_only_fields = ('id',)
+        read_only_fields = ('id', 'owner',)
         error_status_codes = status_codes()
+
+
+class FileSerializerPostRequest(FileSerializer):
+    class Meta(FileSerializer.Meta):
+        exclude = ('owner',)
+
+
+class FileSetSerializer(FileSerializer):
+    class Meta(FileSerializer.Meta):
+        model = models.FileSet
+
+
+class FileSetSerializerPostRequest(FileSerializerPostRequest):
+    class Meta(FileSerializerPostRequest.Meta):
+        model = models.FileSet
 
 
 class ComputeResourceSerializer(BaseModelSerializer):
@@ -49,36 +86,19 @@ class ComputeResourceSerializer(BaseModelSerializer):
         error_status_codes = status_codes()
 
 
-class ComputeResourcePostResponse(ComputeResourceSerializer):
-    gateway_server = serializers.CharField(required=False,
-                                           max_length=255)
-
-    class Meta(ComputeResourceSerializer.Meta):
-        error_status_codes = status_codes(*default_status_codes, 201)
-
-
-class ComputeResourcePatchResponse(ComputeResourceSerializer):
-    gateway_server = serializers.CharField(required=False,
-                                           max_length=255)
-
-    class Meta(ComputeResourceSerializer.Meta):
-        error_status_codes = status_codes(*default_status_codes, 204)
-
-
-class JobSerializer(BaseModelSerializer):
-    input_files = FileSerializer(many=True)
-    output_files = FileSerializer(many=True)
-
-    input_fileset_id = serializers.CharField(required=False,
+class JobSerializerBase(BaseModelSerializer):
+    input_fileset_id = serializers.CharField(source='input_files',
+                                             required=False,
                                              allow_blank=True,
                                              allow_null=True,
                                              max_length=24)
-    output_fileset_id = serializers.CharField(required=False,
+    output_fileset_id = serializers.CharField(source='output_files',
+                                              required=False,
                                               allow_blank=True,
                                               allow_null=True,
                                               max_length=24)
 
-    params = serializers.JSONField()
+    params = serializers.JSONField(required=False)
     compute_resource = serializers.CharField(required=False,
                                              allow_blank=True,
                                              allow_null=True,
@@ -89,8 +109,31 @@ class JobSerializer(BaseModelSerializer):
         fields = '__all__'
         # not actually required for id since editable=False on model
         read_only_fields = ('id',)
-        depth = 1
+        depth = 0
         error_status_codes = status_codes()
+
+
+class JobSerializerResponse(JobSerializerBase):
+    # output_files = FileSerializer(many=True, required=False)
+    output_fileset_id = serializers.CharField(source='input_files',
+                                              required=True, max_length=24)
+    input_fileset_id = serializers.CharField(source='output_files',
+                                             required=True, max_length=24)
+
+    class Meta:
+        model = models.Job
+        # not actually required for id since editable=False on model
+        read_only_fields = ('id',)
+        exclude = ('input_files', 'output_files',)
+        depth = 0
+        error_status_codes = status_codes()
+
+
+class JobSerializerRequest(JobSerializerBase):
+    input_files = FileSerializer(many=True, required=False)
+
+    class Meta(JobSerializerBase.Meta):
+        depth = 1
 
     @transaction.atomic
     def create(self, validated_data):
@@ -154,9 +197,9 @@ class JobSerializer(BaseModelSerializer):
 
     @transaction.atomic
     def update(self, instance, validated_data):
-        serializer = JobSerializer(instance,
-                                   data=validated_data,
-                                   partial=True)
+        serializer = JobSerializerRequest(instance,
+                                          data=validated_data,
+                                          partial=True)
 
         output_files_data = validated_data.pop('output_files', [])
 

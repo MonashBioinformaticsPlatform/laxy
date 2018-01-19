@@ -9,7 +9,7 @@ from .view_mixins import JSONView, GetMixin, PatchMixin, DeleteMixin, PostMixin
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from .models import Job
-
+from .serializers import EventSerializer
 from . import tasks
 
 
@@ -21,9 +21,9 @@ def _get_object_auth_header(request):
     return secret
 
 
-def _get_event_target_object(request):
-    content_type = request.data.get('content_type', None)
-    object_id = request.data.get('object_id', None)
+def _get_event_target_object(data):
+    content_type = data.get('content_type', None)
+    object_id = data.get('object_id', None)
     ct = ContentType.objects.get(app_label='laxy_backend',
                                  model=content_type)
     obj = ct.get_object_for_this_type(id=object_id)
@@ -47,10 +47,12 @@ class Events(JSONView):
         # an expiry ? This would avoid needing to expire keys in the
         # database for old stale jobs.
 
-        try:
-            event_type = request.data.get('event_type')
-        except:
+        serializer = EventSerializer(data=request.data)
+        if not serializer.is_valid():
             return Response({}, status=status.HTTP_400_BAD_REQUEST)
+
+        data = serializer.validated_data
+        event_type = data.get('event_type')
 
         if event_type == 'job_complete':
             try:
@@ -58,7 +60,7 @@ class Events(JSONView):
                 if secret is None:
                     return Response({}, status=status.HTTP_401_UNAUTHORIZED)
 
-                job = _get_event_target_object(request)
+                job = _get_event_target_object(data)
                 if not isinstance(job, Job):
                     return Response({}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -70,8 +72,7 @@ class Events(JSONView):
                     job.secret = None
                     job.save()
 
-                    task_data = {'compute_resource_id':
-                                     job.compute_resource.id}
+                    task_data = {'compute_resource_id': job.compute_resource.id}
                     if job.compute_resource.disposable:
                         tasks.stop_cluster.apply_async(
                             args=(task_data,))
