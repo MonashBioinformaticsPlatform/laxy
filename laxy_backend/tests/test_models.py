@@ -31,6 +31,41 @@ def _create_user_and_login(username='testuser',
     return (admin_user, client)
 
 
+class FileModelTest(TestCase):
+    def setUp(self):
+        self.admin_user = User.objects.create_user('adminuser', '', 'testpass')
+        self.admin_user.is_superuser = True
+        self.admin_user.save()
+
+        self.user = User.objects.create_user('testuser', '', 'testpass')
+        self.user.is_superuser = False
+        self.user.save()
+
+        self.file_sra_ftp = File(
+            location="ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR950/SRR950078/"
+                     "SRR950078_1.fastq.gz",
+            owner_id=self.user.id)
+        self.file_sra_ftp.save()
+
+        self.file_ftp = File(
+            location="ftp://ftp.monash.edu.au/pub/linux/debian/ls-lR.gz",
+            owner_id=self.user.id)
+        self.file_ftp.save()
+
+        self.file_complex_http = File(
+            location="https://example.com:8000/fastq/"
+                     "sample1_R1.fastq.gz"
+                     "#hashpart"
+                     "?format=gz&shuffle=yes",
+            owner_id=self.user.id)
+        self.file_complex_http.save()
+
+    def test_filename_guessing(self):
+        self.assertEqual(self.file_sra_ftp.name, 'SRR950078_1.fastq.gz')
+        self.assertEqual(self.file_ftp.name, 'ls-lR.gz')
+        self.assertEqual(self.file_complex_http.name, "sample1_R1.fastq.gz")
+
+
 class JobViewTest(TestCase):
     def setUp(self):
         admin_user, authenticated_client = _create_user_and_login()

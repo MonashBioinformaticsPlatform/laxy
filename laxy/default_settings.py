@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/1.11/ref/settings/
 
 import os
 from datetime import timedelta
+import tempfile
 from pathlib import Path
 from django.core.exceptions import ImproperlyConfigured
 import environ
@@ -57,6 +58,7 @@ default_env = PrefixedEnv(
     STATIC_URL=(str, '/static/'),
     MEDIA_ROOT=(str, str(app_root.path('uploads')())),
     MEDIA_URL=(str, 'uploads/'),
+    FILE_CACHE_PATH=(str, tempfile.gettempdir()),
 )
 
 
@@ -69,6 +71,8 @@ DEBUG = env('DEBUG')
 AWS_ACCESS_KEY_ID = env('AWS_ACCESS_KEY_ID')
 
 AWS_SECRET_ACCESS_KEY = env('AWS_SECRET_ACCESS_KEY')
+
+FILE_CACHE_PATH = env('FILE_CACHE_PATH')
 
 ALLOWED_HOSTS = env('ALLOWED_HOSTS')
 
