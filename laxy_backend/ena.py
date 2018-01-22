@@ -7,6 +7,7 @@ import csv
 from lxml import etree
 from django.db import transaction
 from django.contrib.auth.models import User
+import enasearch
 
 from .models import File, FileSet
 
@@ -45,15 +46,15 @@ def parse_fastq_table(table: str) -> Dict[str, Dict]:
     table = [row for row in csv.DictReader(table.splitlines(), delimiter='\t')]
     by_url = dict()
     for rec in table:
-        accession = rec[list(rec.keys())[0]]
         links = rec['fastq_ftp'].split(';')
         checksums = rec['fastq_md5'].split(';')
         sizes = rec['fastq_bytes'].split(';')
+        read_count = int(rec['read_count'])
 
         links = ['ftp://%s' % l for l in links]
         sizes = [int(s) for s in sizes]
         for url, md5, size in zip(links, checksums, sizes):
-            by_url[url] = {'accession': accession,
+            by_url[url] = {'run_accession': rec['run_accession'],
                            'md5': md5,
                            'size': size}
 
@@ -99,7 +100,9 @@ def create_file_objects(urls: dict,
         md5 = metadata['md5']
         size = metadata['size']
         f = File(location=url, name=name,
-                 checksum=f'md5:{md5}', owner=owner)
+                 checksum=f'md5:{md5}',
+                 owner=owner,
+                 metadata=metadata)
         file_objs.append(f)
 
     File.objects.bulk_create(file_objs)
@@ -109,8 +112,8 @@ def create_file_objects(urls: dict,
 
 def get_fastq_urls(accession: str) -> Dict[str, Dict]:
     """
-    Given an ENA (or SRA) Run, Experiment, Project (or Study?) accession,
-    return a list of associated FASTQ download URLs.
+    Given an ENA (or SRA) Run (SRR*), Experiment (SRX*), Project (PRJ*)
+    (or Study?) accession, return a list of associated FASTQ download URLs.
 
     :param accession:
     :type accession:
@@ -118,22 +121,11 @@ def get_fastq_urls(accession: str) -> Dict[str, Dict]:
     :rtype:
     """
 
-    # An alternative here would be to use the enasearch library
-    # import enasearch
-    # record = enasearch.retrieve_data(ids=accession, display="xml")
-    # record is a dictionary that is equivalent to the xml -
-    # we'd need to extract the same fields, probably via a jq expression
-
-    record_url = f'https://www.ebi.ac.uk/ena/data/view/{accession}&display=xml&download=xml'
-    record = requests.get(record_url)
-    xml = etree.fromstring(record.content)
-    xref_db_links = xml.xpath(
-        "//XREF_LINK/DB[text()='ENA-FASTQ-FILES']/following-sibling::ID/text()")
-    urls = dict()
-    for fastq_table_url in xref_db_links:
-        table = requests.get(fastq_table_url)
-        by_url = parse_fastq_table(table.text)
-        urls.update(by_url)
+    fields = "run_accession,experiment_accession,study_accession," \
+             "instrument_platform,library_strategy,read_count," \
+             "fastq_ftp,fastq_md5,fastq_bytes"
+    table = enasearch.retrieve_run_report(accession=accession, fields=fields)
+    urls = parse_fastq_table(table)
 
     return urls
 

@@ -10,6 +10,7 @@ pyyaml
 toolz
 xxhash
 lxml
+enasearch
 
 # Base Django packages
 django
