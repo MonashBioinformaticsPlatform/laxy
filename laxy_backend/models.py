@@ -289,6 +289,7 @@ class File(UUIDModel):
     # The URL to the file. Could be file://, https://, s3://, sftp://
     location = URLFieldExtra(max_length=2048, blank=False, null=False)
     # origin = URLFieldExtra(max_length=2048)
+    metadata = JSONField(default=OrderedDict)
 
     # There is no direct link from File->Job, instead we use FileSet->Job.
     # This way, Files represent a single unique file (on disk, or at a URL),
@@ -341,7 +342,7 @@ class FileSet(UUIDModel):
     # files = models.ManyToManyField(File)
 
     # a list of File ids eg ['2VSd4mZvmYX0OXw07dGfnV', '3XSd4mZvmYX0OXw07dGfmZ']
-    files = JSONField(default=list())
+    files = JSONField(default=list)
 
     # TODO: a list of FileSet ids (effectively like subdirectories) ?
     # filesets = JSONField(default=list())
