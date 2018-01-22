@@ -16,6 +16,8 @@ from ..models import Job, File, FileSet
 from ..jwt_helpers import (get_jwt_user_header_dict,
                            make_jwt_header_dict,
                            create_jwt_user_token)
+
+
 # from ..authorization import JWTAuthorizedClaimPermission
 
 
@@ -66,6 +68,66 @@ class FileModelTest(TestCase):
         self.assertEqual(self.file_complex_http.name, "sample1_R1.fastq.gz")
 
 
+class FileSetModelTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user('testuser', '', 'testpass')
+        self.user.is_superuser = False
+        self.user.save()
+
+        self.file_a = File(owner=self.user,
+                           name="file_a",
+                           location="file:///tmp/file_a")
+        self.file_b = File(owner=self.user,
+                           name="file_b",
+                           location="file:///tmp/file_b")
+        self.file_a.save()
+        self.file_b.save()
+
+        self.fileset = FileSet(name='test-fileset-1', owner=self.user)
+
+    def test_fileset(self):
+        id_list = sorted([self.file_a.id, self.file_b.id])
+
+        fileset = self.fileset
+        file_a = self.file_a
+        file_b = self.file_b
+
+        # Add files to a FileSet via File object or it's ID
+        fileset.add(file_a)
+        self.assertIn(file_a.id, fileset.files)
+        # Since we did save=False, the database record shouldn't be updated
+        # until after we've actually saved
+        fileset.add(file_b.id, save=False)
+        self.assertListEqual(id_list, fileset.files)
+        db_fileset = FileSet.objects.get(id=fileset.id)
+        self.assertNotIn(file_b.id, db_fileset.files)
+        self.assertIn(file_a.id, db_fileset.files)
+        fileset.save()
+        db_fileset = FileSet.objects.get(id=fileset.id)
+        self.assertIn(file_b.id, db_fileset.files)
+        self.assertIn(file_a.id, db_fileset.files)
+
+        # Adding twice shouldn't create duplicates in the file list
+        fileset.add([file_a.id, file_b])
+        self.assertListEqual(id_list, fileset.files)
+        fileset.add([file_a, file_a])
+        self.assertListEqual(id_list, fileset.files)
+
+        # Remove files from a FileSet (via File ID and object)
+        self.fileset.remove(file_b.id)
+        self.assertNotIn(file_b.id, fileset.files)
+
+        self.fileset.remove(file_a, save=False)
+        self.assertNotIn(file_a.id, fileset.files)
+        # Since we did save=False, the database record shouldn't be updated
+        # until after we've actually saved
+        db_fileset = FileSet.objects.get(id=fileset.id)
+        self.assertIn(file_a.id, db_fileset.files)
+        self.fileset.save()
+        db_fileset = FileSet.objects.get(id=fileset.id)
+        self.assertNotIn(file_a.id, db_fileset.files)
+
+
 class JobViewTest(TestCase):
     def setUp(self):
         admin_user, authenticated_client = _create_user_and_login()
@@ -73,8 +135,7 @@ class JobViewTest(TestCase):
         self.admin_authenticated_client = authenticated_client
 
         self.job = Job(owner=admin_user,
-                       params='{"bla":"foo"}',
-                       )
+                       params='{"bla":"foo"}')
         self.job.save()
 
         user, user_client = _create_user_and_login('user1', 'userpass1',
@@ -83,8 +144,7 @@ class JobViewTest(TestCase):
         self.user_client = user_client
 
         self.user_job = Job(owner=user,
-                            params='{"bing":"bang"}',
-                            )
+                            params='{"bing":"bang"}')
         self.user_job.save()
 
     def tearDown(self):
@@ -110,7 +170,6 @@ class JobViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_admin_authenticated_patch(self):
-
         response = self.admin_authenticated_client.patch(
             reverse('laxy_backend:job', args=[self.job.uuid()]),
             data=json.dumps({'status': Job.STATUS_COMPLETE}),
@@ -195,13 +254,13 @@ class JobViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
         response = client.patch(
-                reverse('laxy_backend:job', args=[self.user_job.uuid()]),
-                {'status': Job.STATUS_COMPLETE}, format='json')
+            reverse('laxy_backend:job', args=[self.user_job.uuid()]),
+            {'status': Job.STATUS_COMPLETE}, format='json')
         self.assertEqual(response.status_code, 204)
 
         response = client.patch(
-                reverse('laxy_backend:job', args=[self.job.uuid()]),
-                {'status': Job.STATUS_COMPLETE}, format='json')
+            reverse('laxy_backend:job', args=[self.job.uuid()]),
+            {'status': Job.STATUS_COMPLETE}, format='json')
         self.assertEqual(response.status_code, 403)
 
         client.credentials(HTTP_AUTHORIZATION="Bearer __invalid_jwt__")
@@ -209,7 +268,6 @@ class JobViewTest(TestCase):
             response = client.patch(
                 reverse('laxy_backend:job', args=[self.job.uuid()]),
                 {'status': Job.STATUS_COMPLETE}, format='json')
-
 
     # @unittest.skip("JWT Authentication not working")
     def test_jwt_auth_access(self):
@@ -219,27 +277,6 @@ class JobViewTest(TestCase):
         response = client.get(
             reverse('laxy_backend:job', args=[self.job.uuid()]), format='json')
         self.assertEqual(response.status_code, 200)
-
-    def test_fileset(self):
-        fs = FileSet(name='test-fileset-1', owner=self.user)
-        file_a = File(owner=self.user,
-                      name="file_a",
-                      location="file:///tmp/file_a")
-        file_b = File(owner=self.user,
-                      name="file_b",
-                      location="file:///tmp/file_b")
-        file_a.save()
-        file_b.save()
-        id_list = sorted([file_a.id, file_b.id])
-
-        fs.add(file_a)
-        self.assertIn(file_a.id, fs.files)
-        fs.add(file_b.id)
-        self.assertListEqual(id_list, fs.files)
-        fs.add([file_a.id, file_b])
-        self.assertListEqual(id_list, fs.files)
-        fs.add([file_a, file_a])
-        self.assertListEqual(id_list, fs.files)
 
     def test_jobserializer(self):
         raise NotImplementedError()

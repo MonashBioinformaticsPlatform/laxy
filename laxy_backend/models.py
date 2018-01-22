@@ -407,7 +407,7 @@ class FileSet(UUIDModel):
 
     @transaction.atomic
     def remove(self, files, save=True, delete=False):
-        if not isinstance(files, Sequence):
+        if isinstance(files, str) or not isinstance(files, Sequence):
             files = [files]
 
         for f in files:
