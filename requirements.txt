@@ -16,7 +16,16 @@ enasearch
 django
 django-extensions
 django-reversion
-django-jsonfield
+
+# The Bitbucket one
+# django-jsonfield  # https://bitbucket.org/schinckel/django-jsonfield
+-e hg+https://bitbucket.org/schinckel/django-jsonfield#egg=django-jsonfield
+
+# The Github one
+# jsonfield  # https://github.com/dmkoch/django-jsonfield
+# compatibility layer for jsonfield<->Django native Postgres JSONField
+# django-jsonfield-compat  # broken ?
+
 # For LoginRequiredMixin, CsrfExemptMixin
 django-braces
 django-environ

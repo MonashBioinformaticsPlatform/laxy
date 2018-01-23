@@ -83,8 +83,7 @@ def sh_bool(boolean):
         return 'no'
 
 
-class FileCreate(PostMixin,
-                 JSONView):
+class FileCreate(JSONView):
     class Meta:
         model = File
         serializer = FileSerializer
@@ -98,7 +97,7 @@ class FileCreate(PostMixin,
     @view_config(request_serializer=FileSerializerPostRequest,
                  response_serializer=FileSerializer)
     @method_decorator(csrf_exempt)
-    def post(self, request):
+    def post(self, request, version=None):
         """
         Create a new File. UUIDs are autoassigned.
 
@@ -110,7 +109,12 @@ class FileCreate(PostMixin,
         -->
         """
 
-        return super(FileCreate, self).post(request)
+        serializer = self.Meta.serializer(data=request.data)
+        if serializer.is_valid():
+            obj = serializer.save(owner=request.user)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class FileView(GetMixin,
@@ -128,7 +132,7 @@ class FileView(GetMixin,
     # permission_classes = (DjangoObjectPermissions,)
 
     @view_config(response_serializer=FileSerializer)
-    def get(self, request, uuid):
+    def get(self, request, uuid=None, version=None):
         """
         Returns info about a File, specified by UUID.
 
@@ -145,7 +149,7 @@ class FileView(GetMixin,
 
     @view_config(request_serializer=FileSerializer,
                  response_serializer=PatchSerializerResponse)
-    def patch(self, request, uuid):
+    def patch(self, request, uuid=None, version=None):
         return super(FileView, self).patch(request, uuid)
 
 
@@ -559,7 +563,7 @@ class JobCreate(JSONView):
         """
         request._dont_enforce_csrf_checks = True
 
-        serializer = JobSerializer(data=request.data)
+        serializer = JobSerializerRequest(data=request.data)
         if serializer.is_valid():
 
             job = serializer.save()

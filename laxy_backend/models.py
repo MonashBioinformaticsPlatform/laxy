@@ -18,6 +18,7 @@ from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.db import models, transaction
 from django.core.validators import URLValidator
+from django.core.exceptions import ValidationError
 from django.db.models import Model, CharField, TextField, UUIDField, \
     URLField, ForeignKey, BooleanField, IntegerField, DateTimeField
 from django.contrib.auth.models import User
@@ -31,7 +32,7 @@ from .cfncluster import generate_cluster_stack_name
 from .util import generate_uuid, generate_secret_key
 
 if 'postgres' not in settings.DATABASES['default']['ENGINE']:
-    from jsonfield import JSONField as JSONField
+    from jsonfield import JSONField
 else:
     from django.contrib.postgres.fields import JSONField
 
@@ -52,15 +53,32 @@ def create_auth_token(sender, instance=None, created=False, **kwargs):
         Token.objects.create(user=instance)
 
 
-class URLFieldExtra(URLField):
-    schemes = ['http',
+class URIValidator(URLValidator):
+    """
+    A validator for generic URIs that also allows additional schemes not
+    supported by the default Django URLValidator.
+    """
+
+    schemes = ('http',
                'https',
                'ftp',
                'sftp',
                's3',
                'magnet',
-               ]
-    default_validators = [URLValidator(schemes=schemes)]
+               'file',
+               )
+
+    def __call__(self, value):
+        try:
+            scheme = urlparse(value).scheme
+            # skip additional validation of file, magnet, s3 etc
+            # since the regexes used in URLValidator assumes web addresses
+            # with hosts/IPs etc
+            if scheme not in super().schemes:
+                return
+        except ValueError as e:
+            raise ValidationError(self.message, code=self.code)
+        super().__call__(value)
 
 
 class UserProfile(models.Model):
@@ -202,6 +220,8 @@ class Job(UUIDModel):
     exit_code = IntegerField(blank=True, null=True)
     # django-jsonfield or native Postgres
     params = JSONField(default=OrderedDict)
+    # jsonfield or native Postgres
+    # params = JSONField(load_kwargs={'object_pairs_hook': OrderedDict})
 
     input_files = ForeignKey('FileSet', null=True, blank=True,
                              related_name='jobs_as_input',
@@ -287,9 +307,13 @@ class File(UUIDModel):
     checksum = CharField(max_length=255, blank=True, null=True)
     owner = ForeignKey(User, on_delete=models.CASCADE, related_name='files')
     # The URL to the file. Could be file://, https://, s3://, sftp://
-    location = URLFieldExtra(max_length=2048, blank=False, null=False)
+    location = URLField(max_length=2048, blank=False, null=False,
+                        validators=[URIValidator()])
     # origin = URLFieldExtra(max_length=2048)
+
     metadata = JSONField(default=OrderedDict)
+
+    # metadata = JSONField(load_kwargs={'object_pairs_hook': OrderedDict})
 
     # There is no direct link from File->Job, instead we use FileSet->Job.
     # This way, Files represent a single unique file (on disk, or at a URL),
@@ -345,7 +369,7 @@ class FileSet(UUIDModel):
     files = JSONField(default=list)
 
     # TODO: a list of FileSet ids (effectively like subdirectories) ?
-    # filesets = JSONField(default=list())
+    # filesets = JSONField(default=list)
 
     job = ForeignKey(Job,
                      on_delete=models.CASCADE,

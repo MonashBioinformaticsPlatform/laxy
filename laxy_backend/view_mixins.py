@@ -1,4 +1,5 @@
 from rest_framework.response import Response
+from django.http import HttpResponse
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.schemas import SchemaGenerator
@@ -67,6 +68,10 @@ class PatchMixin:
         obj = self.get_obj(uuid)
         if obj is None:
             return Response(status=status.HTTP_404_NOT_FOUND)
+
+        if 'id' in request.data:
+            return HttpResponse(status=status.HTTP_400_BAD_REQUEST,
+                                reason="id cannot be updated")
 
         serializer = self.Meta.serializer(obj,
                                           data=request.data,

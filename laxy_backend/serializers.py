@@ -1,8 +1,10 @@
 import pydash
 from django.db import transaction
 from rest_framework import serializers
+from django.core.validators import URLValidator
 from rest_framework import status
 from rest_framework.fields import CurrentUserDefault
+from drf_openapi.entities import VersionedSerializers
 from http.client import responses as response_code_messages
 
 from . import models
@@ -17,6 +19,7 @@ def status_codes(*codes):
 
 
 class BaseModelSerializer(serializers.ModelSerializer):
+
     class Meta:
         fields = '__all__'
         read_only_fields = ('id',)
@@ -51,9 +54,14 @@ class EventSerializer(BaseModelSerializer):
 
 
 class FileSerializer(BaseModelSerializer):
+
+    location = serializers.CharField(
+        max_length=2048,
+        validators=[models.URIValidator()])
+
     class Meta:
         model = models.File
-        fields = '__all__'
+        fields = ('id', 'name', 'location', 'owner', 'checksum', 'metadata')
         read_only_fields = ('id', 'owner',)
         error_status_codes = status_codes()
 
@@ -63,14 +71,18 @@ class FileSerializerPostRequest(FileSerializer):
         exclude = ('owner',)
 
 
-class FileSetSerializer(FileSerializer):
-    class Meta(FileSerializer.Meta):
+class FileSetSerializer(BaseModelSerializer):
+    class Meta:
         model = models.FileSet
+        fields = '__all__'
+        read_only_fields = ('id', 'owner',)
+        error_status_codes = status_codes()
 
 
 class FileSetSerializerPostRequest(FileSerializerPostRequest):
-    class Meta(FileSerializerPostRequest.Meta):
+    class Meta(FileSetSerializer.Meta):
         model = models.FileSet
+        exclude = ('owner',)
 
 
 class ComputeResourceSerializer(BaseModelSerializer):

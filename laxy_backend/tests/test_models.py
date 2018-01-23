@@ -6,10 +6,10 @@ import json
 import jwt
 
 from django.test import TestCase
+from django.core.exceptions import ObjectDoesNotExist
 from django.test.client import Client
 from django.urls import reverse
 from django.contrib.auth.models import User
-
 from rest_framework.test import APIClient
 
 from ..models import Job, File, FileSet
@@ -126,6 +126,110 @@ class FileSetModelTest(TestCase):
         self.fileset.save()
         db_fileset = FileSet.objects.get(id=fileset.id)
         self.assertNotIn(file_a.id, db_fileset.files)
+
+        # The delete flag removes the associated File record
+        fileset.add([file_a.id, file_b])
+        self.fileset.remove(file_a, delete=True)
+        with self.assertRaises(ObjectDoesNotExist):
+            db_file_a = File.objects.get(id=file_a.id)
+        db_file_b = File.objects.get(id=file_b.id)
+
+
+class FileViewTest(TestCase):
+    def setUp(self):
+        user, user_client = _create_user_and_login('user1', 'userpass1',
+                                                   is_superuser=False)
+        self.user = user
+        self.user_client = user_client
+
+        self.file_a = File(owner=self.user,
+                           # no name to test File.name() property serialization
+                           # name="file_a",
+                           location="file:///tmp/file_a")
+        self.file_b = File(owner=self.user,
+                           name="file_b",
+                           location="file:///tmp/file_b")
+        self.file_a.save()
+        self.file_b.save()
+
+    def test_create_file(self):
+        job_json = {
+            'location': 'http://example.com/file_c.txt',
+            'checksum': 'xxh64:c70492d07ce72425',
+            'metadata': {'tags': ['text', 'interesting']}
+        }
+
+        response = self.user_client.post(
+            reverse('laxy_backend:create_file'),
+            data=json.dumps(job_json),
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 200)
+        file_id = response.data.get('id')
+        new_file = File.objects.get(id=file_id)
+        self.assertEqual(new_file.location, 'http://example.com/file_c.txt')
+        self.assertEqual(new_file.name, 'file_c.txt')
+        self.assertEqual(new_file.checksum, 'xxh64:c70492d07ce72425')
+        self.assertEqual(new_file.owner, self.user)
+        self.assertDictEqual(new_file.metadata,
+                             {'tags': ['text', 'interesting']})
+
+    def test_create_file_with_scheme_file(self):
+        job_json = {
+            'location': 'file:///tmp/file_c.txt',
+        }
+
+        response = self.user_client.post(
+            reverse('laxy_backend:create_file'),
+            data=json.dumps(job_json),
+            content_type='application/json'
+        )
+
+        # TODO: for some reason file:// URLs are giving a validation error,
+        #       returning 400
+        import sys
+        sys.stderr.write(json.dumps(response.data, indent=2))
+        self.assertEqual(response.status_code, 200)
+
+    def test_get_file_unauthenticated(self):
+        client = APIClient()
+        response = client.get(reverse('laxy_backend:file',
+                                      args=[self.file_a.uuid()]))
+        self.assertEqual(response.status_code, 401)
+
+    def test_get_file(self):
+        response = self.user_client.get(reverse('laxy_backend:file',
+                                                args=[self.file_a.uuid()]))
+        self.assertEqual(response.status_code, 200)
+        json_data = response.data
+        self.assertEqual(json_data.get('id'), self.file_a.id)
+        self.assertEqual(json_data.get('location'), 'file:///tmp/file_a')
+        self.assertEqual(json_data.get('checksum'), None)
+        self.assertEqual(json_data.get('metadata'), {})
+
+    def test_update_file_checksum(self):
+        new_checksum = 'md5:cbda22bcb41ab0151b438589aa4637e2'
+        response = self.user_client.patch(
+            reverse('laxy_backend:file', args=[self.file_a.uuid()]),
+            data=json.dumps({'checksum': new_checksum}),
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 204)
+
+        updated_file = File.objects.get(id=self.file_a.id)
+        self.assertEqual(updated_file.checksum, new_checksum)
+
+    def test_update_file_id_attempt(self):
+        new_id = 'some_UUID_string'
+        response = self.user_client.patch(
+            reverse('laxy_backend:file', args=[self.file_a.uuid()]),
+            data=json.dumps({'id': new_id}),
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 400)
 
 
 class JobViewTest(TestCase):
