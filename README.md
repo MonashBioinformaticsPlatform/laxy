@@ -12,7 +12,7 @@ open http://localhost:9997/
 ## Creating the UML diagram(s) for the Django models
 
 ```bash
-./manage.py graph_models --pygraphviz -a -g -o docs/models_uml.png
+./manage.py graph_models --pygraphviz -g -o docs/models_uml.png laxy_backend
 ```
 
 ## Backend
@@ -20,6 +20,13 @@ open http://localhost:9997/
 ### Setup
 
 ```bash
+# Create a Python virtual environment, install package dependencies
+python3 -m venv venv
+source venv/bin/activate
+python3 install -U -r requirements.txt
+# For development
+python3 install -U -r requirements-dev.txt
+
 # Copy the example settings environment and edit as required
 cp .env_example .env
 vi .env
@@ -33,6 +40,12 @@ vi .env
 ./manage.py migrate
 
 ./manage.py createsuperuser
+```
+
+### Run
+```bash
+source venv/bin/activate
+DEBUG=yes python3 manage.py runserver 0.0.0.0:8000
 ```
 
 OpenAPI / Swagger API (via drf_openapi): 
