@@ -68,13 +68,13 @@ class FileSerializer(BaseModelSerializer):
 
 class FileSerializerPostRequest(FileSerializer):
     class Meta(FileSerializer.Meta):
-        exclude = ('owner',)
+        fields = ('id', 'name', 'location', 'checksum', 'metadata')
 
 
 class FileSetSerializer(BaseModelSerializer):
     class Meta:
         model = models.FileSet
-        fields = '__all__'
+        fields = ('id', 'name', 'owner', 'files', 'job')
         read_only_fields = ('id', 'owner',)
         error_status_codes = status_codes()
 
@@ -82,7 +82,7 @@ class FileSetSerializer(BaseModelSerializer):
 class FileSetSerializerPostRequest(FileSerializerPostRequest):
     class Meta(FileSetSerializer.Meta):
         model = models.FileSet
-        exclude = ('owner',)
+        fields = ('id', 'name', 'files', 'job')
 
 
 class ComputeResourceSerializer(BaseModelSerializer):
