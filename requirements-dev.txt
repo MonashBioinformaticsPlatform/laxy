@@ -1,2 +1,4 @@
+django-extensions  # apt: graphviz graphviz-dev
 docker-compose
 mercurial
+# pip-chill  # nice idea that is broken ?
