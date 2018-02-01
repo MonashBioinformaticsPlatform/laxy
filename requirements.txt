@@ -26,13 +26,13 @@ django-celery-results==1.0.1
 django-environ==0.4.4
 django-filter==1.1.0
 django-guardian==1.4.9
-django-jsonfield==1.0.1
+hg+https://bitbucket.org/schinckel/django-jsonfield#egg=django-jsonfield
 django-rest-swagger==2.1.2
 django-reversion==2.0.13
 djangorestframework==3.7.7
 djangorestframework-jwt==1.11.0
 docutils==0.14
-drf-openapi==1.3.0
+git+https://github.com/maykinmedia/drf_openapi.git@105-proxy-label-cannot-be-decoded#egg=drf_openapi
 enasearch==0.2.0
 ephem==3.7.6.0
 flake8==3.5.0

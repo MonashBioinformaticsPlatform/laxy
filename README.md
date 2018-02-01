@@ -19,13 +19,18 @@ open http://localhost:9997/
 
 ### Setup
 
+Dependencies:
+
+* Python 3.6+
+
 ```bash
+
 # Create a Python virtual environment, install package dependencies
-python3 -m venv venv
+python3.6 -m venv venv
 source venv/bin/activate
-python3 install -U -r requirements.txt
+python3.6 install -U -r requirements.txt
 # For development
-python3 install -U -r requirements-dev.txt
+python3.6 install -U -r requirements-dev.txt
 
 # Copy the example settings environment and edit as required
 cp .env_example .env
@@ -45,7 +50,7 @@ vi .env
 ### Run
 ```bash
 source venv/bin/activate
-DEBUG=yes python3 manage.py runserver 0.0.0.0:8000
+DEBUG=yes python3.6 manage.py runserver 0.0.0.0:8000
 ```
 
 OpenAPI / Swagger API (via drf_openapi): 
