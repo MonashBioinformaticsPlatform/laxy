@@ -22,6 +22,7 @@ from laxy_backend.views import (JobView, JobCreate,
                                 FileCreate, FileView,
                                 FileSetCreate, FileSetView,
                                 ComputeResourceView, ComputeResourceCreate,
+                                ENAQueryView, ENAFastqUrlQueryView,
                                 view_user_profile)
 
 from laxy_backend.view_event import Events
@@ -93,6 +94,13 @@ api_urls = [
     re_path(r'event/$',
             Events.as_view(),
             name='event'),
+
+    re_path(r'ena/$',
+            ENAQueryView.as_view(),
+            name='ena_query'),
+    re_path(r'ena/fastqs/$',
+            ENAFastqUrlQueryView.as_view(),
+            name='ena_fastq_ulr_query'),
 ]
 
 urlpatterns = [

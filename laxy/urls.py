@@ -17,6 +17,12 @@ from rest_framework.documentation import include_docs_urls
 
 from .openapi import LaxyOpenAPISchemaView
 
+auth_token_urls = [
+    # https://getblimp.github.io/django-rest-framework-jwt/
+    re_path(r'^get-token/', obtain_jwt_token),
+    re_path(r'^refresh-token/', refresh_jwt_token),
+    re_path(r'^verify-token/', verify_jwt_token, name='jwt-verify-token'),
+]
 
 urlpatterns = [
     re_path(r'^admin/', admin.site.urls),
@@ -25,15 +31,12 @@ urlpatterns = [
     # re_path(r'^logout/$', auth_views.LogoutView.as_view()),
     re_path('^', include('django.contrib.auth.urls')),
 
-    # https://getblimp.github.io/django-rest-framework-jwt/
-    re_path(r'^jwt/get-token/', obtain_jwt_token),
-    re_path(r'^jwt/refresh-token/', refresh_jwt_token),
-    re_path(r'^jwt/verify-token/', verify_jwt_token, name='jwt-verify-token'),
+    re_path(r'^api/v1/auth/', include(auth_token_urls)),
 
     ## re_path(r'^', include(router.urls)),
-    # re_path(r'^coreapi/', include_docs_urls(title='Laxy API',
-    #                                         authentication_classes=[],
-    #                                         permission_classes=[])),
+    re_path(r'^coreapi/', include_docs_urls(title='Laxy API',
+                                            authentication_classes=[],
+                                            permission_classes=[])),
 
     re_path(r'^api-auth/', include('rest_framework.urls',
                                    namespace='rest_framework')),

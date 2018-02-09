@@ -1,3 +1,4 @@
+import json
 import pydash
 from django.db import transaction
 from rest_framework import serializers
@@ -237,3 +238,9 @@ class JobSerializerRequest(JobSerializerBase):
         # instance.save()  # instance.output_files.add saves
 
         return serializer.save()
+
+
+class SchemalessJsonResponseSerializer(serializers.Serializer):
+
+    def to_representation(self, obj):
+        return obj

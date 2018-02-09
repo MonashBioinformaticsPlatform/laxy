@@ -76,12 +76,16 @@ class DownloadTaskTest(TestCase):
         self.assetFileExists(fn)
 
     def test_ena_get_fastq_urls(self):
-        urls = get_fastq_urls('PRJNA214799')
+        urls = get_fastq_urls(['PRJNA214799'])
+
+        self.assertListEqual([k for k in urls.keys()], self.ena_expected_urls)
+
+        urls = get_fastq_urls(['PRJNA214799', 'PRJNA214799'])
 
         self.assertListEqual([k for k in urls.keys()], self.ena_expected_urls)
 
     def test_ena_create_file_objects(self):
-        urls = get_fastq_urls('PRJNA214799')
+        urls = get_fastq_urls(['PRJNA214799'])
         file_objs = create_file_objects(urls, owner=self.admin_user)
 
         self.assertTrue(file_objs)

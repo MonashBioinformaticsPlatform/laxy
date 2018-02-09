@@ -1,3 +1,4 @@
+from typing import Dict, List
 from django.shortcuts import render
 
 import logging
@@ -39,7 +40,10 @@ from rest_framework.permissions import (AllowAny,
                                         IsAdminUser,
                                         DjangoObjectPermissions)
 from rest_framework_jwt.authentication import JSONWebTokenAuthentication
-
+from django.utils.encoding import force_text
+import coreschema
+import coreapi
+from rest_framework.filters import BaseFilterBackend
 from drf_openapi.utils import view_config
 
 from celery import shared_task
@@ -58,10 +62,12 @@ from .serializers import (PatchSerializerResponse,
                           FileSerializer,
                           FileSerializerPostRequest,
                           FileSetSerializer,
-                          FileSetSerializerPostRequest)
+                          FileSetSerializerPostRequest,
+                          SchemalessJsonResponseSerializer,)
 
 from . import tasks
-
+from . import ena
+from .util import sh_bool
 from .view_mixins import JSONView, GetMixin, PatchMixin, DeleteMixin, PostMixin
 
 logger = logging.getLogger(__name__)
@@ -69,18 +75,102 @@ logger = logging.getLogger(__name__)
 PUBLIC_IP = requests.get('http://api.ipify.org').text
 
 
-def sh_bool(boolean):
+# TODO: For reason I don't understand and haven't investigated deeply,
+#       Swagger/CoreAPI only show the 'name' for the query parameter if
+#       name='query'. Any other value doesn't seem to appear in the auto-generated
+#       docs when applying this as a filter backend as intended
+class QueryParamFilterBackend(BaseFilterBackend):
     """
-    Formats a boolean to be passed to a bash script environment (eg run_job.sh)
-    :param boolean:
-    :type boolean:
-    :return: 'yes' or 'no'
-    :rtype: str
+    This class largely exists so that query parameters can appear in the automatic documentation.
+
+    A subclass is used in a DRF view like:
+
+        filter_backends = (CustomQueryParamFilterBackend,)
+
+    to specify the name, description and type of query parameters.
+
+    eg http://my_url/?query=somestring
+
+    To define query params subclass it and pass a list of dictionaries into the superclass constructor like:
+
+    class CustomQueryParams(QueryParamFilterBackend):
+        def __init__(self):
+            super().__init__([{name: 'query',
+                               description: 'A comma separated list of something.'}])
+
     """
-    if boolean:
-        return 'yes'
-    else:
-        return 'no'
+    def __init__(self, query_params: List[Dict[str, any]]=None):
+
+        if query_params is None:
+            query_params = []
+
+        for qp in query_params:
+            field = coreapi.Field(
+                name=qp.get('name'),
+                location=qp.get('location', qp.get('name')),
+                description=qp.get('description', None),
+                example=qp.get('example', None),
+                required=qp.get('required', True),
+                type=qp.get('type', 'string'),
+                schema=coreschema.String(
+                    title=force_text(qp.get('title', (qp.get('name', False) or qp.get('name')))),
+                    description=force_text(qp.get('description', '')))
+            )
+
+            if hasattr(self, 'schema_fields'):
+                self.schema_fields.append(field)
+            else:
+                self.schema_fields = [field]
+
+    def get_schema_fields(self, view):
+        return self.schema_fields
+
+
+class ENAQueryParams(QueryParamFilterBackend):
+    def __init__(self):
+        super().__init__([
+            dict(name='accessions',
+                 example='PRJNA276493,SRR950078',
+                 description='A comma separated list of ENA/SRA accessions.'),
+        ])
+
+
+class ENAQueryView(APIView):
+    renderer_classes = (JSONRenderer,)
+    serializer_class = SchemalessJsonResponseSerializer
+    # TODO: Would this be better achieved with a SearchFilter ?
+    # http://www.django-rest-framework.org/api-guide/filtering/#searchfilter
+    filter_backends = (ENAQueryParams,)
+    api_docs_visible_to = 'public'
+
+    @view_config(response_serializer=SchemalessJsonResponseSerializer)
+    def get(self, request, version=None):
+        accession_list = request.query_params.get('accessions', None)
+        if accession_list is not None:
+            accessions = accession_list.split(',')
+            ena_result = ena.search_ena_accessions(accessions)
+
+            return Response(ena_result, status=status.HTTP_200_OK)
+
+        return Response({}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ENAFastqUrlQueryView(APIView):
+    renderer_classes = (JSONRenderer,)
+    serializer_class = SchemalessJsonResponseSerializer
+    filter_backends = (ENAQueryParams,)
+    api_docs_visible_to = 'public'
+
+    @view_config(response_serializer=SchemalessJsonResponseSerializer)
+    def get(self, request, version=None):
+        accession_list = request.query_params.get('accessions', None)
+        if accession_list is not None:
+            accessions = accession_list.split(',')
+            ena_result = ena.get_fastq_urls(accessions)
+
+            return Response(ena_result, status=status.HTTP_200_OK)
+
+        return Response({}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class FileCreate(JSONView):
@@ -90,6 +180,7 @@ class FileCreate(JSONView):
 
     queryset = Meta.model.objects.all()
     serializer_class = Meta.serializer
+
     # TODO: Only the user that created the file should be able to view
     # and modify the job
     # permission_classes = (DjangoObjectPermissions,)
@@ -127,6 +218,7 @@ class FileView(GetMixin,
 
     queryset = Meta.model.objects.all()
     serializer_class = Meta.serializer
+
     # TODO: Only the user that created the file should be able to view
     # and modify the job
     # permission_classes = (DjangoObjectPermissions,)
@@ -161,6 +253,7 @@ class FileSetCreate(PostMixin,
 
     queryset = Meta.model.objects.all()
     serializer_class = Meta.serializer
+
     # TODO: Only the user that created the file should be able to view
     # and modify the job
     # permission_classes = (DjangoObjectPermissions,)
@@ -193,6 +286,7 @@ class FileSetView(GetMixin,
 
     queryset = Meta.model.objects.all()
     serializer_class = Meta.serializer
+
     # TODO: Only the user that created the file should be able to view
     # and modify the job
     # permission_classes = (DjangoObjectPermissions,)
@@ -270,9 +364,8 @@ class ComputeResourceView(GetMixin,
             req_status = serializer.validated_data.get('status', None)
             if (obj.status == ComputeResource.STATUS_STARTING or
                 obj.status == ComputeResource.STATUS_ONLINE) and \
-                (req_status == ComputeResource.STATUS_DECOMMISSIONED or
-                 req_status == ComputeResource.STATUS_TERMINATING):
-
+                    (req_status == ComputeResource.STATUS_DECOMMISSIONED or
+                     req_status == ComputeResource.STATUS_TERMINATING):
                 # remove the status field supplied in the request.
                 # this task will update the status in the database itself
                 serializer.validated_data.pop('status')
@@ -397,11 +490,11 @@ class JobView(JSONView):
 
             job = self.get_obj(job_id)
             if (job.done and
-                job.compute_resource and
-                job.compute_resource.disposable and
-                not job.compute_resource.running_jobs()):
-                    task_data = dict(job_id=job_id)
-                    tasks.stop_cluster.apply_async(args=(task_data,))
+                    job.compute_resource and
+                    job.compute_resource.disposable and
+                    not job.compute_resource.running_jobs()):
+                task_data = dict(job_id=job_id)
+                tasks.stop_cluster.apply_async(args=(task_data,))
 
             return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -435,7 +528,7 @@ class JobView(JSONView):
     def _generate_s3_download_urls(self, job_id,
                                    subpath='input/final',
                                    expires_in=getattr(settings,
-                                       'PRESIGNED_S3_URL_TTL', None)):
+                                                      'PRESIGNED_S3_URL_TTL', None)):
         """
         For a completed job, generates a set of expiring pre-signed
         S3 download URLs, to be passed to a third party application
@@ -599,10 +692,10 @@ class JobCreate(JSONView):
             # domain = get_current_site(request).domain
             # public_ip = requests.get('https://api.ipify.org').text
             callback_url = (u'{scheme}://{domain}:{port}/api/v1/job/{job_id}/'
-                            .format(scheme=request.scheme,
-                                    domain=PUBLIC_IP,
-                                    port=port,
-                                    job_id=job_id))
+                .format(scheme=request.scheme,
+                        domain=PUBLIC_IP,
+                        port=port,
+                        job_id=job_id))
 
             # better alternative to test
             # callback_url = reverse('job', args=[job_id])
@@ -664,8 +757,8 @@ class JobCreate(JSONView):
                            # when required
                            # tasks.stop_cluster.s()
                            ).apply_async()
-                          # TODO: Make this error handler work.
-                          #.apply_async(link_error=self._task_err_handler.s())
+            # TODO: Make this error handler work.
+            # .apply_async(link_error=self._task_err_handler.s())
 
             # Update the representation of the compute_resource to the uuid,
             # otherwise it is serialized to 'ComputeResource object'

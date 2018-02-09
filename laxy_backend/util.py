@@ -8,6 +8,20 @@ import cgi
 import os
 from urllib.parse import urlparse
 
+
+def sh_bool(boolean):
+    """
+    Formats a boolean to be passed to a bash script environment (eg run_job.sh)
+    :param boolean:
+    :type boolean:
+    :return: 'yes' or 'no'
+    :rtype: str
+    """
+    if boolean:
+        return 'yes'
+    else:
+        return 'no'
+
 def url_safe_base64_uuid() -> str:
     padded_base64_uuid = base64.urlsafe_b64encode(uuid.uuid4().bytes)
     return padded_base64_uuid.decode('ascii').replace('=', '')

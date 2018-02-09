@@ -10,11 +10,13 @@ PyYAML
 toolz
 xxhash
 lxml
+pandas
 enasearch
 
 # Base Django packages
 django
 django-reversion
+django-cors-headers
 
 # The Bitbucket one
 # django-jsonfield  # https://bitbucket.org/schinckel/django-jsonfield
