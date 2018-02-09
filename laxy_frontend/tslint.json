@@ -1,0 +1,41 @@
+{
+  "defaultSeverity": "error",
+  "extends": [
+    "tslint:recommended"
+  ],
+  "jsRules": {},
+  "rules": {
+    "quotemark": [
+      true,
+      "single"
+    ],
+    "indent": [
+      true
+    ],
+    "interface-name": [
+      false
+    ],
+    // "variable-name": false,
+    "prefer-for-of": false,
+    "object-literal-shorthand": false,
+    "only-arrow-functions": false,
+    "ordered-imports": false,
+    "trailing-comma": false,
+    "no-var-requires": false,
+    "no-console": false,
+    "arrow-parens": false,
+    // Pending fix for shorthand property names.
+    "object-literal-sort-keys": false,
+    "strict-boolean-expressions": true,
+    "ban-comma-operator": true,
+    "curly": [true, "ignore-same-line"],
+    "no-for-in-array": true,
+    "no-bitwise": true,
+    "switch-default": true,
+    "triple-equals": [true, "allow-null-check", "allow-undefined-check"],
+    "prefer-const": true,
+    "semicolon": [true, "always"],
+    "prefer-template": [true, "allow-single-concat"]
+  },
+  "rulesDirectory": []
+}

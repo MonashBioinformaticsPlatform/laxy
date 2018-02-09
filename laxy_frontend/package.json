@@ -6,10 +6,10 @@
   "scripts": {
     "build": "webpack",
     "watch": "webpack -d --watch --progress",
-    "dev:": "webpack-dev-server -d --progress --watch --port 9997 --open --content-base ./ && python3 ../manage.py runserver 9998",
+    "dev": "webpack-dev-server -d --progress --watch --port 9997 --open --content-base ./ && python3 ../manage.py runserver 9998",
     "django": "python3 ../manage.py runserver 9998",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "webpack-dev-server --watch --progress --port 9997 --open --content-base ./",
+    "start": "webpack-dev-server -d --progress --watch --port 9997 --open --content-base ./",
     "public_demo": "webpack-dev-server --port 4000 --host 0.0.0.0 --content-base ./"
   },
   "author": "",
@@ -21,6 +21,7 @@
     "@types/axios": "^0.14.0",
     "@types/js-cookie": "^2.0.28",
     "@types/lodash": "^4.14.77",
+    "@types/numeral": "0.0.22",
     "@types/vue-material": "../../vue-material-types",
     "babel-core": "^6.26.0",
     "css-loader": "^0.28.1",
@@ -44,6 +45,7 @@
     "es6-promise": "^4.1.1",
     "js-cookie": "^2.1.4",
     "lodash": "^4.17.4",
+    "numeral": "^2.0.6",
     "vue": "^2.4.4",
     "vue-markdown": "^2.2.4",
     "vue-moment": "^2.0.2",
