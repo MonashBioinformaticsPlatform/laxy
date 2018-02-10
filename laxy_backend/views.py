@@ -145,6 +145,26 @@ class ENAQueryView(APIView):
 
     @view_config(response_serializer=SchemalessJsonResponseSerializer)
     def get(self, request, version=None):
+        """
+        Queries ENA metadata. Essentially a proxy for ENA REST API
+        requests by accession, converting the XML output to JSON
+        (eg https://www.ebi.ac.uk/ena/data/view/SRR950078&display=xml).
+
+        Returns JSON equivalent to the ENA response.
+
+        Query parameters:
+
+        * `accessions` - a comma seperated list of ENA accessions
+
+        <!--
+        :param request:
+        :type request:
+        :param version:
+        :type version:
+        :return:
+        :rtype:
+        -->
+        """
         accession_list = request.query_params.get('accessions', None)
         if accession_list is not None:
             accessions = accession_list.split(',')
@@ -155,7 +175,7 @@ class ENAQueryView(APIView):
         return Response({}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ENAFastqUrlQueryView(APIView):
+class ENAFastqUrlQueryView(JSONView):
     renderer_classes = (JSONRenderer,)
     serializer_class = SchemalessJsonResponseSerializer
     filter_backends = (ENAQueryParams,)
@@ -163,6 +183,24 @@ class ENAFastqUrlQueryView(APIView):
 
     @view_config(response_serializer=SchemalessJsonResponseSerializer)
     def get(self, request, version=None):
+        """
+        Returns a JSON object contains study, experiment, run and sample
+        accessions associated with a given ENA accession, as well as the
+        FASTQ FTP download links, md5 checksum, size and read count.
+
+        Query parameters:
+
+        * `accessions` - a comma separated list of ENA accessions
+
+        <!--
+        :param request:
+        :type request:
+        :param version:
+        :type version:
+        :return:
+        :rtype:
+        -->
+        """
         accession_list = request.query_params.get('accessions', None)
         if accession_list is not None:
             accessions = accession_list.split(',')
@@ -187,7 +225,7 @@ class FileCreate(JSONView):
 
     @view_config(request_serializer=FileSerializerPostRequest,
                  response_serializer=FileSerializer)
-    @method_decorator(csrf_exempt)
+    # @method_decorator(csrf_exempt)
     def post(self, request, version=None):
         """
         Create a new File. UUIDs are autoassigned.
@@ -260,8 +298,8 @@ class FileSetCreate(PostMixin,
 
     @view_config(request_serializer=FileSetSerializerPostRequest,
                  response_serializer=FileSetSerializer)
-    @method_decorator(csrf_exempt)
-    def post(self, request):
+    # @method_decorator(csrf_exempt)
+    def post(self, request, version=None):
         """
         Create a new FileSet. UUIDs are autoassigned.
 
@@ -292,7 +330,7 @@ class FileSetView(GetMixin,
     # permission_classes = (DjangoObjectPermissions,)
 
     @view_config(response_serializer=FileSetSerializer)
-    def get(self, request, uuid):
+    def get(self, request, uuid, version=None):
         """
         Returns info about a FileSet, specified by UUID.
 
@@ -309,7 +347,7 @@ class FileSetView(GetMixin,
 
     @view_config(request_serializer=FileSetSerializer,
                  response_serializer=PatchSerializerResponse)
-    def patch(self, request, uuid):
+    def patch(self, request, uuid, version=None):
         return super(FileSetView, self).patch(request, uuid)
 
 
@@ -324,7 +362,7 @@ class ComputeResourceView(GetMixin,
     serializer_class = Meta.serializer
     permission_classes = (IsAdminUser,)
 
-    def get(self, request, uuid):
+    def get(self, request, uuid, version=None):
         """
         Returns info about a ComputeResource, specified by UUID.
 
@@ -341,10 +379,14 @@ class ComputeResourceView(GetMixin,
 
     @view_config(request_serializer=ComputeResourceSerializer,
                  response_serializer=PatchSerializerResponse)
-    def patch(self, request, uuid):
+    def patch(self, request, uuid, version=None):
         """
+        Updates a ComputeResource record. Since this is a PATCH request,
+        partial updates are allowed.
 
-        PATCH: https://tools.ietf.org/html/rfc5789
+        **Side effect:** for disposable compute resources changing
+        `status` to `decommissioned` or `terminating` will
+        shutdown / terminate this resource so it is no longer available.
 
         <!--
         :param request:
@@ -392,8 +434,8 @@ class ComputeResourceCreate(PostMixin,
 
     @view_config(request_serializer=ComputeResourceSerializer,
                  response_serializer=ComputeResourceSerializer)
-    @method_decorator(csrf_exempt)
-    def post(self, request):
+    # @method_decorator(csrf_exempt)
+    def post(self, request, version=None):
         """
         Create a new ComputeResource. UUIDs are autoassigned.
 
@@ -640,10 +682,10 @@ class JobCreate(JSONView):
     #         tasks.stop_cluster.apply_async(
     #             args=({'compute_resource_id': job_id},))
 
-    @method_decorator(csrf_exempt)
     @view_config(request_serializer=JobSerializerRequest,
                  response_serializer=JobSerializerResponse)
-    def post(self, request):
+    # @method_decorator(csrf_exempt)
+    def post(self, request, version=None):
         """
         Create a new Job. UUIDs are autoassigned.
 
@@ -654,7 +696,8 @@ class JobCreate(JSONView):
         :rtype: rest_framework.response.Response
         -->
         """
-        request._dont_enforce_csrf_checks = True
+
+        # setattr(request, '_dont_enforce_csrf_checks', True)
 
         serializer = JobSerializerRequest(data=request.data)
         if serializer.is_valid():

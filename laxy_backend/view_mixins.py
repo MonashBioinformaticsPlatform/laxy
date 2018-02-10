@@ -37,12 +37,14 @@ class GetMixin:
         """
         Returns info about a model instance retrieved by UUID.
 
+        <!--
         :param request: The request object.
         :type request:
         :param uuid: The URL-encoded UUID.
         :type uuid: str
         :return: The response object.
         :rtype:
+        -->
         """
         obj = self.get_obj(uuid)
         if obj is None:
@@ -58,12 +60,14 @@ class PatchMixin:
 
         PATCH: https://tools.ietf.org/html/rfc5789
 
+        <!--
         :param request:
         :type request:
         :param uuid:
         :type uuid:
         :return:
         :rtype:
+        -->
         """
         obj = self.get_obj(uuid)
         if obj is None:
@@ -88,14 +92,16 @@ class PatchMixin:
 class DeleteMixin:
     def delete(self, request, uuid):
         """
+        Deletes the object specified via UUID.
 
+        <!--
         :param request:
         :type request:
         :param job_id:
         :type job_id:
         :return:
         :rtype:
-
+        -->
         """
         obj = self.get_obj(uuid)
         if obj is None:
@@ -111,10 +117,12 @@ class PostMixin:
         """
         Create a new model instance. UUIDs are autoassigned.
 
+        <!--
         :param request: The request object.
         :type request:
         :return: The response object.
         :rtype:
+        -->
         """
 
         serializer = self.Meta.serializer(data=request.data)
