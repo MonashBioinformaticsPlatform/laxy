@@ -160,7 +160,14 @@ TEMPLATES = [
 ]
 
 # https://github.com/ottoyiu/django-cors-headers#configuration
-CORS_ORIGIN_ALLOW_ALL = True
+# CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOW_CREDENTIALS = True
+CORS_ORIGIN_WHITELIST = ('localhost:8000',
+                         'localhost:9997',
+                         'erc.monash.edu',
+                         'erc.monash.edu.au',
+                         )
+# CSRF_TRUSTED_ORIGINS = ('localhost:8000',)
 
 REST_FRAMEWORK = {
     'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.URLPathVersioning',

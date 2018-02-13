@@ -22,8 +22,9 @@ from laxy_backend.views import (JobView, JobCreate,
                                 FileCreate, FileView,
                                 FileSetCreate, FileSetView,
                                 ComputeResourceView, ComputeResourceCreate,
-                                ENAQueryView, ENAFastqUrlQueryView,
-                                view_user_profile)
+                                ENAQueryView, ENAFastqUrlQueryView,)
+
+from laxy_backend.view_auth import Login, Logout, view_user_profile
 
 from laxy_backend.view_event import Events
 
@@ -66,6 +67,13 @@ api_urls = [
     # path('event/',
     #     Events.as_view(),
     #     name='event'),
+
+    re_path(r'auth/login/$',
+            Login.as_view(),
+            name='api_login'),
+    re_path(r'auth/logout/$',
+            Logout.as_view(),
+            name='api_logout'),
 
     re_path(r'job/(?P<job_id>[a-zA-Z0-9\-_]+)/$',
             JobView.as_view(),

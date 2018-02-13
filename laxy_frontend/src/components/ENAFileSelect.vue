@@ -76,16 +76,18 @@
 <script lang="ts">
     declare function require(path: string): any;
 
-    import "vue-material/dist/vue-material.css";
+    import 'vue-material/dist/vue-material.css';
 
-    import * as _ from "lodash";
-    import "es6-promise";
+    import * as _ from 'lodash';
+    import 'es6-promise';
 
-    import axios, {AxiosResponse} from "axios";
-    import Vue, {ComponentOptions} from "vue";
+    import axios, {AxiosResponse} from 'axios';
+    import Vue, {ComponentOptions} from 'vue';
     import VueMaterial from "vue-material";
-    import Component from "vue-class-component";
+    import Component from 'vue-class-component';
     import {Emit, Inject, Model, Prop, Provide, Watch} from "vue-property-decorator"
+
+    import {WebAPI} from '../web-api';
 
     interface ENASample {
         // pair?: ENASample,
@@ -111,7 +113,7 @@
     }
 
     // Test data
-    private const _dummysampleList: Array<ENASample> = [
+    const _dummysampleList: Array<ENASample> = [
         {
             run_accession: "SRRFAKE0001",
             sample_accession: "SAMFAKE0001",
@@ -140,6 +142,7 @@
 
     @Component({props: {}, filters: {}})
     export default class ENAFileSelect extends Vue {
+        public apiBaseUrl: string = "http://localhost:8000";
 
         public samples: Array<ENASample> = [];  // = _dummysampleList;
         public selectedSamples: Array<ENASample> = [];
@@ -149,12 +152,12 @@
 
         public ena_ids: DbAccession[] = [{accession: ""} as DbAccession];
 
-        public accession_input: string = "PRJNA276493, SRR950078";
+        public accession_input: string = "PRJNA276493, PRJEB3366, SRR950078";
 
-        private fetcher = axios.create({
-            baseURL: "http://localhost:8000",
-            headers: {"Authorization": "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxLCJ1c2VybmFtZSI6ImFkbWluIiwiZXhwIjoxNTE4MjMzMzQ1LCJlbWFpbCI6ImFqcGVycnlAcGFuc2FwaWVucy5jb20iLCJvcmlnX2lhdCI6MTUxNzg4Nzc0NX0.UVTobwKSeB6BJyNsa34C2bcpVdtOTZYFz7cefQCg8tY"}
-        });
+        // private fetcher = axios.create({
+        //     baseURL: "http://localhost:8000",
+        //     headers: {"Authorization": "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxLCJ1c2VybmFtZSI6ImFkbWluIiwiZXhwIjoxNTE4NzQ5MjA2LCJlbWFpbCI6ImFqcGVycnlAcGFuc2FwaWVucy5jb20iLCJvcmlnX2lhdCI6MTUxODQwMzYwNn0.Jn8SBl_7jVY7WX7hxJ9xYIdc5U02w7jlc6A2YzaLHXE"}
+        // });
         public submitting: boolean = false;
         public error_alert_message: string = "Everything is fine.";
 
@@ -180,10 +183,11 @@
             let accession_list = _.uniq(_.compact(accessions.trim().split(/[\s,]+/))).join(",");
             const url = `/api/v1/ena/fastqs?accessions=${accession_list}`;
             // console.log(url);
+            const fetcher = WebAPI.fetcher;
 
             try {
                 this.submitting = true;
-                const response = await this.fetcher.get(url) as AxiosResponse;
+                const response = await fetcher.get(url) as AxiosResponse;
                 this.submitting = false;
                 // if (response.data.status === "error") {
                 //     this.error_alert_message = `${response.status} ${response.statusText}`;

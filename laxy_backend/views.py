@@ -16,7 +16,6 @@ from django.contrib.sites.shortcuts import get_current_site
 from django.urls import reverse
 from django.contrib.auth import views as auth_views
 from django.utils.decorators import method_decorator
-from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.http import Http404
@@ -53,7 +52,7 @@ import reversion
 
 from braces.views import LoginRequiredMixin, CsrfExemptMixin
 
-from .jwt_helpers import get_jwt_user_header_dict
+from .jwt_helpers import get_jwt_user_header_dict, create_jwt_user_token
 from .models import Job, ComputeResource, File, FileSet
 from .serializers import (PatchSerializerResponse,
                           JobSerializerResponse,
@@ -832,20 +831,6 @@ def _get_default_compute_resource():
     compute.save()
     return compute
 
-
-@login_required()
-def view_user_profile(request):
-    token = _get_or_create_drf_token(request.user)
-
-    jwt_token = get_jwt_user_header_dict(request.user.username)['Authorization']
-    drf_token = 'Token %s' % token.key
-
-    return JsonResponse({'Authorization': [jwt_token, drf_token]})
-
-
-@login_required()
-def show_jwt(request):
-    return JsonResponse(get_jwt_user_header_dict(request.user.username))
 
 # def _test_celery_task():
 #     from celery import Celery

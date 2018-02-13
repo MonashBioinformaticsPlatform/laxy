@@ -240,6 +240,11 @@ class JobSerializerRequest(JobSerializerBase):
         return serializer.save()
 
 
+class LoginRequestSerializer(serializers.Serializer):
+    username = serializers.CharField(required=True)
+    password = serializers.CharField(required=True)
+
+
 class SchemalessJsonResponseSerializer(serializers.Serializer):
 
     def to_representation(self, obj):

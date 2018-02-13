@@ -35,7 +35,8 @@
     "triple-equals": [true, "allow-null-check", "allow-undefined-check"],
     "prefer-const": true,
     "semicolon": [true, "always"],
-    "prefer-template": [true, "allow-single-concat"]
+    "prefer-template": [true, "allow-single-concat"],
+    "member-ordering": [false]
   },
   "rulesDirectory": []
 }
