@@ -1,9 +1,13 @@
+import csv
+from typing import List
+
 from rest_framework.response import Response
 from django.http import HttpResponse
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.schemas import SchemaGenerator
 from rest_framework.renderers import JSONRenderer, SchemaJSRenderer, CoreJSONRenderer
+from rest_framework.parsers import JSONParser, BaseParser
 
 from drf_openapi.utils import view_config
 
@@ -12,6 +16,7 @@ class JSONView(APIView):
     # renderer_classes = (JSONRenderer, SchemaJSRenderer, CoreJSONRenderer,)
     # renderer_classes = (CoreJSONRenderer,)
     renderer_classes = (JSONRenderer,)
+    parser_classes = (JSONParser,)
     api_docs_visible_to = 'public'
 
     # def get(self, request):
@@ -30,6 +35,31 @@ class JSONView(APIView):
             return ModelClass.objects.get(id=uuid)
         except (ModelClass.DoesNotExist, ValueError):
             return None
+
+
+class CSVTextParser(BaseParser):
+    """
+    A CSV parser for DRF APIViews.
+
+    Based on the RFC 4180 text/csv MIME type, but extended with
+    a dialect.
+    https://tools.ietf.org/html/rfc4180
+    """
+    media_type = 'text/csv'
+
+    def parse(self, stream, media_type=None, parser_context=None) -> List[List]:
+        """
+        Return a list of lists representing the rows of a CSV file.
+        """
+        # return list(csv.reader(stream, dialect='excel'))
+
+        charset = 'utf-8'
+        media_type_params = dict([param.strip().split('=') for param in media_type.split(';')[1:]])
+        charset = media_type_params.get('charset', 'utf-8')
+        dialect = media_type_params.get('dialect', 'excel')
+        txt = stream.read().decode(charset)
+        csv_table = list(csv.reader(txt.splitlines(), dialect=dialect))
+        return csv_table
 
 
 class GetMixin:

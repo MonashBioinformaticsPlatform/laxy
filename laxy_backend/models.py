@@ -5,8 +5,10 @@
 #                       int, map, next, oct, open, pow, range, round,
 #                       str, super, zip)
 
+from typing import List
 from collections import OrderedDict, Sequence
 from datetime import datetime
+import csv
 import uuid
 from pathlib import Path
 from urllib.parse import urlparse
@@ -455,3 +457,111 @@ class FileSet(UUIDModel):
         :rtype: django.models.query.QuerySet(File)
         """
         return File.objects.filter(id__in=self.files)
+
+
+@reversion.register()
+class SampleSet(UUIDModel):
+    """
+    A set of samples for a pipeline run. Might be used to represent a directory.
+
+    name - The set name (eg directory name)
+    samples - A JSON blob representing each 'sample' and the associated Files.
+    owner - The User who owns this object.
+    """
+
+    name = CharField(max_length=2048)
+    owner = ForeignKey(User,
+                       on_delete=models.CASCADE,
+                       related_name='samplesets')
+    samples = JSONField(default=OrderedDict)
+
+    # 'samples' is a dictionary keyed by sample name, with a list of files grouped by
+    # merge_group and pair (a merge_group could be a set of equivalent lanes the sample
+    # was split accross, or a technical replicate):
+    #
+    # Equivalent samples (technical replicates) in different lanes can be merged -
+    # they could also be thought of as split FASTQ files.
+
+    # Structure:
+    # {sampleName, [[R1_lane1, R2_lane1], [R1_lane2, R2_lane2]]}
+
+    # A single 'sampleName' actually corresponds to a Sample+Condition+BiologicalReplicate.
+
+    # for two samples (R1, R2 paired end) split across two lanes, using File UUIDs
+    #
+    # {"sample_wildtype": [{"R1": "2VSd4mZvmYX0OXw07dGfnV", "R2: "3XSd4mZvmYX0OXw07dGfmZ"},
+    #                      {"R1": "Toopini9iPaenooghaquee", "R2": "Einanoohiew9ungoh3yiev"}],
+    #  "sample_mutant":   [{"R1": "zoo7eiPhaiwion6ohniek3", "R2": "ieshiePahdie0ahxooSaed"],
+    #                      ["R1": "nahFoogheiChae5de1iey3", "R2": "Dae7leiZoo8fiesheech5s"]],}
+    #
+    # We would merge the R1s together for a sample and the R2s together for a sample:
+    # eg, merge "2VSd4mZvmYX0OXw07dGfnV" with "Toopini9iPaenooghaquee"
+    #     and   "3XSd4mZvmYX0OXw07dGfmZ" with "Einanoohiew9ungoh3yiev"
+    # ..etc.. as technical replicates
+
+    def from_csv(self, csv_string, header=False, dialect='excel', comment_char='#', save=True):
+        """
+        Accepts a raw string, or a pre-parsed list-of-lists (eg from Python's csv.reader)
+
+        CSV format:
+
+        # Sample Name, R1 file, R2 file
+        SampleA, ftp://bla_lane1_R1.fastq.gz, ftp://bla_lane1_R2.fastq.gz
+        SampleA, ftp://bla_lane2_R1.fastq.gz, ftp://bla_lane2_R2.fastq.gz
+        SampleB, ftp://bla2_R1_001.fastq.gz, ftp://bla2_R2_001.fastq.gz
+               , ftp://bla2_R1_002.fastq.gz, ftp://bla2_R2_002.fastq.gz
+        SampleC, ftp://foo2_lane4_1.fastq.gz, ftp://foo2_lane4_2.fastq.gz
+        SampleC, ftp://foo2_lane5_1.fastq.gz, ftp://foo2_lane5_2.fastq.gz
+        ------
+
+        Sample name actually corresponds to Sample+Condition+BiologicalReplicate
+        (eg an ID for both the sample, replicate and condition/treatment)
+
+        :param csv_string:
+        :type csv_string:
+        :return:
+        :rtype:
+        """
+        samples = OrderedDict()
+        prev_sample_name = None
+
+        if isinstance(csv_string, str):
+            lines = list(csv.reader(csv_string.splitlines(), dialect=dialect))
+        elif isinstance(csv_string, List):
+            lines = csv_string
+
+        if header:  # skip header
+           lines = lines[1:]
+
+        for line in lines:
+            fields = line
+            # skip empty lines
+            if not fields:
+                continue
+            sample_name = fields[0].strip()
+
+            if sample_name == '':
+                if prev_sample_name:
+                    sample_name = prev_sample_name
+                else:
+                    raise ValueError('First row sample name cannot be blank')
+
+            if sample_name not in samples:
+                samples[sample_name] = []
+
+            pair = OrderedDict({f'R{n+1}': file.strip()
+                                for n, file in enumerate(fields[1:])})
+            samples[sample_name].append(pair)
+            prev_sample_name = sample_name
+
+        self.samples = samples
+        if save:
+            self.save()
+
+    def to_csv(self, newline='\r\n'):
+        lines = []
+        for sample_name, pairs in self.samples.items():
+            for pair in pairs:
+                lines.append(','.join([sample_name] + list(pair.values())))
+
+        return newline.join(lines)

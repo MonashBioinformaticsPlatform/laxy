@@ -19,6 +19,15 @@ def status_codes(*codes):
     return dict([(c, response_code_messages[c]) for c in codes])
 
 
+class SchemalessJsonResponseSerializer(serializers.Serializer):
+    """
+    We use this serializer anywhere we want to accept a schemaless blob of JSON.
+    """
+
+    def to_representation(self, obj):
+        return obj
+
+
 class BaseModelSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -59,6 +68,8 @@ class FileSerializer(BaseModelSerializer):
     location = serializers.CharField(
         max_length=2048,
         validators=[models.URIValidator()])
+    # metadata = serializers.JSONField()
+    metadata = SchemalessJsonResponseSerializer()  # becomes OpenAPI 'object' type
 
     class Meta:
         model = models.File
@@ -73,6 +84,8 @@ class FileSerializerPostRequest(FileSerializer):
 
 
 class FileSetSerializer(BaseModelSerializer):
+    files = serializers.ListField(required=True)
+
     class Meta:
         model = models.FileSet
         fields = ('id', 'name', 'owner', 'files', 'job')
@@ -80,10 +93,26 @@ class FileSetSerializer(BaseModelSerializer):
         error_status_codes = status_codes()
 
 
-class FileSetSerializerPostRequest(FileSerializerPostRequest):
+class FileSetSerializerPostRequest(FileSetSerializer):
     class Meta(FileSetSerializer.Meta):
         model = models.FileSet
         fields = ('id', 'name', 'files', 'job')
+
+
+class SampleSetSerializer(BaseModelSerializer):
+
+    # TODO: Swagger docs (drf_openapi) lists JSONField type as string.
+    #       So we use our 'SchemalessJsonResponseSerializer' instead
+    #       - this serializes correctly and lists the correct field type in the docs.
+    #       Maybe drf_openapi needs a fix ?
+    # samples = serializers.JSONField(required=True)
+    samples = SchemalessJsonResponseSerializer(required=True)
+
+    class Meta:
+        model = models.SampleSet
+        fields = ('id', 'name', 'owner', 'samples')
+        read_only_fields = ('id', 'owner',)
+        error_status_codes = status_codes()
 
 
 class ComputeResourceSerializer(BaseModelSerializer):
@@ -111,7 +140,8 @@ class JobSerializerBase(BaseModelSerializer):
                                               allow_null=True,
                                               max_length=24)
 
-    params = serializers.JSONField(required=False)
+    # params = serializers.JSONField(required=False)
+    params = SchemalessJsonResponseSerializer(required=False)  # becomes OpenAPI 'object' type
     compute_resource = serializers.CharField(required=False,
                                              allow_blank=True,
                                              allow_null=True,
@@ -244,8 +274,3 @@ class LoginRequestSerializer(serializers.Serializer):
     username = serializers.CharField(required=True)
     password = serializers.CharField(required=True)
 
-
-class SchemalessJsonResponseSerializer(serializers.Serializer):
-
-    def to_representation(self, obj):
-        return obj

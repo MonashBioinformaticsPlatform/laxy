@@ -24,6 +24,7 @@ from django.contrib.auth.models import User
 
 from rest_framework import generics
 from rest_framework import status
+from rest_framework.parsers import JSONParser, MultiPartParser
 
 from rest_framework.response import Response
 # from django.http import HttpResponse, JsonResponse
@@ -53,7 +54,7 @@ import reversion
 from braces.views import LoginRequiredMixin, CsrfExemptMixin
 
 from .jwt_helpers import get_jwt_user_header_dict, create_jwt_user_token
-from .models import Job, ComputeResource, File, FileSet
+from .models import Job, ComputeResource, File, FileSet, SampleSet
 from .serializers import (PatchSerializerResponse,
                           JobSerializerResponse,
                           JobSerializerRequest,
@@ -62,12 +63,13 @@ from .serializers import (PatchSerializerResponse,
                           FileSerializerPostRequest,
                           FileSetSerializer,
                           FileSetSerializerPostRequest,
+                          SampleSetSerializer,
                           SchemalessJsonResponseSerializer,)
 
 from . import tasks
 from . import ena
 from .util import sh_bool
-from .view_mixins import JSONView, GetMixin, PatchMixin, DeleteMixin, PostMixin
+from .view_mixins import JSONView, GetMixin, PatchMixin, DeleteMixin, PostMixin, CSVTextParser
 
 logger = logging.getLogger(__name__)
 
@@ -348,6 +350,152 @@ class FileSetView(GetMixin,
                  response_serializer=PatchSerializerResponse)
     def patch(self, request, uuid, version=None):
         return super(FileSetView, self).patch(request, uuid)
+
+
+class SampleSetCreate(JSONView):
+    class Meta:
+        model = SampleSet
+        serializer = SampleSetSerializer
+
+    queryset = Meta.model.objects.all()
+    serializer_class = Meta.serializer
+    parser_classes = (JSONParser, MultiPartParser, CSVTextParser,)
+
+    # TODO: Only the user that created the file should be able to view
+    # and modify the job
+    # permission_classes = (DjangoObjectPermissions,)
+
+    @view_config(request_serializer=SampleSetSerializer,
+                 response_serializer=SampleSetSerializer)
+    # @method_decorator(csrf_exempt)
+    def post(self, request, version=None):
+        """
+        Create a new SampleSet. UUIDs are autoassigned.
+
+        `samples` is an object keyed by sample name, with a list of files grouped by
+        'merge group' and pair (a 'merge group' could be a set of equivalent lanes the sample
+        was split across, or a technical replicate):
+
+        Equivalent samples (technical replicates) in different lanes can be merged -
+        they could also be thought of as split FASTQ files.
+
+        Several content-types are supported:
+
+          - `application/json` (accepting JSON objects below)
+          - `text/csv` where the POST body is CSV text as in: https://tools.ietf.org/html/rfc4180
+          - `multipart/form-data` where the `file` field is the CSV file.
+
+        CSV example:
+
+        ```csv
+        SampleA,ftp://bla_lane1_R1.fastq.gz,ftp://bla_lane1_R2.fastq.gz
+        SampleA,ftp://bla_lane2_R1.fastq.gz,ftp://bla_lane2_R2.fastq.gz
+        SampleB,ftp://bla2_R1_001.fastq.gz,ftp://bla2_R2_001.fastq.gz
+               ,ftp://bla2_R1_002.fastq.gz,ftp://bla2_R2_002.fastq.gz
+        SampleC,ftp://foo2_lane4_1.fastq.gz,ftp://foo2_lane4_2.fastq.gz
+        SampleC,ftp://foo2_lane5_1.fastq.gz,ftp://foo2_lane5_2.fastq.gz
+        ```
+
+        Columns are sampleName, R1 file, R2 file.
+        Repeated sample names represent 'merge groups' (eg additional lanes containing techinal replicates).
+
+        JSON request body example:
+
+        ```json
+        {sampleName, [[R1_lane1, R2_lane1],
+                      [R1_lane2, R2_lane2]]}
+        ```
+
+        A single 'sampleName' actually corresponds to a Sample+Condition+BiologicalReplicate.
+
+        For two samples (R1, R2 paired end) split across two lanes, using File UUIDs:
+
+        ```json
+        {"sample_wildtype": [{"R1": "2VSd4mZvmYX0OXw07dGfnV",
+                              "R2: "3XSd4mZvmYX0OXw07dGfmZ"},
+                             {"R1": "Toopini9iPaenooghaquee",
+                              "R2": "Einanoohiew9ungoh3yiev"},
+         "sample_mutant":   [{"R1": "zoo7eiPhaiwion6ohniek3",
+                              "R2": "ieshiePahdie0ahxooSaed"},
+                             {"R1": "nahFoogheiChae5de1iey3",
+                             "R2": "Dae7leiZoo8fiesheech5s"}]
+        }
+        ```
+
+        <!--
+        :param request: The request object.
+        :type request: django.http.HttpRequest
+        :return: The response object.
+        :rtype: rest_framework.response.Response
+        -->
+        """
+        content_type = request.content_type.split(';')[0].strip()
+        encoding = 'utf-8'
+
+        if content_type == 'multipart/form-data':
+            fh = request.data.get('file', None)
+            csv_table = fh.read().decode(encoding)
+            obj = self.Meta.model(name='CSV uploaded on %s' % datetime.isoformat(datetime.now()),
+                                  owner=request.user)
+            obj.from_csv(csv_table)
+
+            return Response(self.Meta.serializer(obj).data, status=status.HTTP_200_OK)
+
+        elif content_type == 'text/csv':
+            csv_table = request.data
+            obj = self.Meta.model(name='CSV uploaded on %s' % datetime.isoformat(datetime.now()),
+                                  owner=request.user)
+            obj.from_csv(csv_table)
+
+            return Response(self.Meta.serializer(obj).data, status=status.HTTP_200_OK)
+        elif content_type == 'application/json':
+            serializer = self.Meta.serializer(data=request.data)
+            if serializer.is_valid():
+                obj = serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(None, status=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # return super(SampleSetCreate, self).post(request)
+
+
+class SampleSetView(GetMixin,
+                    DeleteMixin,
+                    PatchMixin,
+                    JSONView):
+    class Meta:
+        model = SampleSet
+        serializer = SampleSetSerializer
+
+    queryset = Meta.model.objects.all()
+    serializer_class = Meta.serializer
+
+    # TODO: Only the user that created the file should be able to view
+    # and modify the job
+    # permission_classes = (DjangoObjectPermissions,)
+
+    @view_config(response_serializer=SampleSetSerializer)
+    def get(self, request, uuid, version=None):
+        """
+        Returns info about a FileSet, specified by UUID.
+
+        <!--
+        :param request: The request object.
+        :type request: django.http.HttpRequest
+        :param uuid: The URL-encoded UUID.
+        :type uuid: str
+        :return: The response object.
+        :rtype: rest_framework.response.Response
+        -->
+        """
+        return super(SampleSetView, self).get(request, uuid)
+
+    @view_config(request_serializer=SampleSetSerializer,
+                 response_serializer=PatchSerializerResponse)
+    def patch(self, request, uuid, version=None):
+        return super(SampleSetView, self).patch(request, uuid)
 
 
 class ComputeResourceView(GetMixin,

@@ -12,7 +12,8 @@ from django.urls import reverse
 from django.contrib.auth.models import User
 from rest_framework.test import APIClient
 
-from ..models import Job, File, FileSet
+from ..util import ordereddicts_to_dicts
+from ..models import Job, File, FileSet, SampleSet
 from ..jwt_helpers import (get_jwt_user_header_dict,
                            make_jwt_header_dict,
                            create_jwt_user_token)
@@ -399,3 +400,46 @@ class JobViewTest(TestCase):
         # * file objects specified by id only must exist in the database
         # * file objects specified without an id, but with other fields
         #   (name, checksum, location) should be created.
+
+
+class SampleSetTest(TestCase):
+    def setUp(self):
+        self.csv_text = """SampleA,ftp://bla_lane1_R1.fastq.gz,ftp://bla_lane1_R2.fastq.gz
+SampleA, ftp://bla_lane2_R1.fastq.gz, ftp://bla_lane2_R2.fastq.gz
+SampleB,ftp://bla2_R1_001.fastq.gz,ftp://bla2_R2_001.fastq.gz
+       ,ftp://bla2_R1_002.fastq.gz,ftp://bla2_R2_002.fastq.gz
+SampleC,ftp://foo2_lane4_1.fastq.gz,ftp://foo2_lane4_2.fastq.gz
+SampleC,ftp://foo2_lane5_1.fastq.gz,ftp://foo2_lane5_2.fastq.gz
+
+"""
+
+        self.sample_dict = {
+            'SampleA': [{'R1': 'ftp://bla_lane1_R1.fastq.gz', 'R2': 'ftp://bla_lane1_R2.fastq.gz'},
+                        {'R1': 'ftp://bla_lane2_R1.fastq.gz', 'R2': 'ftp://bla_lane2_R2.fastq.gz'}],
+            'SampleB': [{'R1': 'ftp://bla2_R1_001.fastq.gz', 'R2': 'ftp://bla2_R2_001.fastq.gz'},
+                        {'R1': 'ftp://bla2_R1_002.fastq.gz', 'R2': 'ftp://bla2_R2_002.fastq.gz'}],
+            'SampleC': [{'R1': 'ftp://foo2_lane4_1.fastq.gz', 'R2': 'ftp://foo2_lane4_2.fastq.gz'},
+                        {'R1': 'ftp://foo2_lane5_1.fastq.gz', 'R2': 'ftp://foo2_lane5_2.fastq.gz'}]}
+
+        self.from_csv_text = """SampleA,ftp://bla_lane1_R1.fastq.gz,ftp://bla_lane1_R2.fastq.gz
+SampleA,ftp://bla_lane2_R1.fastq.gz,ftp://bla_lane2_R2.fastq.gz
+SampleB,ftp://bla2_R1_001.fastq.gz,ftp://bla2_R2_001.fastq.gz
+SampleB,ftp://bla2_R1_002.fastq.gz,ftp://bla2_R2_002.fastq.gz
+SampleC,ftp://foo2_lane4_1.fastq.gz,ftp://foo2_lane4_2.fastq.gz
+SampleC,ftp://foo2_lane5_1.fastq.gz,ftp://foo2_lane5_2.fastq.gz
+"""
+
+    def tearDown(self):
+        pass
+
+    def test_from_csv(self):
+        sampleset = SampleSet()
+        sampleset.from_csv(self.csv_text, save=False)
+
+        self.assertDictEqual(ordereddicts_to_dicts(sampleset.samples), self.sample_dict)
+
+    def test_to_csv(self):
+        sampleset = SampleSet()
+        sampleset.from_csv(self.csv_text, save=False)
+        csv_txt = sampleset.to_csv()
+        self.assertListEqual(self.from_csv_text.splitlines(), csv_txt.splitlines())

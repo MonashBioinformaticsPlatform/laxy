@@ -2,6 +2,8 @@ import random
 import string
 import uuid
 import base64
+from collections import OrderedDict
+import json
 from basehash import base62
 import requests
 import cgi
@@ -21,6 +23,7 @@ def sh_bool(boolean):
         return 'yes'
     else:
         return 'no'
+
 
 def url_safe_base64_uuid() -> str:
     padded_base64_uuid = base64.urlsafe_b64encode(uuid.uuid4().bytes)
@@ -53,6 +56,14 @@ def b64uuid_to_uuid(b64uuid: str, regenerate_padding=True) -> uuid.UUID:
 
 def b62encode(text: str) -> str:
     return base62().encode(int.from_bytes(text.encode(), byteorder='big'))
+
+
+def ordereddicts_to_dicts(d: OrderedDict) -> dict:
+    """
+    Turns nested OrderedDicts into plain dicts (eg, for the purpose of
+    assertDictEqual dict comparison).
+    """
+    return json.loads(json.dumps(d))
 
 
 def find_filename_and_size_from_url(url, **kwargs):

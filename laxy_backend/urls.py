@@ -21,8 +21,9 @@ from rest_framework.urlpatterns import format_suffix_patterns
 from laxy_backend.views import (JobView, JobCreate,
                                 FileCreate, FileView,
                                 FileSetCreate, FileSetView,
+                                SampleSetCreate, SampleSetView,
                                 ComputeResourceView, ComputeResourceCreate,
-                                ENAQueryView, ENAFastqUrlQueryView,)
+                                ENAQueryView, ENAFastqUrlQueryView, )
 
 from laxy_backend.view_auth import Login, Logout, view_user_profile
 
@@ -88,10 +89,17 @@ api_urls = [
             FileView.as_view(),
             name='file'),
     re_path(r'fileset/(?P<uuid>[a-zA-Z0-9\-_]+)/$',
-            FileSetView.as_view()),
+            FileSetView.as_view(),
+            name='fileset'),
     re_path(r'fileset/$',
             FileSetCreate.as_view(),
             name='create_fileset'),
+    re_path(r'sampleset/(?P<uuid>[a-zA-Z0-9\-_]+)/$',
+            SampleSetView.as_view(),
+            name='sampleset'),
+    re_path(r'sampleset/$',
+            SampleSetCreate.as_view(),
+            name='create_sampleset'),
     re_path(
         r'compute_resource/(?P<uuid>[a-zA-Z0-9\-_]+)/$',
         ComputeResourceView.as_view(),
