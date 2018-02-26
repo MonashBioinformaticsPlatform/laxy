@@ -1,15 +1,82 @@
 from django.contrib import admin
+from django.contrib.humanize.templatetags import humanize
+from django.utils.html import format_html
 from reversion.admin import VersionAdmin
 
 from .models import Job, ComputeResource, File, FileSet, SampleSet
 
 
 class ComputeResourceAdmin(VersionAdmin):
-    pass
+    list_display = ('uuid', 'address', 'created', 'status_html')
+    ordering = ('-created_time',)
+
+    color_mappings = {
+        ComputeResource.STATUS_ONLINE: 'green',
+        ComputeResource.STATUS_ERROR: 'red',
+        ComputeResource.STATUS_STARTING: 'orange',
+        ComputeResource.STATUS_TERMINATING: 'orange',
+    }
+
+    def uuid(self, obj):
+        return 'ComputeResource UUID: %s' % obj.uuid()
+
+    def created(self, obj):
+        return humanize.naturaltime(obj.created_time)
+
+    def status_html(self, obj):
+        return format_html(
+            '<span style="color: {};"><strong>{}</strong></span>',
+            self.color_mappings.get(obj.status, 'black'),
+            obj.get_status_display(),
+        )
+
+    def address(self, obj):
+        if obj.status == ComputeResource.STATUS_ONLINE:
+            return obj.host
+        else:
+            return ''
 
 
 class JobAdmin(VersionAdmin):
-    pass
+    list_display = ('uuid',
+                    'created',
+                    'modified',
+                    'completed',
+                    '_compute_resource',
+                    '_status')
+    ordering = ('-created_time', '-completed_time', '-modified_time',)
+
+    color_mappings = {
+        Job.STATUS_FAILED: 'red',
+        Job.STATUS_CANCELLED: 'red',
+        Job.STATUS_RUNNING: 'green',
+    }
+
+    def uuid(self, obj):
+        return '%s' % obj.uuid()
+
+    def created(self, obj):
+        return humanize.naturaltime(obj.created_time)
+
+    def modified(self, obj):
+        return humanize.naturaltime(obj.modified_time)
+
+    def completed(self, obj):
+        return humanize.naturaltime(obj.completed_time)
+
+    def _compute_resource(self, obj):
+        c = obj.compute_resource
+        if c is not None:
+            return format_html('%s (%s)' % (c.id, c.host))
+        else:
+            return ''
+
+    def _status(self, obj):
+        return format_html(
+            '<span style="color: {};"><strong>{}</strong></span>',
+            self.color_mappings.get(obj.status, 'black'),
+            obj.get_status_display(),
+        )
 
 
 class FileAdmin(VersionAdmin):
@@ -19,8 +86,21 @@ class FileAdmin(VersionAdmin):
 class FileSetAdmin(VersionAdmin):
     pass
 
+
 class SampleSetAdmin(VersionAdmin):
-    pass
+    list_display = ('uuid',
+                    'created',
+                    'modified')
+    ordering = ('-created_time', '-modified_time',)
+
+    def uuid(self, obj):
+        return '%s' % obj.uuid()
+
+    def created(self, obj):
+        return humanize.naturaltime(obj.created_time)
+
+    def modified(self, obj):
+        return humanize.naturaltime(obj.modified_time)
 
 
 # admin.site.register(TaskMeta, TaskMetaAdmin)
