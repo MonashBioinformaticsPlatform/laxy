@@ -34,6 +34,7 @@ import FileBrowser from './components/FileBrowser.vue';
 import RNASeqSetup from './components/RNASeqSetup.vue';
 import InputDataForm from './components/InputFilesForm.vue';
 import ENAFileSelect from './components/ENAFileSelect.vue';
+import SampleSet from './components/SampleSet.vue';
 
 Vue.component('input-files-form', InputDataForm);
 
@@ -71,6 +72,11 @@ const router = new VueRouter({
             path: '/enaselect',
             name: 'enaselect',
             component: ENAFileSelect,
+        },
+        {
+            path: '/cart',
+            name: 'cart',
+            component: SampleSet,
         },
     ],
     // mode: 'history',

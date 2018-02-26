@@ -119,6 +119,39 @@ class PatchMixin:
                         status=status.HTTP_400_BAD_REQUEST)
 
 
+class PutMixin:
+    def put(self, request, uuid):
+        """
+        Replacing an existing resource.
+        (Creating a new resource via specifying a UUID is not allowed)
+
+        <!--
+        :param request:
+        :type request:
+        :param uuid:
+        :type uuid:
+        :return:
+        :rtype:
+        -->
+        """
+        obj = self.get_obj(uuid)
+        if obj is None:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        if 'id' in request.data:
+            return HttpResponse(status=status.HTTP_400_BAD_REQUEST,
+                                reason="id cannot be updated")
+
+        serializer = self.Meta.serializer(obj, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+            # return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors,
+                        status=status.HTTP_400_BAD_REQUEST)
+
+
 class DeleteMixin:
     def delete(self, request, uuid):
         """

@@ -57,6 +57,22 @@ class PatchSerializerResponse(BaseModelSerializer):
         error_status_codes = status_codes(*default_status_codes, 204)
 
 
+class PutSerializerResponse(BaseModelSerializer):
+    """
+    A generic PUT response serializer, which should generally be 204 status
+    code on success with no response body.
+    """
+
+    class Meta(BaseModelSerializer.Meta):
+        # a dummy model, just so we can supply Meta.model
+        class UUIDOnlyModel(models.UUIDModel):
+            pass
+
+        model = UUIDOnlyModel
+        fields = ()
+        error_status_codes = status_codes(*default_status_codes, 204)
+
+
 class EventSerializer(BaseModelSerializer):
     event_type = serializers.CharField(required=True, max_length=255)
     object_id = serializers.CharField(required=True, max_length=24)
@@ -106,7 +122,8 @@ class SampleSetSerializer(BaseModelSerializer):
     #       - this serializes correctly and lists the correct field type in the docs.
     #       Maybe drf_openapi needs a fix ?
     # samples = serializers.JSONField(required=True)
-    samples = SchemalessJsonResponseSerializer(required=True)
+    # samples = SchemalessJsonResponseSerializer(required=True)
+    samples = serializers.ListField(required=True)
 
     class Meta:
         model = models.SampleSet

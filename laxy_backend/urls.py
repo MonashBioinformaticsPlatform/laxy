@@ -21,7 +21,7 @@ from rest_framework.urlpatterns import format_suffix_patterns
 from laxy_backend.views import (JobView, JobCreate,
                                 FileCreate, FileView,
                                 FileSetCreate, FileSetView,
-                                SampleSetCreate, SampleSetView,
+                                SampleSetView, SampleSetCreate,
                                 ComputeResourceView, ComputeResourceCreate,
                                 ENAQueryView, ENAFastqUrlQueryView, )
 

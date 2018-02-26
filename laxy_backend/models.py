@@ -90,6 +90,14 @@ class UserProfile(models.Model):
     # favorite_color = models.CharField(default='2196F3', max_length=6)
 
 
+class Timestamped(Model):
+    class Meta:
+        abstract = True
+
+    created_time = DateTimeField(auto_now_add=True)
+    modified_time = DateTimeField(auto_now=True)
+
+
 class UUIDModel(Model):
     # We don't use the native UUIDField (even though it's more efficient on
     # Postgres) since it makes inspecting the database for the job_id a
@@ -109,7 +117,7 @@ class UUIDModel(Model):
 
 
 @reversion.register()
-class ComputeResource(UUIDModel):
+class ComputeResource(Timestamped, UUIDModel):
     # model created, no actual resource yet
     STATUS_CREATED = 'created'
     # actual resource is being created
@@ -159,8 +167,6 @@ class ComputeResource(UUIDModel):
     gateway_server = CharField(max_length=255, blank=True, null=True)
     disposable = BooleanField(default=True)
     name = CharField(max_length=128, blank=True, null=True)
-    created_time = DateTimeField(auto_now_add=True)
-    modified_time = DateTimeField(auto_now=True)
 
     def running_jobs(self):
         """
@@ -188,7 +194,7 @@ class ComputeResource(UUIDModel):
 
 
 @reversion.register()
-class Job(UUIDModel):
+class Job(Timestamped, UUIDModel):
     """
     Represents a processing job (typically a long running remote job managed
     by a Celery task queue).
@@ -238,8 +244,6 @@ class Job(UUIDModel):
                                   on_delete=models.SET_NULL,
                                   related_name='jobs')
 
-    created_time = DateTimeField(auto_now_add=True)
-    modified_time = DateTimeField(auto_now=True)
     completed_time = DateTimeField(blank=True, null=True)
 
     @property
@@ -291,7 +295,7 @@ def update_job_completed_time(sender, instance,
 
 
 @reversion.register()
-class File(UUIDModel):
+class File(Timestamped, UUIDModel):
     """
     File model.
 
@@ -348,7 +352,7 @@ class File(UUIDModel):
 
 
 @reversion.register()
-class FileSet(UUIDModel):
+class FileSet(Timestamped, UUIDModel):
     """
     A set of files. Might be used to represent a directory.
 
@@ -460,7 +464,7 @@ class FileSet(UUIDModel):
 
 
 @reversion.register()
-class SampleSet(UUIDModel):
+class SampleSet(Timestamped, UUIDModel):
     """
     A set of samples for a pipeline run. Might be used to represent a directory.
 
@@ -469,30 +473,58 @@ class SampleSet(UUIDModel):
     owner - The User who owns this object.
     """
 
-    name = CharField(max_length=2048)
+    name = CharField(max_length=2048, blank=True, null=True)
     owner = ForeignKey(User,
+                       blank=True,
+                       null=True,
                        on_delete=models.CASCADE,
                        related_name='samplesets')
-    samples = JSONField(default=OrderedDict)
+    samples = JSONField(default=list)
+    # saved = BooleanField(default=False)
 
     # 'samples' is a dictionary keyed by sample name, with a list of files grouped by
     # merge_group and pair (a merge_group could be a set of equivalent lanes the sample
-    # was split accross, or a technical replicate):
+    # was split across, or a technical replicate):
     #
     # Equivalent samples (technical replicates) in different lanes can be merged -
     # they could also be thought of as split FASTQ files.
 
     # Structure:
-    # {sampleName, [[R1_lane1, R2_lane1], [R1_lane2, R2_lane2]]}
+    # [{name: sampleName,
+    #  files: [{"R1": R1_lane1, "R2": R2_lane1},
+    #          {"R1": R1_lane2, "R2": R2_lane2}]}]
 
     # A single 'sampleName' actually corresponds to a Sample+Condition+BiologicalReplicate.
 
-    # for two samples (R1, R2 paired end) split across two lanes, using File UUIDs
+    # For two samples (R1, R2 paired end) split across two lanes, using File UUIDs
     #
-    # {"sample_wildtype": [{"R1": "2VSd4mZvmYX0OXw07dGfnV", "R2: "3XSd4mZvmYX0OXw07dGfmZ"},
-    #                      {"R1": "Toopini9iPaenooghaquee", "R2": "Einanoohiew9ungoh3yiev"}],
-    #  "sample_mutant":   [{"R1": "zoo7eiPhaiwion6ohniek3", "R2": "ieshiePahdie0ahxooSaed"],
-    #                      ["R1": "nahFoogheiChae5de1iey3", "R2": "Dae7leiZoo8fiesheech5s"]],}
+    # [
+    #     {
+    #         "name": "sample_wildtype",
+    #         files: [
+    #             {
+    #                 "R1": "2VSd4mZvmYX0OXw07dGfnV",
+    #                 "R2": "3XSd4mZvmYX0OXw07dGfmZ"
+    #             },
+    #             {
+    #                 "R1": "Toopini9iPaenooghaquee",
+    #                 "R2": "Einanoohiew9ungoh3yiev"
+    #             }]
+    #     },
+    #     {
+    #         "name": "sample_mutant",
+    #         "files": [
+    #             {
+    #                 "R1": "zoo7eiPhaiwion6ohniek3",
+    #                 "R2": "ieshiePahdie0ahxooSaed"
+    #             },
+    #             {
+    #                 "R1": "nahFoogheiChae5de1iey3",
+    #                 "R2": "Dae7leiZoo8fiesheech5s"
+    #             }]
+    #     }
+    # ]
+    #
     #
     # We would merge the R1s together for a sample and the R2s together for a sample:
     # eg, merge "2VSd4mZvmYX0OXw07dGfnV" with "Toopini9iPaenooghaquee"
@@ -549,19 +581,32 @@ class SampleSet(UUIDModel):
             if sample_name not in samples:
                 samples[sample_name] = []
 
-            pair = OrderedDict({f'R{n+1}': file.strip()
-                                for n, file in enumerate(fields[1:])})
+            # TODO: Convert URLs into UUIDs
+            # Files may be specified as (existing) UUIDs or URLs.
+            # If they are URLs, create (or lookup) associated file objects
+            # for that user
+
+            pair = OrderedDict({f'R{n+1}': file.strip() for n, file in enumerate(fields[1:])})
             samples[sample_name].append(pair)
             prev_sample_name = sample_name
 
-        self.samples = samples
+        # We initially create a structure like {sampleName: [{"R1": fileId1, "R2": fileId2}]},
+        # Then convert to [{name: sampleName, files: [ ... ]},]
+        sample_list = []
+        for sample_name, files in samples.items():
+            sample_list.append({'name': sample_name, 'files': files})
+
+        self.samples = sample_list
         if save:
             self.save()
 
     def to_csv(self, newline='\r\n'):
         lines = []
-        for sample_name, pairs in self.samples.items():
-            for pair in pairs:
+        for sample in self.samples:
+            sample_name = sample.get('name')
+            for pair in sample.get('files', {}):
                 lines.append(','.join([sample_name] + list(pair.values())))
+
+        # TODO: Optionally convert File UUIDs into URLs
 
         return newline.join(lines)

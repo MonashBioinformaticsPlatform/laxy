@@ -19,7 +19,7 @@
   },
   "devDependencies": {
     "@types/axios": "^0.14.0",
-    "@types/js-cookie": "^2.0.28",
+    "@types/js-cookie": "^2.1.0",
     "@types/lodash": "^4.14.77",
     "@types/numeral": "0.0.22",
     "@types/vue-material": "../../vue-material-types",
@@ -43,7 +43,7 @@
   "dependencies": {
     "axios": "^0.16.2",
     "es6-promise": "^4.1.1",
-    "js-cookie": "^2.1.4",
+    "js-cookie": "^2.2.0",
     "lodash": "^4.17.4",
     "numeral": "^2.0.6",
     "vue": "^2.4.4",

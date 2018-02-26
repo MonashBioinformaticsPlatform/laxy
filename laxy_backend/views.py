@@ -27,6 +27,7 @@ from rest_framework import status
 from rest_framework.parsers import JSONParser, MultiPartParser
 
 from rest_framework.response import Response
+from django.http import HttpResponse
 # from django.http import HttpResponse, JsonResponse
 
 from rest_framework.views import APIView
@@ -56,6 +57,7 @@ from braces.views import LoginRequiredMixin, CsrfExemptMixin
 from .jwt_helpers import get_jwt_user_header_dict, create_jwt_user_token
 from .models import Job, ComputeResource, File, FileSet, SampleSet
 from .serializers import (PatchSerializerResponse,
+                          PutSerializerResponse,
                           JobSerializerResponse,
                           JobSerializerRequest,
                           ComputeResourceSerializer,
@@ -64,12 +66,13 @@ from .serializers import (PatchSerializerResponse,
                           FileSetSerializer,
                           FileSetSerializerPostRequest,
                           SampleSetSerializer,
-                          SchemalessJsonResponseSerializer,)
+                          SchemalessJsonResponseSerializer, )
 
 from . import tasks
 from . import ena
 from .util import sh_bool
-from .view_mixins import JSONView, GetMixin, PatchMixin, DeleteMixin, PostMixin, CSVTextParser
+from .view_mixins import (JSONView, GetMixin, PatchMixin, PutMixin,
+                          DeleteMixin, PostMixin, CSVTextParser)
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +103,8 @@ class QueryParamFilterBackend(BaseFilterBackend):
                                description: 'A comma separated list of something.'}])
 
     """
-    def __init__(self, query_params: List[Dict[str, any]]=None):
+
+    def __init__(self, query_params: List[Dict[str, any]] = None):
 
         if query_params is None:
             query_params = []
@@ -352,7 +356,7 @@ class FileSetView(GetMixin,
         return super(FileSetView, self).patch(request, uuid)
 
 
-class SampleSetCreate(JSONView):
+class SampleSetCreateUpdate(JSONView):
     class Meta:
         model = SampleSet
         serializer = SampleSetSerializer
@@ -361,6 +365,56 @@ class SampleSetCreate(JSONView):
     serializer_class = Meta.serializer
     parser_classes = (JSONParser, MultiPartParser, CSVTextParser,)
 
+    def create_update(self, request, obj):
+        """
+        Replaces an existing SampleSet with new content, or creates a new one if `uuid` is None.
+
+        :param obj:
+        :type obj:
+        :param request:
+        :type request:
+        :return:
+        :rtype:
+        """
+
+        content_type = request.content_type.split(';')[0].strip()
+        encoding = 'utf-8'
+
+        # if uuid is None:
+        #     obj = self.Meta.model(name='CSV uploaded on %s' % datetime.isoformat(datetime.now()),
+        #                           owner=request.user)
+        # else:
+        #     obj = self.get_obj(uuid)
+        #     if obj is None:
+        #         return Response(status=status.HTTP_404_NOT_FOUND)
+        #
+        #     if 'id' in request.data:
+        #         return HttpResponse(status=status.HTTP_400_BAD_REQUEST,
+        #                             reason="id cannot be updated")
+
+        if content_type == 'multipart/form-data':
+            fh = request.data.get('file', None)
+            csv_table = fh.read().decode(encoding)
+            obj.from_csv(csv_table)
+
+            return Response(self.Meta.serializer(obj).data, status=status.HTTP_200_OK)
+
+        elif content_type == 'text/csv':
+            csv_table = request.data
+            obj.from_csv(csv_table)
+
+            return Response(self.Meta.serializer(obj).data, status=status.HTTP_200_OK)
+
+        elif content_type == 'application/json':
+            serializer = self.Meta.serializer(data=request.data)
+            if serializer.is_valid():
+                obj = serializer.save(owner=request.user)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(None, status=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
+
+
+class SampleSetCreate(SampleSetCreateUpdate):
     # TODO: Only the user that created the file should be able to view
     # and modify the job
     # permission_classes = (DjangoObjectPermissions,)
@@ -401,24 +455,39 @@ class SampleSetCreate(JSONView):
 
         JSON request body example:
 
-        ```json
-        {sampleName, [[R1_lane1, R2_lane1],
-                      [R1_lane2, R2_lane2]]}
-        ```
-
         A single 'sampleName' actually corresponds to a Sample+Condition+BiologicalReplicate.
 
         For two samples (R1, R2 paired end) split across two lanes, using File UUIDs:
 
         ```json
-        {"sample_wildtype": [{"R1": "2VSd4mZvmYX0OXw07dGfnV",
-                              "R2: "3XSd4mZvmYX0OXw07dGfmZ"},
-                             {"R1": "Toopini9iPaenooghaquee",
-                              "R2": "Einanoohiew9ungoh3yiev"},
-         "sample_mutant":   [{"R1": "zoo7eiPhaiwion6ohniek3",
-                              "R2": "ieshiePahdie0ahxooSaed"},
-                             {"R1": "nahFoogheiChae5de1iey3",
-                             "R2": "Dae7leiZoo8fiesheech5s"}]
+        {
+            "name": "My New Sample Set",
+            "samples": [
+                {
+                    "name": "sample_wildtype",
+                    files: [
+                        {
+                            "R1": "2VSd4mZvmYX0OXw07dGfnV",
+                            "R2": "3XSd4mZvmYX0OXw07dGfmZ"
+                        },
+                        {
+                            "R1": "Toopini9iPaenooghaquee",
+                            "R2": "Einanoohiew9ungoh3yiev"
+                        }]
+                },
+                {
+                    "name": "sample_mutant",
+                    "files": [
+                        {
+                            "R1": "zoo7eiPhaiwion6ohniek3",
+                            "R2": "ieshiePahdie0ahxooSaed"
+                        },
+                        {
+                            "R1": "nahFoogheiChae5de1iey3",
+                            "R2": "Dae7leiZoo8fiesheech5s"
+                        }]
+                }
+            ]
         }
         ```
 
@@ -429,49 +498,14 @@ class SampleSetCreate(JSONView):
         :rtype: rest_framework.response.Response
         -->
         """
-        content_type = request.content_type.split(';')[0].strip()
-        encoding = 'utf-8'
-
-        if content_type == 'multipart/form-data':
-            fh = request.data.get('file', None)
-            csv_table = fh.read().decode(encoding)
-            obj = self.Meta.model(name='CSV uploaded on %s' % datetime.isoformat(datetime.now()),
-                                  owner=request.user)
-            obj.from_csv(csv_table)
-
-            return Response(self.Meta.serializer(obj).data, status=status.HTTP_200_OK)
-
-        elif content_type == 'text/csv':
-            csv_table = request.data
-            obj = self.Meta.model(name='CSV uploaded on %s' % datetime.isoformat(datetime.now()),
-                                  owner=request.user)
-            obj.from_csv(csv_table)
-
-            return Response(self.Meta.serializer(obj).data, status=status.HTTP_200_OK)
-        elif content_type == 'application/json':
-            serializer = self.Meta.serializer(data=request.data)
-            if serializer.is_valid():
-                obj = serializer.save()
-                return Response(serializer.data, status=status.HTTP_200_OK)
-        else:
-            return Response(None, status=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        # return super(SampleSetCreate, self).post(request)
+        sample_name = request.data.get('name', 'CSV uploaded on %s' % datetime.isoformat(datetime.now()))
+        obj = self.Meta.model(name=sample_name, owner=request.user)
+        return self.create_update(request, obj)
 
 
 class SampleSetView(GetMixin,
                     DeleteMixin,
-                    PatchMixin,
-                    JSONView):
-    class Meta:
-        model = SampleSet
-        serializer = SampleSetSerializer
-
-    queryset = Meta.model.objects.all()
-    serializer_class = Meta.serializer
-
+                    SampleSetCreateUpdate):
     # TODO: Only the user that created the file should be able to view
     # and modify the job
     # permission_classes = (DjangoObjectPermissions,)
@@ -493,9 +527,30 @@ class SampleSetView(GetMixin,
         return super(SampleSetView, self).get(request, uuid)
 
     @view_config(request_serializer=SampleSetSerializer,
-                 response_serializer=PatchSerializerResponse)
-    def patch(self, request, uuid, version=None):
-        return super(SampleSetView, self).patch(request, uuid)
+                 response_serializer=PutSerializerResponse)
+    def put(self, request, uuid, version=None):
+        obj = self.get_obj(uuid)
+        if obj is None:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        if 'id' in request.data:
+            return HttpResponse(status=status.HTTP_400_BAD_REQUEST,
+                                reason="id cannot be updated")
+
+        sample_name = request.data.get('name', None)
+        if sample_name is not None:
+            obj.name = sample_name
+
+        return self.create_update(request, uuid)
+
+    # TODO: CSV upload doesn't append/merge, it aways creates a new SampleSet.
+    #       Implement PATCH method so we can append/merge an uploaded CSV rather
+    #       than just replace wholesale
+    #
+    # @view_config(request_serializer=SampleSetSerializer,
+    #              response_serializer=PatchSerializerResponse)
+    # def patch(self, request, uuid, version=None):
+    #     return super(SampleSetView, self).patch(request, uuid)
 
 
 class ComputeResourceView(GetMixin,
@@ -978,7 +1033,6 @@ def _get_default_compute_resource():
         gateway_server=getattr(settings, 'CLUSTER_MANAGEMENT_HOST'))
     compute.save()
     return compute
-
 
 # def _test_celery_task():
 #     from celery import Celery

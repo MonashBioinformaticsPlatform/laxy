@@ -2,10 +2,15 @@ declare function require(path: string): any;
 
 import 'es6-promise';
 import axios, {AxiosResponse} from 'axios';
+const Cookies = require('js-cookie');
 
 export class WebAPI {
     private static baseUrl: string = 'http://localhost:8000';
-    public static fetcher = axios.create({baseURL: WebAPI.baseUrl, withCredentials: true});
+    public static fetcher = axios.create({
+        baseURL: WebAPI.baseUrl,
+        withCredentials: true,
+        xsrfHeaderName: 'X-CSRFToken',
+        xsrfCookieName: 'csrftoken'});
 
     public static async getAuthToken(user: string, pass: string): Promise<string> {
         try {
@@ -38,5 +43,9 @@ export class WebAPI {
     public static getAuthHeader() {
         const token = sessionStorage.getItem('accessToken');
         return {Authorization: `Bearer ${token}`};
+    }
+
+    public static getCsrfToken(): string {
+        return Cookies.get('csrftoken');
     }
 }

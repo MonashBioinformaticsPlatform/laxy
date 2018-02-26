@@ -9,12 +9,6 @@ npm start
 open http://localhost:9997/
 ```
 
-## Creating the UML diagram(s) for the Django models
-
-```bash
-./manage.py graph_models --pygraphviz -g -o docs/models_uml.png laxy_backend
-```
-
 ## Backend
 
 ### Setup
@@ -70,6 +64,12 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
 ##### To manually restart just the `django` service without bringing the whole stack down/up
 ```bash
 docker-compose restart django
+```
+
+## Creating the UML diagram(s) for the Django models
+
+```bash
+./manage.py graph_models --pygraphviz -g -o docs/models_uml.png laxy_backend
 ```
 
 #### Production

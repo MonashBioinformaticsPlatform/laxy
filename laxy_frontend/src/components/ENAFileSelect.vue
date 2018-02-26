@@ -107,11 +107,6 @@
         accession: string;
     }
 
-    interface MdDialog extends Element {
-        open: Function,
-        close: Function,
-    }
-
     // Test data
     const _dummysampleList: Array<ENASample> = [
         {
@@ -142,8 +137,6 @@
 
     @Component({props: {}, filters: {}})
     export default class ENAFileSelect extends Vue {
-        public apiBaseUrl: string = "http://localhost:8000";
-
         public samples: Array<ENASample> = [];  // = _dummysampleList;
         public selectedSamples: Array<ENASample> = [];
 
@@ -154,10 +147,6 @@
 
         public accession_input: string = "PRJNA276493, PRJEB3366, SRR950078";
 
-        // private fetcher = axios.create({
-        //     baseURL: "http://localhost:8000",
-        //     headers: {"Authorization": "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxLCJ1c2VybmFtZSI6ImFkbWluIiwiZXhwIjoxNTE4NzQ5MjA2LCJlbWFpbCI6ImFqcGVycnlAcGFuc2FwaWVucy5jb20iLCJvcmlnX2lhdCI6MTUxODQwMzYwNn0.Jn8SBl_7jVY7WX7hxJ9xYIdc5U02w7jlc6A2YzaLHXE"}
-        // });
         public submitting: boolean = false;
         public error_alert_message: string = "Everything is fine.";
 
