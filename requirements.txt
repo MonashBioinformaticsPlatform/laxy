@@ -25,6 +25,7 @@ django-celery-beat==1.1.0
 django-celery-results==1.0.1
 django-cors-headers==2.1.0
 django-environ==0.4.4
+django-extensions==2.0.0
 django-filter==1.1.0
 django-guardian==1.4.9
 hg+https://bitbucket.org/schinckel/django-jsonfield#egg=django-jsonfield

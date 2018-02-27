@@ -17,6 +17,7 @@ enasearch
 django
 django-reversion
 django-cors-headers
+django-extensions
 
 # The Bitbucket one
 # django-jsonfield  # https://bitbucket.org/schinckel/django-jsonfield
