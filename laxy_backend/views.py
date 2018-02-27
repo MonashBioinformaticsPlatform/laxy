@@ -70,8 +70,8 @@ from .serializers import (PatchSerializerResponse,
 
 from . import tasks
 from . import ena
-from .util import sh_bool
-from .view_mixins import (JSONView, GetMixin, PatchMixin, PutMixin,
+from . import bcbio
+from .view_mixins import (JSONView, GetMixin, PatchMixin,
                           DeleteMixin, PostMixin, CSVTextParser)
 
 logger = logging.getLogger(__name__)
@@ -379,18 +379,6 @@ class SampleSetCreateUpdate(JSONView):
 
         content_type = request.content_type.split(';')[0].strip()
         encoding = 'utf-8'
-
-        # if uuid is None:
-        #     obj = self.Meta.model(name='CSV uploaded on %s' % datetime.isoformat(datetime.now()),
-        #                           owner=request.user)
-        # else:
-        #     obj = self.get_obj(uuid)
-        #     if obj is None:
-        #         return Response(status=status.HTTP_404_NOT_FOUND)
-        #
-        #     if 'id' in request.data:
-        #         return HttpResponse(status=status.HTTP_400_BAD_REQUEST,
-        #                             reason="id cannot be updated")
 
         if content_type == 'multipart/form-data':
             fh = request.data.get('file', None)
@@ -808,69 +796,6 @@ class JobCreate(JSONView):
     queryset = Meta.model.objects.all()
     serializer_class = Meta.serializer
 
-    def _munge_sample_descriptions(self, job):
-        """
-        Hack: Add a suffix to the description field if it would confuse
-        the bcbio automatic R1/R2 paired end detection when the files are
-        renamed post-lane merging
-        :param job: A Job object
-        :type job: Job
-        :return:
-        :rtype:
-        """
-        pair_end_re = re.compile(r'_([RI]*)\d$')
-        for sample in job.input_files.all():
-            if re.match(pair_end_re, sample.description):
-                sample.description = '%s_' % sample.description
-                sample.save()
-
-    def _get_bcbio_run_job_env(self, job):
-        """
-        Prepare a dictionary of environment variables to be passed to the
-        run_job.sh script. These are the bcbio-nextgen specific env vars.
-
-        :param job: The Job.
-        :type job: models.Job
-        :return: A dictionary of environment variables.
-        :rtype: dict
-        """
-        sample_shortnames = []
-        for sample in job.input_files.all():
-            sample_shortnames.append(sample.description)
-
-        # We merge files (eg samples split across lanes with
-        # bcbio_prepare_samples.py) if there are sample/replicate names
-        # duplicated in the list, indicating one file
-        # TODO: THIS LOGIC IS STILL WRONG - R1 and R2 of a sample will have
-        #       the same description (shortname) but shouldn't be merged.
-        merge_files = len(set(sample_shortnames)) != len(sample_shortnames)
-
-        if merge_files:
-            self._munge_sample_descriptions(job)
-
-        return {
-            'UPDATE_TOOLS': sh_bool(True),
-            'UPDATE_DATA': sh_bool(False),
-            'MERGE_FILES': sh_bool(merge_files),
-            'DOCKER_IMAGE': settings.BCBIO_DOCKER_IMAGE,
-        }
-
-    def _get_bcbio_task_data(self, job):
-        """
-        Prepare a dictionary of variables to be passed to the Celery tasks that
-        will start this job. These are the bcbio-nextgen specific variables.
-
-        :param job: The Job.
-        :type job: models.Job
-        :return: A dictionary of variables to be passed to the Celery task(s).
-        :rtype: dict
-        """
-        samples = []
-        for sample in job.input_files.all():
-            samples.append(sample.to_dict())
-
-        return dict(samples=samples)
-
     # TODO: This error handler should be used when the job start
     #       task chain fails
     # @shared_task(bind=True)
@@ -936,11 +861,11 @@ class JobCreate(JSONView):
             port = request.META.get('SERVER_PORT', 8001)
             # domain = get_current_site(request).domain
             # public_ip = requests.get('https://api.ipify.org').text
-            callback_url = (u'{scheme}://{domain}:{port}/api/v1/job/{job_id}/'
-                .format(scheme=request.scheme,
-                        domain=PUBLIC_IP,
-                        port=port,
-                        job_id=job_id))
+            callback_url = (u'{scheme}://{domain}:{port}/api/v1/job/{job_id}/'.format(
+                scheme=request.scheme,
+                domain=PUBLIC_IP,
+                port=port,
+                job_id=job_id))
 
             # better alternative to test
             # callback_url = reverse('job', args=[job_id])
@@ -965,8 +890,8 @@ class JobCreate(JSONView):
                                               callback_auth_header,
                                           })
 
-            task_data['environment'].update(self._get_bcbio_run_job_env(job))
-            task_data.update(self._get_bcbio_task_data(job))
+            task_data['environment'].update(bcbio.get_bcbio_run_job_env(job))
+            task_data.update(bcbio.get_bcbio_task_data(job))
 
             s3_location = 's3://{bucket}/{job_id}/{s3_path}'.format(
                 bucket=settings.S3_BUCKET,
