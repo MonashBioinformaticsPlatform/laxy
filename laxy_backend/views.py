@@ -27,6 +27,7 @@ from rest_framework import status
 from rest_framework.parsers import JSONParser, MultiPartParser
 
 from rest_framework.response import Response
+from rest_framework.request import Request
 from django.http import HttpResponse
 # from django.http import HttpResponse, JsonResponse
 
@@ -55,7 +56,7 @@ import reversion
 from braces.views import LoginRequiredMixin, CsrfExemptMixin
 
 from .jwt_helpers import get_jwt_user_header_dict, create_jwt_user_token
-from .models import Job, ComputeResource, File, FileSet, SampleSet
+from .models import Job, ComputeResource, File, FileSet, SampleSet, PipelineRun
 from .serializers import (PatchSerializerResponse,
                           PutSerializerResponse,
                           JobSerializerResponse,
@@ -66,13 +67,15 @@ from .serializers import (PatchSerializerResponse,
                           FileSetSerializer,
                           FileSetSerializerPostRequest,
                           SampleSetSerializer,
-                          SchemalessJsonResponseSerializer, )
+                          PipelineRunSerializer,
+                          PipelineRunCreateSerializer,
+                          SchemalessJsonResponseSerializer)
 
 from . import tasks
 from . import ena
 from . import bcbio
 from .view_mixins import (JSONView, GetMixin, PatchMixin,
-                          DeleteMixin, PostMixin, CSVTextParser)
+                          DeleteMixin, PostMixin, CSVTextParser, PutMixin)
 
 logger = logging.getLogger(__name__)
 
@@ -231,13 +234,13 @@ class FileCreate(JSONView):
     @view_config(request_serializer=FileSerializerPostRequest,
                  response_serializer=FileSerializer)
     # @method_decorator(csrf_exempt)
-    def post(self, request, version=None):
+    def post(self, request: Request, version=None):
         """
         Create a new File. UUIDs are autoassigned.
 
         <!--
         :param request: The request object.
-        :type request: django.http.HttpRequest
+        :type request: rest_framework.request.Request
         :return: The response object.
         :rtype: rest_framework.response.Response
         -->
@@ -267,13 +270,13 @@ class FileView(GetMixin,
     # permission_classes = (DjangoObjectPermissions,)
 
     @view_config(response_serializer=FileSerializer)
-    def get(self, request, uuid=None, version=None):
+    def get(self, request: Request, uuid=None, version=None):
         """
         Returns info about a File, specified by UUID.
 
         <!--
         :param request: The request object.
-        :type request: django.http.HttpRequest
+        :type request: rest_framework.request.Request
         :param uuid: The URL-encoded UUID.
         :type uuid: str
         :return: The response object.
@@ -304,13 +307,13 @@ class FileSetCreate(PostMixin,
     @view_config(request_serializer=FileSetSerializerPostRequest,
                  response_serializer=FileSetSerializer)
     # @method_decorator(csrf_exempt)
-    def post(self, request, version=None):
+    def post(self, request: Request, version=None):
         """
         Create a new FileSet. UUIDs are autoassigned.
 
         <!--
         :param request: The request object.
-        :type request: django.http.HttpRequest
+        :type request: rest_framework.request.Request
         :return: The response object.
         :rtype: rest_framework.response.Response
         -->
@@ -335,13 +338,13 @@ class FileSetView(GetMixin,
     # permission_classes = (DjangoObjectPermissions,)
 
     @view_config(response_serializer=FileSetSerializer)
-    def get(self, request, uuid, version=None):
+    def get(self, request: Request, uuid, version=None):
         """
         Returns info about a FileSet, specified by UUID.
 
         <!--
         :param request: The request object.
-        :type request: django.http.HttpRequest
+        :type request: rest_framework.request.Request
         :param uuid: The URL-encoded UUID.
         :type uuid: str
         :return: The response object.
@@ -398,6 +401,8 @@ class SampleSetCreateUpdate(JSONView):
             if serializer.is_valid():
                 obj = serializer.save(owner=request.user)
                 return Response(serializer.data, status=status.HTTP_200_OK)
+            else:
+                return Response(serializer.data, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response(None, status=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
 
@@ -410,7 +415,7 @@ class SampleSetCreate(SampleSetCreateUpdate):
     @view_config(request_serializer=SampleSetSerializer,
                  response_serializer=SampleSetSerializer)
     # @method_decorator(csrf_exempt)
-    def post(self, request, version=None):
+    def post(self, request: Request, version=None):
         """
         Create a new SampleSet. UUIDs are autoassigned.
 
@@ -481,7 +486,7 @@ class SampleSetCreate(SampleSetCreateUpdate):
 
         <!--
         :param request: The request object.
-        :type request: django.http.HttpRequest
+        :type request: rest_framework.request.Request
         :return: The response object.
         :rtype: rest_framework.response.Response
         -->
@@ -499,13 +504,13 @@ class SampleSetView(GetMixin,
     # permission_classes = (DjangoObjectPermissions,)
 
     @view_config(response_serializer=SampleSetSerializer)
-    def get(self, request, uuid, version=None):
+    def get(self, request: Request, uuid, version=None):
         """
         Returns info about a FileSet, specified by UUID.
 
         <!--
         :param request: The request object.
-        :type request: django.http.HttpRequest
+        :type request: rest_framework.request.Request
         :param uuid: The URL-encoded UUID.
         :type uuid: str
         :return: The response object.
@@ -552,13 +557,13 @@ class ComputeResourceView(GetMixin,
     serializer_class = Meta.serializer
     permission_classes = (IsAdminUser,)
 
-    def get(self, request, uuid, version=None):
+    def get(self, request: Request, uuid, version=None):
         """
         Returns info about a ComputeResource, specified by UUID.
 
         <!--
         :param request: The request object.
-        :type request: django.http.HttpRequest
+        :type request: rest_framework.request.Request
         :param uuid: The URL-encoded UUID.
         :type uuid: str
         :return: The response object.
@@ -569,7 +574,7 @@ class ComputeResourceView(GetMixin,
 
     @view_config(request_serializer=ComputeResourceSerializer,
                  response_serializer=PatchSerializerResponse)
-    def patch(self, request, uuid, version=None):
+    def patch(self, request: Request, uuid, version=None):
         """
         Updates a ComputeResource record. Since this is a PATCH request,
         partial updates are allowed.
@@ -580,7 +585,7 @@ class ComputeResourceView(GetMixin,
 
         <!--
         :param request:
-        :type request: django.http.HttpRequest
+        :type request: rest_framework.request.Request
         :param uuid: The compute resource UUID.
         :type uuid: str
         :return:
@@ -625,19 +630,106 @@ class ComputeResourceCreate(PostMixin,
     @view_config(request_serializer=ComputeResourceSerializer,
                  response_serializer=ComputeResourceSerializer)
     # @method_decorator(csrf_exempt)
-    def post(self, request, version=None):
+    def post(self, request: Request, version=None):
         """
         Create a new ComputeResource. UUIDs are autoassigned.
 
         <!--
         :param request: The request object.
-        :type request: django.http.HttpRequest
+        :type request: rest_framework.request.Request
         :return: The response object.
         :rtype: rest_framework.response.Response
         -->
         """
 
         return super(ComputeResourceCreate, self).post(request)
+
+
+class PipelineRunCreate(PostMixin,
+                        JSONView):
+    class Meta:
+        model = PipelineRun
+        serializer = PipelineRunCreateSerializer
+
+    queryset = Meta.model.objects.all()
+    serializer_class = Meta.serializer
+
+    # TODO: Only the user that created the file should be able to view
+    # and modify the job
+    # permission_classes = (DjangoObjectPermissions,)
+
+    @view_config(request_serializer=PipelineRunCreateSerializer,
+                 response_serializer=PipelineRunSerializer)
+    def post(self, request: Request, version=None):
+        """
+        Create a new PipelineRun. UUIDs are autoassigned.
+
+        <!--
+        :param request: The request object.
+        :type request: rest_framework.request.Request
+        :return: The response object.
+        :rtype: rest_framework.response.Response
+        -->
+        """
+
+        return super(PipelineRunCreate, self).post(request)
+
+
+class PipelineRunView(GetMixin,
+                      DeleteMixin,
+                      PutMixin,
+                      PatchMixin,
+                      JSONView):
+    class Meta:
+        model = PipelineRun
+        serializer = PipelineRunSerializer
+
+    queryset = Meta.model.objects.all()
+    serializer_class = Meta.serializer
+
+    # TODO: Only the user that created the file should be able to view
+    # and modify the job
+    # permission_classes = (DjangoObjectPermissions,)
+
+    @view_config(response_serializer=PipelineRunSerializer)
+    def get(self, request: Request, uuid, version=None):
+        """
+        Returns info about a FileSet, specified by UUID.
+
+        <!--
+        :param request: The request object.
+        :type request: rest_framework.request.Request
+        :param uuid: The URL-encoded UUID.
+        :type uuid: str
+        :return: The response object.
+        :rtype: rest_framework.response.Response
+        -->
+        """
+        return super(PipelineRunView, self).get(request, uuid)
+
+    @view_config(request_serializer=PipelineRunSerializer,
+                 response_serializer=PipelineRunSerializer)
+    def patch(self, request, uuid, version=None):
+        return super(PipelineRunView, self).patch(request, uuid)
+
+    @view_config(request_serializer=PipelineRunCreateSerializer,
+                 response_serializer=PipelineRunSerializer)
+    def put(self, request: Request, uuid: str, version=None):
+        """
+        Replace an existing PipelineRun. UUIDs are autoassigned.
+
+        <!--
+        :param request: The request object.
+        :type request: rest_framework.request.Request
+        :return: The response object.
+        :rtype: rest_framework.response.Response
+        -->
+        """
+
+        return super(PipelineRunView, self).put(
+            request,
+            uuid,
+            serializer_class=PipelineRunCreateSerializer)
 
 
 class JobView(JSONView):
@@ -653,13 +745,13 @@ class JobView(JSONView):
     # permission_classes = (DjangoObjectPermissions,)
 
     @view_config(response_serializer=JobSerializerResponse)
-    def get(self, request, job_id, version=None):
+    def get(self, request: Request, job_id, version=None):
         """
         Returns info about a Job, specified by Job ID (UUID).
 
         <!--
         :param request: The request object.
-        :type request: django.http.HttpRequest
+        :type request: rest_framework.request.Request
         :param job_id: The URL-encoded UUID.
         :type job_id: str
         :return: The response object.
@@ -685,14 +777,25 @@ class JobView(JSONView):
 
     @view_config(request_serializer=JobSerializerRequest,
                  response_serializer=PatchSerializerResponse)
-    def patch(self, request, job_id, version=None):
+    def patch(self, request: Request, job_id, version=None):
         """
 
-        PATCH: https://tools.ietf.org/html/rfc5789
+        The main purpose of this endpoint is to update job `status` and `exit_code`.
+        Setting `exit_code` automatically updates the job status (zero implies 'complete',
+        non-zero is 'failed').
+
+        Note that in some cases updating job `status` may have side-effects beyond
+        simply updating the Job record.
+        Eg, changing `status` to "complete", "cancelled" or "failed" may terminate the
+        associated compute instance if it was a single-job disposable ComputeResource, or
+        trigger movement or cleanup of staged / temporary / intermediate files.
+
+        Valid job statuses are "created", "starting", "running", "failed", "cancelled"
+        and "complete".
 
         <!--
         :param request:
-        :type request: django.http.HttpRequest
+        :type request: rest_framework.request.Request
         :param job_id: The job UUID.
         :type job_id: str
         :return:
@@ -733,12 +836,12 @@ class JobView(JSONView):
         return Response(serializer.errors,
                         status=status.HTTP_400_BAD_REQUEST)
 
-    def delete(self, request, job_id, version=None):
+    def delete(self, request: Request, job_id, version=None):
         """
 
         <!--
         :param request: The request object.
-        :type request: django.http.HttpRequest
+        :type request: rest_framework.request.Request
         :param job_id: A job UUID.
         :type job_id: str
         :return: The response object.
@@ -812,13 +915,13 @@ class JobCreate(JSONView):
     @view_config(request_serializer=JobSerializerRequest,
                  response_serializer=JobSerializerResponse)
     # @method_decorator(csrf_exempt)
-    def post(self, request, version=None):
+    def post(self, request: Request, version=None):
         """
         Create a new Job. UUIDs are autoassigned.
 
         <!--
         :param request: The request object.
-        :type request: django.http.HttpRequest
+        :type request: rest_framework.request.Request
         :return: The response object.
         :rtype: rest_framework.response.Response
         -->
@@ -826,10 +929,11 @@ class JobCreate(JSONView):
 
         # setattr(request, '_dont_enforce_csrf_checks', True)
 
-        serializer = JobSerializerRequest(data=request.data)
+        serializer = JobSerializerRequest(data=request.data,
+                                          context={'request': request})
         if serializer.is_valid():
 
-            job = serializer.save()
+            job = serializer.save()  # owner=request.user)
 
             if not job.compute_resource:
                 job.compute_resource = _get_default_compute_resource()
@@ -934,7 +1038,7 @@ class JobCreate(JSONView):
             # otherwise it is serialized to 'ComputeResource object'
             serializer.validated_data.update(
                 compute_resource=job.compute_resource.id)
-            # apparently validated_data doens't include this (if it's flagged
+            # apparently validated_data doesn't include this (if it's flagged
             # read-only ?), so we add it back
             serializer.validated_data.update(id=job.id)
 

@@ -22,6 +22,7 @@ from laxy_backend.views import (JobView, JobCreate,
                                 FileCreate, FileView,
                                 FileSetCreate, FileSetView,
                                 SampleSetView, SampleSetCreate,
+                                PipelineRunView, PipelineRunCreate,
                                 ComputeResourceView, ComputeResourceCreate,
                                 ENAQueryView, ENAFastqUrlQueryView, )
 
@@ -100,6 +101,12 @@ api_urls = [
     re_path(r'sampleset/$',
             SampleSetCreate.as_view(),
             name='create_sampleset'),
+    re_path(r'pipelinerun/(?P<uuid>[a-zA-Z0-9\-_]+)/$',
+            PipelineRunView.as_view(),
+            name='pipelinerun'),
+    re_path(r'pipelinerun/$',
+            PipelineRunCreate.as_view(),
+            name='create_pipelinerun'),
     re_path(
         r'compute_resource/(?P<uuid>[a-zA-Z0-9\-_]+)/$',
         ComputeResourceView.as_view(),

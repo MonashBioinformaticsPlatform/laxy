@@ -109,6 +109,7 @@ class PatchMixin:
 
         serializer = self.Meta.serializer(obj,
                                           data=request.data,
+                                          context={'request': request},
                                           partial=True)
         if serializer.is_valid():
             serializer.save()
@@ -120,7 +121,7 @@ class PatchMixin:
 
 
 class PutMixin:
-    def put(self, request, uuid):
+    def put(self, request, uuid, serializer_class=None):
         """
         Replacing an existing resource.
         (Creating a new resource via specifying a UUID is not allowed)
@@ -134,6 +135,9 @@ class PutMixin:
         :rtype:
         -->
         """
+        if serializer_class is None:
+            serializer_class = self.Meta.serializer
+
         obj = self.get_obj(uuid)
         if obj is None:
             return Response(status=status.HTTP_404_NOT_FOUND)
@@ -142,7 +146,8 @@ class PutMixin:
             return HttpResponse(status=status.HTTP_400_BAD_REQUEST,
                                 reason="id cannot be updated")
 
-        serializer = self.Meta.serializer(obj, data=request.data)
+        serializer = serializer_class(obj, data=request.data,
+                                      context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(status=status.HTTP_204_NO_CONTENT)
@@ -188,7 +193,8 @@ class PostMixin:
         -->
         """
 
-        serializer = self.Meta.serializer(data=request.data)
+        serializer = self.Meta.serializer(data=request.data,
+                                          context={'request': request})
         if serializer.is_valid():
             obj = serializer.save()
             # 200 status code since we include the resulting entity in the body

@@ -8,6 +8,7 @@
 from typing import List
 from collections import OrderedDict, Sequence
 from datetime import datetime
+import json
 import csv
 import uuid
 from pathlib import Path
@@ -115,6 +116,9 @@ class UUIDModel(Model):
     def uuid(self):
         return self.id
 
+    def __unicode__(self):
+        return self.id
+
 
 @reversion.register()
 class ComputeResource(Timestamped, UUIDModel):
@@ -217,6 +221,7 @@ class Job(Timestamped, UUIDModel):
     owner = ForeignKey(User,
                        on_delete=models.SET_NULL,
                        null=True,
+                       blank=True,
                        related_name='jobs')
     secret = CharField(max_length=255,
                        blank=True,
@@ -479,7 +484,9 @@ class SampleSet(Timestamped, UUIDModel):
                        null=True,
                        on_delete=models.CASCADE,
                        related_name='samplesets')
+
     samples = JSONField(default=list)
+
     # saved = BooleanField(default=False)
 
     # 'samples' is a dictionary keyed by sample name, with a list of files grouped by
@@ -563,7 +570,7 @@ class SampleSet(Timestamped, UUIDModel):
             lines = csv_string
 
         if header:  # skip header
-           lines = lines[1:]
+            lines = lines[1:]
 
         for line in lines:
             fields = line
@@ -610,3 +617,46 @@ class SampleSet(Timestamped, UUIDModel):
         # TODO: Optionally convert File UUIDs into URLs
 
         return newline.join(lines)
+
+
+@reversion.register()
+class PipelineRun(Timestamped, UUIDModel):
+    owner = ForeignKey(User,
+                       blank=True,
+                       null=True,
+                       on_delete=models.CASCADE,
+                       related_name='pipeline_runs')
+
+    # TODO: This may become a ForeignKey pointing to a Pipeline definition
+    #       Otherwise it will be a pipeline name (eg, used to run the right
+    #       job script, possibly on the right ComputeResource)
+    pipeline = CharField(max_length=256, blank=True, null=True)
+
+    sample_set = ForeignKey(SampleSet,
+                            blank=True,
+                            null=True,
+                            on_delete=models.SET_NULL,
+                            related_name='pipeline_runs'
+                            )
+
+    # input_files = ForeignKey(FileSet,
+    #                          blank=True,
+    #                          null=True,
+    #                          on_delete=models.SET_NULL,
+    #                          related_name='pipeline_runs')
+
+    # Sample metadata, keyed by sample name - eg, mapping sample names to conditions
+    # {"SampleA": { "conditions": ["wt", "ugly"]},
+    #  "SampleB": { "conditions": ["mutant"]} }
+    sample_metadata = JSONField(default=OrderedDict)
+
+    # Parameters specific to the pipeline (eg reference genome)
+    params = JSONField(default=OrderedDict)
+
+    # Free-text comment, mostly for users to help keep track of runs.
+    comment = CharField(max_length=2048, blank=True, null=True)
+
+    def to_json(self):
+        # TODO: Convert File UUIDs into URLs here ?
+        from .serializers import PipelineRunSerializer
+        return json.dumps(PipelineRunSerializer(self).data)

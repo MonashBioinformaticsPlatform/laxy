@@ -1,13 +1,17 @@
 import json
+from collections import OrderedDict
+
 import pydash
 from django.db import transaction
 from rest_framework import serializers
 from django.core.validators import URLValidator
 from rest_framework import status
+from rest_framework.exceptions import ValidationError
 from rest_framework.fields import CurrentUserDefault
 from drf_openapi.entities import VersionedSerializers
 from http.client import responses as response_code_messages
 
+from laxy_backend.models import SampleSet, PipelineRun
 from . import models
 
 default_status_codes = (400, 401, 403, 404)
@@ -24,12 +28,24 @@ class SchemalessJsonResponseSerializer(serializers.Serializer):
     We use this serializer anywhere we want to accept a schemaless blob of JSON.
     """
 
+    def create(self, validated_data):
+        return validated_data
+
+    def update(self, instance, validated_data):
+        instance = validated_data
+
+    def to_internal_value(self, data):
+        data = OrderedDict(data)
+        if json.loads(json.dumps(data)) != data:
+            msg = 'Invalid JSON, round-trip serialization failed'
+            raise ValidationError(msg)
+        return data
+
     def to_representation(self, obj):
         return obj
 
 
 class BaseModelSerializer(serializers.ModelSerializer):
-
     class Meta:
         fields = '__all__'
         read_only_fields = ('id',)
@@ -41,6 +57,11 @@ class BaseModelSerializer(serializers.ModelSerializer):
             return obj.id
 
 
+# a dummy model, just so we can supply Meta.model
+class DummyUUIDOnlyModel(models.UUIDModel):
+    pass
+
+
 class PatchSerializerResponse(BaseModelSerializer):
     """
     A generic PATCH response serializer, which should generally be 204 status
@@ -48,11 +69,7 @@ class PatchSerializerResponse(BaseModelSerializer):
     """
 
     class Meta(BaseModelSerializer.Meta):
-        # a dummy model, just so we can supply Meta.model
-        class UUIDOnlyModel(models.UUIDModel):
-            pass
-
-        model = UUIDOnlyModel
+        model = DummyUUIDOnlyModel
         fields = ()
         error_status_codes = status_codes(*default_status_codes, 204)
 
@@ -65,10 +82,7 @@ class PutSerializerResponse(BaseModelSerializer):
 
     class Meta(BaseModelSerializer.Meta):
         # a dummy model, just so we can supply Meta.model
-        class UUIDOnlyModel(models.UUIDModel):
-            pass
-
-        model = UUIDOnlyModel
+        model = DummyUUIDOnlyModel
         fields = ()
         error_status_codes = status_codes(*default_status_codes, 204)
 
@@ -80,7 +94,6 @@ class EventSerializer(BaseModelSerializer):
 
 
 class FileSerializer(BaseModelSerializer):
-
     location = serializers.CharField(
         max_length=2048,
         validators=[models.URIValidator()])
@@ -116,7 +129,6 @@ class FileSetSerializerPostRequest(FileSetSerializer):
 
 
 class SampleSetSerializer(BaseModelSerializer):
-
     # TODO: Swagger docs (drf_openapi) lists JSONField type as string.
     #       So we use our 'SchemalessJsonResponseSerializer' instead
     #       - this serializes correctly and lists the correct field type in the docs.
@@ -146,6 +158,11 @@ class ComputeResourceSerializer(BaseModelSerializer):
 
 
 class JobSerializerBase(BaseModelSerializer):
+    owner = serializers.PrimaryKeyRelatedField(
+        read_only=True,
+        default=serializers.CurrentUserDefault()
+    )
+
     input_fileset_id = serializers.CharField(source='input_files',
                                              required=False,
                                              allow_blank=True,
@@ -211,7 +228,8 @@ class JobSerializerRequest(JobSerializerBase):
         # output_files_data = validated_data.pop('output_files', [])
         compute_resource_id = validated_data.pop('compute_resource', None)
         job = models.Job.objects.create(**validated_data)
-        job.owner = CurrentUserDefault()
+        # user = self.context.get('request').user
+        # job.owner = user
 
         if compute_resource_id:
             compute = models.ComputeResource.objects.get(id=compute_resource_id)
@@ -247,7 +265,7 @@ class JobSerializerRequest(JobSerializerBase):
         if not job.output_files:
             job.output_files = models.FileSet.objects.create(
                 name=f'Output files for job: {job.id}',
-                job=job.id,
+                job=job,
                 owner=job.owner)
             job.output_files.save()
 
@@ -287,7 +305,55 @@ class JobSerializerRequest(JobSerializerBase):
         return serializer.save()
 
 
+class PipelineRunSerializer(BaseModelSerializer):
+
+    owner = serializers.PrimaryKeyRelatedField(
+        read_only=True,
+        # default=serializers.CurrentUserDefault()
+    )
+
+    sample_set = SampleSetSerializer()
+    sample_metadata = SchemalessJsonResponseSerializer(required=False)  # becomes OpenAPI 'object' type
+    params = SchemalessJsonResponseSerializer(required=False)  # becomes OpenAPI 'object' type
+
+    class Meta:
+        model = models.PipelineRun
+        fields = '__all__'
+        read_only_fields = ('id', 'owner',)
+        depth = 1
+        error_status_codes = status_codes()
+
+
+# TODO: Should we convert File UUIDs from the associated SampleSet into URLs here ?
+class PipelineRunCreateSerializer(PipelineRunSerializer):
+    sample_set = serializers.PrimaryKeyRelatedField(queryset=SampleSet.objects.all())
+
+    class Meta(PipelineRunSerializer.Meta):
+        depth = 0
+
+    def create(self, validated_data):
+        run = models.PipelineRun.objects.create(**validated_data)
+        run.owner = self.context.get('request').user
+        run.save()
+        return run
+
+    def update(self, instance, validated_data):
+        # FIXME: This is not the right way to update the instance - we really should be
+        # doing it via the serializer (as commented out below).
+        for k, v in validated_data.items():
+            if k not in self.Meta.read_only_fields:
+                setattr(instance, k, v)
+        instance.save()
+        return instance
+
+        # FIXME: This fails due to not validating the sample_set primary key.
+        #        Unclear why PrimaryKeyRelatedField isn't doing it's job
+        # serializer = PipelineRunCreateSerializer(instance,
+        #                                          data=validated_data)
+        # if serializer.is_valid():
+        #     return serializer.save()
+
+
 class LoginRequestSerializer(serializers.Serializer):
     username = serializers.CharField(required=True)
     password = serializers.CharField(required=True)
-
