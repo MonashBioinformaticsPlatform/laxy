@@ -18,18 +18,31 @@ Dependencies:
 * Python 3.6+
 
 ```bash
-
 # Create a Python virtual environment, install package dependencies
 python3.6 -m venv venv
 source venv/bin/activate
 python3.6 install -U -r requirements.txt
 # For development
 python3.6 install -U -r requirements-dev.txt
+```
 
-# Copy the example settings environment and edit as required
+Create a user and database on Postgres (run `psql`):
+```postgresql
+CREATE ROLE laxy WITH LOGIN PASSWORD 'blablafooword';
+CREATE DATABASE laxy;
+ALTER DATABASE laxy OWNER TO laxy;
+GRANT ALL PRIVILEGES ON DATABASE laxy TO laxy;
+```
+
+```bash
+# Copy the example settings environment and edit as required,
+# including the database name and password above. 
 cp .env_example .env
 vi .env
+```
 
+Initialize the database, create an admin user:
+```bash
 ./manage.py migrate
 ./manage.py makemigrations django_celery_results
 ./manage.py makemigrations laxy_backend
@@ -39,6 +52,9 @@ vi .env
 ./manage.py migrate
 
 ./manage.py createsuperuser
+
+# You may want to prepopulate the database with some data
+./manage.py loadata laxy_backend/fixtures.json
 ```
 
 ### Run
@@ -58,6 +74,7 @@ DRF CoreAPI docs: http://localhost:8000/coreapi/
 #### Development
 
 ```bash
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml build
 docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
 ```
 
@@ -75,5 +92,6 @@ docker-compose restart django
 #### Production
 
 ```bash
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml build
 docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```

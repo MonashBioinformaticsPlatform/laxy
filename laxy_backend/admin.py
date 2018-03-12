@@ -3,7 +3,7 @@ from django.contrib.humanize.templatetags import humanize
 from django.utils.html import format_html
 from reversion.admin import VersionAdmin
 
-from .models import Job, ComputeResource, File, FileSet, SampleSet
+from .models import Job, ComputeResource, File, FileSet, SampleSet, PipelineRun
 
 
 class ComputeResourceAdmin(VersionAdmin):
@@ -103,9 +103,14 @@ class SampleSetAdmin(VersionAdmin):
         return humanize.naturaltime(obj.modified_time)
 
 
+class PipelineRunAdmin(VersionAdmin):
+    pass
+
+
 # admin.site.register(TaskMeta, TaskMetaAdmin)
 admin.site.register(Job, JobAdmin)
 admin.site.register(ComputeResource, ComputeResourceAdmin)
 admin.site.register(File, FileAdmin)
 admin.site.register(FileSet, FileSetAdmin)
 admin.site.register(SampleSet, SampleSetAdmin)
+admin.site.register(PipelineRun, PipelineRunAdmin)

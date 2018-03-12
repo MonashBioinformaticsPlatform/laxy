@@ -6,7 +6,7 @@ services:
     image: laxy:latest
     working_dir: /app
     environment:
-      - LAXY_DATABASE_URL=postgres://postgres:postgres@db:5432
+      - LAXY_DATABASE_URL=postgres://postgres:postgres@db:5432/postgres
       - LAXY_BROKER_URL=amqp://guest@rabbitmq
     command: bash -c "python3 manage.py runserver 0.0.0.0:8001"
 #    ports:
@@ -17,6 +17,10 @@ services:
 
   db:
     image: postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
 #    expose:
 #      - "5432:5432"
 

@@ -49,6 +49,7 @@ default_env = PrefixedEnv(
     DEBUG=(bool, False),
     AWS_ACCESS_KEY_ID=(str, None),
     AWS_SECRET_ACCESS_KEY=(str, None),
+    DEFAULT_COMPUTE_RESOURCE=(str, 'default'),
     ALLOWED_HOSTS=(list, []),
     BROKER_URL=(str, 'amqp://'),
     EMAIL_HOST_URL=('email_url', ''),
@@ -68,9 +69,14 @@ def env(env_key=None, default=environ.Env.NOTSET):
 
 DEBUG = env('DEBUG')
 
+if DEBUG:
+    CELERY_ALWAYS_EAGER = True
+
 AWS_ACCESS_KEY_ID = env('AWS_ACCESS_KEY_ID')
 
 AWS_SECRET_ACCESS_KEY = env('AWS_SECRET_ACCESS_KEY')
+
+DEFAULT_COMPUTE_RESOURCE = env('DEFAULT_COMPUTE_RESOURCE')
 
 FILE_CACHE_PATH = env('FILE_CACHE_PATH')
 
@@ -92,7 +98,8 @@ except ImproperlyConfigured:
 # Database
 # https://docs.djangoproject.com/en/1.11/ref/settings/#databases
 DATABASES = {
-    'default': default_env.db('DATABASE_URL', default='sqlite:///db.sqlite3')
+    'default': default_env.db('%sDATABASE_URL' % APP_ENV_PREFIX,
+                              default='postgres:///postgres:postgres@db:5432')
 }
 
 # SECURITY WARNING: don't run with debug turned on in production!

@@ -11,7 +11,7 @@ from django.contrib.auth.models import User
 from ..models import Job, File, FileSet
 from ..ena import get_fastq_urls, create_file_objects, create_fastq_fileset
 
-from ..tasks import download_url, download_file
+from ..tasks.download import download_url, download_file
 
 
 class DownloadTaskTest(TestCase):

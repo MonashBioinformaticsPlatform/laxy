@@ -72,8 +72,10 @@ from .serializers import (PatchSerializerResponse,
                           SchemalessJsonResponseSerializer)
 
 from . import tasks
+from .tasks import orchestration
 from . import ena
 from . import bcbio
+from .util import sh_bool
 from .view_mixins import (JSONView, GetMixin, PatchMixin,
                           DeleteMixin, PostMixin, CSVTextParser, PutMixin)
 
@@ -397,7 +399,7 @@ class SampleSetCreateUpdate(JSONView):
             return Response(self.Meta.serializer(obj).data, status=status.HTTP_200_OK)
 
         elif content_type == 'application/json':
-            serializer = self.Meta.serializer(data=request.data)
+            serializer = self.Meta.serializer(obj, data=request.data)
             if serializer.is_valid():
                 obj = serializer.save(owner=request.user)
                 return Response(serializer.data, status=status.HTTP_200_OK)
@@ -534,7 +536,7 @@ class SampleSetView(GetMixin,
         if sample_name is not None:
             obj.name = sample_name
 
-        return self.create_update(request, uuid)
+        return self.create_update(request, obj)
 
     # TODO: CSV upload doesn't append/merge, it aways creates a new SampleSet.
     #       Implement PATCH method so we can append/merge an uploaded CSV rather
@@ -606,8 +608,7 @@ class ComputeResourceView(GetMixin,
                 # remove the status field supplied in the request.
                 # this task will update the status in the database itself
                 serializer.validated_data.pop('status')
-                tasks.stop_cluster.apply_async(
-                    args=({'compute_resource_id': obj.id},))
+                obj.dispose()
 
             serializer.save()
             return Response(status=status.HTTP_204_NO_CONTENT)
@@ -716,7 +717,7 @@ class PipelineRunView(GetMixin,
                  response_serializer=PipelineRunSerializer)
     def put(self, request: Request, uuid: str, version=None):
         """
-        Replace an existing PipelineRun. UUIDs are autoassigned.
+        Replace the content of an existing PipelineRun.
 
         <!--
         :param request: The request object.
@@ -771,7 +772,7 @@ class JobView(JSONView):
             data.update(compute_resource=obj.compute_resource.id)
 
         if obj.status == Job.STATUS_COMPLETE:
-            data.update(result_urls=self._generate_s3_download_urls(obj.id))
+            pass
 
         return Response(data, status=status.HTTP_200_OK)
 
@@ -790,7 +791,7 @@ class JobView(JSONView):
         associated compute instance if it was a single-job disposable ComputeResource, or
         trigger movement or cleanup of staged / temporary / intermediate files.
 
-        Valid job statuses are "created", "starting", "running", "failed", "cancelled"
+        Valid job statuses are "created", "hold", "starting", "running", "failed", "cancelled"
         and "complete".
 
         <!--
@@ -829,7 +830,7 @@ class JobView(JSONView):
                     job.compute_resource.disposable and
                     not job.compute_resource.running_jobs()):
                 task_data = dict(job_id=job_id)
-                tasks.stop_cluster.apply_async(args=(task_data,))
+                job.compute_resource.dispose()
 
             return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -854,41 +855,11 @@ class JobView(JSONView):
 
         if job.compute_resource.disposable:
             task_data = dict(job_id=job_id)
-            tasks.stop_cluster.apply_async(args=(task_data,))
+            job.compute_resource.dispose()
 
         job.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-    def _generate_s3_download_urls(self, job_id,
-                                   subpath='input/final',
-                                   expires_in=getattr(settings,
-                                                      'PRESIGNED_S3_URL_TTL', None)):
-        """
-        For a completed job, generates a set of expiring pre-signed
-        S3 download URLs, to be passed to a third party application
-        that wants to download the job output.
-
-        :param job_id: The Job UUID
-        :type job_id: str
-        :param subpath: The relative path inside the job (pseudo)directory
-                        (eg under {bucket}/{job_id}/)
-        :type subpath: str
-        :param expires_in: Expiry time, in seconds from 'now'.
-        :type expires_in: datetime.datetime
-        :return:
-        :rtype:
-        """
-        subpath = subpath.lstrip('/').rstrip('/')
-        path = '%s/%s/' % (job_id, subpath)
-        args = (settings.S3_BUCKET,
-                path,
-                settings.PRESIGNED_S3_URL_TTL)
-        # result = tasks.generate_s3_download_urls.apply_async(args=args))
-        # Blocking call, since this usually seems fast enough that is doesn't
-        # need to be queued
-        result = tasks.generate_s3_download_urls.apply(args=args)
-        return result.get()
 
 
 class JobCreate(JSONView):
@@ -909,8 +880,7 @@ class JobCreate(JSONView):
     #     job.save()
     #
     #     if job.compute_resource and job.compute_resource.disposable:
-    #         tasks.stop_cluster.apply_async(
-    #             args=({'compute_resource_id': job_id},))
+    #         job.compute_resource.dispose()
 
     @view_config(request_serializer=JobSerializerRequest,
                  response_serializer=JobSerializerResponse)
@@ -918,6 +888,10 @@ class JobCreate(JSONView):
     def post(self, request: Request, version=None):
         """
         Create a new Job. UUIDs are autoassigned.
+
+        If the query parameter `?pipeline_run_id={uuid}` is
+        provided, `params` is populated with the serialized
+        PipelineRun instance.
 
         <!--
         :param request: The request object.
@@ -929,6 +903,102 @@ class JobCreate(JSONView):
 
         # setattr(request, '_dont_enforce_csrf_checks', True)
 
+        serializer = JobSerializerRequest(data=request.data,
+                                          context={'request': request})
+
+        pipeline_run_id = request.query_params.get('pipeline_run_id', None)
+        if pipeline_run_id:
+            try:
+                pipeline_run_obj = PipelineRun.objects.get(id=pipeline_run_id)
+            except PipelineRun.DoesNotExist:
+                return HttpResponse(reason='pipeline_run %s does not exist'
+                                           % pipeline_run_id,
+                                    status=status.HTTP_400_BAD_REQUEST)
+            request.data['params'] = pipeline_run_obj.to_json()
+
+        if serializer.is_valid():
+
+            job_status = serializer.validated_data.get('status', '')
+            if job_status != '' and job_status != Job.STATUS_HOLD:
+                return HttpResponse(reason='status can only be set to "%s" '
+                                           'or left unset for job creation'
+                                           % Job.STATUS_HOLD,
+                                    status=status.HTTP_400_BAD_REQUEST)
+
+            job = serializer.save()  # owner=request.user)
+
+            if job.status == Job.STATUS_HOLD:
+                return Response(serializer.data, status=status.HTTP_200_OK)
+
+            if not job.compute_resource:
+                job.compute_resource = _get_default_compute_resource()
+                job.save()
+
+            job_id = job.id
+
+            callback_url = request.build_absolute_uri(
+                reverse('laxy_backend:job', args=[job_id]))
+
+            # port = request.META.get('SERVER_PORT', 8001)
+            # # domain = get_current_site(request).domain
+            # # public_ip = requests.get('https://api.ipify.org').text
+            # callback_url = (u'{scheme}://{domain}:{port}/api/v1/job/{job_id}/'.format(
+            #     scheme=request.scheme,
+            #     domain=PUBLIC_IP,
+            #     port=port,
+            #     job_id=job_id))
+
+            # job_bot, _ = User.objects.get_or_create(username='job_bot')
+            # token, _ = Token.objects.get_or_create(user=job_bot)
+
+            token, _ = Token.objects.get_or_create(user=request.user)
+            callback_auth_header = 'Authorization: Token %s' % token.key
+
+            task_data = dict(job_id=job_id,
+                             compute_resource_id=job.compute_resource.id,
+                             # pipeline_run_config=pipeline_run.to_json(), # this is job.params
+                             # gateway=settings.CLUSTER_MANAGEMENT_HOST,
+                             environment={'JOB_ID': job_id,
+                                          'JOB_COMPLETE_CALLBACK_URL':
+                                              callback_url,
+                                          'JOB_COMPLETE_AUTH_HEADER':
+                                              callback_auth_header,
+                                          'JOB_INPUT_STAGED': sh_bool(True),
+                                          })
+
+            # TESTING: Start cluster, run job, (pre-existing data), stop cluster
+            # tasks.run_job_chain(task_data)
+
+            # result = tasks.start_job.apply_async(args=(task_data,))
+            result = tasks.start_job(task_data)
+
+            # result = chain(# tasks.stage_job_config.s(task_data),
+            #                # tasks.stage_input_files.s(),
+            #                tasks.start_job.s(task_data),
+            #                ).apply_async()
+
+            # TODO: Make this error handler work.
+            # .apply_async(link_error=self._task_err_handler.s())
+
+            # Update the representation of the compute_resource to the uuid,
+            # otherwise it is serialized to 'ComputeResource object'
+            # serializer.validated_data.update(
+            #     compute_resource=job.compute_resource.id)
+
+            # apparently validated_data doesn't include this (if it's flagged
+            # read-only ?), so we add it back
+            # serializer.validated_data.update(id=job.id)
+
+            job = Job.objects.get(id=job_id)
+            serializer = JobSerializerResponse(job)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @view_config(request_serializer=JobSerializerRequest,
+                 response_serializer=JobSerializerResponse)
+    # @method_decorator(csrf_exempt)
+    def _cfn_cluster_create_flow(self, request: Request, version=None):
         serializer = JobSerializerRequest(data=request.data,
                                           context={'request': request})
         if serializer.is_valid():
@@ -1058,8 +1128,8 @@ def _get_or_create_drf_token(user):
 
 
 def _get_default_compute_resource():
-    compute = ComputeResource(
-        gateway_server=getattr(settings, 'CLUSTER_MANAGEMENT_HOST'))
+    compute = ComputeResource.objects.filter(
+        name=getattr(settings, 'DEFAULT_COMPUTE_RESOURCE')).first()
     compute.save()
     return compute
 

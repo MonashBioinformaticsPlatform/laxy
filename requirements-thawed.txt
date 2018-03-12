@@ -3,6 +3,9 @@ gunicorn
 requests
 backoff
 boto3
+Fabric3
+# executor
+# envoy
 BaseHash
 PyJWT
 pydash
@@ -12,6 +15,7 @@ xxhash
 lxml
 pandas
 enasearch
+
 
 # Base Django packages
 django

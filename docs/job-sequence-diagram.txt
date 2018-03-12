@@ -1,0 +1,29 @@
+# Use with: https://davidje13.github.io/SequenceDiagram/
+
+theme monospace
+title new job flow
+divider space with height 16: direct scp/rsync file movement
+
+note left of browser: new job submission
+browser -> +laxy_backend: POST /job/
+if valid
+  browser <-- -laxy_backend : 200 OK
+else
+  browser <-- -laxy_backend : 400 Bad Request
+end
+divider line with height 10: Async (Celery task queue)
+note over laxy_backend: Job.status == 'created'
+laxy_backend -> compute: copy pipeline_config.json, job.sh (scp)
+note right of compute: "job.sh or laxy_backend
+                        intiates input_file transfer"
+laxy_backend -> compute: copy input_files (scp)
+laxy_backend -> compute: run job.sh (ssh)
+note over laxy_backend: Job.status == 'running'
+laxy_backend --> compute: poll squeue, ps (ssh)
+divider tear with height 10: job running
+note right of compute: Job completes (or fails)
+compute -> laxy_backend: PUT /job/{job_id}
+laxy_backend -> +compute: copy job output (rsync/scp)
+laxy_backend <-- -compute : ...
+note over laxy_backend : "index job output files
+                          create File/FileSet records"

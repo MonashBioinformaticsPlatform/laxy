@@ -1,4 +1,4 @@
 django-extensions  # apt: graphviz graphviz-dev
 docker-compose
-mercurial
+# mercurial  # Python 2.7 only
 # pip-chill  # nice idea that is broken ?

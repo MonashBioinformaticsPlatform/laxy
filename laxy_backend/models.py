@@ -20,10 +20,12 @@ from django.conf import settings
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.db import models, transaction
+from django.core.serializers import serialize
 from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError
 from django.db.models import Model, CharField, TextField, UUIDField, \
     URLField, ForeignKey, BooleanField, IntegerField, DateTimeField
+from django.contrib.postgres.fields import ArrayField, HStoreField
 from django.contrib.auth.models import User
 from django.utils import timezone
 import reversion
@@ -31,6 +33,7 @@ from rest_framework.authtoken.models import Token
 
 from django.db import connection
 
+from .tasks import orchestration
 from .cfncluster import generate_cluster_stack_name
 from .util import generate_uuid, generate_secret_key
 
@@ -105,6 +108,12 @@ class UUIDModel(Model):
     # nuisance.
     # id = UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     # Alternative: https://github.com/nebstrebor/django-shortuuidfield ?
+
+    # IDEA: If we were to make this NOT abstract and subclass it for various models,
+    # we get one big table where we can query UUIDModel.objects.get(id=uuid) to get
+    # any of our objects by UUID (Currently won't work due to related_name
+    # backreference clashes, but these could be resolved).
+    # https://docs.djangoproject.com/en/2.0/topics/db/models/#multi-table-inheritance
     class Meta:
         abstract = True
 
@@ -118,6 +127,32 @@ class UUIDModel(Model):
 
     def __unicode__(self):
         return self.id
+
+
+class JSONSerializable():
+    def to_json(self):
+        return serialize('json', self)
+
+
+# class JobParams(JSONSerializable, UUIDModel):
+#     """
+#     This class exists as a parent for all pipeline run models (eg JobParams),
+#     to allow a Job to point to a generic parameter model via a ForeignKey
+#     (Job->JobParams).
+#
+#     The intention is that as other specific parameter subclasses are created
+#     (eg ChipSeqPipelineRun, HomologyModellingPipelineRun), we can retrieve them
+#     via Job.params.
+#
+#     All JobParams subclasses should be JSON serializable (via implementing .to_json())
+#     such that we can get the JSON representation without knowing the specific type.
+#
+#     We can also retrieve any run parameter set via it's UUID without knowing it's
+#     specific type via JobParams.object.get(id=some_params_id).to_json()
+#
+#     https://docs.djangoproject.com/en/2.0/topics/db/models/#multi-table-inheritance
+#     """
+#     pass
 
 
 @reversion.register()
@@ -172,6 +207,10 @@ class ComputeResource(Timestamped, UUIDModel):
     disposable = BooleanField(default=True)
     name = CharField(max_length=128, blank=True, null=True)
 
+    # This contains resource type specific data, eg it may contain
+    # ssh keys, queue type
+    extra = JSONField(default=OrderedDict)
+
     def running_jobs(self):
         """
         Returns a Django QuerySet of all the jobs currently running or
@@ -196,6 +235,22 @@ class ComputeResource(Timestamped, UUIDModel):
                                               Job.STATUS_RUNNING,
                                               Job.STATUS_STARTING])
 
+    def dispose(self):
+        """
+        Terminates the ComputeResource such that it can no longer be used.
+        eg, may permanently terminate the associated AWS instance.
+
+        Returns False if resource isn't disposable.
+
+        :return:
+        :rtype:
+        """
+        if self.disposable:
+            orchestration.dispose_compute_resource.apply_async(
+                args=({'compute_resource_id': self.id},))
+        else:
+            return False
+
 
 @reversion.register()
 class Job(Timestamped, UUIDModel):
@@ -204,6 +259,7 @@ class Job(Timestamped, UUIDModel):
     by a Celery task queue).
     """
     STATUS_CREATED = 'created'
+    STATUS_HOLD = 'hold'
     STATUS_STARTING = 'starting'
     STATUS_RUNNING = 'running'
     STATUS_FAILED = 'failed'
@@ -211,6 +267,7 @@ class Job(Timestamped, UUIDModel):
     STATUS_COMPLETE = 'complete'
 
     JOB_STATUS_CHOICES = ((STATUS_CREATED, 'object_created'),
+                          (STATUS_HOLD, 'hold'),
                           (STATUS_STARTING, 'starting'),
                           (STATUS_RUNNING, 'running'),
                           (STATUS_FAILED, 'failed'),
@@ -231,10 +288,20 @@ class Job(Timestamped, UUIDModel):
                        choices=JOB_STATUS_CHOICES,
                        default=STATUS_CREATED)
     exit_code = IntegerField(blank=True, null=True)
-    # django-jsonfield or native Postgres
-    params = JSONField(default=OrderedDict)
+    remote_id = CharField(max_length=64, blank=True, null=True)
+
     # jsonfield or native Postgres
     # params = JSONField(load_kwargs={'object_pairs_hook': OrderedDict})
+
+    # django-jsonfield or native Postgres
+    params = JSONField(default=OrderedDict)
+
+    # A JSON-serializable params class that may be specialized via
+    # multiple-table inheritance
+    # params = ForeignKey(JobParams,
+    #                     blank=True,
+    #                     null=True,
+    #                     on_delete=models.SET_NULL)
 
     input_files = ForeignKey('FileSet', null=True, blank=True,
                              related_name='jobs_as_input',
@@ -377,16 +444,10 @@ class FileSet(Timestamped, UUIDModel):
     # files = models.ManyToManyField(File)
 
     # a list of File ids eg ['2VSd4mZvmYX0OXw07dGfnV', '3XSd4mZvmYX0OXw07dGfmZ']
-    files = JSONField(default=list)
+    files = ArrayField(CharField(max_length=22), blank=True, default=list)
 
     # TODO: a list of FileSet ids (effectively like subdirectories) ?
-    # filesets = JSONField(default=list)
-
-    job = ForeignKey(Job,
-                     on_delete=models.CASCADE,
-                     related_name='files',
-                     null=True,
-                     blank=True)
+    # filesets = ArrayField(CharField(max_length=22), blank=True, default=list)
 
     @transaction.atomic
     def add(self, files, save=True):
@@ -497,18 +558,18 @@ class SampleSet(Timestamped, UUIDModel):
     # they could also be thought of as split FASTQ files.
 
     # Structure:
-    # [{name: sampleName,
-    #  files: [{"R1": R1_lane1, "R2": R2_lane1},
-    #          {"R1": R1_lane2, "R2": R2_lane2}]}]
+    # [{"name": "sampleName",
+    #   "files": [{"R1": "R1_lane1", "R2": "R2_lane1"},
+    #             {"R1": "R1_lane2", "R2": "R2_lane2"}]}]
 
     # A single 'sampleName' actually corresponds to a Sample+Condition+BiologicalReplicate.
 
     # For two samples (R1, R2 paired end) split across two lanes, using File UUIDs
     #
     # [
-    #     {
+    #    {
     #         "name": "sample_wildtype",
-    #         files: [
+    #         "files": [
     #             {
     #                 "R1": "2VSd4mZvmYX0OXw07dGfnV",
     #                 "R2": "3XSd4mZvmYX0OXw07dGfmZ"

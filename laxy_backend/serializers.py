@@ -35,8 +35,10 @@ class SchemalessJsonResponseSerializer(serializers.Serializer):
         instance = validated_data
 
     def to_internal_value(self, data):
+        if isinstance(data, str):
+            data = json.loads(data, object_pairs_hook=OrderedDict)
         data = OrderedDict(data)
-        if json.loads(json.dumps(data)) != data:
+        if json.loads(json.dumps(data), object_pairs_hook=OrderedDict) != data:
             msg = 'Invalid JSON, round-trip serialization failed'
             raise ValidationError(msg)
         return data
@@ -57,33 +59,29 @@ class BaseModelSerializer(serializers.ModelSerializer):
             return obj.id
 
 
-# a dummy model, just so we can supply Meta.model
-class DummyUUIDOnlyModel(models.UUIDModel):
-    pass
-
-
-class PatchSerializerResponse(BaseModelSerializer):
+class PatchSerializerResponse(serializers.Serializer):
     """
     A generic PATCH response serializer, which should generally be 204 status
-    code on success with no response body.
+    code on success with no response body. This primarily exists to present
+    the correct status codes in the drf_openapi Swagger docs.
     """
 
-    class Meta(BaseModelSerializer.Meta):
-        model = DummyUUIDOnlyModel
+    class Meta:
         fields = ()
+        read_only_fields = ('id',)
         error_status_codes = status_codes(*default_status_codes, 204)
 
 
-class PutSerializerResponse(BaseModelSerializer):
+class PutSerializerResponse(serializers.Serializer):
     """
     A generic PUT response serializer, which should generally be 204 status
-    code on success with no response body.
+    code on success with no response body. This primarily exists to present
+    the correct status codes in the drf_openapi Swagger docs.
     """
 
-    class Meta(BaseModelSerializer.Meta):
-        # a dummy model, just so we can supply Meta.model
-        model = DummyUUIDOnlyModel
+    class Meta:
         fields = ()
+        read_only_fields = ('id',)
         error_status_codes = status_codes(*default_status_codes, 204)
 
 
@@ -117,7 +115,7 @@ class FileSetSerializer(BaseModelSerializer):
 
     class Meta:
         model = models.FileSet
-        fields = ('id', 'name', 'owner', 'files', 'job')
+        fields = ('id', 'name', 'owner', 'files',)
         read_only_fields = ('id', 'owner',)
         error_status_codes = status_codes()
 
@@ -125,7 +123,7 @@ class FileSetSerializer(BaseModelSerializer):
 class FileSetSerializerPostRequest(FileSetSerializer):
     class Meta(FileSetSerializer.Meta):
         model = models.FileSet
-        fields = ('id', 'name', 'files', 'job')
+        fields = ('id', 'name', 'files',)
 
 
 class SampleSetSerializer(BaseModelSerializer):
@@ -176,7 +174,8 @@ class JobSerializerBase(BaseModelSerializer):
 
     # params = serializers.JSONField(required=False)
     params = SchemalessJsonResponseSerializer(required=False)  # becomes OpenAPI 'object' type
-    compute_resource = serializers.CharField(required=False,
+    compute_resource = serializers.CharField(source='compute_resource.id',
+                                             required=False,
                                              allow_blank=True,
                                              allow_null=True,
                                              max_length=24)
@@ -192,9 +191,9 @@ class JobSerializerBase(BaseModelSerializer):
 
 class JobSerializerResponse(JobSerializerBase):
     # output_files = FileSerializer(many=True, required=False)
-    output_fileset_id = serializers.CharField(source='input_files',
+    output_fileset_id = serializers.CharField(source='input_files.id',
                                               required=True, max_length=24)
-    input_fileset_id = serializers.CharField(source='output_files',
+    input_fileset_id = serializers.CharField(source='output_files.id',
                                              required=True, max_length=24)
 
     class Meta:
@@ -241,7 +240,7 @@ class JobSerializerRequest(JobSerializerBase):
         # we ignore anything in input_files and just use the specified FileSet.
         if not input_fileset_id:
             ifileset = models.FileSet.objects.create(
-                name=f'Input files for job: {job.id}', job=job, owner=job.owner)
+                name=f'Input files for job: {job.id}', owner=job.owner)
             for f in input_files_data:
                 f_id = f.get('id', None)
                 if not f_id:
@@ -265,7 +264,6 @@ class JobSerializerRequest(JobSerializerBase):
         if not job.output_files:
             job.output_files = models.FileSet.objects.create(
                 name=f'Output files for job: {job.id}',
-                job=job,
                 owner=job.owner)
             job.output_files.save()
 

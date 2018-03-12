@@ -30,38 +30,12 @@ from celery.exceptions import (Ignore,
                                TimeLimitExceeded,
                                SoftTimeLimitExceeded)
 
-from .models import Job, ComputeResource
+from ..models import Job, ComputeResource, File
 
 from celery.utils.log import get_task_logger
-from .models import File
-from .util import b62encode, find_filename_and_size_from_url
+from ..util import b62encode, find_filename_and_size_from_url
 
 logger = get_task_logger(__name__)
-
-
-@shared_task(bind=True)
-def send_email(self, recipients, subject, message,
-               from_email=None, fail_silently=False):
-    if from_email is None:
-        from_email = settings.EMAIL_HOST_USER
-
-    # import html2text
-    # message = html2text.html2text(rendered_template)
-
-    # NOTE: for more sophisticated emailing (eg retries), see:
-    #       http://bameda.github.io/djmail/
-    #       .. or just use Mailgun
-    msg = EmailMultiAlternatives(
-        subject,
-        message,
-        from_email,
-        recipients)
-
-    # msg.attach_alternative(
-    #     rendered_template,
-    #     "text/html")
-
-    msg.send(fail_silently=fail_silently)
 
 
 def _raise_request_exception(response):
