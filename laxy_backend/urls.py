@@ -28,8 +28,6 @@ from laxy_backend.views import (JobView, JobCreate,
 
 from laxy_backend.view_auth import Login, Logout, view_user_profile
 
-from laxy_backend.view_event import Events
-
 app_name = 'laxy_backend'
 
 
@@ -66,9 +64,6 @@ api_urls = [
     # path('compute_resource/',
     #     ComputeResourceCreate.as_view(),
     #     name='compute_resource'),
-    # path('event/',
-    #     Events.as_view(),
-    #     name='event'),
 
     re_path(r'auth/login/$',
             Login.as_view(),
@@ -114,9 +109,6 @@ api_urls = [
     re_path(r'compute_resource/$',
             ComputeResourceCreate.as_view(),
             name='compute_resource'),
-    re_path(r'event/$',
-            Events.as_view(),
-            name='event'),
 
     re_path(r'ena/$',
             ENAQueryView.as_view(),
