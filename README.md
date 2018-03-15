@@ -63,6 +63,17 @@ source venv/bin/activate
 DEBUG=yes python3.6 manage.py runserver 0.0.0.0:8000
 ```
 
+#### Run Celery
+```bash
+celery -A laxy worker -B -E -Ofair -l info \
+       --statedb=laxy_celery_worker.state
+```
+
+#### Run Celery Flower to monitor work queue
+```bash
+FLOWER_BASIC_AUTH=user:pass celery -A laxy flower --port=5555
+```
+
 OpenAPI / Swagger API (via drf_openapi): 
 * Docs: http://localhost:8000/swagger/v1/
 * JSON: http://localhost:8000/swagger/v1/?format=openapi

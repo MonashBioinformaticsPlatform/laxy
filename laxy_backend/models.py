@@ -35,7 +35,9 @@ from django.db import connection
 
 from .tasks import orchestration
 from .cfncluster import generate_cluster_stack_name
-from .util import generate_uuid, generate_secret_key
+from .util import (generate_uuid,
+                   generate_secret_key,
+                   find_filename_and_size_from_url)
 
 if 'postgres' not in settings.DATABASES['default']['ENGINE']:
     from jsonfield import JSONField
@@ -407,14 +409,31 @@ class File(Timestamped, UUIDModel):
             return self._name
         else:
             fn = Path(urlparse(self.location).path).name
-            # TODO: If fn is empty, we could still grab the filename
-            #       from the utils.find_filename_and_size_from_url,
-            #       (only upon creation, or when location changes)
-            return fn
+            self._name = fn
+            return self._name
 
     @name.setter
     def name(self, value):
         self._name = value
+
+    # TODO: This could be triggered via a pre_save signal + async task upon
+    # creation and when self.location changes
+    def set_metadata_from_location(self, save=True):
+        """
+        Uses the location URL to update the filename and file
+        size, possibly other metadata. This may be achieved by various
+        mechanisms (HEAD and Content-Disposition for http/https URLs, os.stat
+        for local file:// URLs, fallback to URL or path splitting).
+
+        :return:
+        :rtype:
+        """
+        filename, size = find_filename_and_size_from_url(self.location)
+        self._name = filename
+        if size is not None:
+            self.metadata['size'] = size
+        if save:
+            self.save()
 
     def to_dict(self):
         return OrderedDict(name=self.name,
@@ -438,15 +457,10 @@ class FileSet(Timestamped, UUIDModel):
                        on_delete=models.CASCADE,
                        related_name='filesets')
 
-    # Using a ManyToManyField here is going to create lots of intermediate
-    # tables, so we just use a JSONField instead
-    # (or maybe Postgres ArrayField, Django-MySQL ListCharField ?)
-    # files = models.ManyToManyField(File)
-
     # a list of File ids eg ['2VSd4mZvmYX0OXw07dGfnV', '3XSd4mZvmYX0OXw07dGfmZ']
     files = ArrayField(CharField(max_length=22), blank=True, default=list)
 
-    # TODO: a list of FileSet ids (effectively like subdirectories) ?
+    # IDEA: a list of FileSet ids (effectively like subdirectories) ?
     # filesets = ArrayField(CharField(max_length=22), blank=True, default=list)
 
     @transaction.atomic
@@ -599,7 +613,8 @@ class SampleSet(Timestamped, UUIDModel):
     #     and   "3XSd4mZvmYX0OXw07dGfmZ" with "Einanoohiew9ungoh3yiev"
     # ..etc.. as technical replicates
 
-    def from_csv(self, csv_string, header=False, dialect='excel', comment_char='#', save=True):
+    def from_csv(self, csv_string, header=False, dialect='excel',
+                 comment_char='#', save=True):
         """
         Accepts a raw string, or a pre-parsed list-of-lists (eg from Python's csv.reader)
 
@@ -654,7 +669,8 @@ class SampleSet(Timestamped, UUIDModel):
             # If they are URLs, create (or lookup) associated file objects
             # for that user
 
-            pair = OrderedDict({f'R{n+1}': file.strip() for n, file in enumerate(fields[1:])})
+            pair = OrderedDict(
+                {f'R{n+1}': file.strip() for n, file in enumerate(fields[1:])})
             samples[sample_name].append(pair)
             prev_sample_name = sample_name
 
@@ -688,9 +704,10 @@ class PipelineRun(Timestamped, UUIDModel):
                        on_delete=models.CASCADE,
                        related_name='pipeline_runs')
 
-    # TODO: This may become a ForeignKey pointing to a Pipeline definition
-    #       Otherwise it will be a pipeline name (eg, used to run the right
-    #       job script, possibly on the right ComputeResource)
+    # NOTE: This may become a ForeignKey pointing to a Pipeline definition
+    #       Currently it's intended to be a pipeline name used as an identifier
+    #       (eg, used to run the correct job script, possibly on a suitable
+    #        ComputeResource)
     pipeline = CharField(max_length=256, blank=True, null=True)
 
     sample_set = ForeignKey(SampleSet,
@@ -706,7 +723,8 @@ class PipelineRun(Timestamped, UUIDModel):
     #                          on_delete=models.SET_NULL,
     #                          related_name='pipeline_runs')
 
-    # Sample metadata, keyed by sample name - eg, mapping sample names to conditions
+    # Sample metadata, keyed by sample name
+    # - eg, mapping sample names to conditions
     # {"SampleA": { "conditions": ["wt", "ugly"]},
     #  "SampleB": { "conditions": ["mutant"]} }
     sample_metadata = JSONField(default=OrderedDict)

@@ -245,7 +245,7 @@ def download_url(url,
 #         the cached files on disk with meaningful names and structure directly
 #         and these generally won't let use control the structure of the disk
 #         cache
-@shared_task(bind=True)
+@shared_task(bind=True, track_started=True)
 def download_file(self, file_id: Union[str, File]):
     if isinstance(file_id, str):
         file = File.objects.get(id=file_id)

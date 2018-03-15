@@ -84,10 +84,9 @@ logger = logging.getLogger(__name__)
 PUBLIC_IP = requests.get('http://api.ipify.org').text
 
 
-# TODO: For reason I don't understand and haven't investigated deeply,
-#       Swagger/CoreAPI only show the 'name' for the query parameter if
-#       name='query'. Any other value doesn't seem to appear in the auto-generated
-#       docs when applying this as a filter backend as intended
+# TODO: Strangley, Swagger/CoreAPI only show the 'name' for the query parameter
+#       if name='query'. Any other value doesn't seem to appear in the
+#       auto-generated docs when applying this as a filter backend as intended
 class QueryParamFilterBackend(BaseFilterBackend):
     """
     This class largely exists so that query parameters can appear in the automatic documentation.
@@ -229,8 +228,6 @@ class FileCreate(JSONView):
     queryset = Meta.model.objects.all()
     serializer_class = Meta.serializer
 
-    # TODO: Only the user that created the file should be able to view
-    # and modify the job
     # permission_classes = (DjangoObjectPermissions,)
 
     @view_config(request_serializer=FileSerializerPostRequest,
@@ -267,8 +264,6 @@ class FileView(GetMixin,
     queryset = Meta.model.objects.all()
     serializer_class = Meta.serializer
 
-    # TODO: Only the user that created the file should be able to view
-    # and modify the job
     # permission_classes = (DjangoObjectPermissions,)
 
     @view_config(response_serializer=FileSerializer)
@@ -302,8 +297,6 @@ class FileSetCreate(PostMixin,
     queryset = Meta.model.objects.all()
     serializer_class = Meta.serializer
 
-    # TODO: Only the user that created the file should be able to view
-    # and modify the job
     # permission_classes = (DjangoObjectPermissions,)
 
     @view_config(request_serializer=FileSetSerializerPostRequest,
@@ -335,8 +328,6 @@ class FileSetView(GetMixin,
     queryset = Meta.model.objects.all()
     serializer_class = Meta.serializer
 
-    # TODO: Only the user that created the file should be able to view
-    # and modify the job
     # permission_classes = (DjangoObjectPermissions,)
 
     @view_config(response_serializer=FileSetSerializer)
@@ -410,8 +401,7 @@ class SampleSetCreateUpdate(JSONView):
 
 
 class SampleSetCreate(SampleSetCreateUpdate):
-    # TODO: Only the user that created the file should be able to view
-    # and modify the job
+
     # permission_classes = (DjangoObjectPermissions,)
 
     @view_config(request_serializer=SampleSetSerializer,
@@ -501,8 +491,7 @@ class SampleSetCreate(SampleSetCreateUpdate):
 class SampleSetView(GetMixin,
                     DeleteMixin,
                     SampleSetCreateUpdate):
-    # TODO: Only the user that created the file should be able to view
-    # and modify the job
+
     # permission_classes = (DjangoObjectPermissions,)
 
     @view_config(response_serializer=SampleSetSerializer)
@@ -655,8 +644,6 @@ class PipelineRunCreate(PostMixin,
     queryset = Meta.model.objects.all()
     serializer_class = Meta.serializer
 
-    # TODO: Only the user that created the file should be able to view
-    # and modify the job
     # permission_classes = (DjangoObjectPermissions,)
 
     @view_config(request_serializer=PipelineRunCreateSerializer,
@@ -688,8 +675,6 @@ class PipelineRunView(GetMixin,
     queryset = Meta.model.objects.all()
     serializer_class = Meta.serializer
 
-    # TODO: Only the user that created the file should be able to view
-    # and modify the job
     # permission_classes = (DjangoObjectPermissions,)
 
     @view_config(response_serializer=PipelineRunSerializer)
@@ -741,8 +726,6 @@ class JobView(JSONView):
     queryset = Meta.model.objects.all()
     serializer_class = Meta.serializer
 
-    # TODO: Only the user that created the job should be able to view
-    # and modify the job
     # permission_classes = (DjangoObjectPermissions,)
 
     @view_config(response_serializer=JobSerializerResponse)
@@ -870,17 +853,15 @@ class JobCreate(JSONView):
     queryset = Meta.model.objects.all()
     serializer_class = Meta.serializer
 
-    # TODO: This error handler should be used when the job start
-    #       task chain fails
-    # @shared_task(bind=True)
-    # def _task_err_handler(self, task_data):
-    #     job_id = task_data.get('job_id', None)
-    #     job = Job.objects.get(id=job_id)
-    #     job.status = Job.STATUS_FAILED
-    #     job.save()
-    #
-    #     if job.compute_resource and job.compute_resource.disposable:
-    #         job.compute_resource.dispose()
+    @shared_task(bind=True)
+    def _task_err_handler(failed_task, cxt, ex, tb, job_id):
+        # job_id = task_data.get('job_id', None)
+        job = Job.objects.get(id=job_id)
+        job.status = Job.STATUS_FAILED
+        job.save()
+
+        if job.compute_resource and job.compute_resource.disposable:
+            job.compute_resource.dispose()
 
     @view_config(request_serializer=JobSerializerRequest,
                  response_serializer=JobSerializerResponse)
@@ -969,8 +950,11 @@ class JobCreate(JSONView):
             # TESTING: Start cluster, run job, (pre-existing data), stop cluster
             # tasks.run_job_chain(task_data)
 
-            # result = tasks.start_job.apply_async(args=(task_data,))
-            result = tasks.start_job(task_data)
+            result = tasks.start_job.apply_async(
+                args=(task_data,),
+                link_error=self._task_err_handler.s(job_id))
+            # Non-async for testing
+            # result = tasks.start_job(task_data)
 
             # result = chain(# tasks.stage_job_config.s(task_data),
             #                # tasks.stage_input_files.s(),
@@ -978,7 +962,7 @@ class JobCreate(JSONView):
             #                ).apply_async()
 
             # TODO: Make this error handler work.
-            # .apply_async(link_error=self._task_err_handler.s())
+            # .apply_async(link_error=self._task_err_handler.s(job_id))
 
             # Update the representation of the compute_resource to the uuid,
             # otherwise it is serialized to 'ComputeResource object'
@@ -990,6 +974,11 @@ class JobCreate(JSONView):
             # serializer.validated_data.update(id=job.id)
 
             job = Job.objects.get(id=job_id)
+            if result.state == 'FAILURE':
+                raise result.result
+                # return Response({'error': result.traceback},
+                #                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
             serializer = JobSerializerResponse(job)
             return Response(serializer.data, status=status.HTTP_200_OK)
 

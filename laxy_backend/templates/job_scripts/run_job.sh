@@ -15,6 +15,7 @@ env >job.out
 EXIT_CODE=$?
 
 #### Notify service we are done ####
+# FIXME: auth token should be in a file so that it won't leak in the process name
 curl -X PATCH \
      -H "Content-Type: application/json" \
      -H "${JOB_COMPLETE_AUTH_HEADER}" \

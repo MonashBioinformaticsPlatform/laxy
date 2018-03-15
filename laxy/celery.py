@@ -7,7 +7,7 @@ from celery import Celery
 # set the default Django settings module for the 'celery' program.
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'laxy.settings')
 
-from django.conf import settings  # noqa
+from django.conf import settings
 
 app = Celery('laxy')
 

@@ -23,6 +23,10 @@ def status_codes(*codes):
     return dict([(c, response_code_messages[c]) for c in codes])
 
 
+# TODO: Swagger docs (drf_openapi) lists JSONField type as string.
+#       So we use our this class to serialize arbitrary JSON instead.
+#       It appears as the the correct field type in the docs.
+#       Maybe drf_openapi needs a fix ?
 class SchemalessJsonResponseSerializer(serializers.Serializer):
     """
     We use this serializer anywhere we want to accept a schemaless blob of JSON.
@@ -85,12 +89,6 @@ class PutSerializerResponse(serializers.Serializer):
         error_status_codes = status_codes(*default_status_codes, 204)
 
 
-class EventSerializer(BaseModelSerializer):
-    event_type = serializers.CharField(required=True, max_length=255)
-    object_id = serializers.CharField(required=True, max_length=24)
-    content_type = serializers.CharField(required=True, max_length=255)
-
-
 class FileSerializer(BaseModelSerializer):
     location = serializers.CharField(
         max_length=2048,
@@ -127,10 +125,6 @@ class FileSetSerializerPostRequest(FileSetSerializer):
 
 
 class SampleSetSerializer(BaseModelSerializer):
-    # TODO: Swagger docs (drf_openapi) lists JSONField type as string.
-    #       So we use our 'SchemalessJsonResponseSerializer' instead
-    #       - this serializes correctly and lists the correct field type in the docs.
-    #       Maybe drf_openapi needs a fix ?
     # samples = serializers.JSONField(required=True)
     # samples = SchemalessJsonResponseSerializer(required=True)
     samples = serializers.ListField(required=True)

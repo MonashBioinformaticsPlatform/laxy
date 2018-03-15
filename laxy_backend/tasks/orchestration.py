@@ -13,7 +13,7 @@ from celery.utils.log import get_task_logger
 logger = get_task_logger(__name__)
 
 
-@shared_task(bind=True)
+@shared_task(bind=True, track_started=True)
 def dispose_compute_resource(self, task_data, **kwargs):
     from ..models import Job, ComputeResource
 

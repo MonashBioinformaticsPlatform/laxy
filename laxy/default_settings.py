@@ -50,7 +50,7 @@ default_env = PrefixedEnv(
     AWS_ACCESS_KEY_ID=(str, None),
     AWS_SECRET_ACCESS_KEY=(str, None),
     DEFAULT_COMPUTE_RESOURCE=(str, 'default'),
-    ALLOWED_HOSTS=(list, []),
+    ALLOWED_HOSTS=(list, ['*']),
     BROKER_URL=(str, 'amqp://'),
     EMAIL_HOST_URL=('email_url', ''),
     EMAIL_HOST_USER=(str, ''),
@@ -67,10 +67,8 @@ def env(env_key=None, default=environ.Env.NOTSET):
     return default_env('%s%s' % (APP_ENV_PREFIX, env_key), default=default)
 
 
+# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
-
-if DEBUG:
-    CELERY_ALWAYS_EAGER = True
 
 AWS_ACCESS_KEY_ID = env('AWS_ACCESS_KEY_ID')
 
@@ -102,10 +100,11 @@ DATABASES = {
                               default='postgres:///postgres:postgres@db:5432')
 }
 
-# SECURITY WARNING: don't run with debug turned on in production!
-# DEBUG = True
-
-ALLOWED_HOSTS = ['*']
+BROKER_URL = env('BROKER_URL')
+CELERY_RESULT_BACKEND = 'django-db'
+# CELERY_RESULT_BACKEND = BROKER_URL
+#if DEBUG:
+#    CELERY_ALWAYS_EAGER = True
 
 MEDIA_ROOT = str(env('MEDIA_ROOT'))
 MEDIA_URL = str(env('MEDIA_URL'))

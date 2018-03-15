@@ -54,7 +54,7 @@ def _init_fabric_env():
     return env
 
 
-@shared_task(bind=True)
+@shared_task(bind=True, track_started=True)
 def start_job(self, task_data=None, **kwargs):
     from ..models import Job
 
@@ -102,9 +102,6 @@ def start_job(self, task_data=None, **kwargs):
         succeeded = result.succeeded
         remote_id = result
     except BaseException as e:
-        succeeded = False
-        message = e.message
-    except Exception as e:
         succeeded = False
         message = e.message
 
