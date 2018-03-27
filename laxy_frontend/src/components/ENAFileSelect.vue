@@ -74,8 +74,6 @@
 
 
 <script lang="ts">
-    declare function require(path: string): any;
-
     import 'vue-material/dist/vue-material.css';
 
     import * as _ from 'lodash';
@@ -89,51 +87,11 @@
 
     import {WebAPI} from '../web-api';
 
-    interface ENASample {
-        // pair?: ENASample,
-        run_accession?: string,
-        study_accession?: string,
-        experiment_accession?: string,
-        sample_accession?: string;
-        library_strategy?: string,
-        instrument_platform?: string
-        read_count?: number,
-        fastq_bytes?: number,
-        fastq_md5?: string,
-        fastq_ftp?: string,
-    }
+    import {ENADummySampleList as _dummysampleList} from "../test-data";
 
     interface DbAccession {
         accession: string;
     }
-
-    // Test data
-    const _dummysampleList: Array<ENASample> = [
-        {
-            run_accession: "SRRFAKE0001",
-            sample_accession: "SAMFAKE0001",
-            library_strategy: "RNA-Seq",
-            read_count: 12346
-        },
-        {
-            run_accession: "SRRFAKE0001",
-            sample_accession: "SAMFAKE0001",
-            library_strategy: "RNA-Seq",
-            read_count: 1234567
-        },
-        {
-            run_accession: "SRRFAKE0001",
-            sample_accession: "SAMFAKE0001",
-            library_strategy: "RNA-Seq",
-            read_count: 12345678
-        },
-        {
-            run_accession: "SRRFAKE0001",
-            sample_accession: "SAMFAKE0001",
-            library_strategy: "RNA-Seq",
-            read_count: 123456789
-        },
-    ];
 
     @Component({props: {}, filters: {}})
     export default class ENAFileSelect extends Vue {

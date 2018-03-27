@@ -98,8 +98,6 @@
 
 
 <script lang="ts">
-    declare function require(path: string): any;
-
     import 'vue-material/dist/vue-material.css';
 
     import * as _ from 'lodash';

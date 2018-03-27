@@ -40,43 +40,12 @@
                             <label>Sample list name</label>
                             <md-input v-model="sample_list_name" placeholder="My sample list"></md-input>
                         </md-input-container>
-                        <md-table @select="onSelect">
-                            <md-table-header>
-                                <md-table-row>
-                                    <md-table-head v-for="field in show_sample_fields" :key="field">
-                                        {{ field | deunderscore }}
-                                    </md-table-head>
-                                </md-table-row>
-                            </md-table-header>
-                            <md-table-body>
-                                <md-table-row v-for="sample in samples" :key="sample.name"
-                                              :md-item="sample"
-                                              md-selection>
-                                    <md-table-cell v-for="field in show_sample_fields" :key="field">
-                                        <span v-if="field === 'name'">
-                                            <md-input-container>
-                                                <md-input v-model="sample[field]">
-                                                </md-input>
-                                            </md-input-container>
-                                        </span>
-                                        <!--
-                                        <span v-else-if="field === 'read_count'">
-                                              {{ sample[field] | numeral_format('0 a') }}
-                                        </span>
-                                        -->
-                                        <span v-else-if="field === 'R1' || field === 'R2'">
-                                            <span v-for="file in sample['files']">
-                                                {{ file[field] }}<br/>
-                                            </span>
-                                            <!-- {{ JSON.stringify(sample['files']) }} -->
-                                        </span>
-                                        <span v-else>
-                                              {{ sample[field] }}
-                                        </span>
-                                    </md-table-cell>
-                                </md-table-row>
-                            </md-table-body>
-                        </md-table>
+
+                        <sample-table :samples="samples"
+                                      :fields="['name', 'R1', 'R2']"
+                                      :editable_fields="['name']"
+                                      @selected="onSelect"></sample-table>
+
                         <md-toolbar class="md-dense" :disabled="submitting">
                             <md-menu md-size="5">
                                 <!--<md-button md-menu-trigger>-->
@@ -130,8 +99,6 @@
 
 
 <script lang="ts">
-    declare function require(path: string): any;
-
     import "vue-material/dist/vue-material.css";
 
     import * as _ from "lodash";
@@ -145,76 +112,20 @@
 
     import {WebAPI} from "../web-api";
 
-    interface Sample {
-        name: string;
-        files: Array<any>,
-    }
-
-    // Test data
-    const _dummySampleList: Array<Sample> = [
-        {
-            name: "SampleA",
-            files: [
-                {
-                    "R1": "ftp://example.com/sampleA_lane1_R1.fastq.gz",
-                    "R2": "ftp://example.com/sampleA_lane1_R2.fastq.gz"
-                },
-            ]
-        },
-        {
-            name: "SampleB",
-            files: [
-                {
-                    "R1": "ftp://example.com/sampleB_lane1_R1.fastq.gz",
-                    "R2": "ftp://example.com/sampleB_lane1_R2.fastq.gz"
-                },
-                {
-                    "R1": "ftp://example.com/sampleB_lane4_R1.fastq.gz",
-                    "R2": "ftp://example.com/sampleB_lane4_R2.fastq.gz"
-                }
-
-            ]
-        },
-        {
-            "name": "sample_wildtype",
-            files: [
-                {
-                    "R1": "2VSd4mZvmYX0OXw07dGfnV",
-                    "R2": "3XSd4mZvmYX0OXw07dGfmZ"
-                },
-                {
-                    "R1": "Toopini9iPaenooghaquee",
-                    "R2": "Einanoohiew9ungoh3yiev"
-                }]
-        },
-        {
-            "name": "sample_mutant",
-            "files": [
-                {
-                    "R1": "zoo7eiPhaiwion6ohniek3",
-                    "R2": "ieshiePahdie0ahxooSaed"
-                },
-                {
-                    "R1": "nahFoogheiChae5de1iey3",
-                    "R2": "Dae7leiZoo8fiesheech5s"
-                }]
-        }
-    ];
-
+    import {DummySampleList as _dummySampleList} from "../test-data";
 
     @Component({props: {}, filters: {}})
     export default class SampleSet extends Vue {
         public submitting: boolean = false;
-        public error_alert_message: string = "Everything is fine.";
-        public snackbar_message: string = "Everything is fine.";
+        public error_alert_message: string = "Everything is fine. 🐺";
+        public snackbar_message: string = "Everything is fine. ☃";
         public snackbar_duration: number = 2000;
         public csv_file: string = "";
 
         public sampleset_uuid: string | null = null;
         public sample_list_name: string = "";
-        public samples: Array<Sample> = _dummySampleList;
-        public selectedSamples: Array<Sample> = [];
-        public show_sample_fields: Array<string> = ["name", "R1", "R2"];
+        public samples: Sample[] = _dummySampleList;
+        public selectedSamples: Sample[] = [];
 
         // for lodash in templates
         get _() {
@@ -223,11 +134,6 @@
 
         created() {
 
-        }
-
-        onSelect(rows: any) {
-            this.selectedSamples = rows as Array<Sample>;
-            // console.log(this.selectedSamples);
         }
 
         async submit() {
@@ -293,7 +199,12 @@
             }
         }
 
+        onSelect(rows: any) {
+            this.selectedSamples = rows as Array<Sample>;
+        }
+
         removeSelected() {
+            // const cartTable: any = this.$refs['cartTable'];
             for (const row of this.selectedSamples) {
                 const i = this.samples.indexOf(row);
                 this.samples.splice(i, 1);

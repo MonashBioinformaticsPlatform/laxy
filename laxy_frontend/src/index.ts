@@ -35,8 +35,11 @@ import RNASeqSetup from './components/RNASeqSetup.vue';
 import InputDataForm from './components/InputFilesForm.vue';
 import ENAFileSelect from './components/ENAFileSelect.vue';
 import SampleSet from './components/SampleSet.vue';
+import SampleTable from './components/SampleTable.vue';
+import PipelineParams from './components/PipelineParams.vue';
 
 Vue.component('input-files-form', InputDataForm);
+Vue.component('sample-table', SampleTable);
 
 Vue.filter('numeral_format', function (value: number | string, format: string = '0 a') {
     if (!value) return '';
@@ -45,7 +48,7 @@ Vue.filter('numeral_format', function (value: number | string, format: string = 
 
 Vue.filter('deunderscore', function (value: string) {
     if (!value) return '';
-    value = value.replace('_', ' ')
+    value = value.replace('_', ' ');
     // capitalize first letter
     return value.charAt(0).toUpperCase() + value.slice(1);
 });
@@ -78,6 +81,11 @@ const router = new VueRouter({
             name: 'cart',
             component: SampleSet,
         },
+        {
+            path: '/setupRun',
+            name: 'setupRun',
+            component: PipelineParams,
+        },
     ],
     // mode: 'history',
 });
@@ -87,6 +95,7 @@ interface MainApp extends Vue {
     user_fullname: string;
     login_form_username: string;
     login_form_password: string;
+    sample_cart_count: number;
 }
 
 const MainApp = new Vue({
@@ -98,6 +107,7 @@ const MainApp = new Vue({
             user_fullname: 'John Monash',
             login_form_username: '',
             login_form_password: '',
+            sample_cart_count: 999,
         };
     },
     methods: {
