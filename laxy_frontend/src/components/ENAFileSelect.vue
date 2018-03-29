@@ -23,7 +23,7 @@
             </md-layout>
             <md-layout md-gutter>
                 <md-layout>
-                    <div v-if="samples != null">
+                    <md-layout v-if="samples != null">
                         <md-table @select="onSelect">
                             <md-table-header>
                                 <md-table-row>
@@ -62,10 +62,10 @@
                         </md-layout>
 
                         <hr>
-                    </div>
-                    <div v-else>
+                    </md-layout>
+                    <md-layout v-else>
                         .. no samples ..
-                    </div>
+                    </md-layout>
                 </md-layout>
             </md-layout>
         </md-layout>

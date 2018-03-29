@@ -1,4 +1,4 @@
-<template xmlns:md-="">
+<template>
     <div>
         <md-dialog-alert :md-content-html="error_alert_message"
                          :md-content="error_alert_message" ref="error_dialog">
@@ -82,7 +82,7 @@
         public sample_list_name: string = "";
         public samples: Array<Sample> = _dummySampleList;
         public sampleset_id: string = "3NNIIOt8skAuS1w2ZfgOq";
-        public selectedSamples: Array<Sample>;
+        public selectedSamples: Array<Sample> = [];
 
         public available_genomes: Array<ReferenceGenome> = [
             {id: "hg19", organism: "Human"},

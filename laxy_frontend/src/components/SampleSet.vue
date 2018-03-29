@@ -1,15 +1,18 @@
 <template>
     <div>
-        <md-dialog-alert :md-content-html="error_alert_message" :md-content="error_alert_message" ref="error_dialog">
+        <md-dialog-alert :md-content-html="error_alert_message"
+                         :md-content="error_alert_message" ref="error_dialog">
         </md-dialog-alert>
 
-        <md-dialog md-open-from="#add_menu_button" md-close-to="#add_menu_button" ref="csv_file_select_dialog">
+        <md-dialog md-open-from="#add_menu_button"
+                   md-close-to="#add_menu_button" ref="csv_file_select_dialog">
             <md-dialog-title>Select a file</md-dialog-title>
 
             <md-dialog-content>Choose a CSV file to upload.
                 <md-input-container>
                     <label>From CSV</label>
-                    <md-file v-model="csv_file" :disabled="submitting" @selected="submitCSV"></md-file>
+                    <md-file v-model="csv_file" :disabled="submitting"
+                             @selected="submitCSV"></md-file>
                 </md-input-container>
 
                 Example format (Sample name, R1, R2):
@@ -20,25 +23,30 @@
                                ,ftp://bla2_R1_002.fastq.gz,ftp://bla2_R2_002.fastq.gz
                         SampleC,ftp://foo2_lane4_1.fastq.gz,ftp://foo2_lane4_2.fastq.gz
                         SampleC,ftp://foo2_lane5_1.fastq.gz,ftp://foo2_lane5_2.fastq.gz
-                    </pre>
-                Each row represents a biological replicate (sample + condition + biological replicate).
-                Rows with identical sample names are considered technical replicates and may be merged for
+                </pre>
+                Each row represents a biological replicate (sample + condition +
+                biological replicate).
+                Rows with identical sample names are considered technical
+                replicates and may be merged for
                 analysis.
                 For single-end data, omit the R2 column.
             </md-dialog-content>
 
             <md-dialog-actions>
-                <md-button class="md-primary" @click="closeDialog('csv_file_select_dialog')">Close</md-button>
+                <md-button class="md-primary"
+                           @click="closeDialog('csv_file_select_dialog')">Close
+                </md-button>
             </md-dialog-actions>
         </md-dialog>
 
         <md-layout md-column>
             <md-layout md-gutter>
                 <md-layout>
-                    <div v-if="samples != null">
+                    <md-layout v-if="samples != null">
                         <md-input-container>
                             <label>Sample list name</label>
-                            <md-input v-model="sample_list_name" placeholder="My sample list"></md-input>
+                            <md-input v-model="sample_list_name"
+                                      placeholder="My sample list"></md-input>
                         </md-input-container>
 
                         <sample-table :samples="samples"
@@ -46,32 +54,42 @@
                                       :editable_fields="['name']"
                                       @selected="onSelect"></sample-table>
 
-                        <md-toolbar class="md-dense" :disabled="submitting">
+                        <md-toolbar class="md-dense" :disabled="submitting"
+                                    style="width: 100%;">
                             <md-menu md-size="5">
                                 <!--<md-button md-menu-trigger>-->
                                 <!--<md-icon>add</md-icon>-->
                                 <!--Add sample-->
                                 <!--</md-button>-->
-                                <md-button id="add_menu_button" class="md-icon-button"
+                                <md-button id="add_menu_button"
+                                           class="md-icon-button"
                                            md-menu-trigger>
                                     <md-icon>add</md-icon>
-                                    <md-tooltip md-direction="top">Add samples</md-tooltip>
+                                    <md-tooltip md-direction="top">Add samples
+                                    </md-tooltip>
                                 </md-button>
 
                                 <md-menu-content>
-                                    <md-menu-item>From public ENA data</md-menu-item>
-                                    <md-menu-item>From my uploaded files</md-menu-item>
+                                    <md-menu-item>From public ENA data
+                                    </md-menu-item>
+                                    <md-menu-item>From my uploaded files
+                                    </md-menu-item>
                                     <md-menu-item>By URL</md-menu-item>
-                                    <md-menu-item @click="openDialog('csv_file_select_dialog')">From CSV / Excel
+                                    <md-menu-item
+                                            @click="openDialog('csv_file_select_dialog')">
+                                        From CSV / Excel
                                     </md-menu-item>
                                 </md-menu-content>
                             </md-menu>
-                            <md-button class="md-icon-button" @click="removeSelected">
+                            <md-button class="md-icon-button"
+                                       @click="removeSelected">
                                 <md-icon>delete</md-icon>
-                                <md-tooltip md-direction="top">Remove selected</md-tooltip>
+                                <md-tooltip md-direction="top">Remove selected
+                                </md-tooltip>
                             </md-button>
                             <span style="flex: 1;"></span>
-                            <md-button class="md-icon-button" @click="saveSampleList">
+                            <md-button class="md-icon-button"
+                                       @click="saveSampleList">
                                 <md-icon>save</md-icon>
                                 <md-tooltip md-direction="top">Save</md-tooltip>
                             </md-button>
@@ -80,19 +98,24 @@
                             <md-progress md-indeterminate></md-progress>
                         </md-layout>
                         <hr>
-                    </div>
-                    <div v-else>
+                    </md-layout>
+                    <md-layout v-else>
                         .. no samples ..
-                    </div>
+                    </md-layout>
                 </md-layout>
             </md-layout>
             <md-layout md-gutter>
-                <md-button @click="submit" :disabled="submitting" class="md-raised">Save & continue</md-button>
+                <md-button @click="submit" :disabled="submitting"
+                           class="md-raised">Save & continue
+                </md-button>
             </md-layout>
         </md-layout>
-        <md-snackbar md-position="bottom center" ref="snackbar" :md-duration="snackbar_duration">
+        <md-snackbar md-position="bottom center" ref="snackbar"
+                     :md-duration="snackbar_duration">
             <span>{{ snackbar_message }}</span>
-            <md-button class="md-accent" @click="$refs.snackbar.close()">Dismiss</md-button>
+            <md-button class="md-accent" @click="$refs.snackbar.close()">
+                Dismiss
+            </md-button>
         </md-snackbar>
     </div>
 </template>
@@ -108,13 +131,35 @@
     import Vue, {ComponentOptions} from "vue";
     import VueMaterial from "vue-material";
     import Component from "vue-class-component";
-    import {Emit, Inject, Model, Prop, Provide, Watch} from "vue-property-decorator";
+    import {
+        Emit,
+        Inject,
+        Model,
+        Prop,
+        Provide,
+        Watch
+    } from "vue-property-decorator";
 
+    import {
+        State,
+        Getter,
+        Action,
+        Mutation,
+        namespace
+    } from "vuex-class";
+
+    import {SET_SAMPLES} from "../store";
     import {WebAPI} from "../web-api";
 
     import {DummySampleList as _dummySampleList} from "../test-data";
 
-    @Component({props: {}, filters: {}})
+    @Component({
+        props: {},
+        filters: {},
+        beforeRouteLeave(to: any, from: any, next: any) {
+            this.beforeRouteLeave(to, from , next);
+        }
+    })
     export default class SampleSet extends Vue {
         public submitting: boolean = false;
         public error_alert_message: string = "Everything is fine. 🐺";
@@ -123,8 +168,15 @@
         public csv_file: string = "";
 
         public sampleset_uuid: string | null = null;
+
         public sample_list_name: string = "";
-        public samples: Sample[] = _dummySampleList;
+
+        // For Vuex, we make 'samples' a readonly computed attribute that deep clones
+        // the object held by the vuex store. 'samples' in the vuex store is
+        // only modified by wholesale replacement upon 'Save' or navigation
+        // away from the SampleCart route.
+        // public samples: Sample[];
+
         public selectedSamples: Sample[] = [];
 
         // for lodash in templates
@@ -132,12 +184,29 @@
             return _;
         }
 
-        created() {
+        async beforeCreate() {
+            // FIXME: Debug only
+            if (this.$store.state.samples.length == 0) {
+                const s = _.cloneDeep(_dummySampleList);
+                this.$store.commit(SET_SAMPLES, s);
+            }
+        }
 
+        created() {
+            //this.samples = _.cloneDeep(this.$store.state.samples);
+        }
+
+        public _samples: Sample[];
+        get samples() {
+            this._samples = _.cloneDeep(this.$store.state.samples);
+            return this._samples;
         }
 
         async submit() {
-            const data = {name: this.sample_list_name, samples: this.samples};
+            const data = {
+                name: this.sample_list_name,
+                samples: this.samples
+            };
             try {
                 this.submitting = true;
                 let response = null;
@@ -149,6 +218,8 @@
                 }
                 this.submitting = false;
                 this.flashSnackBarMessage("Saved !");
+
+                this.$store.commit(SET_SAMPLES, this.samples);
 
                 // TODO: Save and highlight validation issues (eg identical sample names)
                 //       Route to next step
@@ -209,6 +280,7 @@
                 const i = this.samples.indexOf(row);
                 this.samples.splice(i, 1);
             }
+            this.$store.commit(SET_SAMPLES, this.samples);
         }
 
         saveSampleList() {
@@ -231,7 +303,17 @@
 
         populateSelectionList(sample_list: Array<Sample>) {
             console.log(sample_list);
-            this.samples = sample_list;
+            this.$store.commit(SET_SAMPLES, sample_list);
+        }
+
+        // This ensures changes to sample table are committed to the vuex store
+        // prior to navigating away. Defined here and wrapped on the Component
+        // decorator so `this` works correctly.
+        // https://router.vuejs.org/en/advanced/navigation-guards.html
+        beforeRouteLeave(to: any, from: any, next: any) {
+            // console.log([to, from, next]);
+            this.$store.commit(SET_SAMPLES, this._samples);
+            next();
         }
     };
 

@@ -18,6 +18,10 @@
         [v-cloak]::before {
             content: "<i>loading…</i>"
         }
+
+        .md-table {
+            width: 100%;
+        }
     </style>
     <title>Laxy</title>
 </head>
@@ -40,7 +44,8 @@
             </div>
 
             <div v-show="logged_in">
-                <md-menu md-size="4" md-direction="bottom left" ref="avatarMenu">
+                <md-menu md-size="4" md-direction="bottom left"
+                         ref="avatarMenu">
                     <md-button class="md-fab md-raised" md-menu-trigger>
                         <md-avatar>
                             <img src="http://i.pravatar.cc/64" alt="Avatar">
@@ -50,8 +55,10 @@
                         <div class="author-card">
                             <div class="author-card-info">
                                 <md-subheader>{{ user_fullname }}</md-subheader>
-                                <md-menu-item @selected="openProfile">Profile</md-menu-item>
-                                <md-menu-item @selected="logout">Logout</md-menu-item>
+                                <md-menu-item @selected="openProfile">Profile
+                                </md-menu-item>
+                                <md-menu-item @selected="logout">Logout
+                                </md-menu-item>
                             </div>
                         </div>
                     </md-menu-content>
@@ -60,19 +67,24 @@
             <div v-show="!logged_in">
                 <!--<md-icon class="md-primary">account_circle</md-icon>-->
                 <md-menu md-size="4" md-direction="bottom left" ref="loginMenu">
-                    <md-button class="md-raised md-primary" md-menu-trigger>Sign in
+                    <md-button class="md-raised md-primary" md-menu-trigger>Sign
+                        in
                     </md-button>
                     <md-menu-content>
                         <form novalidate @submit.stop.prevent="login()">
                             <md-input-container>
                                 <label>Username</label>
-                                <md-input v-model="login_form_username"></md-input>
+                                <md-input
+                                        v-model="login_form_username"></md-input>
                             </md-input-container>
                             <md-input-container>
                                 <label>Password</label>
-                                <md-input type="password" v-model="login_form_password"></md-input>
+                                <md-input type="password"
+                                          v-model="login_form_password"></md-input>
                             </md-input-container>
-                            <md-button type="submit" class="md-raised md-primary">Sign in</md-button>
+                            <md-button type="submit"
+                                       class="md-raised md-primary">Sign in
+                            </md-button>
                         </form>
                     </md-menu-content>
                 </md-menu>

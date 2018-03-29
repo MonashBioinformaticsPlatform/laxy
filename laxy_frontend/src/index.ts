@@ -11,13 +11,13 @@ const numeral = require('numeral');
 import axios, {AxiosResponse} from 'axios';
 
 import Vue, {ComponentOptions} from 'vue';
-import VueRouter from 'vue-router';
-
-import {WebAPI} from './web-api';
+import Vuex from 'vuex';
+import VueRouter, {RouterOptions} from 'vue-router';
 
 const VueMaterial = require('vue-material');
 const VueMoment = require('vue-moment');  // for date formatting
 
+Vue.use(Vuex);
 Vue.use(VueRouter);
 Vue.use(VueMaterial);
 Vue.use(VueMoment);
@@ -28,6 +28,9 @@ const VueMarkdown = require('vue-markdown');
 Vue.use(VueMarkdown);
 Vue.component('vue-markdown', VueMarkdown);
 */
+
+import {Store as store} from './store';
+import {WebAPI} from './web-api';
 
 import FrontPage from './components/FrontPage.vue';
 import FileBrowser from './components/FileBrowser.vue';
@@ -41,12 +44,12 @@ import PipelineParams from './components/PipelineParams.vue';
 Vue.component('input-files-form', InputDataForm);
 Vue.component('sample-table', SampleTable);
 
-Vue.filter('numeral_format', function (value: number | string, format: string = '0 a') {
+Vue.filter('numeral_format', function(value: number | string, format: string = '0 a') {
     if (!value) return '';
     return numeral(value).format(format);
 });
 
-Vue.filter('deunderscore', function (value: string) {
+Vue.filter('deunderscore', function(value: string) {
     if (!value) return '';
     value = value.replace('_', ' ');
     // capitalize first letter
@@ -88,7 +91,7 @@ const router = new VueRouter({
         },
     ],
     // mode: 'history',
-});
+} as RouterOptions);
 
 interface MainApp extends Vue {
     logged_in: boolean;
@@ -98,9 +101,10 @@ interface MainApp extends Vue {
     sample_cart_count: number;
 }
 
-const MainApp = new Vue({
+const App = new Vue({
     el: '#app',
     router,
+    store,
     data() {
         return {
             logged_in: false,
@@ -128,14 +132,14 @@ const MainApp = new Vue({
             data.logged_in = true;
             // router.push('rnaseq');
         },
-        logout(event) {
+        logout(event: Event) {
             sessionStorage.setItem('accessToken', '');
             WebAPI.logout();
             (this.$data as MainApp).logged_in = false;
             // this.$refs["avatarMenu"].close();
             router.push('/');
         },
-        openProfile(event) {
+        openProfile(event: Event) {
             // this.$refs["avatarMenu"].close();
             router.push('profile');
         },

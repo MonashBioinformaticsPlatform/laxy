@@ -8,7 +8,7 @@
             </md-table-row>
         </md-table-header>
         <md-table-body>
-            <md-table-row v-for="sample in samples" :key="sample.name"
+            <md-table-row v-for="(sample, index) in samples" :key="sample.name"
                           :md-item="sample"
                           md-selection>
                 <md-table-cell v-for="field in fields" :key="field">

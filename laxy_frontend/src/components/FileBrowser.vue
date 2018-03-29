@@ -191,7 +191,7 @@
     export default class FileBrowser extends Vue {
 
         filesets: Array<FileSet> = dummyFileSetData;
-        selected_fileset: FileSet; // = dummyFileSetData[0];
+        selected_fileset: FileSet = this.filesets[0]; // = dummyFileSetData[0];
 
         created() {
             this.onSelectFileset(this.filesets[0], null);
