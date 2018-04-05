@@ -1,8 +1,11 @@
 const path = require('path');
 const webpack = require('webpack');
 const WebpackShellPlugin = require('webpack-shell-plugin');
+const NyanProgressPlugin = require('nyan-progress-webpack-plugin');
 
-const plugins = [];
+const plugins = [
+    new NyanProgressPlugin()
+];
 
 /*
 plugins.push(new WebpackShellPlugin({
@@ -53,7 +56,7 @@ module.exports = {
             {
                 test: /\.css$/,
                 // loader: 'style-loader!css-loader',
-                use: [ 'style-loader', 'css-loader' ]
+                use: ['style-loader', 'css-loader']
             },
         ]
     },
