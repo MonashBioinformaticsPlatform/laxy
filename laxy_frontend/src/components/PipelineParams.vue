@@ -66,6 +66,8 @@
         Watch
     } from "vue-property-decorator";
 
+    import {SET_SAMPLES} from "../store";
+    import {SampleSet} from "../model";
     import {WebAPI} from "../web-api";
 
     import {DummySampleList as _dummySampleList} from "../test-data";
@@ -79,9 +81,8 @@
         public snackbar_duration: number = 2000;
 
         public pipelinerun_uuid: string | null = null;
-        public sample_list_name: string = "";
-        public samples: Array<Sample> = _dummySampleList;
-        public sampleset_id: string = "3NNIIOt8skAuS1w2ZfgOq";
+        // public samples: SampleSet = _dummySampleList;
+        // public sampleset_id: string = "3NNIIOt8skAuS1w2ZfgOq";
         public selectedSamples: Array<Sample> = [];
 
         public available_genomes: Array<ReferenceGenome> = [
@@ -90,18 +91,24 @@
         ];
         public reference_genome: string = this.available_genomes[0].id;
 
+        public _samples: SampleSet;
+        get samples(): SampleSet {
+            this._samples = _.cloneDeep(this.$store.state.samples);
+            return this._samples;
+        }
+
         // for lodash in templates
         get _() {
             return _;
         }
 
         created() {
-
+            this._samples = _.cloneDeep(this.$store.state.samples);
         }
 
         prepareData() {
             let data = {
-                "sample_set": this.sampleset_id,
+                "sample_set": this.samples.id,
                 "sample_metadata": {},
                 "params": {
                     "genome": this.reference_genome,
@@ -120,7 +127,7 @@
         }
 
         async save() {
-            // const data = _dummyPipelineConfig;
+            this.$store.commit(SET_SAMPLES, this._samples);
 
             const data = this.prepareData();
             console.log(data);
@@ -164,8 +171,6 @@
             } catch (error) {
 
             }
-
-
         }
 
         openDialog(ref: string) {
@@ -188,7 +193,8 @@
 
         populateSelectionList(sample_list: Array<Sample>) {
             console.log(sample_list);
-            this.samples = sample_list;
+            this._samples.items = sample_list;
+            this.$store.commit(SET_SAMPLES, this._samples);
         }
     };
 

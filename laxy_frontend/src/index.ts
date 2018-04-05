@@ -37,7 +37,7 @@ import FileBrowser from './components/FileBrowser.vue';
 import RNASeqSetup from './components/RNASeqSetup.vue';
 import InputDataForm from './components/InputFilesForm.vue';
 import ENAFileSelect from './components/ENAFileSelect.vue';
-import SampleSet from './components/SampleSet.vue';
+import SampleCart from './components/SampleCart.vue';
 import SampleTable from './components/SampleTable.vue';
 import PipelineParams from './components/PipelineParams.vue';
 
@@ -82,7 +82,7 @@ const router = new VueRouter({
         {
             path: '/cart',
             name: 'cart',
-            component: SampleSet,
+            component: SampleCart,
         },
         {
             path: '/setupRun',
@@ -111,7 +111,6 @@ const App = new Vue({
             user_fullname: 'John Monash',
             login_form_username: '',
             login_form_password: '',
-            sample_cart_count: 999,
         };
     },
     methods: {
@@ -152,5 +151,10 @@ const App = new Vue({
         close(ref: string) {
             console.log('Closed: ' + ref);
         },
+    },
+    computed: {
+        sample_cart_count(): number {
+            return this.$store.getters.sample_cart_count;
+        }
     }
 }) as ComponentOptions<MainApp>;

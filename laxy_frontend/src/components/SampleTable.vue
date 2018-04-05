@@ -8,7 +8,7 @@
             </md-table-row>
         </md-table-header>
         <md-table-body>
-            <md-table-row v-for="(sample, index) in samples" :key="sample.name"
+            <md-table-row v-for="(sample, index) in samples.items" :key="sample.name"
                           :md-item="sample"
                           md-selection>
                 <md-table-cell v-for="field in fields" :key="field">
@@ -23,10 +23,10 @@
                     </span>
                     -->
                     <span v-else-if="field === 'R1' || field === 'R2'">
-                        <span v-for="file in sample['files']">
+                        <span v-for="file in sample.files">
                             {{ file[field] }}<br/>
                         </span>
-                        <!-- {{ JSON.stringify(sample['files']) }} -->
+                        <!-- {{ JSON.stringify(sample.files) }} -->
                     </span>
                     <span v-else>
                         {{ sample[field] }}
@@ -49,16 +49,18 @@
     import Component from "vue-class-component";
     import {Emit, Inject, Model, Prop, Provide, Watch} from "vue-property-decorator";
 
+    import {SampleSet} from "../model";
+
     import {DummySampleList as _dummySampleList} from "../test-data";
 
     @Component({props: {
-                samples: Array,
+                samples: {},
                 fields: Array,
                 editable_fields: Array
         }, filters: {}})
     export default class SampleTable extends Vue {
         // public samples: Array<Sample> = _dummySampleList;
-        public samples: Sample[];
+        public samples: SampleSet;
         public selectedSamples: Array<Sample> = [];
         public fields: Array<string>; // = ["name", "condition", "R1", "R2"];
         public editable_fields: Array<string>; // = ["name", "condition"];
@@ -79,8 +81,8 @@
 
         removeSelected() {
             for (const row of this.selectedSamples) {
-                const i = this.samples.indexOf(row);
-                this.samples.splice(i, 1);
+                const i = this.samples.items.indexOf(row);
+                this.samples.items.splice(i, 1);
             }
         }
     };

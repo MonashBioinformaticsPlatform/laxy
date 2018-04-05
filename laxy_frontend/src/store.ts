@@ -1,4 +1,5 @@
 import Vuex from 'vuex';
+import {SampleSet} from './model';
 
 export const ADD_SAMPLES = 'add_samples';
 export const SET_SAMPLES = 'set_samples';
@@ -6,18 +7,24 @@ export const SET_SAMPLES = 'set_samples';
 export const Store = new Vuex.Store({
     strict: true,
     state: {
-        samples: [] as Sample[],
+        samples: {} as SampleSet,
     },
     getters: {
         samples: state => {
             return state.samples;
+        },
+        sample_cart_count: state => {
+            if (state.samples.items != undefined) {
+                return state.samples.items.length;
+            }
+            return 0;
         }
     },
     mutations: {
         [ADD_SAMPLES](state, samples: Sample[]) {
-            state.samples.push(...samples);
+            state.samples.items.push(...samples);
         },
-        [SET_SAMPLES](state, samples: Sample[]) {
+        [SET_SAMPLES](state, samples: SampleSet) {
             state.samples = samples;
         }
     },

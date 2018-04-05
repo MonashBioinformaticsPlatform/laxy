@@ -1,62 +1,66 @@
 // Test data
+import {SampleSet} from './model';
 
-export const DummySampleList: Sample[] = [
-    {
-        'id': 'kazd4mZvmYX0OXw07dGfnV',
-        'name': 'SampleA',
-        'condition': 'wildtype',
-        'files': [
-            {
-                'R1': 'ftp://example.com/sampleA_lane1_R1.fastq.gz',
-                'R2': 'ftp://example.com/sampleA_lane1_R2.fastq.gz'
-            },
-        ],
-    },
-    {
-        'id': 'lezd4mZvmYX0OXw07dGfnV',
-        'name': 'SampleB',
-        'condition': 'mutant',
-        'files': [
-            {
-                'R1': 'ftp://example.com/sampleB_lane1_R1.fastq.gz',
-                'R2': 'ftp://example.com/sampleB_lane1_R2.fastq.gz'
-            },
-            {
-                'R1': 'ftp://example.com/sampleB_lane4_R1.fastq.gz',
-                'R2': 'ftp://example.com/sampleB_lane4_R2.fastq.gz'
-            }
+export const DummySampleList: SampleSet = {
+    name: 'Dummyset',
+    items: [
+        {
+            'id': 'kazd4mZvmYX0OXw07dGfnV',
+            'name': 'SampleA',
+            'condition': 'wildtype',
+            'files': [
+                {
+                    'R1': 'ftp://example.com/sampleA_lane1_R1.fastq.gz',
+                    'R2': 'ftp://example.com/sampleA_lane1_R2.fastq.gz'
+                },
+            ],
+        },
+        {
+            'id': 'lezd4mZvmYX0OXw07dGfnV',
+            'name': 'SampleB',
+            'condition': 'mutant',
+            'files': [
+                {
+                    'R1': 'ftp://example.com/sampleB_lane1_R1.fastq.gz',
+                    'R2': 'ftp://example.com/sampleB_lane1_R2.fastq.gz'
+                },
+                {
+                    'R1': 'ftp://example.com/sampleB_lane4_R1.fastq.gz',
+                    'R2': 'ftp://example.com/sampleB_lane4_R2.fastq.gz'
+                }
 
-        ]
-    },
-    {
-        'id': 'food4mZvmYX0OXw07dGfnV',
-        'name': 'sample_wildtype',
-        'condition': 'wildtype',
-        'files': [
-            {
-                'R1': '2VSd4mZvmYX0OXw07dGfnV',
-                'R2': '3XSd4mZvmYX0OXw07dGfmZ'
-            },
-            {
-                'R1': 'Toopini9iPaenooghaquee',
-                'R2': 'Einanoohiew9ungoh3yiev'
-            }]
-    },
-    {
-        'id': 'bla7eiPhaiwion6ohniek3',
-        'name': 'sample_mutant',
-        'condition': 'mutant',
-        'files': [
-            {
-                'R1': 'zoo7eiPhaiwion6ohniek3',
-                'R2': 'ieshiePahdie0ahxooSaed'
-            },
-            {
-                'R1': 'nahFoogheiChae5de1iey3',
-                'R2': 'Dae7leiZoo8fiesheech5s'
-            }]
-    }
-];
+            ]
+        },
+        {
+            'id': 'food4mZvmYX0OXw07dGfnV',
+            'name': 'sample_wildtype',
+            'condition': 'wildtype',
+            'files': [
+                {
+                    'R1': '2VSd4mZvmYX0OXw07dGfnV',
+                    'R2': '3XSd4mZvmYX0OXw07dGfmZ'
+                },
+                {
+                    'R1': 'Toopini9iPaenooghaquee',
+                    'R2': 'Einanoohiew9ungoh3yiev'
+                }]
+        },
+        {
+            'id': 'bla7eiPhaiwion6ohniek3',
+            'name': 'sample_mutant',
+            'condition': 'mutant',
+            'files': [
+                {
+                    'R1': 'zoo7eiPhaiwion6ohniek3',
+                    'R2': 'ieshiePahdie0ahxooSaed'
+                },
+                {
+                    'R1': 'nahFoogheiChae5de1iey3',
+                    'R2': 'Dae7leiZoo8fiesheech5s'
+                }]
+        }
+    ]
+} as SampleSet;
 
 export const DummyPipelineConfig = {
         'sample_set': '3NNIIOt8skAuS1w2ZfgOq',

@@ -16,7 +16,10 @@
     "interface-name": [
       false
     ],
-    // "variable-name": false,
+    "variable-name": [true,
+      "allow-leading-underscore",
+      "allow-pascal-case",
+      "allow-snake-case"],
     "prefer-for-of": false,
     "object-literal-shorthand": false,
     "only-arrow-functions": false,
