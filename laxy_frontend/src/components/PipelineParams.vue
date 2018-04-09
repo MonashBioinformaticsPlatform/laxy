@@ -70,7 +70,12 @@
         Watch
     } from "vue-property-decorator";
 
-    import {SET_SAMPLES} from "../store";
+    import {
+        SET_SAMPLES,
+        SET_PIPELINE_PARAMS,
+        SET_PIPELINE_DESCRIPTION
+    } from "../store";
+
     import {SampleSet} from "../model";
     import {WebAPI} from "../web-api";
 
@@ -95,12 +100,12 @@
         // public sampleset_id: string = "3NNIIOt8skAuS1w2ZfgOq";
         public selectedSamples: Array<Sample> = [];
 
-        public description: string = '';
         public available_genomes: Array<ReferenceGenome> = [
-            {id: "hg19", organism: "Human"},
-            {id: "mm10", organism: "Mouse"},
+            {id: 'hg19', organism: 'Human'},
+            {id: 'mm10', organism: 'Mouse'},
         ];
-        public reference_genome: string = this.available_genomes[0].id;
+        // public reference_genome: string = this.available_genomes[0].id;
+        // public description: string = '';
 
         public _samples: SampleSet;
         get samples(): SampleSet {
@@ -111,6 +116,23 @@
         // for lodash in templates
         get _() {
             return _;
+        }
+
+        get description() {
+            return this.$store.getters.pipelineParams.description;
+        }
+        set description(txt: string) {
+            this.$store.commit(SET_PIPELINE_DESCRIPTION, txt);
+        }
+
+        get reference_genome() {
+            return this.$store.getters.pipelineParams.reference_genome;
+        }
+        set reference_genome(id: string) {
+            this.$store.commit(SET_PIPELINE_PARAMS, {
+                description: this.description,
+                reference_genome: id,
+            });
         }
 
         created() {
