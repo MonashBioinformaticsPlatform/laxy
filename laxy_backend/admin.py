@@ -104,7 +104,20 @@ class SampleSetAdmin(VersionAdmin):
 
 
 class PipelineRunAdmin(VersionAdmin):
-    pass
+    list_display = ('uuid',
+                    'created',
+                    'modified')
+    ordering = ('-created_time', '-modified_time',)
+
+    def uuid(self, obj):
+        return '%s' % obj.uuid()
+
+    def created(self, obj):
+        return humanize.naturaltime(obj.created_time)
+
+    def modified(self, obj):
+        return humanize.naturaltime(obj.modified_time)
+
 
 
 # admin.site.register(TaskMeta, TaskMetaAdmin)
