@@ -213,7 +213,8 @@ class ENAFastqUrlQueryView(JSONView):
         accession_list = request.query_params.get('accessions', None)
         if accession_list is not None:
             accessions = accession_list.split(',')
-            ena_result = ena.get_fastq_urls(accessions)
+            # ena_result = ena.get_fastq_urls(accessions)
+            ena_result = ena.get_run_table(accessions)
 
             return Response(ena_result, status=status.HTTP_200_OK)
 

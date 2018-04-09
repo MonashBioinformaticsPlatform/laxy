@@ -113,6 +113,9 @@ const App = new Vue({
             login_form_password: '',
         };
     },
+    async created() {
+      WebAPI.isLoggedIn().then((result) => {this.logged_in = result; });
+    },
     methods: {
         async login() {
             const data = (this.$data as MainApp);

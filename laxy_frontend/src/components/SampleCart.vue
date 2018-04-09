@@ -187,8 +187,8 @@
 
         async beforeCreate() {
             // FIXME: Debug only
-            if (this.$store.state.samples == null ||
-                this.$store.state.samples.items == null) {
+            if (this.$store.getters.sample_cart_count === null ||
+                this.$store.getters.sample_cart_count === 0) {
                 const s: SampleSet = _.cloneDeep(_dummySampleList);
                 this.$store.commit(SET_SAMPLES, s);
             }

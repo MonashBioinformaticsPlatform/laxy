@@ -108,12 +108,17 @@ def parse_fastq_table(table: str, key_by='run_accession') -> Dict[str, Dict]:
         for f in semicol_fields:
             rec[f] = rec[f].split(';')
         rec['read_count'] = int(rec['read_count'])
-
         rec['fastq_ftp'] = ['ftp://%s' % l for l in rec['fastq_ftp']]
         rec['fastq_bytes'] = [int(s) for s in rec['fastq_bytes']]
+
+        # If there is only one item in the list, make it a value not a list.
+        # for field in ['fastq_ftp', 'fastq_md5', 'fastq_bytes']:
+        #     if len(rec[field]) == 1:
+        #         rec[field] = rec[field].pop()
+
         key = rec[key_by]
         if isinstance(rec[key_by], list):
-            key = rec[key_by].pop()
+            key = rec[key_by][0]
         by_url[key] = rec
 
     return by_url
@@ -121,8 +126,8 @@ def parse_fastq_table(table: str, key_by='run_accession') -> Dict[str, Dict]:
 
 def flatten_fastq_table(table: str, delimiter='\t', inner_sep=';') -> str:
     """
-    Take a TSV table where some fields are semi-colon;separated and create new rows with
-    those fields split.
+    Take a TSV table where some fields are semi-colon;separated and create new
+    rows with those fields split.
 
     1   2   A;B   C;D
 
@@ -140,7 +145,8 @@ def flatten_fastq_table(table: str, delimiter='\t', inner_sep=';') -> str:
     :return:
     :rtype:
     """
-    table = [row for row in csv.DictReader(table.splitlines(), delimiter=delimiter)]
+    table = [row for row in csv.DictReader(table.splitlines(),
+                                           delimiter=delimiter)]
     rows = []
 
     for rec in table:
@@ -264,6 +270,47 @@ def get_fastq_urls(accessions: List[str], fields: List[str] = None) -> Dict[str,
         urls_dict.update(urls)
 
     return urls_dict
+
+
+def get_run_table(accessions: List[str], fields: List[str] = None) -> Dict[str, Dict]:
+    """
+    Given an ENA (or SRA) Run (SRR*), Experiment (SRX*), Project (PRJ*)
+    (or Study?) accession, return a list of associated Sample-style records
+    (including FASTQ download URLs) for each run suitable for use by the
+    frontend.
+
+    :param fields:
+    :type fields:
+    :param accessions:
+    :type accessions:
+    :return:
+    :rtype:
+    """
+
+    if fields is None:
+        fields = ['run_accession', 'experiment_accession', 'study_accession',
+                  'sample_accession', 'instrument_platform', 'instrument_model',
+                  'library_strategy', 'library_source', 'library_layout',
+                  'library_selection', 'library_name', 'broker_name',
+                  'study_alias', 'experiment_alias', 'sample_alias',
+                  'run_alias', 'read_count', 'base_count', 'fastq_ftp',
+                  'fastq_md5', 'fastq_bytes', 'center_name']
+
+    runs_dict = dict()
+    # raises HTTPError on status_code 500 (eg ENA is temporarily down)
+    for accession in accessions:
+        table = enasearch.retrieve_run_report(accession=accession, fields=','.join(fields))
+        # table = flatten_fastq_table(table)
+        runs = parse_fastq_table(table, key_by='run_accession')
+        runs_dict.update(runs)
+
+    # We turn the list of FTP urls into a list of dicts like
+    # [{'R1': 'ftp://bla_1.fastq.gz'}, {'R2': 'ftp://bla_2.fastq.gz'}]
+    for run, metadata in runs_dict.items():
+        if metadata.get('fastq_ftp', False):
+            metadata['fastq_ftp'] = [{'R%s' % str(n+1): url}
+                                     for n, url in enumerate(metadata['fastq_ftp'])]
+    return runs_dict
 
 
 def search_ena_accessions(accessions: List[str]):

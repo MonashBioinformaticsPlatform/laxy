@@ -727,13 +727,13 @@ class PipelineRun(Timestamped, UUIDModel):
     # - eg, mapping sample names to conditions
     # {"SampleA": { "conditions": ["wt", "ugly"]},
     #  "SampleB": { "conditions": ["mutant"]} }
-    sample_metadata = JSONField(default=OrderedDict)
+    # sample_metadata = JSONField(default=OrderedDict)
 
     # Parameters specific to the pipeline (eg reference genome)
     params = JSONField(default=OrderedDict)
 
     # Free-text comment, mostly for users to help keep track of runs.
-    comment = CharField(max_length=2048, blank=True, null=True)
+    description = CharField(max_length=2048, blank=True, null=True)
 
     def to_json(self):
         # TODO: Convert File UUIDs into URLs here ?

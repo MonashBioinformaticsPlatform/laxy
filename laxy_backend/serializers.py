@@ -305,7 +305,7 @@ class PipelineRunSerializer(BaseModelSerializer):
     )
 
     sample_set = SampleSetSerializer()
-    sample_metadata = SchemalessJsonResponseSerializer(required=False)  # becomes OpenAPI 'object' type
+    # sample_metadata = SchemalessJsonResponseSerializer(required=False)  # becomes OpenAPI 'object' type
     params = SchemalessJsonResponseSerializer(required=False)  # becomes OpenAPI 'object' type
 
     class Meta:

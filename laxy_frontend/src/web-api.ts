@@ -40,6 +40,15 @@ export class WebAPI {
         }
     }
 
+    public static async isLoggedIn() {
+        try {
+            const result = await this.fetcher.get(`/accounts/profile/`) as AxiosResponse;
+            return true;
+        } catch (error) {
+            return false;
+        }
+    }
+
     public static getAuthHeader() {
         const token = sessionStorage.getItem('accessToken');
         return {Authorization: `Bearer ${token}`};

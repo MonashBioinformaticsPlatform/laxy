@@ -4,7 +4,8 @@ declare interface Sample {
     id?: string;
     name: string;
     files: any[];
-    condition?: string;
+    metadata: {}; // {condition: '', ena: {}}
+    // condition?: string;
 }
 
 declare interface ENASample {

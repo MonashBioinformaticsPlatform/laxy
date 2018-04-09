@@ -2,12 +2,13 @@
 import {SampleSet} from './model';
 
 export const DummySampleList: SampleSet = {
+    id: undefined,
     name: 'Dummyset',
     items: [
         {
             'id': 'kazd4mZvmYX0OXw07dGfnV',
             'name': 'SampleA',
-            'condition': 'wildtype',
+            'metadata': {'condition': 'wildtype'},
             'files': [
                 {
                     'R1': 'ftp://example.com/sampleA_lane1_R1.fastq.gz',
@@ -18,7 +19,7 @@ export const DummySampleList: SampleSet = {
         {
             'id': 'lezd4mZvmYX0OXw07dGfnV',
             'name': 'SampleB',
-            'condition': 'mutant',
+            'metadata': {'condition': 'mutant'},
             'files': [
                 {
                     'R1': 'ftp://example.com/sampleB_lane1_R1.fastq.gz',
@@ -34,7 +35,7 @@ export const DummySampleList: SampleSet = {
         {
             'id': 'food4mZvmYX0OXw07dGfnV',
             'name': 'sample_wildtype',
-            'condition': 'wildtype',
+            'metadata': {'condition': 'wildtype'},
             'files': [
                 {
                     'R1': '2VSd4mZvmYX0OXw07dGfnV',
@@ -48,7 +49,7 @@ export const DummySampleList: SampleSet = {
         {
             'id': 'bla7eiPhaiwion6ohniek3',
             'name': 'sample_mutant',
-            'condition': 'mutant',
+            'metadata': {'condition': 'mutant'},
             'files': [
                 {
                     'R1': 'zoo7eiPhaiwion6ohniek3',
@@ -63,19 +64,19 @@ export const DummySampleList: SampleSet = {
 } as SampleSet;
 
 export const DummyPipelineConfig = {
-        'sample_set': '3NNIIOt8skAuS1w2ZfgOq',
-        'sample_metadata': {
-            'kazd4mZvmYX0OXw07dGfnV': {'condition': 'wildtype'},
-            'lezd4mZvmYX0OXw07dGfnV': {'condition': 'mutant'},
-            'food4mZvmYX0OXw07dGfnV': {'condition': 'wildtype'},
-            'bla7eiPhaiwion6ohniek3': {'condition': 'mutant'},
-        },
-        'params': {
-            'genome': 'mm10'
-        },
-        'pipeline': 'rnasik',
-        'comment': 'some string'
-    };
+    'sample_set': '3NNIIOt8skAuS1w2ZfgOq',
+    'sample_metadata': {
+        'kazd4mZvmYX0OXw07dGfnV': {'condition': 'wildtype'},
+        'lezd4mZvmYX0OXw07dGfnV': {'condition': 'mutant'},
+        'food4mZvmYX0OXw07dGfnV': {'condition': 'wildtype'},
+        'bla7eiPhaiwion6ohniek3': {'condition': 'mutant'},
+    },
+    'params': {
+        'genome': 'mm10'
+    },
+    'pipeline': 'rnasik',
+    'comment': 'some string'
+};
 
 export const ENADummySampleList: ENASample[] = [
     {

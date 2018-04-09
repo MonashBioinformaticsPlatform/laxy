@@ -1,6 +1,7 @@
 <template>
     <div>
-        <md-dialog-alert :md-content-html="error_alert_message" :md-content="error_alert_message" ref="error_dialog">
+        <md-dialog-alert :md-content-html="error_alert_message"
+                         :md-content="error_alert_message" ref="error_dialog">
         </md-dialog-alert>
 
         <md-layout md-column>
@@ -14,8 +15,10 @@
                                 </md-tooltip>
                             </span>
                         </label>
-                        <md-input v-model="accession_input" placeholder="PRJNA276493, SRR950078"></md-input>
-                        <md-button class="md-icon-button" @click="search(accession_input)">
+                        <md-input v-model="accession_input"
+                                  placeholder="PRJNA276493, SRR950078"></md-input>
+                        <md-button class="md-icon-button"
+                                   @click="search(accession_input)">
                             <md-icon type="submit">search</md-icon>
                         </md-button>
                     </md-input-container>
@@ -27,15 +30,20 @@
                         <md-table @select="onSelect">
                             <md-table-header>
                                 <md-table-row>
-                                    <md-table-head v-for="field in show_sample_fields" :key="field">{{ field | deunderscore }}
+                                    <md-table-head
+                                            v-for="field in show_sample_fields"
+                                            :key="field">{{ field | deunderscore }}
                                     </md-table-head>
                                 </md-table-row>
                             </md-table-header>
                             <md-table-body>
-                                <md-table-row v-for="sample in samples" :key="sample.run_accession"
+                                <md-table-row v-for="sample in samples"
+                                              :key="sample.fastq_md5.join('-')"
                                               :md-item="sample"
                                               md-auto-select md-selection>
-                                    <md-table-cell v-for="field in show_sample_fields" :key="field">
+                                    <md-table-cell
+                                            v-for="field in show_sample_fields"
+                                            :key="field">
                                         <span v-if="field.includes('_accession')">
                                             <a :href="'https://www.ebi.ac.uk/ena/data/view/'+sample[field]"
                                                target="_blank">
@@ -68,24 +76,46 @@
                     </md-layout>
                 </md-layout>
             </md-layout>
+            <md-layout md-gutter>
+                <md-button @click="addToCart"
+                           :disabled="submitting || samples.length === 0"
+                           class="md-raised">Add to cart
+                </md-button>
+            </md-layout>
         </md-layout>
+        <md-snackbar md-position="bottom center" ref="snackbar"
+                     :md-duration="snackbar_duration">
+            <span>{{ snackbar_message }}</span>
+            <md-button class="md-accent" @click="$refs.snackbar.close()">
+                Dismiss
+            </md-button>
+        </md-snackbar>
     </div>
 </template>
 
 
 <script lang="ts">
-    import 'vue-material/dist/vue-material.css';
+    import "vue-material/dist/vue-material.css";
 
-    import * as _ from 'lodash';
-    import 'es6-promise';
+    import * as _ from "lodash";
+    import "es6-promise";
 
-    import axios, {AxiosResponse} from 'axios';
-    import Vue, {ComponentOptions} from 'vue';
+    import * as pluralize from "pluralize";
+    import axios, {AxiosResponse} from "axios";
+    import Vue, {ComponentOptions} from "vue";
     import VueMaterial from "vue-material";
-    import Component from 'vue-class-component';
-    import {Emit, Inject, Model, Prop, Provide, Watch} from "vue-property-decorator"
+    import Component from "vue-class-component";
+    import {
+        Emit,
+        Inject,
+        Model,
+        Prop,
+        Provide,
+        Watch
+    } from "vue-property-decorator";
 
-    import {WebAPI} from '../web-api';
+    import {ADD_SAMPLES} from "../store";
+    import {WebAPI} from "../web-api";
 
     import {ENADummySampleList as _dummysampleList} from "../test-data";
 
@@ -98,12 +128,42 @@
         public samples: Array<ENASample> = [];  // = _dummysampleList;
         public selectedSamples: Array<ENASample> = [];
 
-        public show_sample_fields = ["run_accession", "experiment_accession", "study_accession", "sample_accession",
-            "instrument_platform", "library_strategy", "read_count"];
+        public snackbar_message: string = "Everything is fine. ☃";
+        public snackbar_duration: number = 2000;
+
+        // TODO: Show only run_accession and sample_accession, maybe run_alias
+        //       in table, show all other details in a hover card to the right.
+        public show_sample_fields = [
+            "run_alias",
+            "run_accession",
+            "experiment_accession",
+            //"study_accession",
+            "sample_accession",
+            //"instrument_platform",
+            //"instrument_model",
+            "library_strategy",
+            "library_source",
+            //"library_layout",
+            "library_selection",
+            //"library_name",
+            //"study_alias",
+            //"experiment_alias",
+            //"sample_alias",
+            //"run_alias",
+            //"read_count",
+            //"base_count",
+            //"center_name",
+            //"broker_name",
+            //"fastq_ftp",
+            //"fastq_md5",
+            //"fastq_bytes"]
+        ];
 
         public ena_ids: DbAccession[] = [{accession: ""} as DbAccession];
 
-        public accession_input: string = "PRJNA276493, PRJEB3366, SRR950078";
+        // public accession_input: string = "PRJNA319904"; // ~6000 files !
+        // public accession_input: string = "PRJEB3366"; // many !
+        public accession_input: string = "PRJNA276493, SRR950078";
 
         public submitting: boolean = false;
         public error_alert_message: string = "Everything is fine.";
@@ -120,6 +180,38 @@
         onSelect(rows: any) {
             this.selectedSamples = rows as Array<ENASample>;
             // console.log(this.selectedSamples);
+        }
+
+        remove(rows: ENASample[]) {
+            for (const row of rows) {
+                const i = this.samples.indexOf(row);
+                this.samples.splice(i, 1);
+            }
+        }
+
+        addToCart() {
+            // TODO: this.selectedSamples needs to be transformed from an array
+            // of ENASample[] to an array of Sample[], mapping 'fastq_ftp' to 'files',
+            // 'sample_accession' to 'name'.
+            // Might be also a good time to refactor 'condition' to 'metadata'
+            // and shove some of the ENA metadata in there (eg the
+            // run/experiment/study/sample_accession)
+
+            console.log(this.selectedSamples);
+            const cart_samples = [];
+            for (let ena of this.selectedSamples) {
+                cart_samples.push({
+                    name: ena.sample_accession,
+                    files: ena.fastq_ftp,
+                    metadata: {condition: '', ena: ena},
+                });
+            }
+            this.$store.commit(ADD_SAMPLES, cart_samples);
+            let count = this.selectedSamples.length;
+            this.flashSnackBarMessage(`Added ${count} ${pluralize("sample", count)} to cart.`);
+
+            this.remove(this.selectedSamples);
+            this.selectedSamples = [];
         }
 
         async search(accessions: string) {
@@ -147,6 +239,7 @@
                 console.log(error);
                 this.error_alert_message = error.toString();
                 this.openDialog("error_dialog");
+                this.submitting = false;
             }
         }
 
@@ -162,6 +255,11 @@
             (this.$refs[ref] as MdDialog).open();
         }
 
+        flashSnackBarMessage(msg: string, duration: number = 2000) {
+            this.snackbar_message = msg;
+            this.snackbar_duration = duration;
+            (this.$refs.snackbar as any).open();
+        }
     };
 
 </script>

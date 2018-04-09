@@ -7,7 +7,7 @@ export const SET_SAMPLES = 'set_samples';
 export const Store = new Vuex.Store({
     strict: true,
     state: {
-        samples: {} as SampleSet,
+        samples: new SampleSet(),
     },
     getters: {
         samples: state => {
@@ -22,6 +22,7 @@ export const Store = new Vuex.Store({
     },
     mutations: {
         [ADD_SAMPLES](state, samples: Sample[]) {
+            // if (state.samples.items == undefined)
             state.samples.items.push(...samples);
         },
         [SET_SAMPLES](state, samples: SampleSet) {

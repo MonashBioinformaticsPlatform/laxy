@@ -8,6 +8,10 @@
             <md-whiteframe style="padding: 32px;">
                 <h3>Pipeline parameters</h3>
                 <md-input-container>
+                    <label>Description</label>
+                    <md-input v-model="description" placeholder="Description of pipeline run ..."></md-input>
+                </md-input-container>
+                <md-input-container>
                     <label for="genome">Reference genome</label>
                     <md-select name="genome" id="genome"
                                v-model="reference_genome">
@@ -22,8 +26,8 @@
             <md-whiteframe style="padding: 32px;">
                 <h3>Sample conditions</h3>
                 <sample-table :samples="samples"
-                              :fields="['name', 'condition']"
-                              :editable_fields="['condition']"
+                              :fields="['name', 'metadata.condition']"
+                              :editable_fields="['metadata.condition']"
                               @selected="onSelect"></sample-table>
             </md-whiteframe>
             <md-layout>
@@ -73,7 +77,13 @@
     import {DummySampleList as _dummySampleList} from "../test-data";
     import {DummyPipelineConfig as _dummyPipelineConfig} from "../test-data";
 
-    @Component({props: {}, filters: {}})
+    @Component({
+        props: {},
+        filters: {},
+        beforeRouteLeave(to: any, from: any, next: any) {
+            (this as any).beforeRouteLeave(to, from, next);
+        }
+    })
     export default class PipelineParams extends Vue {
         public submitting: boolean = false;
         public error_alert_message: string = "Everything is fine. 🏩";
@@ -85,6 +95,7 @@
         // public sampleset_id: string = "3NNIIOt8skAuS1w2ZfgOq";
         public selectedSamples: Array<Sample> = [];
 
+        public description: string = '';
         public available_genomes: Array<ReferenceGenome> = [
             {id: "hg19", organism: "Human"},
             {id: "mm10", organism: "Mouse"},
@@ -108,21 +119,13 @@
 
         prepareData() {
             let data = {
-                "sample_set": this.samples.id,
-                "sample_metadata": {},
+                "sample_set": this._samples.id,
                 "params": {
                     "genome": this.reference_genome,
                 },
                 "pipeline": "rnasik",
-                "comment": "Just a test."
+                "description": this.description,
             };
-
-            data.sample_metadata =
-                _.keyBy(_.map(this.samples, s => _.pick(s, ["id", "condition"])),
-                    "id");
-
-            // data.sample_metadata = _.keyBy(this.samples, "id");
-
             return data;
         }
 
@@ -195,6 +198,12 @@
             console.log(sample_list);
             this._samples.items = sample_list;
             this.$store.commit(SET_SAMPLES, this._samples);
+        }
+
+        beforeRouteLeave(to: any, from: any, next: any) {
+            // console.log([to, from, next]);
+            this.$store.commit(SET_SAMPLES, this._samples);
+            next();
         }
     };
 
