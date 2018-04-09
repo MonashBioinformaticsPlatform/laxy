@@ -70,7 +70,8 @@
                                 </md-button>
 
                                 <md-menu-content>
-                                    <md-menu-item>From public ENA data
+                                    <md-menu-item @click="routeTo('enaselect')">
+                                        From public ENA data
                                     </md-menu-item>
                                     <md-menu-item>From my uploaded files
                                     </md-menu-item>
@@ -89,7 +90,8 @@
                             </md-button>
                             <span style="flex: 1;"></span>
                             <md-button class="md-icon-button"
-                                       @click="saveSampleList">
+                                       @click="saveSampleList"
+                                       :disabled="submitting">
                                 <md-icon>save</md-icon>
                                 <md-tooltip md-direction="top">Save</md-tooltip>
                             </md-button>
@@ -105,7 +107,8 @@
                 </md-layout>
             </md-layout>
             <md-layout md-gutter>
-                <md-button @click="submit" :disabled="submitting"
+                <md-button @click="saveAndContinue"
+                           :disabled="submitting"
                            class="md-raised">Save & continue
                 </md-button>
             </md-layout>
@@ -234,6 +237,7 @@
                 this.submitting = false;
                 this.error_alert_message = error.toString();
                 this.openDialog("error_dialog");
+                throw error;
             }
         }
 
@@ -272,6 +276,7 @@
                 this.error_alert_message = error.toString();
                 this.closeDialog("csv_file_select_dialog");
                 this.openDialog("error_dialog");
+                throw error;
             }
         }
 
@@ -292,6 +297,15 @@
             this.submit();
         }
 
+        async saveAndContinue() {
+            try {
+                await this.submit();
+                this.routeTo("setupRun");
+            } catch(error) {
+                throw error;
+            }
+        }
+
         openDialog(ref: string) {
             (this.$refs[ref] as MdDialog).open();
         }
@@ -310,6 +324,10 @@
             console.log(sample_list);
             this._samples.items = sample_list;
             this.$store.commit(SET_SAMPLES, this._samples);
+        }
+
+        routeTo(name: string) {
+            this.$router.push(name);
         }
 
         // This ensures changes to sample table are committed to the vuex store

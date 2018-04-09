@@ -44,12 +44,12 @@ import PipelineParams from './components/PipelineParams.vue';
 Vue.component('input-files-form', InputDataForm);
 Vue.component('sample-table', SampleTable);
 
-Vue.filter('numeral_format', function(value: number | string, format: string = '0 a') {
+Vue.filter('numeral_format', function (value: number | string, format: string = '0 a') {
     if (!value) return '';
     return numeral(value).format(format);
 });
 
-Vue.filter('deunderscore', function(value: string) {
+Vue.filter('deunderscore', function (value: string) {
     if (!value) return '';
     value = value.replace('_', ' ');
     // capitalize first letter
@@ -91,6 +91,27 @@ const router = new VueRouter({
         },
     ],
     // mode: 'history',
+    scrollBehavior(to, from, savedPosition) {
+        // This does smooth scrolling to the top of the page
+        // when we navigate to a new route.
+        //
+        // The "behaviour: 'smooth'" option is a draft spec and might be
+        // unsupported in some old/crappy browsers.
+        // https://developer.mozilla.org/en-US/docs/Web/API/Window/scrollTo
+        const topOfPage = {x: 0, y: 0};
+        const duration = 300; // ms
+        return new Promise((resolve, reject) => {
+            window.scrollTo({
+                top: topOfPage.y,
+                left: topOfPage.x,
+                behavior: 'smooth'
+            });
+            setTimeout(() => {
+                resolve(topOfPage);
+            }, duration);
+        });
+        // return {x: 0, y: 0};
+    }
 } as RouterOptions);
 
 interface MainApp extends Vue {
@@ -114,7 +135,9 @@ const App = new Vue({
         };
     },
     async created() {
-      WebAPI.isLoggedIn().then((result) => {this.logged_in = result; });
+        WebAPI.isLoggedIn().then((result) => {
+            this.logged_in = result;
+        });
     },
     methods: {
         async login() {
