@@ -1,5 +1,9 @@
 # Laxy Genomics Pipelines
 
+```bash
+git clone --recurse-submodules https://github.com/MonashBioinformaticsPlatform/laxy.git
+```
+
 ## Fronted development server
 
 ```

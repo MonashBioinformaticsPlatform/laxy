@@ -5,6 +5,24 @@
         </md-dialog-alert>
 
         <md-layout md-column>
+            <md-layout>
+                <md-whiteframe md-elevation="5" style="padding: 16px; min-height: 100%; width: 100%;">
+                    <div>The <a href="http://www.ebi.ac.uk/ena">European
+                        Nucleotide Archive (ENA)</a>
+                        at
+                        EMBL-EBI provides publicly available datasets from high-throughput sequencing
+                        platforms.
+                        <br/>
+                        ENA also mirrors datasets from the
+                        <a href="https://www.ncbi.nlm.nih.gov/sra">Sequence Read Archive (SRA)</a>.
+                        <br/><br/>
+                        Search ENA by Project/Study (<code>SRP&hellip;</code>/<code>PRJ&hellip;</code>),
+                        Experiment (<code>SRX&hellip;</code>/<code>ERX&hellip;</code>),
+                        Run (<code>SRR&hellip;</code>/<code>ERR&hellip;</code>) or
+                        Sample (<code>SAM&hellip;</code>/<code>ERS&hellip;</code>) accessions.
+                    </div>
+                </md-whiteframe>
+            </md-layout>
             <md-layout md-column>
                 <form @submit.stop.prevent="search(accession_input)">
                     <md-input-container>
@@ -24,64 +42,81 @@
                     </md-input-container>
                 </form>
             </md-layout>
+            <md-layout v-if="submitting">
+                <md-progress md-indeterminate></md-progress>
+            </md-layout>
             <md-layout md-gutter>
-                <md-layout>
-                    <md-layout v-if="samples != null">
-                        <md-table @select="onSelect">
-                            <md-table-header>
-                                <md-table-row>
-                                    <md-table-head
-                                            v-for="field in show_sample_fields"
-                                            :key="field">{{ field | deunderscore }}
-                                    </md-table-head>
-                                </md-table-row>
-                            </md-table-header>
-                            <md-table-body>
-                                <md-table-row v-for="sample in samples"
-                                              :key="sample.fastq_md5.join('-')"
-                                              :md-item="sample"
-                                              md-auto-select md-selection>
-                                    <md-table-cell
-                                            v-for="field in show_sample_fields"
-                                            :key="field">
+                <md-layout v-if="!hasResults"
+                           md-flex-large="75" md-flex-small="100">
+                    <!-- no results -->
+                </md-layout>
+                <md-layout v-else
+                           md-flex-large="75" md-flex-small="100">
+                    <md-table @select="onSelect">
+                        <md-table-header>
+                            <md-table-row>
+                                <md-table-head
+                                        v-for="field in show_sample_fields"
+                                        :key="field">{{ field | deunderscore }}
+                                </md-table-head>
+                            </md-table-row>
+                        </md-table-header>
+                        <md-table-body>
+                            <md-table-row v-for="sample in samples"
+                                          :key="sample.fastq_md5.join('-')"
+                                          :md-item="sample"
+                                          @mouseover="rowHover($event)"
+                                          md-auto-select md-selection>
+                                <md-table-cell
+                                        v-for="field in show_sample_fields"
+                                        :key="field">
                                         <span v-if="field.includes('_accession')">
                                             <a :href="'https://www.ebi.ac.uk/ena/data/view/'+sample[field]"
                                                target="_blank">
                                               {{ sample[field] }}
                                             </a>
                                         </span>
-                                        <span v-else-if="field === 'read_count'">
+                                    <span v-else-if="field === 'read_count'">
                                               {{ sample[field] | numeral_format('0 a') }}
                                         </span>
-                                        <span v-else>
+                                    <span v-else>
                                               {{ sample[field] }}
                                         </span>
+                                </md-table-cell>
+                                <!-- FASTQ links
+                                <md-table-cell v-for="url in sample.fastq_ftp" :key="url">
+                                    <a :href="url"><md-icon>link</md-icon>&nbsp;FASTQ</a>
+                                </md-table-cell>
+                                -->
+                            </md-table-row>
+                        </md-table-body>
+                    </md-table>
+                </md-layout>
+                <md-layout v-if="hasResults"
+                           md-column md-flex-large="20" md-flex-small="100" style="width: 100%">
+                    <md-whiteframe md-elevation="5" style="padding: 16px; min-height: 100%;">
+                        <div>
+                            <md-table>
+                                <md-table-row v-for="(value, key) in hoveredSampleDetails" :key="key">
+                                    <md-table-cell v-if="extra_info_fields.includes(key) && value !== ''"
+                                                   style="width: 40%; padding: -16px; height: 32px;">
+                                        <strong>{{ key }}:</strong>
                                     </md-table-cell>
-                                    <!-- FASTQ links
-                                    <md-table-cell v-for="url in sample.fastq_ftp" :key="url">
-                                        <a :href="url"><md-icon>link</md-icon>&nbsp;FASTQ</a>
+                                    <md-table-cell v-if="extra_info_fields.includes(key) && value !== ''">
+                                        {{ value }}
                                     </md-table-cell>
-                                    -->
                                 </md-table-row>
-                            </md-table-body>
-                        </md-table>
-                        <md-layout v-if="submitting">
-                            <md-progress md-indeterminate></md-progress>
-                        </md-layout>
-
-                        <hr>
-                    </md-layout>
-                    <md-layout v-else>
-                        .. no samples ..
-                    </md-layout>
+                            </md-table>
+                        </div>
+                    </md-whiteframe>
                 </md-layout>
             </md-layout>
-            <md-layout md-gutter>
-                <md-button @click="addToCart"
-                           :disabled="submitting || samples.length === 0"
-                           class="md-raised">Add to cart
-                </md-button>
-            </md-layout>
+        </md-layout>
+        <md-layout md-gutter>
+            <md-button @click="addToCart"
+                       :disabled="submitting || samples.length === 0"
+                       class="md-raised">Add to cart
+            </md-button>
         </md-layout>
         <md-snackbar md-position="bottom center" ref="snackbar"
                      :md-duration="snackbar_duration">
@@ -159,11 +194,27 @@
             //"fastq_bytes"]
         ];
 
+        public extra_info_fields = [
+            "study_accession",
+            "instrument_platform",
+            "instrument_model",
+            "library_layout",
+            "library_name",
+            "study_alias",
+            "experiment_alias",
+            "sample_alias",
+            "run_alias",
+            "read_count",
+            "center_name",
+            "broker_name"
+        ];
+
         public ena_ids: DbAccession[] = [{accession: ""} as DbAccession];
 
-        // public accession_input: string = "PRJNA319904"; // ~6000 files !
-        // public accession_input: string = "PRJEB3366"; // many !
+        // public accession_input: string = 'PRJNA319904'; // ~6000 files !
+        // public accession_input: string = 'PRJEB3366'; // many !
         public accession_input: string = "PRJNA276493, SRR950078";
+        public hoveredSampleDetails: string = "";
 
         public submitting: boolean = false;
         public error_alert_message: string = "Everything is fine.";
@@ -171,6 +222,10 @@
         // for lodash in templates
         get _() {
             return _;
+        }
+
+        get hasResults() {
+            return !(this.samples == null || this.samples.length === 0);
         }
 
         created() {
@@ -203,7 +258,7 @@
                 cart_samples.push({
                     name: ena.sample_accession,
                     files: ena.fastq_ftp,
-                    metadata: {condition: '', ena: ena},
+                    metadata: {condition: "", ena: ena},
                 });
             }
             this.$store.commit(ADD_SAMPLES, cart_samples);
@@ -212,6 +267,11 @@
 
             this.remove(this.selectedSamples);
             this.selectedSamples = [];
+        }
+
+        rowHover(row: any) {
+            this.hoveredSampleDetails = row;
+            // console.log(row);
         }
 
         async search(accessions: string) {
@@ -263,3 +323,7 @@
     };
 
 </script>
+
+<style lang="css" scoped>
+
+</style>

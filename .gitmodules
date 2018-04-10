@@ -1,0 +1,4 @@
+[submodule "laxy_frontend/local_node_modules/vue-material"]
+	path = laxy_frontend/local_node_modules/vue-material
+	url = https://github.com/pansapiens/vue-material.git
+	branch = dev
