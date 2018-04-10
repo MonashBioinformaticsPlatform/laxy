@@ -208,30 +208,11 @@
         }
 
         async submit() {
-            this.$store.commit(SET_SAMPLES, this._samples);
-            const data = {
-                name: this.samples.name,
-                samples: this.samples.items
-            };
             try {
                 this.submitting = true;
-                let response = null;
-                if (this.samples.id == null) {
-                    response = await WebAPI.fetcher.post("/api/v1/sampleset/", data) as AxiosResponse;
-                    this._samples.id = response.data.id;
-                    this.$store.commit(SET_SAMPLES, this._samples);
-                } else {
-                    response = await WebAPI.fetcher.put(`/api/v1/sampleset/${this.samples.id}/`, data) as AxiosResponse;
-                }
+                await this.$store.dispatch(SET_SAMPLES, this._samples);
                 this.submitting = false;
                 this.flashSnackBarMessage("Saved !");
-
-                //this.populateSelectionList(this.samples);
-                //this.$store.commit(SET_SAMPLES, this.samples);
-
-                // TODO: Save and highlight validation issues (eg identical sample names)
-                //       Route to next step
-
             } catch (error) {
                 console.log(error);
                 this.submitting = false;

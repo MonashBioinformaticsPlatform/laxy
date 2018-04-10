@@ -122,7 +122,10 @@
             return this.$store.getters.pipelineParams.description;
         }
         set description(txt: string) {
-            this.$store.commit(SET_PIPELINE_DESCRIPTION, txt);
+            this.$store.commit(SET_PIPELINE_PARAMS, {
+                description: txt,
+                reference_genome: this.reference_genome,
+            });
         }
 
         get reference_genome() {
@@ -141,7 +144,7 @@
 
         prepareData() {
             let data = {
-                "sample_set": this._samples.id,
+                "sample_set": this.$store.state.samples.id,
                 "params": {
                     "genome": this.reference_genome,
                 },
@@ -152,18 +155,18 @@
         }
 
         async save() {
-            this.$store.commit(SET_SAMPLES, this._samples);
-
-            const data = this.prepareData();
-            console.log(data);
             try {
                 this.submitting = true;
-                let response = null;
+                await this.$store.dispatch(SET_SAMPLES, this._samples);
+
+                const data = this.prepareData();
+                console.log(data);
+
                 if (this.pipelinerun_uuid == null) {
-                    response = await WebAPI.fetcher.post("/api/v1/pipelinerun/", data) as AxiosResponse;
+                    const response = await WebAPI.fetcher.post("/api/v1/pipelinerun/", data) as AxiosResponse;
                     this.pipelinerun_uuid = response.data.id;
                 } else {
-                    response = await WebAPI.fetcher.put(`/api/v1/pipelinerun/${this.pipelinerun_uuid}/`, data) as AxiosResponse;
+                    await WebAPI.fetcher.put(`/api/v1/pipelinerun/${this.pipelinerun_uuid}/`, data) as AxiosResponse;
                 }
                 this.submitting = false;
                 this.flashSnackBarMessage("Saved !");
@@ -214,12 +217,6 @@
 
         onSelect(rows: any) {
             this.selectedSamples = rows as Array<Sample>;
-        }
-
-        populateSelectionList(sample_list: Array<Sample>) {
-            console.log(sample_list);
-            this._samples.items = sample_list;
-            this.$store.commit(SET_SAMPLES, this._samples);
         }
 
         beforeRouteLeave(to: any, from: any, next: any) {
