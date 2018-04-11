@@ -93,7 +93,11 @@
                     </md-table>
                 </md-layout>
                 <md-layout v-if="hasResults"
-                           md-column md-flex-large="20" md-flex-small="100" style="width: 100%">
+                           md-column
+                           md-flex-large="20"
+                           md-flex-medium="100"
+                           md-flex-small="100"
+                           style="width: 100%">
                     <md-whiteframe md-elevation="5" style="padding: 16px; min-height: 100%;">
                         <div>
                             <md-table>
@@ -112,7 +116,7 @@
                 </md-layout>
             </md-layout>
         </md-layout>
-        <md-layout md-gutter>
+        <md-layout v-if="showButtons" md-gutter>
             <md-button @click="addToCart"
                        :disabled="submitting || samples.length === 0"
                        class="md-raised">Add to cart
@@ -158,8 +162,13 @@
         accession: string;
     }
 
-    @Component({props: {}, filters: {}})
+    @Component({
+        props: {showButtons: Boolean},
+        filters: {}
+    })
     export default class ENAFileSelect extends Vue {
+        public showButtons: boolean | undefined;
+
         public samples: Array<ENASample> = [];  // = _dummysampleList;
         public selectedSamples: Array<ENASample> = [];
 

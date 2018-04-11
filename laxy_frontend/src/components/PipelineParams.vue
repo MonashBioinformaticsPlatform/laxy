@@ -6,6 +6,7 @@
 
         <md-layout md-column>
             <md-whiteframe style="padding: 32px;">
+                <h2>RNAsik</h2>
                 <h3>Pipeline parameters</h3>
                 <md-input-container>
                     <label>Description</label>
@@ -30,7 +31,7 @@
                               :editable_fields="['metadata.condition']"
                               @selected="onSelect"></sample-table>
             </md-whiteframe>
-            <md-layout>
+            <md-layout v-if="showButtons">
                 <md-button class="md-primary md-raised" @click="save">
                     Save
                 </md-button>
@@ -83,13 +84,15 @@
     import {DummyPipelineConfig as _dummyPipelineConfig} from "../test-data";
 
     @Component({
-        props: {},
+        props: {showButtons: Boolean},
         filters: {},
         beforeRouteLeave(to: any, from: any, next: any) {
             (this as any).beforeRouteLeave(to, from, next);
         }
     })
     export default class PipelineParams extends Vue {
+        public showButtons: boolean | undefined;
+
         public submitting: boolean = false;
         public error_alert_message: string = "Everything is fine. 🏩";
         public snackbar_message: string = "Everything is fine. ௐ";

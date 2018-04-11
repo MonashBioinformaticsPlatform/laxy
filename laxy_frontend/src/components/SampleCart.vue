@@ -106,7 +106,7 @@
                     </md-layout>
                 </md-layout>
             </md-layout>
-            <md-layout md-gutter>
+            <md-layout v-if="showButtons" md-gutter>
                 <md-button @click="saveAndContinue"
                            :disabled="submitting"
                            class="md-raised">Save & continue
@@ -158,13 +158,17 @@
     import {DummySampleList as _dummySampleList} from "../test-data";
 
     @Component({
-        props: {},
+        props: {showButtons: Boolean},
         filters: {},
         beforeRouteLeave(to: any, from: any, next: any) {
             (this as any).beforeRouteLeave(to, from, next);
         }
     })
     export default class SampleCart extends Vue {
+        _DEBUG: boolean = false;
+
+        public showButtons: boolean | undefined;
+
         public submitting: boolean = false;
         public error_alert_message: string = "Everything is fine. 🐺";
         public snackbar_message: string = "Everything is fine. ☃";
@@ -189,11 +193,13 @@
         }
 
         async beforeCreate() {
-            // FIXME: Debug only
-            if (this.$store.getters.sample_cart_count === null ||
-                this.$store.getters.sample_cart_count === 0) {
-                const s: SampleSet = _.cloneDeep(_dummySampleList);
-                this.$store.commit(SET_SAMPLES, s);
+            // Example data for debug only
+            if (this._DEBUG) {
+                if (this.$store.getters.sample_cart_count === null ||
+                    this.$store.getters.sample_cart_count === 0) {
+                    const s: SampleSet = _.cloneDeep(_dummySampleList);
+                    this.$store.commit(SET_SAMPLES, s);
+                }
             }
         }
 

@@ -32,8 +32,10 @@
             <md-button class="md-icon-button" @click="toggleLeftSidenav">
                 <md-icon>menu</md-icon>
             </md-button>
-            <h1 class="md-title">Laxy</h1>&nbsp;
-            <h2 class="md-subheading">(not Galaxy)</h2>
+            <h1 class="md-title">Laxy</h1>
+            <!--
+            <h2 class="md-subheading">/ˈlaksi/ <em>noun</em>: some combination of lazy, lax and sexy.</h2>
+            -->
             <span style="flex: 1"></span>
 
             <div style="padding-left: 32px; padding-right: 32px;">
@@ -99,6 +101,12 @@
             </md-toolbar>
             <md-list md-dense>
                 <md-list-item>
+                    <router-link to="/ENAflow">
+                        <span v-on:click="toggleLeftSidenav()">Run from ENA data</span>
+                    </router-link>
+                </md-list-item>
+                <!--
+                <md-list-item>
                     <router-link to="/files">
                         <span v-on:click="toggleLeftSidenav()">Files</span>
                     </router-link>
@@ -123,6 +131,7 @@
                         <span v-on:click="toggleLeftSidenav()">Pipeline parameters</span>
                     </router-link>
                 </md-list-item>
+                -->
             </md-list>
         </md-sidenav>
 

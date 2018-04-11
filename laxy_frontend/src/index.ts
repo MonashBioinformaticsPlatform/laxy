@@ -40,9 +40,13 @@ import ENAFileSelect from './components/ENAFileSelect.vue';
 import SampleCart from './components/SampleCart.vue';
 import SampleTable from './components/SampleTable.vue';
 import PipelineParams from './components/PipelineParams.vue';
+import ENAFlow from './components/ENAFlow.vue';
 
 Vue.component('input-files-form', InputDataForm);
 Vue.component('sample-table', SampleTable);
+Vue.component('ena-search', ENAFileSelect);
+Vue.component('sample-cart', SampleCart);
+Vue.component('pipeline-params', PipelineParams);
 
 Vue.filter('numeral_format', function (value: number | string, format: string = '0 a') {
     if (!value) return '';
@@ -63,6 +67,11 @@ const router = new VueRouter({
             path: '/',
             name: 'front',
             component: FrontPage,
+        },
+        {
+            path: '/ENAflow',
+            name: 'ENAflow',
+            component: ENAFlow,
         },
         {
             path: '/files',
