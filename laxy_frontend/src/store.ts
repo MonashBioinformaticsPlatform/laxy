@@ -54,6 +54,9 @@ export const Store = new Vuex.Store({
     actions: {
         async [SET_SAMPLES]({commit, state}, samples) {
             const preCommit = _.cloneDeep(state.samples);
+            if (preCommit.id != null && samples.id == null) {
+                samples.id = preCommit.id;
+            }
             // optimistically commit the state
             commit(SET_SAMPLES, samples);
             const data = {

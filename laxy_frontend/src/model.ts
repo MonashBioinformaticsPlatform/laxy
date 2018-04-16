@@ -1,6 +1,7 @@
 export class SampleSet {
     // [index: number]: Sample;
 
+    // public id: string | undefined;
     private _id?: string;
     public get id(): (string | undefined) {
         return this._id;

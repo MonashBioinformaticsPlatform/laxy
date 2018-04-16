@@ -48,12 +48,12 @@ Vue.component('ena-search', ENAFileSelect);
 Vue.component('sample-cart', SampleCart);
 Vue.component('pipeline-params', PipelineParams);
 
-Vue.filter('numeral_format', function (value: number | string, format: string = '0 a') {
+Vue.filter('numeral_format', function(value: number | string, format: string = '0 a') {
     if (!value) return '';
     return numeral(value).format(format);
 });
 
-Vue.filter('deunderscore', function (value: string) {
+Vue.filter('deunderscore', function(value: string) {
     if (!value) return '';
     value = value.replace('_', ' ');
     // capitalize first letter
