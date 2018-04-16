@@ -1,8 +1,7 @@
-version: '3'
+version: '3.2'
 
 services:
   django:
-    build: .
     image: laxy:latest
     working_dir: /app
     environment:
@@ -11,7 +10,7 @@ services:
     command: bash -c "python3 manage.py runserver 0.0.0.0:8001"
 #    ports:
 #      - "8001:8001"
-    links:
+    depends_on:
       - db
       - celeryd
 
@@ -21,6 +20,14 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=postgres
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - dbdata:/var/lib/postgresql/data/pgdata
+#      - type: volume
+#        source: dbdata
+#        target: /var/lib/postgresql/data/pgdata
+#        volume:
+#          nocopy: true
 #    expose:
 #      - "5432:5432"
 
@@ -36,7 +43,7 @@ services:
 #    environment:
 #     - BROKER_URL=amqp://guest@rabbitmq
     command: bash -c "celery -A laxy worker -B -E -l info --broker=amqp://guest@rabbitmq"
-    links:
+    depends_on:
       - db
       - rabbitmq
 
@@ -49,7 +56,7 @@ services:
       - "5556:5556"
     working_dir: /app
     command: bash -c "sleep 10 && celery -A laxy flower --port=5556 --broker=amqp://guest@rabbitmq"
-    links:
+    depends_on:
       - db
       - rabbitmq
       - celeryd
@@ -65,5 +72,8 @@ services:
 #      - private
 #    volumes:
 #       - static:/usr/share/nginx/html:ro
-    links:
+    depends_on:
       - django
+
+volumes:
+  dbdata:

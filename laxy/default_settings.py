@@ -47,6 +47,8 @@ environ.Env.read_env(envfile())  # read the .env file
 default_env = PrefixedEnv(
     APP_ENV_PREFIX,
     DEBUG=(bool, False),
+    ADMIN_EMAIL=(str, None),
+    ADMIN_USERNAME=(str, None),
     AWS_ACCESS_KEY_ID=(str, None),
     AWS_SECRET_ACCESS_KEY=(str, None),
     DEFAULT_COMPUTE_RESOURCE=(str, 'default'),
@@ -69,6 +71,11 @@ def env(env_key=None, default=environ.Env.NOTSET):
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
+
+ADMIN_EMAIL = env('ADMIN_EMAIL')
+ADMIN_USERNAME = env('ADMIN_USERNAME')
+if ADMIN_EMAIL and ADMIN_USERNAME:
+    ADMINS = [(ADMIN_USERNAME, ADMIN_EMAIL)]
 
 AWS_ACCESS_KEY_ID = env('AWS_ACCESS_KEY_ID')
 
@@ -172,6 +179,7 @@ CORS_ORIGIN_WHITELIST = ('localhost:8000',
                          'localhost:9997',
                          'erc.monash.edu',
                          'erc.monash.edu.au',
+                         '118.138.240.175:8002',
                          )
 # CSRF_TRUSTED_ORIGINS = ('localhost:8000',)
 

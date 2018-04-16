@@ -1,15 +1,18 @@
-version: '3'
+version: '3.2'
 
 networks:
   private:
 
 volumes:
   static:
+  dbdata:
 
 services:
 
   django:
-    restart: always
+    deploy:
+      restart_policy:
+        condition: any
     environment:
       - LAXY_DEBUG=no
       - LAXY_STATIC_ROOT=/usr/share/nginx/html/backend
@@ -32,24 +35,36 @@ services:
                       gunicorn laxy.wsgi -b 0.0.0.0:8001"
 
   db:
-    restart: always
+    deploy:
+      restart_policy:
+        condition: any
+      # We always place the db container on the manager node so it
+      # will be located with it's persistent volume container 'dbdata'
+      placement:
+        constraints: [node.role == manager]
     networks:
       - private
 
   rabbitmq:
-    restart: always
+    deploy:
+      restart_policy:
+        condition: any
     networks:
       - private
 
   celeryd:
-    restart: always
+    deploy:
+      restart_policy:
+        condition: any
     volumes:
       - .:/app
     networks:
       - private
 
   flower:
-    restart: always
+    deploy:
+      restart_policy:
+        condition: any
     environment:
       - FLOWER_BASIC_AUTH=user:pass
     ports:
@@ -60,7 +75,9 @@ services:
       - .:/app
 
   nginx:
-    restart: always
+    deploy:
+      restart_policy:
+        condition: any
     ports:
       # production
       - "80:80"

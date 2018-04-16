@@ -91,6 +91,13 @@ DRF CoreAPI docs: http://localhost:8000/coreapi/
 ```bash
 docker-compose -f docker-compose.yml -f docker-compose.dev.yml build
 docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+# To manually create the admin user (docker-compose.dev.yml does this itself using
+# the LAXY_ADMIN_USERNAME and LAXY_ADMIN_PASSWORD environment variables)
+docker container exec -it laxy_django_1 \
+  python manage.py shell -c "from django.contrib.auth.models import User; \
+                             User.objects.get(username='admin') or \
+                             User.objects.create_superuser('admin', 'admin@example.com', 'adminpass')"
 ```
 
 ##### To manually restart just the `django` service without bringing the whole stack down/up

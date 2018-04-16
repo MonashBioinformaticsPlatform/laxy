@@ -1,4 +1,5 @@
 gunicorn
+redis
 
 requests
 backoff

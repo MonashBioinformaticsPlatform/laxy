@@ -1,15 +1,20 @@
-version: '3'
+version: '3.2'
 services:
 
   django:
+    build: .
     environment:
       - LAXY_DEBUG=yes
+      - LAXY_ADMIN_EMAIL=admin@example.com
+      - LAXY_ADMIN_USERNAME=admin
+      - LAXY_ADMIN_PASSWORD=adminpass
     volumes:
       - .:/app
     # Django app is publicly accessible without reverse proxy
     ports:
       - "8001:8001"
-    command: bash -c "python3 manage.py makemigrations &&
+    command: bash -c "python manage.py shell -c \"from django.contrib.auth.models import User; User.objects.get(username='${LAXY_ADMIN_USERNAME}') or User.objects.create_superuser('${LAXY_ADMIN_USERNAME}', '${LAXY_ADMIN_EMAIL}', '${LAXY_ADMIN_PASSWORD}');\";
+                      python3 manage.py makemigrations &&
                       python3 manage.py migrate &&
                       python3 manage.py runserver 0.0.0.0:8001"
 
