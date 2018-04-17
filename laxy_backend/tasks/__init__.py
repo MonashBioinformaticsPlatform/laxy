@@ -1,6 +1,6 @@
 import logging
 import os
-from os.path import join
+from os.path import join, expanduser
 import random
 import time
 import json
@@ -23,7 +23,7 @@ import backoff
 
 from fabric.api import settings as fabsettings
 from fabric.api import env as fabric_env
-from fabric.api import put, run, shell_env, local, cd
+from fabric.api import put, run, shell_env, local, cd, show
 
 # logging.config.fileConfig('logging_config.ini')
 # logger = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ def _init_fabric_env():
     # fabric path. Note this is for localhost, not the remote host.
     # env.shell_env['PATH'] = '$PATH:%s:%s ' % (env.shell_env.get('PATH', ''),
     #                                           os.environ.get('PATH', ''))
-    env.warn_only = True
+    env.warn_only = getattr(settings, 'DEBUG', False)
     env.use_ssh_config = False
     env.abort_on_prompts = True
     env.reject_unknown_hosts = False
@@ -75,18 +75,20 @@ def start_job(self, task_data=None, **kwargs):
     _init_fabric_env()
     private_key = job.compute_resource.extra.get('private_key', None)
     if private_key:
-        private_key = base64.b64decode(private_key)
+        private_key = base64.b64decode(private_key).decode('ascii')
     remote_username = job.compute_resource.extra.get('username', None)
 
     job_script = StringIO(render_to_string('job_scripts/run_job.sh', {}))
     config_json = StringIO(json.dumps(job.params))
 
+    remote_id = None
     try:
         with fabsettings(gateway=gateway,
                          host_string=master_ip,
                          user=remote_username,
-                         # key=private_key,
-                         key_filename="/Users/perry/.ssh/laxytest"):
+                         key=private_key,
+                         # key_filename=expanduser("~/.ssh/id_rsa"),
+                         ):
             working_dir = '/tmp/{job_id}/'.format(job_id=job_id)
             result = run('mkdir -p %s' % working_dir)
             result = put(job_script,
@@ -100,7 +102,7 @@ def start_job(self, task_data=None, **kwargs):
                     result = run('./run_job.sh 2>&1 run_job.out & echo $!')
 
         succeeded = result.succeeded
-        remote_id = result
+        remote_id = str(result)
     except BaseException as e:
         succeeded = False
         message = e.message
