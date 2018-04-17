@@ -29,37 +29,48 @@ services:
 #        volume:
 #          nocopy: true
 #    expose:
-#      - "5432:5432"
+#      - "5432"
 
   rabbitmq:
     image: rabbitmq
 #   expose:
-#     - "5672:5672"
-#     - "15672:15672"
+#     - "5672"
+#     - "15672"
+
+  redis:
+    image: redis
+#  expose:
+#    - "6379"
 
   celeryd:
     image: laxy:latest
     working_dir: /app
-#    environment:
-#     - BROKER_URL=amqp://guest@rabbitmq
-    command: bash -c "celery -A laxy worker -B -E -l info --broker=amqp://guest@rabbitmq"
+    environment:
+      - LAXY_DATABASE_URL=postgres://postgres:postgres@db:5432/postgres
+      - LAXY_BROKER_URL=amqp://guest@rabbitmq
+#     - LAXY_BROKER_URL=redis://redis:6379/0
+    command: bash -c "celery -A laxy worker -B -E -l debug --broker=${LAXY_BROKER_URL}"
     depends_on:
       - db
       - rabbitmq
+      - redis
 
   flower:
     image: laxy:latest
     environment:
       - LAXY_DEBUG=no
+      - LAXY_BROKER_URL=amqp://guest@rabbitmq
+#     - LAXY_BROKER_URL=redis://redis:6379/0
 #     - FLOWER_BASIC_AUTH=user:pass
     ports:
       - "5556:5556"
     working_dir: /app
-    command: bash -c "sleep 10 && celery -A laxy flower --port=5556 --broker=amqp://guest@rabbitmq"
+    command: bash -c "sleep 10 && celery -A laxy flower --port=5556 --broker=${LAXY_BROKER_URL}"
     depends_on:
       - db
       - rabbitmq
       - celeryd
+      - redis
 
   nginx:
     image: nginx
