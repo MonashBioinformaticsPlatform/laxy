@@ -625,6 +625,13 @@ class ComputeResourceCreate(PostMixin,
         """
         Create a new ComputeResource. UUIDs are autoassigned.
 
+        The `extra` field is a JSON object. Attributes may include:
+          * `username` - the login name to access the ComputeResource
+          * `private_key` - a Base64 encoded SSH private key (eg, generated on
+          the commandline like `base64 < ~/.ssh/id_rsa`).
+          * `base_dir` - the absolute path to where job processing directories
+             will be created on the ComputeResource.
+
         <!--
         :param request: The request object.
         :type request: rest_framework.request.Request

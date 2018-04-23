@@ -112,8 +112,8 @@ CELERY_RESULT_BACKEND = 'django-db'
 # CELERY_RESULT_BACKEND = 'db+postgresql://postgres:postgres@db:5432/postgres'
 # CELERY_RESULT_BACKEND = 'redis://redis:6379/0'
 # CELERY_RESULT_BACKEND = BROKER_URL
-if DEBUG:
-    CELERY_ALWAYS_EAGER = True
+# if DEBUG:
+#     CELERY_ALWAYS_EAGER = True
 # CELERY_IGNORE_RESULT = True
 
 MEDIA_ROOT = str(env('MEDIA_ROOT'))
@@ -263,8 +263,6 @@ USE_I18N = True
 USE_L10N = True
 
 USE_TZ = True
-
-CELERY_RESULT_BACKEND = 'django-db'
 
 JWT_AUTH = {
     # 'JWT_ENCODE_HANDLER':

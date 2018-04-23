@@ -73,15 +73,14 @@ def start_job(self, task_data=None, **kwargs):
     environment = task_data.get('environment', {})
     # environment.update(JOB_ID=job_id)
     _init_fabric_env()
-    private_key = job.compute_resource.extra.get('private_key', None)
-    if private_key:
-        private_key = base64.b64decode(private_key).decode('ascii')
+    private_key = job.compute_resource.private_key
     remote_username = job.compute_resource.extra.get('username', None)
-
+    base_dir = job.compute_resource.extra.get('base_dir', '/tmp/')
     job_script = StringIO(render_to_string('job_scripts/run_job.sh', {}))
     config_json = StringIO(json.dumps(job.params))
 
     remote_id = None
+    message = "Failure, without exception."
     try:
         with fabsettings(gateway=gateway,
                          host_string=master_ip,
@@ -89,7 +88,7 @@ def start_job(self, task_data=None, **kwargs):
                          key=private_key,
                          # key_filename=expanduser("~/.ssh/id_rsa"),
                          ):
-            working_dir = '/tmp/{job_id}/'.format(job_id=job_id)
+            working_dir = os.path.join(base_dir, job_id)
             result = run('mkdir -p %s' % working_dir)
             result = put(job_script,
                          join(working_dir, 'run_job.sh'),
@@ -99,10 +98,14 @@ def start_job(self, task_data=None, **kwargs):
                          mode=0o600)
             with cd(working_dir):
                 with shell_env(**environment):
-                    result = run('./run_job.sh 2>&1 run_job.out & echo $!')
+                    result = run("nohup sh -c '"
+                                 "./run_job.sh 2>&1 run_job.out & "
+                                 "echo $! >job.pid &"
+                                 "'")
+                with shell_env(**environment):
+                    remote_id = run(str("cat job.pid"))
 
         succeeded = result.succeeded
-        remote_id = str(result)
     except BaseException as e:
         succeeded = False
         message = e.message
