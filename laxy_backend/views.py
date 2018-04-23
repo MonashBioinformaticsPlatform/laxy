@@ -257,6 +257,7 @@ class FileCreate(JSONView):
 class FileView(GetMixin,
                DeleteMixin,
                PatchMixin,
+               PutMixin,
                JSONView):
     class Meta:
         model = File
@@ -287,6 +288,25 @@ class FileView(GetMixin,
                  response_serializer=PatchSerializerResponse)
     def patch(self, request, uuid=None, version=None):
         return super(FileView, self).patch(request, uuid)
+
+    @view_config(request_serializer=FileSerializerPostRequest,
+                 response_serializer=FileSerializer)
+    def put(self, request: Request, uuid: str, version=None):
+        """
+        Replace the content of an existing File.
+
+        <!--
+        :param request: The request object.
+        :type request: rest_framework.request.Request
+        :return: The response object.
+        :rtype: rest_framework.response.Response
+        -->
+        """
+
+        return super(FileView, self).put(
+            request,
+            uuid,
+            serializer_class=FileSerializerPostRequest)
 
 
 class FileSetCreate(PostMixin,

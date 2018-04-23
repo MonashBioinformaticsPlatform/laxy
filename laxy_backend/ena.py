@@ -222,10 +222,7 @@ def create_file_objects(urls: dict,
     """
 
     if isinstance(owner, int) or isinstance(owner, str):
-        owner = User.objects.get(id=owner)
-
-    if owner is None:
-        owner = User.objects.get(id=1)
+        owner = User.objects.filter(id=owner).first()
 
     file_objs = []
     for url, metadata in urls.items():
@@ -338,10 +335,10 @@ def create_fastq_fileset(accession: str,
     :rtype:
     """
     if isinstance(owner, int) or isinstance(owner, str):
-        owner = User.objects.get(id=owner)
+        owner = User.objects.filter(id=owner).first()
 
-    if owner is None:
-        owner = User.objects.get(id=1)
+    # if owner is None:
+    #     owner = User.objects.get(id=1)
 
     urls = get_fastq_urls([accession])
     files = create_file_objects(urls)

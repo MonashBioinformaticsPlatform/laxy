@@ -68,6 +68,21 @@ class FileModelTest(TestCase):
         self.assertEqual(self.file_ftp.name, 'ls-lR.gz')
         self.assertEqual(self.file_complex_http.name, "sample1_R1.fastq.gz")
 
+    def test_fileobj_from_http_url(self):
+        f = File(location='https://www.apache.org/licenses/LICENSE-2.0.txt',
+                 owner=User.objects.get(username='testuser'))
+        content = f.file.read().decode()
+        lines = content.splitlines()
+        self.assertEqual(lines[1].strip(),
+                         'Apache License')
+
+    @unittest.skip("Test not implemented")
+    def test_fileobj_from_laxysftp_url(self):
+        f = File(location='laxy+sftp://{compute_id}/{job_id}/output.txt',
+                 owner=User.objects.get(username='testuser'))
+        content = f.file.read().decode()
+        raise NotImplementedError()
+
 
 class FileSetModelTest(TestCase):
     def setUp(self):
@@ -379,10 +394,11 @@ class JobViewTest(TestCase):
         jwt_header = get_jwt_user_header_dict('testuser')
         client = APIClient()
         client.credentials(HTTP_AUTHORIZATION=jwt_header['Authorization'])
-        response = client.get(
-            reverse('laxy_backend:job', args=[self.job.uuid()]), format='json')
+        url = reverse('laxy_backend:job', args=[self.job.uuid()])
+        response = client.get(url, format='json')
         self.assertEqual(response.status_code, 200)
 
+    @unittest.skip("JobSerializer functionality incomplete")
     def test_jobserializer(self):
         raise NotImplementedError()
         # The JobSerializer should:

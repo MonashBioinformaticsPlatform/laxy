@@ -4,7 +4,8 @@
 # from builtins import (ascii, bytes, chr, dict, filter, hex, input,
 #                       int, map, next, oct, open, pow, range, round,
 #                       str, super, zip)
-
+import urllib
+import urllib.request
 from typing import List
 from collections import OrderedDict, Sequence
 from datetime import datetime
@@ -12,14 +13,22 @@ import json
 import csv
 import uuid
 from pathlib import Path
+from os import path
 from urllib.parse import urlparse
 import base64
 from basehash import base62
 import xxhash
+from io import StringIO
+from contextlib import closing
+
+from paramiko.rsakey import RSAKey
+from storages.backends.sftpstorage import SFTPStorage
+
 from django.conf import settings
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.db import models, transaction
+from django.core.files.storage import get_storage_class, default_storage
 from django.core.serializers import serialize
 from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError
@@ -48,6 +57,15 @@ else:
 def unique(l):
     return list(set(l))
 
+
+SCHEME_STORAGE_CLASS_MAPPING = {
+    'sftp': 'storages.backends.sftpstorage.SFTPStorage',
+    'laxy+sftp': 'storages.backends.sftpstorage.SFTPStorage',
+
+}
+"""
+Maps URL schemes to Django storage backends that can handle them.
+"""
 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def create_auth_token(sender, instance=None, created=False, **kwargs):
@@ -253,6 +271,21 @@ class ComputeResource(Timestamped, UUIDModel):
         else:
             return False
 
+    @property
+    def private_key(self):
+        return base64.b64decode(self.extra.get('private_key')).decode('ascii')
+
+    @property
+    def hostname(self):
+        return self.host.split(':')[0]
+
+    @property
+    def port(self):
+        if ':' in self.host:
+            return self.host.split(':').pop()
+        else:
+            return None
+
 
 @reversion.register()
 class Job(Timestamped, UUIDModel):
@@ -279,8 +312,8 @@ class Job(Timestamped, UUIDModel):
 
     owner = ForeignKey(User,
                        on_delete=models.SET_NULL,
-                       null=True,
                        blank=True,
+                       null=True,
                        related_name='jobs')
     secret = CharField(max_length=255,
                        blank=True,
@@ -385,7 +418,10 @@ class File(Timestamped, UUIDModel):
     # hashtype:th3actualh4shits3lf
     # eg: md5:11fca9c1f654078189ad040b1132654c
     checksum = CharField(max_length=255, blank=True, null=True)
-    owner = ForeignKey(User, on_delete=models.CASCADE, related_name='files')
+    owner = ForeignKey(User, on_delete=models.CASCADE,
+                       blank=True,
+                       null=True,
+                       related_name='files')
     # The URL to the file. Could be file://, https://, s3://, sftp://
     location = URLField(max_length=2048, blank=False, null=False,
                         validators=[URIValidator()])
@@ -403,6 +439,10 @@ class File(Timestamped, UUIDModel):
     #                  on_delete=models.CASCADE,
     #                  related_name='files')
 
+    # TODO: Consider removing this as a property,
+    # revert to simple name attribute over hidden _name
+    # Do this magic in a model creation as in .save method below.
+    # Also fix _name references in other parts of the code (eg FileSerializer)
     @property
     def name(self):
         if self._name:
@@ -415,6 +455,14 @@ class File(Timestamped, UUIDModel):
     @name.setter
     def name(self, value):
         self._name = value
+
+    # def save(self, *args, **kwargs):
+    #     if not self.pk:  # only at creation time
+    #         # Derive a name based on the location URL
+    #         if not self.name:
+    #             fn = Path(urlparse(self.location).path).name
+    #             self.name = fn
+    #     super(File, self).save(*args, **kwargs)
 
     # TODO: This could be triggered via a pre_save signal + async task upon
     # creation and when self.location changes
@@ -435,11 +483,49 @@ class File(Timestamped, UUIDModel):
         if save:
             self.save()
 
-    def to_dict(self):
-        return OrderedDict(name=self.name,
-                           origin=self.origin,
-                           location=self.location,
-                           job=self.job.uuid())
+    @property
+    def file(self):
+        from laxy_backend.tasks.download import request_with_retries
+
+        url = urlparse(self.location)
+        scheme = url.scheme
+        storage_class = get_storage_class(
+            SCHEME_STORAGE_CLASS_MAPPING.get(scheme, None))
+        if scheme == 'laxy+sftp':
+            if '.' in url.netloc:
+                raise NotImplementedError(
+                    "ComputeResource UUID appears invalid.")
+            # netloc not hostname, since hostname forces lowercase
+            compute_id = url.netloc
+            try:
+                compute = ComputeResource.objects.get(id=compute_id)
+            except ComputeResource.DoesNotExist as e:
+                raise e
+
+            host = compute.hostname
+            port = compute.port
+            if port is None:
+                port = 22
+            private_key = compute.private_key
+            username = compute.extra.get('username')
+            base_dir = compute.extra.get('base_dir')
+            params = dict(port=port,
+                          username=username,
+                          pkey=RSAKey.from_private_key(StringIO(private_key)))
+            # storage = SFTPStorage(host=host, params=params)
+            storage = storage_class(host=host, params=params)
+            file_path = path.join(base_dir, Path(url.path).relative_to('/'))
+
+            return storage.open(file_path)
+        else:
+            response = request_with_retries(
+                'GET', self.location,
+                stream=True,
+                headers={},
+                auth=None)
+            filelike = getattr(response, 'raw', response)
+            filelike.decode_content = True
+            return filelike
 
 
 @reversion.register()
@@ -455,6 +541,8 @@ class FileSet(Timestamped, UUIDModel):
     name = CharField(max_length=2048)
     owner = ForeignKey(User,
                        on_delete=models.CASCADE,
+                       blank=True,
+                       null=True,
                        related_name='filesets')
 
     # a list of File ids eg ['2VSd4mZvmYX0OXw07dGfnV', '3XSd4mZvmYX0OXw07dGfmZ']

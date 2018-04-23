@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/1.11/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/1.11/ref/settings/
 """
+import logging
 
 import os
 from datetime import timedelta
@@ -18,6 +19,8 @@ from django.core.exceptions import ImproperlyConfigured
 import environ
 
 from laxy.utils import get_secret_key
+
+logger = logging.getLogger(__name__)
 
 APP_ENV_PREFIX = 'LAXY_'
 
@@ -114,6 +117,8 @@ CELERY_RESULT_BACKEND = 'django-db'
 # CELERY_RESULT_BACKEND = BROKER_URL
 # if DEBUG:
 #     CELERY_ALWAYS_EAGER = True
+#     logger.warning("CELERY_ALWAYS_EAGER = True
+#                     seems to prevent tasks from starting ?")
 # CELERY_IGNORE_RESULT = True
 
 MEDIA_ROOT = str(env('MEDIA_ROOT'))
@@ -141,6 +146,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'drf_openapi',
     'reversion',
+    'storages',
     # 'laxy_backend.apps.LaxyBackendConfig',
     'laxy_backend',
 ]

@@ -23,6 +23,7 @@ django
 django-reversion
 django-cors-headers
 django-extensions
+django-storages
 
 # The Bitbucket one
 # django-jsonfield  # https://bitbucket.org/schinckel/django-jsonfield

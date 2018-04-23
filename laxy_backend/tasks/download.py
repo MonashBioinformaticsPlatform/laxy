@@ -19,6 +19,7 @@ from http.client import responses as response_codes
 import requests
 from requests.auth import HTTPBasicAuth
 import urllib.request
+import urllib.error
 from urllib.parse import urlparse
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
@@ -47,7 +48,8 @@ def _raise_request_exception(response):
 
 
 @backoff.on_exception(backoff.expo,
-                      requests.exceptions.RequestException,
+                      (requests.exceptions.RequestException,
+                       urllib.error.URLError),
                       max_tries=8,
                       jitter=backoff.full_jitter)
 def request_with_retries(*args, **kwargs):
@@ -65,6 +67,12 @@ def request_with_retries(*args, **kwargs):
     :return: The requests response object.
     :rtype: requests.Response
     """
+
+    url = args[1]
+    scheme = urlparse(url)
+    if scheme in ['ftp', 'ftps', 'data']:
+        return urllib.request.urlopen(url)
+
     # headers = copy(global_headers)
     headers = {}
     extra_headers = kwargs.get('headers', None)

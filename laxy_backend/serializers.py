@@ -90,11 +90,12 @@ class PutSerializerResponse(serializers.Serializer):
 
 
 class FileSerializer(BaseModelSerializer):
+    name = serializers.CharField(source='_name')
     location = serializers.CharField(
         max_length=2048,
         validators=[models.URIValidator()])
     # metadata = serializers.JSONField()
-    metadata = SchemalessJsonResponseSerializer()  # becomes OpenAPI 'object' type
+    metadata = SchemalessJsonResponseSerializer(required=False)  # becomes OpenAPI 'object' type
 
     class Meta:
         model = models.File
@@ -105,7 +106,7 @@ class FileSerializer(BaseModelSerializer):
 
 class FileSerializerPostRequest(FileSerializer):
     class Meta(FileSerializer.Meta):
-        fields = ('id', 'name', 'location', 'checksum', 'metadata')
+        fields = ('name', 'location', 'checksum', 'metadata')
 
 
 class FileSetSerializer(BaseModelSerializer):
@@ -184,16 +185,16 @@ class JobSerializerBase(BaseModelSerializer):
 
 
 class JobSerializerResponse(JobSerializerBase):
+    input_fileset_id = serializers.CharField(source='input_files.id',
+                                             max_length=24,
+                                             default='')
+    output_fileset_id = serializers.CharField(source='output_files.id',
+                                              max_length=24,
+                                              default='')
     # output_files = FileSerializer(many=True, required=False)
-    output_fileset_id = serializers.CharField(source='input_files.id',
-                                              required=True, max_length=24)
-    input_fileset_id = serializers.CharField(source='output_files.id',
-                                             required=True, max_length=24)
 
     class Meta:
         model = models.Job
-        # not actually required for id since editable=False on model
-        read_only_fields = ('id',)
         exclude = ('input_files', 'output_files',)
         depth = 0
         error_status_codes = status_codes()
