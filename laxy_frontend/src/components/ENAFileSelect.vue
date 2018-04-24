@@ -12,7 +12,7 @@
                         at
                         EMBL-EBI provides publicly available datasets from high-throughput sequencing
                         platforms.
-                        <br/>
+                        <br/><br/>
                         ENA also mirrors datasets from the
                         <a href="https://www.ncbi.nlm.nih.gov/sra">Sequence Read Archive (SRA)</a>.
                         <br/><br/>

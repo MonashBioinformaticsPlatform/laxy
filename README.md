@@ -96,8 +96,18 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
 # the LAXY_ADMIN_USERNAME and LAXY_ADMIN_PASSWORD environment variables)
 docker container exec -it laxy_django_1 \
   python manage.py shell -c "from django.contrib.auth.models import User; \
-                             User.objects.get(username='admin') or \
+                             User.objects.filter(username='admin').count() or \
                              User.objects.create_superuser('admin', 'admin@example.com', 'adminpass')"
+```
+
+Dump fixtures (JSON formatted database records):
+```bash
+docker container exec -it laxy_django_1  python manage.py dumpdata --indent 2
+```
+
+Load fixtures:
+```bash
+docker container exec -it laxy_django_1  python manage.py loaddata fixtures.json
 ```
 
 ##### To manually restart just the `django` service without bringing the whole stack down/up

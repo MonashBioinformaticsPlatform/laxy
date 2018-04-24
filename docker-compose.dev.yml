@@ -13,10 +13,10 @@ services:
     # Django app is publicly accessible without reverse proxy
     ports:
       - "8001:8001"
-    command: bash -c "python manage.py shell -c \"from django.contrib.auth.models import User; User.objects.get(username='${LAXY_ADMIN_USERNAME}') or User.objects.create_superuser('${LAXY_ADMIN_USERNAME}', '${LAXY_ADMIN_EMAIL}', '${LAXY_ADMIN_PASSWORD}');\";
-                      python3 manage.py makemigrations &&
+    command: bash -c "python3 manage.py makemigrations &&
                       python3 manage.py migrate &&
-                      python3 manage.py runserver 0.0.0.0:8001"
+                      python3 manage.py runserver 0.0.0.0:8001 &&
+                      python manage.py shell -c \"from django.contrib.auth.models import User; User.objects.filter(username='${LAXY_ADMIN_USERNAME}').count() or User.objects.create_superuser('${LAXY_ADMIN_USERNAME}', '${LAXY_ADMIN_EMAIL}', '${LAXY_ADMIN_PASSWORD}');\";"
 
   celeryd:
     volumes:
