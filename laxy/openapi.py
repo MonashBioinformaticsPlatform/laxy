@@ -1,3 +1,5 @@
+from django.contrib.sites.models import Site
+
 from drf_openapi.views import SchemaView
 from drf_openapi.entities import OpenApiSchemaGenerator
 from rest_framework.renderers import CoreJSONRenderer
@@ -108,5 +110,15 @@ This is the Laxy API documentation.
 
 The YAML version is at: [{api_url}]({api_url})
 
+Example:
+
+```
+wget --header "Authorization: Token cbda22bcb41ab0151b438589aa4637e2" \
+     http://{server}/api/v1/file/60AFLXQLKsSnO1MBRZ6iZZ/counts.csv
+
+curl --header "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.x.x" \
+     http://{server}/api/v1/job/5kQqyN5y6ghK4KHrfkDFeg/
+```
+
 _YMMV_.
-""".format(api_url='?format=yaml-openapi')
+""".format(api_url='?format=yaml-openapi', server=Site.objects.get_current().domain)

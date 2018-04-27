@@ -110,6 +110,8 @@ DATABASES = {
                               default='postgres:///postgres:postgres@db:5432')
 }
 
+SITE_ID = 1
+
 BROKER_URL = env('BROKER_URL')
 CELERY_RESULT_BACKEND = 'django-db'
 # CELERY_RESULT_BACKEND = 'db+postgresql://postgres:postgres@db:5432/postgres'
@@ -138,6 +140,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',
     'django_extensions',
     'django_celery_results',
     'django_celery_beat',
