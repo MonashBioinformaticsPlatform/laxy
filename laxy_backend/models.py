@@ -89,6 +89,7 @@ class URIValidator(URLValidator):
                'https',
                'ftp',
                'sftp',
+               'laxy+sftp',
                's3',
                'magnet',
                'file',
@@ -425,8 +426,19 @@ class File(Timestamped, UUIDModel):
     # The URL to the file. Could be file://, https://, s3://, sftp://
     location = URLField(max_length=2048, blank=False, null=False,
                         validators=[URIValidator()])
+
+    # TODO: Consider adding a path (eg some/relative/path/dir) - this is
+    # many times redundant to location, from which path can be derived,
+    # but there could be cases where the URL doesn't contain enough information
+    # to reconsititute the path. By storing it here, we make it possible to
+    # provide endpoints like:
+    # https://laxy.org/jobs/XXblaFooXX/output/some/path/filename.txt
+    # Alternative would be to make _name the relative path, including filename.
+    # path = CharField(max_length=2048, blank=True, null=True)
+
     # origin = URLFieldExtra(max_length=2048)
 
+    # Arbitrary metadata.
     metadata = JSONField(default=OrderedDict)
 
     # metadata = JSONField(load_kwargs={'object_pairs_hook': OrderedDict})

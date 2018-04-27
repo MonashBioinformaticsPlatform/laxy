@@ -9,6 +9,7 @@ import jwt
 import uuid
 from datetime import datetime, timedelta
 from collections import OrderedDict
+from wsgiref.util import FileWrapper
 
 from django.conf import settings
 from django.shortcuts import render
@@ -28,11 +29,11 @@ from rest_framework.parsers import JSONParser, MultiPartParser
 
 from rest_framework.response import Response
 from rest_framework.request import Request
-from django.http import HttpResponse
+from django.http import HttpResponse, StreamingHttpResponse
 # from django.http import HttpResponse, JsonResponse
 
 from rest_framework.views import APIView
-from rest_framework.renderers import JSONRenderer
+from rest_framework.renderers import JSONRenderer, BaseRenderer
 from rest_framework.authtoken.models import Token
 from rest_framework.authentication import (TokenAuthentication,
                                            SessionAuthentication,
@@ -84,6 +85,10 @@ logger = logging.getLogger(__name__)
 PUBLIC_IP = requests.get('http://api.ipify.org').text
 
 
+def get_request_content_type(request):
+    return request.content_type.split(';')[0].strip()
+
+
 # TODO: Strangley, Swagger/CoreAPI only show the 'name' for the query parameter
 #       if name='query'. Any other value doesn't seem to appear in the
 #       auto-generated docs when applying this as a filter backend as intended
@@ -133,6 +138,19 @@ class QueryParamFilterBackend(BaseFilterBackend):
 
     def get_schema_fields(self, view):
         return self.schema_fields
+
+
+class StreamingFileDownloadRenderer(BaseRenderer):
+    media_type = 'application/octet-stream'
+    format = 'download'
+    charset = None
+    render_style = 'binary'
+
+    def render(self, filelike, media_type=None, renderer_context=None,
+               blksize=8192):
+        iterable = FileWrapper(filelike, blksize=blksize)
+        for chunk in iterable:
+            yield chunk
 
 
 class ENAQueryParams(QueryParamFilterBackend):
@@ -269,9 +287,24 @@ class FileView(GetMixin,
     # permission_classes = (DjangoObjectPermissions,)
 
     @view_config(response_serializer=FileSerializer)
-    def get(self, request: Request, uuid=None, version=None):
+    def get(self, request: Request, uuid=None, filename=None, version=None):
         """
-        Returns info about a File, specified by UUID.
+        Downloads the content of a File, or returns info about the file.
+        File is specified by it's UUID.
+
+        If the `Content-Type: application/json` header is used, the
+        JSON record for the file is returned without content.
+        Other `Content-Type`s result in a file download.
+
+        A filename can optionally be specified as the last part of the the URL
+        path, so that `wget` will 'just work' without requiring the
+        `--content-disposition` flag, eg:
+
+        `wget http://laxy.org/api/v1/file/XXblafooXX/alignment.bam`
+          vs.
+        `wget --content-disposition http://laxy.org/api/v1/file/XXblafooXX/`
+
+        The filename must match the name stored in the File record.
 
         <!--
         :param request: The request object.
@@ -282,7 +315,41 @@ class FileView(GetMixin,
         :rtype: rest_framework.response.Response
         -->
         """
-        return super(FileView, self).get(request, uuid)
+
+        content_type = get_request_content_type(request)
+        if content_type == 'application/json':
+            return super(FileView, self).get(request, uuid)
+        else:
+            # File download is the default when no Content-Type is specified
+            return self.download(uuid, filename=filename)
+
+    def download(self, uuid, filename=None):
+        obj = self.get_obj(uuid)
+        if obj is None:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        renderer = StreamingFileDownloadRenderer()
+        response = StreamingHttpResponse(
+            renderer.render(obj.file),
+            content_type=StreamingFileDownloadRenderer.media_type)
+
+        # A filename can optionally be specified in the URL, so that
+        # wget will 'just work' without requiring the --content-disposition
+        # flag, eg:
+        # wget http://laxy.org/api/v1/file/XXblafooXX/alignment.bam
+        # vs.
+        # wget --content-disposition http://laxy.org/api/v1/file/XXblafooXX/
+        #
+        if filename is not None:
+            if filename != obj.name:
+                return Response(status=status.HTTP_404_NOT_FOUND)
+
+        response['Content-Disposition'] = f'attachment; filename="{obj.name}"'
+        size = obj.metadata.get('size', None)
+        if size is not None:
+            response['Content-Length'] = int(size)
+
+        return response
 
     @view_config(request_serializer=FileSerializer,
                  response_serializer=PatchSerializerResponse)
@@ -394,7 +461,7 @@ class SampleSetCreateUpdate(JSONView):
         :rtype:
         """
 
-        content_type = request.content_type.split(';')[0].strip()
+        content_type = get_request_content_type(request)
         encoding = 'utf-8'
 
         if content_type == 'multipart/form-data':

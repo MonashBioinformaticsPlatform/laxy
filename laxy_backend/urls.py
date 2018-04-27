@@ -24,7 +24,7 @@ from laxy_backend.views import (JobView, JobCreate,
                                 SampleSetView, SampleSetCreate,
                                 PipelineRunView, PipelineRunCreate,
                                 ComputeResourceView, ComputeResourceCreate,
-                                ENAQueryView, ENAFastqUrlQueryView, )
+                                ENAQueryView, ENAFastqUrlQueryView,)
 
 from laxy_backend.view_auth import Login, Logout, view_user_profile
 
@@ -84,6 +84,9 @@ api_urls = [
     re_path(r'file/(?P<uuid>[a-zA-Z0-9\-_]+)/$',
             FileView.as_view(),
             name='file'),
+    re_path(r'file/(?P<uuid>[a-zA-Z0-9\-_]+)/(?P<filename>.*)$',
+            FileView.as_view(),
+            name='file_download'),
     re_path(r'fileset/(?P<uuid>[a-zA-Z0-9\-_]+)/$',
             FileSetView.as_view(),
             name='fileset'),
