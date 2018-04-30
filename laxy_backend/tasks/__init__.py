@@ -89,7 +89,7 @@ def start_job(self, task_data=None, **kwargs):
                          # key_filename=expanduser("~/.ssh/id_rsa"),
                          ):
             working_dir = os.path.join(base_dir, job_id)
-            result = run('mkdir -p %s' % working_dir)
+            result = run(f'mkdir -p {working_dir} && chmod 700 {working_dir}')
             result = put(job_script,
                          join(working_dir, 'run_job.sh'),
                          mode=0o700)
