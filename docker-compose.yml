@@ -49,7 +49,7 @@ services:
       - LAXY_DATABASE_URL=postgres://postgres:postgres@db:5432/postgres
       - LAXY_BROKER_URL=amqp://guest@rabbitmq
 #     - LAXY_BROKER_URL=redis://redis:6379/0
-    command: bash -c "celery -A laxy worker -B -E -l debug --broker=${LAXY_BROKER_URL}"
+    command: bash -c "celery -A laxy worker -B -E -l info --broker=${LAXY_BROKER_URL}"
     depends_on:
       - db
       - rabbitmq

@@ -19,6 +19,7 @@ services:
                       python manage.py shell -c \"from django.contrib.auth.models import User; User.objects.filter(username='${LAXY_ADMIN_USERNAME}').count() or User.objects.create_superuser('${LAXY_ADMIN_USERNAME}', '${LAXY_ADMIN_EMAIL}', '${LAXY_ADMIN_PASSWORD}');\";"
 
   celeryd:
+    command: bash -c "celery -A laxy worker -B -E -l debug --broker=${LAXY_BROKER_URL}"
     volumes:
       - .:/app
 

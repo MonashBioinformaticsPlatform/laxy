@@ -53,7 +53,7 @@ services:
       - private
 
   celeryd:
-    command: bash -c "celery -A laxy worker -B -E -l info --broker=${LAXY_BROKER_URL}"
+    # command: bash -c "celery -A laxy worker -B -E -l info --broker=${LAXY_BROKER_URL}"
     environment:
       - LAXY_DEBUG=no
     deploy:
