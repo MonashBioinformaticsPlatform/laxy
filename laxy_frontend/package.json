@@ -6,11 +6,11 @@
   "scripts": {
     "build": "webpack",
     "watch": "webpack -d --watch --progress",
-    "dev": "webpack-dev-server -d --progress --watch --port 9997 --open --content-base ./ && python3 ../manage.py runserver 9998",
-    "django": "python3 ../manage.py runserver 9998",
+    "dev": "webpack-dev-server -d --progress --watch --port 8002 --open --content-base ./ && python3 ../manage.py runserver 8001",
+    "django": "python3 ../manage.py runserver 8001",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "webpack-dev-server -d --progress --watch --port 9997 --open --content-base ./",
-    "public_demo": "webpack-dev-server --port 4000 --host 0.0.0.0 --content-base ./"
+    "start": "webpack-dev-server -d --progress --watch --port 8002 --open --content-base ./",
+    "public_demo": "webpack-dev-server --port 8002 --host 0.0.0.0 --content-base ./"
   },
   "author": "",
   "license": "ISC",
