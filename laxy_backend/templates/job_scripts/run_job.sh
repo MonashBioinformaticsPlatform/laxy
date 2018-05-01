@@ -9,6 +9,9 @@ export JOB_ID="${JOB_ID:-}"
 export JOB_COMPLETE_CALLBACK_URL="${JOB_COMPLETE_CALLBACK_URL:-}"
 export JOB_COMPLETE_AUTH_HEADER="${JOB_COMPLETE_AUTH_HEADER:-}"
 
+mkdir -p input
+mkdir -p output
+
 ### Stage input data ###
 PARALLEL_DOWNLOADS=4
 jq '.sample_set.samples[].files[][]' <pipeline_config.json | \
@@ -16,11 +19,11 @@ jq '.sample_set.samples[].files[][]' <pipeline_config.json | \
   parallel --no-notice --line-buffer -j ${PARALLEL_DOWNLOADS} \
   wget --continue --trust-server-names --retry-connrefused --read-timeout=60 \
        --waitretry 60 --timeout=30 --tries 8 \
-       --output-file download.log --directory-prefix input {}
+       --output-file output/download.log --directory-prefix input {}
 
 #### Job happens in here ####
 
-env >job.out
+env >output/job.out
 EXIT_CODE=$?
 
 #### Notify service we are done ####

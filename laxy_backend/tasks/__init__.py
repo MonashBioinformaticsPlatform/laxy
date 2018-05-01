@@ -108,7 +108,8 @@ def start_job(self, task_data=None, **kwargs):
         succeeded = result.succeeded
     except BaseException as e:
         succeeded = False
-        message = e.message
+        if hasattr(e, 'message'):
+            message = e.message
 
     if not succeeded and job.compute_resource.disposable:
         job.compute_resource.dispose()
@@ -131,6 +132,124 @@ def start_job(self, task_data=None, **kwargs):
         self.update_state(state=states.FAILURE, meta=message)
         raise Exception(message)
         # raise Ignore()
+
+    task_data.update(result=result)
+
+    return task_data
+
+
+def remote_list_files(path='.'):
+    """
+    Recursively list files relative to the specified path.
+    Intended to be called within a Fabric context.
+
+    :param path: A path (absolute or relative to cwd)
+    :type path: str
+    :return: A list of relative paths.
+    :rtype: List[str]
+    """
+    lslines = run(f"find {path} -mindepth 1 -type f -printf '%P\n'")
+    if not lslines.succeeded:
+        raise Exception("Failed to list remote files: %s" % lslines)
+    filepaths = lslines.splitlines()
+    filepaths = [f for f in filepaths if f.strip()]
+    return filepaths
+
+
+@shared_task(bind=True, track_started=True)
+def index_remote_files(self, task_data=None, **kwargs):
+    from ..models import Job, File
+
+    if task_data is None:
+        raise InvalidTaskError("task_data is None")
+
+    job_id = task_data.get('job_id')
+    job = Job.objects.get(id=job_id)
+    result = task_data.get('result')
+    master_ip = job.compute_resource.host
+    gateway = job.compute_resource.gateway_server
+
+    webhook_notify_url = ''
+    # secret = None
+
+    environment = task_data.get('environment', {})
+    # environment.update(JOB_ID=job_id)
+    _init_fabric_env()
+    private_key = job.compute_resource.private_key
+    remote_username = job.compute_resource.extra.get('username', None)
+    base_dir = job.compute_resource.extra.get('base_dir', '/tmp/')
+
+    compute_id = job.compute_resource.id
+    message = "Failure, without exception."
+
+    def create_file_objects(remote_path, location_base=''):
+        """
+        Returns a list of (unsaved) File objects from a recursive 'find'
+        of a remote directory.
+
+        :param remote_path: Path on the remote server.
+        :type remote_path: str
+        :param location_base: Prefix of location URL (eg sftp://127.0.0.1/XxX/)
+        :type location_base: str
+        :return: A list of File objects
+        :rtype: List[File]
+        """
+
+        with cd(remote_path):
+            filepaths = remote_list_files('.')
+            urls = [
+                (f'{location_base}/{fpath}', fpath)
+                for fpath in filepaths
+            ]
+
+            file_objs = []
+            for location, fpath in urls:
+                f = File(location=location, owner=job.owner, name=fpath)
+                file_objs.append(f)
+
+        return file_objs
+
+    try:
+        with fabsettings(gateway=gateway,
+                         host_string=master_ip,
+                         user=remote_username,
+                         key=private_key,
+                         # key_filename=expanduser("~/.ssh/id_rsa"),
+                         ):
+            working_dir = os.path.join(base_dir, job_id)
+            input_dir = os.path.join(working_dir, 'input')
+            output_dir = os.path.join(working_dir, 'output')
+
+            output_files = create_file_objects(
+                output_dir,
+                location_base=f'laxy+sftp://{compute_id}/{job_id}/output')
+            job.output_files.add(output_files)
+
+            # TODO: This should really be done at job start, or once input data
+            #       has been staged on the compute node.
+            input_files = create_file_objects(
+                input_dir,
+                location_base=f'laxy+sftp://{compute_id}/{job_id}/input')
+            job.input_files.add(input_files)
+
+        succeeded = True
+    except BaseException as e:
+        succeeded = False
+        if hasattr(e, 'message'):
+            message = e.message
+
+        self.update_state(state=states.FAILURE, meta=message)
+        raise e
+
+    # job_status = Job.STATUS_RUNNING if succeeded else Job.STATUS_FAILED
+    # job = Job.objects.get(id=job_id)
+    # job.status = job_status
+    # job.save()
+
+    # if not succeeded:
+    #     self.update_state(state=states.FAILURE, meta=message)
+    #     raise Exception(message)
+    #     # raise Ignore()
 
     task_data.update(result=result)
 

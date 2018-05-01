@@ -900,6 +900,13 @@ class JobView(JSONView):
                 else:
                     serializer.validated_data.update(status=Job.STATUS_FAILED)
 
+            if serializer.validated_data.get('status') == Job.STATUS_COMPLETE:
+                task_data = dict(job_id=job_id)
+
+                result = tasks.index_remote_files.apply_async(
+                    args=(task_data,))
+                    # link_error=self._task_err_handler.s(job_id))
+
             serializer.save()
 
             job = self.get_obj(job_id)
@@ -907,7 +914,6 @@ class JobView(JSONView):
                     job.compute_resource and
                     job.compute_resource.disposable and
                     not job.compute_resource.running_jobs()):
-                task_data = dict(job_id=job_id)
                 job.compute_resource.dispose()
 
             return Response(status=status.HTTP_204_NO_CONTENT)
@@ -1031,7 +1037,6 @@ class JobCreate(JSONView):
             callback_auth_header = 'Authorization: Token %s' % token.key
 
             task_data = dict(job_id=job_id,
-                             compute_resource_id=job.compute_resource.id,
                              # pipeline_run_config=pipeline_run.to_json(), # this is job.params
                              # gateway=settings.CLUSTER_MANAGEMENT_HOST,
                              environment={'JOB_ID': job_id,

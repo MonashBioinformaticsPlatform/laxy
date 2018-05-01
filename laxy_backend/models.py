@@ -582,17 +582,18 @@ class FileSet(Timestamped, UUIDModel):
             files = [files.id]
         elif isinstance(files, Sequence):
             _files = []
-            for f in files:
-                if isinstance(f, str):
-                    _files.append(f)
-                elif isinstance(f, File):
-                    _files.append(f.id)
-                    if save:
-                        f.save()
-                else:
-                    raise ValueError(
-                        "You must provide a File, a list or Files, "
-                        "a string ID or a list of string IDs")
+            with transaction.atomic():
+                for f in files:
+                    if isinstance(f, str):
+                        _files.append(f)
+                    elif isinstance(f, File):
+                        _files.append(f.id)
+                        if save:
+                            f.save()
+                    else:
+                        raise ValueError(
+                            "You must provide a File, a list or Files, "
+                            "a string ID or a list of string IDs")
             files = _files
         # if isinstance(files, Sequence) and \
         #    all([isinstance(f, str) for f in files]):
