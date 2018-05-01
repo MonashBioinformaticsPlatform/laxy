@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.urls import reverse
 from django.contrib.humanize.templatetags import humanize
 from django.utils.html import format_html
 from reversion.admin import VersionAdmin
@@ -6,7 +7,21 @@ from reversion.admin import VersionAdmin
 from .models import Job, ComputeResource, File, FileSet, SampleSet, PipelineRun
 
 
-class ComputeResourceAdmin(VersionAdmin):
+class Timestamped:
+    list_display = ('uuid', 'created', 'modified',)
+    ordering = ('-created_time', '-modified_time',)
+
+    def uuid(self, obj):
+        return '%s' % obj.uuid()
+
+    def created(self, obj):
+        return humanize.naturaltime(obj.created_time)
+
+    def modified(self, obj):
+        return humanize.naturaltime(obj.modified_time)
+
+
+class ComputeResourceAdmin(Timestamped, VersionAdmin):
     list_display = ('uuid', 'address', 'created', 'status_html')
     ordering = ('-created_time',)
 
@@ -16,12 +31,6 @@ class ComputeResourceAdmin(VersionAdmin):
         ComputeResource.STATUS_STARTING: 'orange',
         ComputeResource.STATUS_TERMINATING: 'orange',
     }
-
-    def uuid(self, obj):
-        return 'ComputeResource UUID: %s' % obj.uuid()
-
-    def created(self, obj):
-        return humanize.naturaltime(obj.created_time)
 
     def status_html(self, obj):
         return format_html(
@@ -37,7 +46,7 @@ class ComputeResourceAdmin(VersionAdmin):
             return ''
 
 
-class JobAdmin(VersionAdmin):
+class JobAdmin(Timestamped, VersionAdmin):
     list_display = ('uuid',
                     'created',
                     'modified',
@@ -51,15 +60,6 @@ class JobAdmin(VersionAdmin):
         Job.STATUS_CANCELLED: 'red',
         Job.STATUS_RUNNING: 'green',
     }
-
-    def uuid(self, obj):
-        return '%s' % obj.uuid()
-
-    def created(self, obj):
-        return humanize.naturaltime(obj.created_time)
-
-    def modified(self, obj):
-        return humanize.naturaltime(obj.modified_time)
 
     def completed(self, obj):
         return humanize.naturaltime(obj.completed_time)
@@ -79,44 +79,32 @@ class JobAdmin(VersionAdmin):
         )
 
 
-class FileAdmin(VersionAdmin):
-    pass
+class FileAdmin(Timestamped, VersionAdmin):
+    list_display = ('uuid',
+                    '_location',
+                    'created',
+                    'modified')
+    ordering = ('-created_time', '-modified_time',)
+
+    def _location(self, obj):
+        url = reverse('laxy_backend:file_download',
+                      kwargs={'uuid': obj.uuid(), 'filename': obj.name})
+        return format_html('<a href="{}">{}</a>', url, obj.name)
 
 
-class FileSetAdmin(VersionAdmin):
-    pass
-
-
-class SampleSetAdmin(VersionAdmin):
+class FileSetAdmin(Timestamped, VersionAdmin):
     list_display = ('uuid',
                     'created',
                     'modified')
     ordering = ('-created_time', '-modified_time',)
 
-    def uuid(self, obj):
-        return '%s' % obj.uuid()
 
-    def created(self, obj):
-        return humanize.naturaltime(obj.created_time)
-
-    def modified(self, obj):
-        return humanize.naturaltime(obj.modified_time)
+class SampleSetAdmin(Timestamped, VersionAdmin):
+    pass
 
 
-class PipelineRunAdmin(VersionAdmin):
-    list_display = ('uuid',
-                    'created',
-                    'modified')
-    ordering = ('-created_time', '-modified_time',)
-
-    def uuid(self, obj):
-        return '%s' % obj.uuid()
-
-    def created(self, obj):
-        return humanize.naturaltime(obj.created_time)
-
-    def modified(self, obj):
-        return humanize.naturaltime(obj.modified_time)
+class PipelineRunAdmin(Timestamped, VersionAdmin):
+    pass
 
 
 
