@@ -25,7 +25,7 @@ text.eachLine {
 
 // final ConfigObject params = new ConfigSlurper().parse(new File("params.groovy").toURI().toURL());
 
-def params = [params: [igenomes_base:'ftp://igenome:G3nom3s4u@ussd-ftp.illumina.com']]
+def params = [params: [igenomes_base:'iGenomes']]
 def slurper = new ConfigSlurper()
 slurper.setBinding(params)
 final ConfigObject config = slurper.parse("https://raw.githubusercontent.com/SciLifeLab/NGI-RNAseq/master/conf/igenomes.config".toURI().toURL())
