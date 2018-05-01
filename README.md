@@ -9,8 +9,18 @@ git clone --recurse-submodules https://github.com/MonashBioinformaticsPlatform/l
 ```
 cd laxy_frontend
 npm install
+npm run build
 npm start
 open http://localhost:9997/
+```
+
+### Building vue-material
+The repository contains a subrepo for vue-material (1.x, custom fork).
+If you make changes to vue-material, rebuild it like:
+
+```bash
+cd laxy_frontend/local_node_modules/vue-material
+npm run build:lib
 ```
 
 ## Backend
