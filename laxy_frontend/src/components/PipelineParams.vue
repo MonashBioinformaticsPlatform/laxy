@@ -106,6 +106,7 @@
         public available_genomes: Array<ReferenceGenome> = [
             {id: 'hg19', organism: 'Human'},
             {id: 'mm10', organism: 'Mouse'},
+            {id: 'R64-1-1', organism: 'Saccharomyces cerevisiae'},
         ];
         // public reference_genome: string = this.available_genomes[0].id;
         // public description: string = '';

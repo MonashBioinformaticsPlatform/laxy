@@ -1,3 +1,5 @@
+from typing import Dict
+import logging
 from datetime import datetime
 import uuid
 import jwt
@@ -6,6 +8,7 @@ from django.contrib.auth.models import User
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 
+logger = logging.getLogger(__name__)
 
 def decode(encoded_token):
     """
@@ -82,11 +85,26 @@ def create_object_access_jwt(obj, ttl=None):
     return token
 
 
-def make_jwt_header_dict(token):
+def make_jwt_header_dict(token) -> Dict:
     return {u'Authorization': u'%s %s' % (
         settings.JWT_AUTH.get('JWT_AUTH_HEADER_PREFIX', u'Bearer'),
         token)}
 
 
-def get_jwt_user_header_dict(username):
+def get_jwt_user_header_dict(username) -> Dict:
     return make_jwt_header_dict(create_jwt_user_token(username)[0])
+
+
+def get_jwt_user_header_str(username) -> str:
+    """
+    Return a string with a JWT auth header:
+
+      Authorization: Bearer xxxJWT.XxxX.XXX
+
+    :param username:
+    :type username:
+    :return:
+    :rtype:
+    """
+    logger.info("Auth header: ", get_jwt_user_header_dict(username).items())
+    return ': '.join(*get_jwt_user_header_dict(username).items())

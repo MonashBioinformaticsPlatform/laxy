@@ -56,7 +56,7 @@ import reversion
 
 from braces.views import LoginRequiredMixin, CsrfExemptMixin
 
-from .jwt_helpers import get_jwt_user_header_dict, create_jwt_user_token
+from .jwt_helpers import get_jwt_user_header_dict, create_jwt_user_token, get_jwt_user_header_str
 from .models import Job, ComputeResource, File, FileSet, SampleSet, PipelineRun
 from .serializers import (PatchSerializerResponse,
                           PutSerializerResponse,
@@ -900,16 +900,18 @@ class JobView(JSONView):
                 else:
                     serializer.validated_data.update(status=Job.STATUS_FAILED)
 
-            if serializer.validated_data.get('status') == Job.STATUS_COMPLETE:
-                task_data = dict(job_id=job_id)
-
-                result = tasks.index_remote_files.apply_async(
-                    args=(task_data,))
-                    # link_error=self._task_err_handler.s(job_id))
-
             serializer.save()
 
             job = self.get_obj(job_id)
+
+            if (job.status == Job.STATUS_COMPLETE or
+                    job.status == Job.STATUS_FAILED):
+
+                task_data = dict(job_id=job_id)
+                result = tasks.index_remote_files.apply_async(
+                    args=(task_data,))
+                # link_error=self._task_err_handler.s(job_id))
+
             if (job.done and
                     job.compute_resource and
                     job.compute_resource.disposable and
@@ -1033,8 +1035,13 @@ class JobCreate(JSONView):
             # job_bot, _ = User.objects.get_or_create(username='job_bot')
             # token, _ = Token.objects.get_or_create(user=job_bot)
 
-            token, _ = Token.objects.get_or_create(user=request.user)
-            callback_auth_header = 'Authorization: Token %s' % token.key
+            # DRF API key
+            # token, _ = Token.objects.get_or_create(user=request.user)
+            # callback_auth_header = 'Authorization: Token %s' % token.key
+
+            # JWT access token for user (expiring by default, so better)
+            callback_auth_header = get_jwt_user_header_str(
+                request.user.username)
 
             task_data = dict(job_id=job_id,
                              # pipeline_run_config=pipeline_run.to_json(), # this is job.params
@@ -1044,7 +1051,7 @@ class JobCreate(JSONView):
                                               callback_url,
                                           'JOB_COMPLETE_AUTH_HEADER':
                                               callback_auth_header,
-                                          'JOB_INPUT_STAGED': sh_bool(True),
+                                          'JOB_INPUT_STAGED': sh_bool(False),
                                           })
 
             # TESTING: Start cluster, run job, (pre-existing data), stop cluster

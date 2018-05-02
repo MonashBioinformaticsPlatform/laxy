@@ -6,6 +6,7 @@ const Cookies = require('js-cookie');
 
 export class WebAPI {
     private static baseUrl: string = 'http://118.138.240.175:8001';
+    // private static baseUrl: string = 'http://localhost:8001';
     public static fetcher = axios.create({
         baseURL: WebAPI.baseUrl,
         withCredentials: true,
