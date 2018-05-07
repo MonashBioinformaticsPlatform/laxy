@@ -200,6 +200,16 @@ class JobSerializerResponse(JobSerializerBase):
         error_status_codes = status_codes()
 
 
+# TODO: modify this to trim down unnessescary output,
+#       eg, we don't need the full nested sample_set etc
+class JobListSerializerResponse(JobSerializerResponse):
+    class Meta:
+        model = models.Job
+        exclude = ('secret', 'input_files', 'output_files',)
+        depth = 0
+        error_status_codes = status_codes()
+
+
 class JobSerializerRequest(JobSerializerBase):
     input_files = FileSerializer(many=True, required=False)
 

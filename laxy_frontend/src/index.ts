@@ -41,6 +41,7 @@ import SampleCart from './components/SampleCart.vue';
 import SampleTable from './components/SampleTable.vue';
 import PipelineParams from './components/PipelineParams.vue';
 import ENAFlow from './components/ENAFlow.vue';
+import JobList from './components/JobList.vue';
 
 Vue.component('input-files-form', InputDataForm);
 Vue.component('sample-table', SampleTable);
@@ -97,6 +98,11 @@ const router = new VueRouter({
             path: '/setupRun',
             name: 'setupRun',
             component: PipelineParams,
+        },
+        {
+            path: '/jobs',
+            name: 'jobs',
+            component: JobList,
         },
     ],
     // mode: 'history',

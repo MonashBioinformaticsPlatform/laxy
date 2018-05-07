@@ -4,6 +4,12 @@ import 'es6-promise';
 import axios, {AxiosResponse} from 'axios';
 const Cookies = require('js-cookie');
 
+class NotImplementedError extends Error {
+  constructor(message: string) {
+    super(message);
+  }
+}
+
 export class WebAPI {
     private static baseUrl: string = 'http://118.138.240.175:8001';
     // private static baseUrl: string = 'http://localhost:8001';
@@ -57,5 +63,24 @@ export class WebAPI {
 
     public static getCsrfToken(): string {
         return Cookies.get('csrftoken');
+    }
+
+    public static async getJobs(page: number, page_size: number) {
+        try {
+            return await this.fetcher.get(
+                `/api/v1/jobs/?page=${page}&page_size=${page_size}`) as AxiosResponse;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    public static async cancelJob(id: string) {
+        try {
+            return await this.fetcher.patch(
+                `/api/v1/job/${id}/`,
+                {status: 'cancelled'}) as AxiosResponse;
+        } catch (error) {
+            throw error;
+        }
     }
 }

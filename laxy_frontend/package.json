@@ -14,10 +14,13 @@
   },
   "author": "",
   "license": "ISC",
-  "//": {
+  "//dev": {
     "@types/vue-material": "git+https://github.com/calebsander/vue-material-types.git#master",
-    "vue-material": "^0.8.1",
     "vue-material": "git+https://github.com/pansapiens/vue-material.git#custom-0.8.1"
+  },
+  "//dev2": {
+    "vue-material": "^0.8.1",
+    "@types/vue-material": "file:./local_node_modules/vue-material-types"
   },
   "devDependencies": {
     "@types/axios": "^0.14.0",

@@ -24,7 +24,7 @@ from laxy_backend.views import (JobView, JobCreate,
                                 SampleSetView, SampleSetCreate,
                                 PipelineRunView, PipelineRunCreate,
                                 ComputeResourceView, ComputeResourceCreate,
-                                ENAQueryView, ENAFastqUrlQueryView,)
+                                ENAQueryView, ENAFastqUrlQueryView, JobListView)
 
 from laxy_backend.view_auth import Login, Logout, view_user_profile
 
@@ -78,6 +78,10 @@ api_urls = [
     re_path(r'job/$',
             JobCreate.as_view(),
             name='create_job'),
+    re_path(r'jobs/$',
+            # JobListView.as_view({'get': 'list'}),
+            JobListView.as_view(),
+            name='list_jobs'),
     re_path(r'file/$',
             FileCreate.as_view(),
             name='create_file'),

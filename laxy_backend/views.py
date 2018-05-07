@@ -1,3 +1,4 @@
+from rest_framework.pagination import PageNumberPagination
 from typing import Dict, List
 from django.shortcuts import render
 
@@ -23,7 +24,7 @@ from django.http import Http404
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth.models import User
 
-from rest_framework import generics
+from rest_framework import generics, viewsets, mixins
 from rest_framework import status
 from rest_framework.parsers import JSONParser, MultiPartParser
 
@@ -70,7 +71,7 @@ from .serializers import (PatchSerializerResponse,
                           SampleSetSerializer,
                           PipelineRunSerializer,
                           PipelineRunCreateSerializer,
-                          SchemalessJsonResponseSerializer)
+                          SchemalessJsonResponseSerializer, JobListSerializerResponse)
 
 from . import tasks
 from .tasks import orchestration
@@ -906,7 +907,6 @@ class JobView(JSONView):
 
             if (job.status == Job.STATUS_COMPLETE or
                     job.status == Job.STATUS_FAILED):
-
                 task_data = dict(job_id=job_id)
                 result = tasks.index_remote_files.apply_async(
                     args=(task_data,))
@@ -1043,16 +1043,23 @@ class JobCreate(JSONView):
             callback_auth_header = get_jwt_user_header_str(
                 request.user.username)
 
+            # TODO: Generate this from job.params.get('reference_genome')
+            #       via the mappings in templates/genomes.json
+            reference_genome = "Saccharomyces_cerevisiae/Ensembl/R64-1-1"
+
             task_data = dict(job_id=job_id,
-                             # pipeline_run_config=pipeline_run.to_json(), # this is job.params
+                             # this is job.params
+                             # pipeline_run_config=pipeline_run.to_json(),
                              # gateway=settings.CLUSTER_MANAGEMENT_HOST,
-                             environment={'JOB_ID': job_id,
-                                          'JOB_COMPLETE_CALLBACK_URL':
-                                              callback_url,
-                                          'JOB_COMPLETE_AUTH_HEADER':
-                                              callback_auth_header,
-                                          'JOB_INPUT_STAGED': sh_bool(False),
-                                          })
+                             environment={
+                                 'JOB_ID': job_id,
+                                 'JOB_COMPLETE_CALLBACK_URL':
+                                     callback_url,
+                                 'JOB_COMPLETE_AUTH_HEADER':
+                                     callback_auth_header,
+                                 'JOB_INPUT_STAGED': sh_bool(False),
+                                 'REFERENCE_GENOME': reference_genome,
+                             })
 
             # TESTING: Start cluster, run job, (pre-existing data), stop cluster
             # tasks.run_job_chain(task_data)
@@ -1211,6 +1218,39 @@ class JobCreate(JSONView):
             return Response(serializer.validated_data,
                             status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class JobPagination(PageNumberPagination):
+    page_size = 10
+    page_query_param = 'page'
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
+# TODO: When we have proper permissions, use viewsets.GenericViewSet or
+# viewsets.ModelViewSet or ListAPIView instead with the appropriate permission_classes
+# http://www.django-rest-framework.org/api-guide/viewsets/#modelviewset
+class JobListView(generics.ListAPIView):
+    """
+    Retrieve a list of job for the current user.
+    """
+
+    serializer_class = JobListSerializerResponse
+    permission_classes = [IsAuthenticated]
+    pagination_class = JobPagination
+
+    def get_queryset(self):
+        return (Job.objects
+                .filter(owner=self.request.user)
+                # .order_by('status')
+                .order_by('-created_time'))
+
+    # def list(self, request):
+    #     # queryset = Job.objects.filter(owner=request.user).order_by('-created_time')
+    #     queryset = self.get_queryset()
+    #     serializer = JobSerializerResponse(queryset, many=True)
+    #     self.transform_output(serializer.data)
+    #     return Response(serializer.data)
 
 
 def _get_or_create_drf_token(user):
