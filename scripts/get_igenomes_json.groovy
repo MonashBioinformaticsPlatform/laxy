@@ -5,7 +5,19 @@ Download a Groovy config (NextFlow) from SciLifeLab/NGI-RNASeq
 and output a JSON version
 
 $ groovy scripts/get_igenomes_json.groovy >laxy_backend/templates/genomes.json
+
+The URL to download a whole release for an organism is composed like:
+
+organism = "Caenorhabditis_elegans"
+centre = "Ensembl"
+release = "WBcel235"
+ftp://igenome:G3nom3s4u@ussd-ftp.illumina.com/{organism}/{centre}/{release}/{organism}_{centre}_{release}.tar.gz
+
+The tar.gz downloaded contains the some of the files listed in the JSON generated here.
+(files for bed12 and STARIndex attributes are missing from the FTP download)
 */
+
+
 
 import groovy.json.JsonOutput
 

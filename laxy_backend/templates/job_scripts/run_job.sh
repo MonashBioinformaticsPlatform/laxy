@@ -16,6 +16,7 @@ set -o xtrace
 export JOB_ID="{{ JOB_ID }}"
 export JOB_COMPLETE_CALLBACK_URL="{{ JOB_COMPLETE_CALLBACK_URL }}"
 export JOB_INPUT_STAGED="{{ JOB_INPUT_STAGED }}"
+export REFERENCE_GENOME="{{ REFERENCE_GENOME }}"
 
 mkdir -p input
 mkdir -p output
@@ -58,12 +59,13 @@ env >job_env.out
 #### Job happens in here
 ####
 
-IGENOMES_REFERENCE="Saccharomyces_cerevisiae/Ensembl/R64-1-1"
-GENOME_FASTA="references/iGenomes/${IGENOMES_REFERENCE}/Sequence/WholeGenomeFasta/genome.fa"
-GENOME_GTF="references/iGenomes/${IGENOMES_REFERENCE}/Annotation/Genes/genes.gtf"
+GENOME_FASTA="references/iGenomes/${REFERENCE_GENOME}/Sequence/WholeGenomeFasta/genome.fa"
+GENOME_GTF="references/iGenomes/${REFERENCE_GENOME}/Annotation/Genes/genes.gtf"
 
-# Don't exit on error, since we
+# Don't exit on error, since we want to capture exit code and do an HTTP
+# request with curl upon failure
 set +o errexit
+
 RNAsik -align star \
        -fastaRef ../../${GENOME_FASTA} \
        -fqDir ../input \
