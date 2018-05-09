@@ -9,6 +9,14 @@ export const SET_SAMPLES = 'set_samples';
 export const SET_SAMPLES_ID = 'set_samples_id';
 export const SET_PIPELINE_PARAMS = 'set_pipeline_params';
 export const SET_PIPELINE_DESCRIPTION = 'set_pipeline_description';
+export const SET_JOBS = 'set_jobs';
+
+export const GET_JOBS = 'get_jobs';
+
+interface JobsPage {
+    total: number;  // total number of jobs on all pages
+    jobs: any[];    // jobs for just the page we've retrieved
+}
 
 export const Store = new Vuex.Store({
     strict: true,
@@ -18,6 +26,7 @@ export const Store = new Vuex.Store({
             reference_genome: 'hg19',
             description: '',
         },
+        jobs: {total: 0, jobs: [] as any []} as JobsPage,
     },
     getters: {
         samples: state => {
@@ -31,6 +40,9 @@ export const Store = new Vuex.Store({
                 return state.samples.items.length;
             }
             return 0;
+        },
+        jobs: state => {
+            return state.jobs;
         }
     },
     mutations: {
@@ -49,6 +61,9 @@ export const Store = new Vuex.Store({
         },
         [SET_PIPELINE_DESCRIPTION](state, txt: any) {
             state.pipelineParams.description = txt;
+        },
+        [SET_JOBS](state, jobs: JobsPage) {
+            state.jobs = jobs;
         }
     },
     actions: {
@@ -81,6 +96,27 @@ export const Store = new Vuex.Store({
         },
         async [SET_PIPELINE_PARAMS]({commit, state}, params: any) {
             commit(SET_PIPELINE_PARAMS, params);
-        }
+        },
+        async [GET_JOBS]({commit, state}, pagination = {page: 1, page_size: 10}) {
+            try {
+                const response = await WebAPI.getJobs(
+                    pagination.page,
+                    pagination.page_size);
+                const jobs: JobsPage = {
+                    total: response.data.count,
+                    jobs: response.data.results
+                };
+                // ISO date strings to Javascipt Date objects
+                for (const key of ['created_time', 'modified_time', 'completed_time']) {
+                    _.update(jobs, key, function(d_str: string) {
+                        return new Date(d_str);
+                    });
+                }
+                commit(SET_JOBS, jobs);
+            } catch (error) {
+                console.log(error);
+                throw error;
+            }
+        },
     },
 });

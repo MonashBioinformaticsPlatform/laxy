@@ -25,11 +25,14 @@
             <md-layout md-gutter>
                 <md-layout>
                     <md-layout v-if="jobs != null">
-                        <md-table-card>
+                        <md-table-card style="width: 100%;">
                             <md-toolbar>
                                 <h1 class="md-title">Jobs</h1>
+                                <md-button class="md-icon-button" @click="refresh()">
+                                    <md-icon :class="{spin: submitting}">refresh</md-icon>
+                                </md-button>
                             </md-toolbar>
-                            <md-table>
+                            <md-table :class="{ colored: submitting }">
                                 <md-table-header>
                                     <md-table-row>
                                         <md-table-head>Job</md-table-head>
@@ -131,7 +134,7 @@
     } from "vuex-class";
 
     import {ComputeJob} from "../model";
-    import {SET_SAMPLES} from "../store";
+    import {GET_JOBS} from "../store";
     import {WebAPI} from "../web-api";
 
     import {DummyJobList as _dummyJobList} from "../test-data";
@@ -139,21 +142,26 @@
     @Component({
         props: {},
         filters: {},
-        beforeRouteLeave(to: any, from: any, next: any) {
-            (this as any).beforeRouteLeave(to, from, next);
-        }
     })
     export default class JobList extends Vue {
         _DEBUG: boolean = false;
 
-        public jobs: any[] = [];
+        // public jobs: any[] = [];
         public jobToCancel: string = "";
         public pagination: { [k: string]: number } = {page_size: 10, page: 1, count: 0};
+
+        private _jobPollerId: number | null = null;
+        private _pollInterval: number = 10000;  // ms
+
 
         public submitting: boolean = false;
         public error_alert_message: string = "Everything is fine. 🐺";
         public snackbar_message: string = "Everything is fine. ☃";
         public snackbar_duration: number = 2000;
+
+        get jobs(): any[] {
+            return this.$store.state.jobs.jobs;
+        }
 
         // for lodash in templates
         get _() {
@@ -162,9 +170,27 @@
 
         created() {
             // this.jobs = _dummyJobList;
-            // this.refresh();
             this.refresh();
         }
+
+        /*
+        // TODO: Make this polling work
+        mounted() {
+            if (this._jobPollerId == null) {
+                this._jobPollerId = setInterval(
+                    () => {
+                        if (!this.submitting) {
+                            this.refresh();
+                        }
+                    },
+                    this._pollInterval);
+            }
+        }
+
+        beforeDestroy() {
+            if (this._jobPollerId != null) clearInterval(this._jobPollerId);
+        }
+        */
 
         getStatusColor(status: string) {
             const status_colors: any = {
@@ -189,25 +215,16 @@
                 await this.refresh();
             } catch (error) {
                 this.pagination.page = leaving_page;
-                this.$refs['pagination'].currentPage = leaving_page;
+                (this.$refs["pagination"] as any).currentPage = leaving_page;
             }
         }
 
         async refresh() {
             try {
                 this.submitting = true;
-                let response = await WebAPI.getJobs(
-                    this.pagination.page,
-                    this.pagination.page_size);
-                let jobs: any = response.data.results;
-                this.pagination["count"] = response.data.count;
-                for (let key of ["created_time", "modified_time", "completed_time"]) {
-                    _.update(jobs, key, function (d_str: string) {
-                        return new Date(d_str);
-                    });
-                }
+                await this.$store.dispatch(GET_JOBS, this.pagination);
+                this.pagination.count = this.$store.state.jobs.total;
                 this.submitting = false;
-                this.jobs = jobs;
                 // this.flashSnackBarMessage("Updated");
             } catch (error) {
                 console.log(error);
@@ -254,10 +271,27 @@
             this.snackbar_duration = duration;
             (this.$refs.snackbar as any).open();
         }
-
-        routeTo(name: string) {
-            this.$router.push(name);
-        }
     };
 
 </script>
+
+<style scoped>
+
+    .colored {
+        background-color: #EEEEEE;
+    }
+
+    .spin {
+        animation: rotate 1s infinite linear;
+    }
+
+    @keyframes rotate {
+        from {
+            transform: rotate(0deg);
+        }
+        to {
+            transform: rotate(359deg);
+        }
+    }
+
+</style>

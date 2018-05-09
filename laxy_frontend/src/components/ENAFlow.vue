@@ -58,7 +58,13 @@
         }
 
         async startJob() {
-            await (this.$refs['pipelineParams'] as any).run();
+            try {
+                await (this.$refs['pipelineParams'] as any).run();
+                this.$router.push('jobs');
+            }
+            catch (error) {
+                throw error;
+            }
         }
     }
 
