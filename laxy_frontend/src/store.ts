@@ -4,6 +4,7 @@ import axios, {AxiosResponse} from 'axios';
 import {ComputeJob, SampleSet} from './model';
 import {WebAPI} from './web-api';
 
+export const SET_USER_PROFILE = 'set_user_profile';
 export const ADD_SAMPLES = 'add_samples';
 export const SET_SAMPLES = 'set_samples';
 export const SET_SAMPLES_ID = 'set_samples_id';
@@ -11,6 +12,7 @@ export const SET_PIPELINE_PARAMS = 'set_pipeline_params';
 export const SET_PIPELINE_DESCRIPTION = 'set_pipeline_description';
 export const SET_JOBS = 'set_jobs';
 
+export const FETCH_USER_PROFILE = 'fetch_user_profile';
 export const FETCH_JOBS = 'fetch_jobs';
 
 interface JobsPage {
@@ -21,6 +23,7 @@ interface JobsPage {
 export const Store = new Vuex.Store({
     strict: true,
     state: {
+        user_profile: {},
         samples: new SampleSet(),
         pipelineParams: {
             reference_genome: 'hg19',
@@ -46,6 +49,9 @@ export const Store = new Vuex.Store({
         }
     },
     mutations: {
+        [SET_USER_PROFILE](state, profile_info: {}) {
+            state.user_profile = profile_info;
+        },
         [ADD_SAMPLES](state, samples: Sample[]) {
             // if (state.samples.items == undefined)
             state.samples.items.push(...samples);
@@ -67,6 +73,17 @@ export const Store = new Vuex.Store({
         }
     },
     actions: {
+        async [FETCH_USER_PROFILE]({commit, state}) {
+            try {
+                const response = await WebAPI.getUserProfile();
+                const profile_info = _.pick(response.data,
+                    ['full_name', 'username', 'email', 'profile_pic'])
+                commit(SET_USER_PROFILE, profile_info);
+            } catch (error) {
+                console.log(error);
+                throw error;
+            }
+        },
         async [SET_SAMPLES]({commit, state}, samples) {
             const preCommit = _.cloneDeep(state.samples);
             if (preCommit.id != null && samples.id == null) {

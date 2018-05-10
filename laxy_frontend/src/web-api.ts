@@ -56,6 +56,14 @@ export class WebAPI {
         }
     }
 
+    public static async getUserProfile() {
+        try {
+            return await this.fetcher.get(`/accounts/profile/`) as AxiosResponse;
+        } catch (error) {
+            throw error;
+        }
+    }
+
     public static getAuthHeader() {
         const token = sessionStorage.getItem('accessToken');
         return {Authorization: `Bearer ${token}`};

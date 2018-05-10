@@ -29,7 +29,7 @@ Vue.use(VueMarkdown);
 Vue.component('vue-markdown', VueMarkdown);
 */
 
-import {Store as store} from './store';
+import {FETCH_USER_PROFILE, SET_USER_PROFILE, Store as store} from './store';
 import {WebAPI} from './web-api';
 
 import FrontPage from './components/FrontPage.vue';
@@ -159,6 +159,7 @@ const App = new Vue({
             const data = (this.$data as MainApp);
             try {
                 const response = await WebAPI.login(data.login_form_username, data.login_form_password);
+                await this.$store.dispatch(FETCH_USER_PROFILE);
                 ((this.$refs as any).loginMenu as any).close();
                 (this as any).become_logged_in();
             } catch (error) {
@@ -172,10 +173,11 @@ const App = new Vue({
             data.logged_in = true;
             // router.push('rnaseq');
         },
-        logout(event: Event) {
+        async logout(event: Event) {
             sessionStorage.setItem('accessToken', '');
-            WebAPI.logout();
+            await WebAPI.logout();
             (this.$data as MainApp).logged_in = false;
+            this.$store.commit(SET_USER_PROFILE, {});
             // this.$refs["avatarMenu"].close();
             router.push('/');
         },
@@ -195,6 +197,9 @@ const App = new Vue({
     computed: {
         sample_cart_count(): number {
             return this.$store.getters.sample_cart_count;
-        }
-    }
+        },
+        user_profile(): any {
+            return this.$store.state.user_profile;
+        },
+     }
 }) as ComponentOptions<MainApp>;

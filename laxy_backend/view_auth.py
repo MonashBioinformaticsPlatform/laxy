@@ -50,14 +50,36 @@ class Logout(APIView):
         return Response()
 
 
+def gravatar_url(email: str) -> str:
+    from urllib.parse import urlencode
+    import urllib, hashlib
+
+    default = 'retro'
+    # default = 'robohash'
+    # default = 'mm'
+    # default = 'monsterid'
+
+    size = 64
+
+    gravatar_url = "https://www.gravatar.com/avatar/" + hashlib.md5(email.encode('utf-8').lower()).hexdigest() + "?"
+    gravatar_url += urlencode({'d': default, 's': str(size)})
+    return gravatar_url
+
+
 @login_required()
 def view_user_profile(request):
-    token = _get_or_create_drf_token(request.user)
+    user = request.user
+    token = _get_or_create_drf_token(user)
 
-    jwt_token = create_jwt_user_token(request.user.username)[0]
+    jwt_token = create_jwt_user_token(user.username)[0]
     drf_token = token.key
 
-    return JsonResponse({'token': jwt_token, 'drf_authtoken': drf_token,
+    return JsonResponse({'username': user.get_username(),
+                         'full_name': user.get_full_name(),
+                         'email': user.email,
+                         'profile_pic': gravatar_url(user.email),
+                         'token': jwt_token,
+                         'drf_authtoken': drf_token,
                          'jwt_authorization_header_prefix': settings.JWT_AUTH.get('JWT_AUTH_HEADER_PREFIX', u'Bearer'),
                          'drf_authorization_header_prefix': 'Token'})
 
