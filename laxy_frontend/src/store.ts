@@ -1,7 +1,7 @@
 import * as _ from 'lodash';
 import Vuex from 'vuex';
 import axios, {AxiosResponse} from 'axios';
-import {SampleSet} from './model';
+import {ComputeJob, SampleSet} from './model';
 import {WebAPI} from './web-api';
 
 export const ADD_SAMPLES = 'add_samples';
@@ -11,11 +11,11 @@ export const SET_PIPELINE_PARAMS = 'set_pipeline_params';
 export const SET_PIPELINE_DESCRIPTION = 'set_pipeline_description';
 export const SET_JOBS = 'set_jobs';
 
-export const GET_JOBS = 'get_jobs';
+export const FETCH_JOBS = 'fetch_jobs';
 
 interface JobsPage {
     total: number;  // total number of jobs on all pages
-    jobs: any[];    // jobs for just the page we've retrieved
+    jobs: ComputeJob[];    // jobs for just the page we've retrieved
 }
 
 export const Store = new Vuex.Store({
@@ -26,7 +26,7 @@ export const Store = new Vuex.Store({
             reference_genome: 'hg19',
             description: '',
         },
-        jobs: {total: 0, jobs: [] as any []} as JobsPage,
+        jobs: {total: 0, jobs: [] as ComputeJob[]} as JobsPage,
     },
     getters: {
         samples: state => {
@@ -97,14 +97,14 @@ export const Store = new Vuex.Store({
         async [SET_PIPELINE_PARAMS]({commit, state}, params: any) {
             commit(SET_PIPELINE_PARAMS, params);
         },
-        async [GET_JOBS]({commit, state}, pagination = {page: 1, page_size: 10}) {
+        async [FETCH_JOBS]({commit, state}, pagination = {page: 1, page_size: 10}) {
             try {
                 const response = await WebAPI.getJobs(
                     pagination.page,
                     pagination.page_size);
                 const jobs: JobsPage = {
                     total: response.data.count,
-                    jobs: response.data.results
+                    jobs: response.data.results as ComputeJob[]
                 };
                 // ISO date strings to Javascipt Date objects
                 for (const key of ['created_time', 'modified_time', 'completed_time']) {

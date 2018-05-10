@@ -67,7 +67,8 @@
                                                     <md-tooltip md-direction="top">Run again</md-tooltip>
                                                     <md-icon>content_copy</md-icon>
                                                 </md-button>
-                                                <md-button class="md-icon-button"
+                                                <md-button v-if="job.status === 'running'"
+                                                           class="md-icon-button"
                                                            @click="askCancelJob(job.id)">
                                                     <md-tooltip md-direction="top">Cancel</md-tooltip>
                                                     <md-icon>cancel</md-icon>
@@ -134,7 +135,7 @@
     } from "vuex-class";
 
     import {ComputeJob} from "../model";
-    import {GET_JOBS} from "../store";
+    import {FETCH_JOBS} from "../store";
     import {WebAPI} from "../web-api";
 
     import {DummyJobList as _dummyJobList} from "../test-data";
@@ -150,16 +151,17 @@
         public jobToCancel: string = "";
         public pagination: { [k: string]: number } = {page_size: 10, page: 1, count: 0};
 
+        /*
         private _jobPollerId: number | null = null;
         private _pollInterval: number = 10000;  // ms
-
+        */
 
         public submitting: boolean = false;
         public error_alert_message: string = "Everything is fine. 🐺";
         public snackbar_message: string = "Everything is fine. ☃";
         public snackbar_duration: number = 2000;
 
-        get jobs(): any[] {
+        get jobs(): ComputeJob[] {
             return this.$store.state.jobs.jobs;
         }
 
@@ -222,7 +224,7 @@
         async refresh() {
             try {
                 this.submitting = true;
-                await this.$store.dispatch(GET_JOBS, this.pagination);
+                await this.$store.dispatch(FETCH_JOBS, this.pagination);
                 this.pagination.count = this.$store.state.jobs.total;
                 this.submitting = false;
                 // this.flashSnackBarMessage("Updated");
