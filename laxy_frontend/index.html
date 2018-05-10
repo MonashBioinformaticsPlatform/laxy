@@ -22,6 +22,24 @@
         .md-table {
             width: 100%;
         }
+
+        .placeholder {
+            color: black;
+            background-color: seashell;
+        }
+
+        .md-layout {
+            margin: 8px;
+        }
+
+        .title-link {
+            color: rgba(255, 255, 255, 0.87) !important;
+        }
+
+        .pad-32 {
+            padding: 32px;
+        }
+
     </style>
     <title>Laxy</title>
 </head>
@@ -32,7 +50,9 @@
             <md-button class="md-icon-button" @click="toggleLeftSidenav">
                 <md-icon>menu</md-icon>
             </md-button>
-            <h1 class="md-title">Laxy</h1>
+            <h1 class="md-title">
+                <router-link to="/" class="title-link">Laxy</router-link>
+            </h1>
             <!--
             <h2 class="md-subheading">/ˈlaksi/ <em>noun</em>: some combination of lazy, lax and sexy.</h2>
             -->
@@ -57,7 +77,9 @@
                         <div class="author-card">
                             <div class="author-card-info">
                                 <md-subheader>{{ user_fullname }}</md-subheader>
-                                <md-menu-item @selected="openProfile">Profile
+                                <md-menu-item @selected="routeTo('jobs')">Jobs
+                                </md-menu-item>
+                                <md-menu-item @selected="routeTo('profile')">Profile
                                 </md-menu-item>
                                 <md-menu-item @selected="logout">Logout
                                 </md-menu-item>
@@ -97,17 +119,22 @@
         <md-sidenav class="md-left" ref="leftSidenav" @open="open('Left')"
                     @close="close('Left')">
             <md-toolbar class="md-large">
-                <h3 class="md-title">Protocols</h3>
+                <h3 class="md-title">~</h3>
             </md-toolbar>
             <md-list md-dense>
                 <md-list-item>
+                    <router-link :to="{name: 'home'}" exact>
+                        <span v-on:click="toggleLeftSidenav()"><md-icon>home</md-icon>&nbsp;&nbsp;Home</span>
+                    </router-link>
+                </md-list-item>
+                <md-list-item>
                     <router-link to="/ENAflow">
-                        <span v-on:click="toggleLeftSidenav()">Run from ENA/SRA data</span>
+                        <span v-on:click="toggleLeftSidenav()"><md-icon>play_circle_outline</md-icon>&nbsp;&nbsp;Run from ENA/SRA data</span>
                     </router-link>
                 </md-list-item>
                 <md-list-item>
                     <router-link to="/jobs">
-                        <span v-on:click="toggleLeftSidenav()">Jobs</span>
+                        <span v-on:click="toggleLeftSidenav()"><md-icon>view_list</md-icon>&nbsp;&nbsp;Jobs</span>
                     </router-link>
                 </md-list-item>
 
@@ -147,13 +174,6 @@
 <script src="dist/bundle.js"></script>
 </body>
 <style>
-    .placeholder {
-        color: black;
-        background-color: seashell;
-    }
 
-    .md-layout {
-        margin: 8px;
-    }
 </style>
 </html>

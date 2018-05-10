@@ -3,62 +3,129 @@
         <md-layout md-column md-gutter>
             <md-layout style="margin: 40px 10% 0 10%;"
                        md-vertical-align="stretch" md-column>
-
-                <h1>Laxy Genomics Pipelines</h1>
-                <span class="md-subheading"><em>All your reads belong to us</em></span>
-                <hr>
-                <div class="md-body-1">
-                    This is a web application for running analysis on genomic data.
-                    It will run an RNA-seq pipeline, but you'll still need some kind of bioinformatician.
-                    <div class="placeholder">
-                        <em>The disconnection is a strange space suit. Why does the green people tremble?
-                            Klingons are the transporters of the crazy honor. The green people is proudly sub-light.
-                            Bravely translate a space suit. It is a gravimetric honor, sir. Why does the collective die?</em>
+                <md-whiteframe md-elevation="2" class="pad-32">
+                    <div class="pad-32">
+                        <h1 class="md-display-2">Laxy &nbsp;<span class="md-subheading"><em>Genomics Pipelines for Humans</em></span>
+                        </h1>
+                        <div class="md-body-1">
+                            Laxy helps run analysis on genomic data.<br>
+                            Give it your raw FASTQ reads and it will run an RNA-seq pipeline and allow you to explore the
+                            results.
+                        </div>
                     </div>
-                </div>
-                <hr>
-                <md-layout md-flex="20">
-                    <md-card md-with-hover>
-                        <md-card-header>
-                            <div class="md-title">RNA-Seq</div>
-                            <div class="md-subhead">with RNAsik</div>
-                        </md-card-header>
+                    <md-layout md-flex="20">
+                        <router-link to="/ENAflow">
+                            <md-card md-with-hover id="rnaseq">
+                                <md-card-header>
+                                    <div class="md-title">RNA-Seq</div>
+                                    <div class="md-subhead">using public data from ENA/SRA</div>
+                                </md-card-header>
 
-                        <md-card-content>
-                            <md-card-media>
-                                <md-layout md-align="center">
-                                    <svg width="128px" height="64px"
-                                         viewBox="0 0 128 64">
-                                        <rect x="0" y="0" width="32"
-                                              height="16"
-                                              style="fill: grey; stroke: black;"/>
-                                        <rect x="42" y="0" width="32"
-                                              height="16"
-                                              style="fill: grey; stroke: black;"/>
-                                        <rect x="24" y="20" width="32"
-                                              height="16"
-                                              style="fill: grey; stroke: black;"/>
-                                        <rect x="64" y="20" width="32"
-                                              height="16"
-                                              style="fill: grey; stroke: black;"/>
-                                        <rect x="0" y="40" width="120"
-                                              height="16"
-                                              style="fill: grey; stroke: black;"/>
-                                    </svg>
-                                </md-layout>
-                            </md-card-media>
-                            <br/>
-                            <md-card-actions>
-                                <router-link tag="md-button"
-                                             class="md-primary md-raised"
-                                             to="rnaseq">
-                                    Run an RNA-Seq analysis
-                                </router-link>
-                            </md-card-actions>
-                        </md-card-content>
-                        <md-ink-ripple></md-ink-ripple>
-                    </md-card>
-                </md-layout>
+                                <md-card-content>
+                                    <md-card-media>
+                                        <md-layout md-align="center">
+                                            <svg width="128px" height="64px"
+                                                 viewBox="0 0 128 64">
+                                                <rect x="0" y="0" width="32"
+                                                      height="16"
+                                                      style="fill: grey; stroke: black;"></rect>
+                                                <rect x="42" y="0" width="32"
+                                                      height="16"
+                                                      style="fill: grey; stroke: black;"></rect>
+                                                <rect x="24" y="20" width="32"
+                                                      height="16"
+                                                      style="fill: grey; stroke: black;"></rect>
+                                                <rect x="64" y="20" width="32"
+                                                      height="16"
+                                                      style="fill: grey; stroke: black;"></rect>
+                                                <rect x="0" y="40" width="120"
+                                                      height="16"
+                                                      style="fill: grey; stroke: black;"></rect>
+                                            </svg>
+                                        </md-layout>
+                                    </md-card-media>
+                                    <br/>
+                                    <md-card-actions>
+                                        <router-link tag="md-button"
+                                                     class="md-primary md-raised"
+                                                     to="rnaseq">
+                                            Run an RNA-Seq analysis
+                                        </router-link>
+                                    </md-card-actions>
+                                </md-card-content>
+                                <md-ink-ripple></md-ink-ripple>
+                            </md-card>
+                        </router-link>
+                        <md-card md-with-hover id="chipseq">
+                            <md-card-header>
+                                <div class="md-title">ChIP-Seq</div>
+                                <div class="md-subhead">using public data from ENA/SRA</div>
+                            </md-card-header>
+
+                            <md-card-content>
+                                <md-card-media>
+                                    <md-layout md-align="center">
+                                        <svg width="128px" height="64px"
+                                             viewBox="0 0 128 64">
+                                            <rect x="0" y="0" width="32"
+                                                  height="16"
+                                                  style="fill: grey; stroke: black;"></rect>
+                                            <rect x="42" y="0" width="32"
+                                                  height="16"
+                                                  style="fill: black; stroke: black; stroke-dasharray: 2;"></rect>
+                                            <rect x="24" y="20" width="32"
+                                                  height="16"
+                                                  style="fill: grey; stroke: black;"></rect>
+                                            <rect x="64" y="20" width="32"
+                                                  height="16"
+                                                  style="fill: grey; stroke: black;"></rect>
+                                            <rect x="0" y="40" width="120"
+                                                  height="16"
+                                                  style="fill: grey; stroke: black;"></rect>
+                                        </svg>
+                                    </md-layout>
+                                </md-card-media>
+                                <br/>
+                                <md-card-actions>
+                                    <router-link tag="md-button"
+                                                 disabled="true"
+                                                 class="md-primary md-raised"
+                                                 to="chipseq">
+                                        Coming soon ...
+                                    </router-link>
+                                </md-card-actions>
+                            </md-card-content>
+                            <md-ink-ripple></md-ink-ripple>
+                        </md-card>
+                        <md-card md-with-hover id="variants">
+                            <md-card-header>
+                                <div class="md-title">Variant calls</div>
+                                <div class="md-subhead">using public data from ENA/SRA</div>
+                            </md-card-header>
+
+                            <md-card-content>
+                                <md-card-media>
+                                    <md-layout md-align="center">
+                                        <span class="md-title">
+                                            T ⤇ C<br>
+                                            G ⤇ A<br>
+                                        </span>
+                                    </md-layout>
+                                </md-card-media>
+                                <br/>
+                                <md-card-actions>
+                                    <router-link tag="md-button"
+                                                 disabled="true"
+                                                 class="md-primary md-raised"
+                                                 to="variants">
+                                        Coming soon ...
+                                    </router-link>
+                                </md-card-actions>
+                            </md-card-content>
+                            <md-ink-ripple></md-ink-ripple>
+                        </md-card>
+                    </md-layout>
+                </md-whiteframe>
             </md-layout>
         </md-layout>
         <br/>
@@ -67,14 +134,15 @@
 
 
 <script lang="ts">
-    import 'vue-material/dist/vue-material.css';
+    import "vue-material/dist/vue-material.css";
 
-    import * as _ from 'lodash';
-    import 'es6-promise';
+    import * as _ from "lodash";
+    import "es6-promise";
 
-    import axios, {AxiosResponse} from 'axios';
+    import axios, {AxiosResponse} from "axios";
     import Vue, {ComponentOptions} from "vue";
-    const VueMaterial = require('vue-material');
+
+    const VueMaterial = require("vue-material");
 
     interface FrontPage extends Vue {
     }
@@ -85,7 +153,7 @@
         },
         props: {},
         data() {
-            return {}
+            return {};
         },
         methods: {},
         computed: {},

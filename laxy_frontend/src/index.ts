@@ -66,7 +66,7 @@ const router = new VueRouter({
         // { path: '/', redirect: '/rnaseq' },
         {
             path: '/',
-            name: 'front',
+            name: 'home',
             component: FrontPage,
         },
         {
@@ -179,9 +179,8 @@ const App = new Vue({
             // this.$refs["avatarMenu"].close();
             router.push('/');
         },
-        openProfile(event: Event) {
-            // this.$refs["avatarMenu"].close();
-            router.push('profile');
+        routeTo(name: string) {
+            this.$router.push(name);
         },
         toggleLeftSidenav() {
             ((this.$refs as any).leftSidenav as any).toggle();
