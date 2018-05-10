@@ -144,7 +144,7 @@ const App = new Vue({
     data() {
         return {
             logged_in: false,
-            user_fullname: 'John Monash',
+            user_fullname: '',
             login_form_username: '',
             login_form_password: '',
         };
