@@ -36,6 +36,8 @@ from django.db.models import Model, CharField, TextField, UUIDField, \
     URLField, ForeignKey, BooleanField, IntegerField, DateTimeField
 from django.contrib.postgres.fields import ArrayField, HStoreField
 from django.contrib.auth.models import User
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 import reversion
 from rest_framework.authtoken.models import Token
@@ -66,6 +68,7 @@ SCHEME_STORAGE_CLASS_MAPPING = {
 """
 Maps URL schemes to Django storage backends that can handle them.
 """
+
 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def create_auth_token(sender, instance=None, created=False, **kwargs):
@@ -174,6 +177,46 @@ class JSONSerializable():
 #     https://docs.djangoproject.com/en/2.0/topics/db/models/#multi-table-inheritance
 #     """
 #     pass
+
+
+class EventLog(UUIDModel):
+    class Meta:
+        ordering = ['-timestamp']
+
+    user = ForeignKey(User,
+                      blank=True,
+                      null=True,
+                      on_delete=models.SET_NULL,
+                      related_name='event_logs')
+    timestamp = DateTimeField(default=timezone.now, db_index=True)
+    event = CharField(max_length=64)
+    extra = JSONField(default=OrderedDict)
+
+    content_type = ForeignKey(ContentType, null=True, on_delete=models.SET_NULL)
+    object_id = CharField(null=True, max_length=24, db_index=True)
+    obj = GenericForeignKey('content_type', 'object_id')
+
+    @staticmethod
+    def log(event, user=None, extra=None, obj=None, timestamp=None):
+        if extra is None:
+            extra = {}
+        content_type = None
+        object_id = None
+        if obj is not None:
+            content_type = ContentType.objects.get_for_model(obj)
+            object_id = obj.pk
+        if timestamp is None:
+            timestamp = timezone.now()
+
+        event = EventLog.objects.create(
+            user=user,
+            event=event,
+            extra=extra,
+            content_type=content_type,
+            object_id=object_id,
+            timestamp=timestamp
+        )
+        return event
 
 
 @reversion.register()
@@ -400,6 +443,39 @@ def update_job_completed_time(sender, instance,
                 obj.status != Job.STATUS_COMPLETE and \
                 not obj.completed_time:
             instance.completed_time = datetime.now()
+
+
+@receiver(pre_save, sender=Job)
+def job_status_changed_event_log(sender, instance,
+                                 raw, using, update_fields, **kwargs):
+    """
+    Creates an event log entry every time a Job is saved with a changed status.
+    """
+    try:
+        obj = sender.objects.get(pk=instance.pk)
+    except sender.DoesNotExist:
+        pass
+    else:
+        if instance.status != obj.status:
+            EventLog.log(
+                'JOB_STATUS_CHANGED',
+                user=instance.owner,
+                obj=obj,
+                extra=OrderedDict({'from': obj.status, 'to': instance.status}))
+
+
+@receiver(post_save, sender=Job)
+def new_job_event_log(sender, instance, created,
+                      raw, using, update_fields, **kwargs):
+    """
+    Creates an event log entry every time a Job is created.
+    """
+    if created:
+        EventLog.log(
+            'JOB_STATUS_CHANGED',
+            user=instance.owner,
+            obj=instance,
+            extra={'from': None, 'to': instance.status})
 
 
 @reversion.register()

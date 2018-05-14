@@ -125,6 +125,11 @@ docker container exec -it laxy_django_1  python manage.py loaddata fixtures.json
 docker-compose restart django
 ```
 
+##### To tail logs for a particular service/container
+```bash
+docker-compose logs --timestamps --tail="10" -f django
+```
+
 ## Creating the UML diagram(s) for the Django models
 
 ```bash

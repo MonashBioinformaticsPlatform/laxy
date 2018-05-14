@@ -258,6 +258,7 @@
             }
 
             this.closeDialog("cancel_job_dialog");
+            this.refresh();
         }
 
         openDialog(ref: string) {

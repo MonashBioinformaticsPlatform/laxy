@@ -62,6 +62,18 @@ class BaseModelSerializer(serializers.ModelSerializer):
         else:
             return obj.id
 
+    def create(self, validated_data):
+        obj = self.Meta.model.objects.create(**validated_data)
+        # If the request is provided as part of the context
+        # passed to the serializer, assign it as the owner
+        # of the model
+        if self.context:
+            user = self.context.get('request').user
+            if user and hasattr(obj, 'owner'):
+                obj.owner = user
+        obj.save()
+        return obj
+
 
 class PatchSerializerResponse(serializers.Serializer):
     """
@@ -355,6 +367,33 @@ class PipelineRunCreateSerializer(PipelineRunSerializer):
         #                                          data=validated_data)
         # if serializer.is_valid():
         #     return serializer.save()
+
+
+class EventLogSerializer(BaseModelSerializer):
+    extra = SchemalessJsonResponseSerializer(required=False)
+
+    class Meta:
+        model = models.EventLog
+        fields = '__all__'
+        read_only_fields = ('id', 'user',)
+        depth = 0
+        error_status_codes = status_codes()
+
+    def create(self, validated_data):
+        obj = self.Meta.model.objects.create(**validated_data)
+        obj.user = self.context.get('request').user
+        obj.save()
+        return obj
+
+
+class JobEventLogSerializer(EventLogSerializer):
+
+    class Meta:
+        model = models.EventLog
+        exclude = ('user', 'timestamp', 'object_id', 'content_type',)
+        read_only_fields = ('id', 'user',)
+        depth = 0
+        error_status_codes = status_codes()
 
 
 class LoginRequestSerializer(serializers.Serializer):

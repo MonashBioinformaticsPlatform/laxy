@@ -1,3 +1,5 @@
+from django.db import transaction
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.pagination import PageNumberPagination
 from typing import Dict, List
 from django.shortcuts import render
@@ -57,8 +59,16 @@ import reversion
 
 from braces.views import LoginRequiredMixin, CsrfExemptMixin
 
-from .jwt_helpers import get_jwt_user_header_dict, create_jwt_user_token, get_jwt_user_header_str
-from .models import Job, ComputeResource, File, FileSet, SampleSet, PipelineRun
+from .jwt_helpers import (get_jwt_user_header_dict,
+                          create_jwt_user_token,
+                          get_jwt_user_header_str)
+from .models import (Job,
+                     ComputeResource,
+                     File,
+                     FileSet,
+                     SampleSet,
+                     PipelineRun,
+                     EventLog)
 from .serializers import (PatchSerializerResponse,
                           PutSerializerResponse,
                           JobSerializerResponse,
@@ -71,7 +81,9 @@ from .serializers import (PatchSerializerResponse,
                           SampleSetSerializer,
                           PipelineRunSerializer,
                           PipelineRunCreateSerializer,
-                          SchemalessJsonResponseSerializer, JobListSerializerResponse)
+                          SchemalessJsonResponseSerializer,
+                          JobListSerializerResponse,
+                          EventLogSerializer, JobEventLogSerializer)
 
 from . import tasks
 from .tasks import orchestration
@@ -95,7 +107,8 @@ def get_request_content_type(request):
 #       auto-generated docs when applying this as a filter backend as intended
 class QueryParamFilterBackend(BaseFilterBackend):
     """
-    This class largely exists so that query parameters can appear in the automatic documentation.
+    This class largely exists so that query parameters can appear in the
+    automatic documentation.
 
     A subclass is used in a DRF view like:
 
@@ -105,7 +118,8 @@ class QueryParamFilterBackend(BaseFilterBackend):
 
     eg http://my_url/?query=somestring
 
-    To define query params subclass it and pass a list of dictionaries into the superclass constructor like:
+    To define query params subclass it and pass a list of dictionaries into the
+    superclass constructor like:
 
     class CustomQueryParams(QueryParamFilterBackend):
         def __init__(self):
@@ -128,7 +142,8 @@ class QueryParamFilterBackend(BaseFilterBackend):
                 required=qp.get('required', True),
                 type=qp.get('type', 'string'),
                 schema=coreschema.String(
-                    title=force_text(qp.get('title', (qp.get('name', False) or qp.get('name')))),
+                    title=force_text(qp.get('title', (qp.get('name', False)
+                                                      or qp.get('name')))),
                     description=force_text(qp.get('description', '')))
             )
 
@@ -500,9 +515,9 @@ class SampleSetCreate(SampleSetCreateUpdate):
         """
         Create a new SampleSet. UUIDs are autoassigned.
 
-        `samples` is an object keyed by sample name, with a list of files grouped by
-        'merge group' and pair (a 'merge group' could be a set of equivalent lanes the sample
-        was split across, or a technical replicate):
+        `samples` is an object keyed by sample name, with a list of files
+        grouped by 'merge group' and pair (a 'merge group' could be a set of
+        equivalent lanes the sample was split across, or a technical replicate):
 
         Equivalent samples (technical replicates) in different lanes can be merged -
         they could also be thought of as split FASTQ files.
@@ -510,7 +525,8 @@ class SampleSetCreate(SampleSetCreateUpdate):
         Several content-types are supported:
 
           - `application/json` (accepting JSON objects below)
-          - `text/csv` where the POST body is CSV text as in: https://tools.ietf.org/html/rfc4180
+          - `text/csv` where the POST body is CSV text as in:
+             https://tools.ietf.org/html/rfc4180
           - `multipart/form-data` where the `file` field is the CSV file.
 
         CSV example:
@@ -525,13 +541,16 @@ class SampleSetCreate(SampleSetCreateUpdate):
         ```
 
         Columns are sampleName, R1 file, R2 file.
-        Repeated sample names represent 'merge groups' (eg additional lanes containing techinal replicates).
+        Repeated sample names represent 'merge groups' (eg additional lanes
+        containing technical replicates).
 
         JSON request body example:
 
-        A single 'sampleName' actually corresponds to a Sample+Condition+BiologicalReplicate.
+        A single 'sampleName' actually corresponds to a
+        Sample+Condition+BiologicalReplicate.
 
-        For two samples (R1, R2 paired end) split across two lanes, using File UUIDs:
+        For two samples (R1, R2 paired end) split across two lanes, using
+        File UUIDs:
 
         ```json
         {
@@ -572,7 +591,8 @@ class SampleSetCreate(SampleSetCreateUpdate):
         :rtype: rest_framework.response.Response
         -->
         """
-        sample_name = request.data.get('name', 'CSV uploaded on %s' % datetime.isoformat(datetime.now()))
+        sample_name = request.data.get('name', 'CSV uploaded on %s' %
+                                       datetime.isoformat(datetime.now()))
         obj = self.Meta.model(name=sample_name, owner=request.user)
         return self.create_update(request, obj)
 
@@ -860,18 +880,26 @@ class JobView(JSONView):
     def patch(self, request: Request, job_id, version=None):
         """
 
-        The main purpose of this endpoint is to update job `status` and `exit_code`.
-        Setting `exit_code` automatically updates the job status (zero implies 'complete',
-        non-zero is 'failed').
+        The main purpose of this endpoint is to update job `status` and
+        `exit_code`. Setting `exit_code` automatically updates the job status
+        (zero implies 'complete', non-zero is 'failed').
 
-        Note that in some cases updating job `status` may have side-effects beyond
-        simply updating the Job record.
-        Eg, changing `status` to "complete", "cancelled" or "failed" may terminate the
-        associated compute instance if it was a single-job disposable ComputeResource, or
-        trigger movement or cleanup of staged / temporary / intermediate files.
+        Note that in some cases updating job `status` may have side-effects
+        beyond simply updating the Job record.
+        Eg, changing `status` to "complete", "cancelled" or "failed" may
+        terminate the associated compute instance if it was a single-job
+        disposable ComputeResource, or trigger movement or cleanup of
+        staged / temporary / intermediate files.
 
-        Valid job statuses are "created", "hold", "starting", "running", "failed", "cancelled"
-        and "complete".
+        Valid job statuses are:
+
+          * "created"
+          * "hold"
+          * "starting"
+          * "running"
+          * "failed"
+          * "cancelled"
+          * "complete"
 
         <!--
         :param request:
@@ -1023,6 +1051,9 @@ class JobCreate(JSONView):
             callback_url = request.build_absolute_uri(
                 reverse('laxy_backend:job', args=[job_id]))
 
+            job_event_url = request.build_absolute_uri(
+                reverse('laxy_backend:create_job_eventlog', args=[job_id]))
+
             # port = request.META.get('SERVER_PORT', 8001)
             # # domain = get_current_site(request).domain
             # # public_ip = requests.get('https://api.ipify.org').text
@@ -1031,9 +1062,6 @@ class JobCreate(JSONView):
             #     domain=PUBLIC_IP,
             #     port=port,
             #     job_id=job_id))
-
-            # job_bot, _ = User.objects.get_or_create(username='job_bot')
-            # token, _ = Token.objects.get_or_create(user=job_bot)
 
             # DRF API key
             # token, _ = Token.objects.get_or_create(user=request.user)
@@ -1055,7 +1083,10 @@ class JobCreate(JSONView):
                                  'JOB_ID': job_id,
                                  'JOB_COMPLETE_CALLBACK_URL':
                                      callback_url,
-                                 'JOB_COMPLETE_AUTH_HEADER':
+                                 'JOB_EVENT_URL': job_event_url,
+                                 # TODO: We should pass this in as it's own
+                                 # key not in the environment
+                                 'JOB_AUTH_HEADER':
                                      callback_auth_header,
                                  'JOB_INPUT_STAGED': sh_bool(False),
                                  'REFERENCE_GENOME': reference_genome,
@@ -1236,7 +1267,7 @@ class JobListView(generics.ListAPIView):
     """
 
     serializer_class = JobListSerializerResponse
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
     pagination_class = JobPagination
 
     def get_queryset(self):
@@ -1251,6 +1282,94 @@ class JobListView(generics.ListAPIView):
     #     serializer = JobSerializerResponse(queryset, many=True)
     #     self.transform_output(serializer.data)
     #     return Response(serializer.data)
+
+
+class EventLogListView(generics.ListAPIView):
+    """
+    To list all events for a particular job, use:
+
+    `/api/v1/eventlogs/?object_id={job_id}`
+    """
+    lookup_field = 'id'
+    queryset = EventLog.objects.all()
+    serializer_class = EventLogSerializer
+    filter_backends = (DjangoFilterBackend,)
+    filter_fields = ('user', 'object_id', 'event',)
+    # permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        return (EventLog.objects
+                .filter(user=self.request.user)
+                .order_by('-created_time'))
+
+
+class EventLogCreate(JSONView):
+    class Meta:
+        model = EventLog
+        serializer = EventLogSerializer
+
+    queryset = Meta.model.objects.all()
+    serializer_class = Meta.serializer
+
+    def post(self, request: Request, version=None, subject_obj=None):
+        """
+        Create a new EventLog.
+
+        <!--
+        :param subject_obj: An optional Django model that is the 'subject' of
+                            the event, assigned to EventLog.obj. Mostly used for
+                            subclasses that deal with events for specific
+                            Model types (eg Jobs).
+        :type subject_obj: django.db.models.Model
+        :param request: The request object.
+        :type request: rest_framework.request.Request
+        :return: The response object.
+        :rtype: rest_framework.response.Response
+        -->
+        """
+
+        serializer = self.Meta.serializer(data=request.data,
+                                          context={'request': request})
+        if serializer.is_valid():
+            if subject_obj is not None:
+                event_obj = serializer.save(user=request.user,
+                                            obj=subject_obj)
+            else:
+                event_obj = serializer.save(user=request.user)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class JobEventLogCreate(EventLogCreate):
+    class Meta:
+        model = EventLog
+        serializer = JobEventLogSerializer
+
+    serializer_class = Meta.serializer
+
+    def post(self, request: Request, job_id=None, version=None):
+        """
+        Create a new EventLog for the Job.
+
+        <!--
+        :param request: The request object.
+        :type request: rest_framework.request.Request
+        :return: The response object.
+        :rtype: rest_framework.response.Response
+        -->
+        """
+
+        job = None
+        if job_id is not None:
+            try:
+                job = Job.objects.get(id=job_id)
+            except Job.DoesNotExist:
+                return Response(status=status.HTTP_404_NOT_FOUND)
+
+        return super(JobEventLogCreate, self).post(request,
+                                                   version=version,
+                                                   subject_obj=job)
 
 
 def _get_or_create_drf_token(user):

@@ -13,8 +13,8 @@ services:
     # Django app is publicly accessible without reverse proxy
     ports:
       - "8001:8001"
-    command: bash -c "python3 manage.py makemigrations &&
-                      python3 manage.py migrate &&
+    command: bash -c "python3 manage.py makemigrations --no-input &&
+                      python3 manage.py migrate --no-input &&
                       python3 manage.py runserver 0.0.0.0:8001 &&
                       python manage.py shell -c \"from django.contrib.auth.models import User; User.objects.filter(username='${LAXY_ADMIN_USERNAME}').count() or User.objects.create_superuser('${LAXY_ADMIN_USERNAME}', '${LAXY_ADMIN_EMAIL}', '${LAXY_ADMIN_PASSWORD}');\";"
 
@@ -22,6 +22,11 @@ services:
     command: bash -c "celery -A laxy worker -B -E -l debug --broker=${LAXY_BROKER_URL}"
     volumes:
       - .:/app
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "500k"
+        max-file: "1"
 
   flower:
     environment:

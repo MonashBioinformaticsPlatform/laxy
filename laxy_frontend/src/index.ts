@@ -150,9 +150,15 @@ const App = new Vue({
         };
     },
     async created() {
-        WebAPI.isLoggedIn().then((result) => {
-            this.logged_in = result;
-        });
+        await this.$store.dispatch(FETCH_USER_PROFILE);
+        if (this.$store.state.user_profile) {
+            this.logged_in = true;
+        } else {
+            this.logged_in = false;
+        }
+        // WebAPI.isLoggedIn().then((result) => {
+        //     this.logged_in = result;
+        // });
     },
     methods: {
         async login() {

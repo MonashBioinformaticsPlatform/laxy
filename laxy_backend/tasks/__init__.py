@@ -78,8 +78,7 @@ def start_job(self, task_data=None, **kwargs):
     base_dir = job.compute_resource.extra.get('base_dir', '/tmp/')
     job_script = render_to_string('job_scripts/run_job.sh',
                                   context=environment)
-    curl_headers = StringIO("Content-Type: application/json\n%s\n" %
-                            environment.get('JOB_COMPLETE_AUTH_HEADER', ''))
+    curl_headers = StringIO("%s\n" % environment.get('JOB_AUTH_HEADER', ''))
     job_script = StringIO(job_script)
     config_json = StringIO(json.dumps(job.params))
 

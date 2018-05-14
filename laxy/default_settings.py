@@ -150,7 +150,6 @@ INSTALLED_APPS = [
     'drf_openapi',
     'reversion',
     'storages',
-    # 'laxy_backend.apps.LaxyBackendConfig',
     'laxy_backend',
 ]
 
@@ -213,6 +212,7 @@ REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': (
         'rest_framework.renderers.JSONRenderer',
     ),
+    # 'DEFAULT_FILTER_BACKENDS': ('django_filters.rest_framework.DjangoFilterBackend',),
     # http://www.django-rest-framework.org/api-guide/pagination/#cursorpagination
     # 'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.CursorPagination',
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',

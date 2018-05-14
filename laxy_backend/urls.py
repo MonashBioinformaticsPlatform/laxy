@@ -24,7 +24,8 @@ from laxy_backend.views import (JobView, JobCreate,
                                 SampleSetView, SampleSetCreate,
                                 PipelineRunView, PipelineRunCreate,
                                 ComputeResourceView, ComputeResourceCreate,
-                                ENAQueryView, ENAFastqUrlQueryView, JobListView)
+                                ENAQueryView, ENAFastqUrlQueryView, JobListView,
+                                EventLogCreate, EventLogListView, JobEventLogCreate)
 
 from laxy_backend.view_auth import Login, Logout, view_user_profile
 
@@ -122,7 +123,17 @@ api_urls = [
             name='ena_query'),
     re_path(r'ena/fastqs/$',
             ENAFastqUrlQueryView.as_view(),
-            name='ena_fastq_ulr_query'),
+            name='ena_fastq_url_query'),
+
+    re_path(r'eventlogs/$',
+            EventLogListView.as_view(),
+            name='list_eventlogs'),
+    re_path(r'eventlog/$',
+            EventLogCreate.as_view(),
+            name='create_eventlog'),
+    re_path(r'job/(?P<job_id>[a-zA-Z0-9\-_]+)/event/$',
+            JobEventLogCreate.as_view(),
+            name='create_job_eventlog'),
 ]
 
 urlpatterns = [

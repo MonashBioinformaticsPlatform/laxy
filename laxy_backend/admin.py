@@ -4,7 +4,13 @@ from django.contrib.humanize.templatetags import humanize
 from django.utils.html import format_html
 from reversion.admin import VersionAdmin
 
-from .models import Job, ComputeResource, File, FileSet, SampleSet, PipelineRun
+from .models import (Job,
+                     ComputeResource,
+                     File,
+                     FileSet,
+                     SampleSet,
+                     PipelineRun,
+                     EventLog)
 
 
 class Timestamped:
@@ -107,6 +113,22 @@ class PipelineRunAdmin(Timestamped, VersionAdmin):
     pass
 
 
+class EventLogAdmin(admin.ModelAdmin):
+    ordering = ('-timestamp',)
+    raw_id_fields = ('user',)
+    list_filter = ('event',
+                   'timestamp',)
+    list_display = ('uuid',
+                    'timestamp',
+                    'user',
+                    'event',
+                    'obj',
+                    'extra',)
+    search_fields = ('object_id',
+                     'user__username',
+                     'user__email',
+                     'extra',)
+
 
 # admin.site.register(TaskMeta, TaskMetaAdmin)
 admin.site.register(Job, JobAdmin)
@@ -115,3 +137,4 @@ admin.site.register(File, FileAdmin)
 admin.site.register(FileSet, FileSetAdmin)
 admin.site.register(SampleSet, SampleSetAdmin)
 admin.site.register(PipelineRun, PipelineRunAdmin)
+admin.site.register(EventLog, EventLogAdmin)

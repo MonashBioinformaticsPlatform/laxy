@@ -27,8 +27,8 @@ services:
       - "8001:8001"
     networks:
       - private
-    command: bash -c "python3 manage.py makemigrations &&
-                      python3 manage.py migrate &&
+    command: bash -c "python3 manage.py makemigrations --no-input &&
+                      python3 manage.py migrate --no-input &&
                       mkdir -p /usr/share/nginx/html/backend &&
                       python3 manage.py collectstatic --no-input &&
                       cp -r /app/laxy_frontend/* /usr/share/nginx/html &&
