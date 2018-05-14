@@ -130,7 +130,11 @@ EXIT_CODE=$?
 # run - so we signal when the 'pipeline' computation completed, but this is
 # considered a distinct event from the whole job completing (that will be
 # generated as a side effect of calling JOB_COMPLETE_CALLBACK_URL)
-send_event "JOB_PIPELINE_FINISHED" '{"exit_code":'${EXIT_CODE}'}'
+if [ ${EXIT_CODE} -ne 0 ]; then
+  send_event "JOB_PIPELINE_FAILED" '{"exit_code":'${EXIT_CODE}'}'
+else
+  send_event "JOB_PIPELINE_COMPLETED" '{"exit_code":'${EXIT_CODE}'}'
+fi
 
 ####
 #### Notify service we are done

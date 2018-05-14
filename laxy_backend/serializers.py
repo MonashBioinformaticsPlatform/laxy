@@ -212,12 +212,15 @@ class JobSerializerResponse(JobSerializerBase):
         error_status_codes = status_codes()
 
 
-# TODO: modify this to trim down unnessescary output,
+# TODO: modify this to trim down unnecessary output,
 #       eg, we don't need the full nested sample_set etc
 class JobListSerializerResponse(JobSerializerResponse):
+    latest_event = serializers.CharField(source='latest_event.event',
+                                         default='')
+
     class Meta:
         model = models.Job
-        exclude = ('secret', 'input_files', 'output_files',)
+        exclude = ('secret', 'input_files', 'output_files')
         depth = 0
         error_status_codes = status_codes()
 

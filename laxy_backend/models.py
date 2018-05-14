@@ -121,6 +121,7 @@ class UserProfile(models.Model):
 class Timestamped(Model):
     class Meta:
         abstract = True
+        get_latest_by = ['-modified_time']
 
     created_time = DateTimeField(auto_now_add=True)
     modified_time = DateTimeField(auto_now=True)
@@ -182,6 +183,7 @@ class JSONSerializable():
 class EventLog(UUIDModel):
     class Meta:
         ordering = ['-timestamp']
+        get_latest_by = ['timestamp']
 
     user = ForeignKey(User,
                       blank=True,
@@ -396,6 +398,17 @@ class Job(Timestamped, UUIDModel):
                                   related_name='jobs')
 
     completed_time = DateTimeField(blank=True, null=True)
+
+    def events(self):
+        return EventLog.objects.filter(object_id=self.id)
+
+    def latest_event(self):
+        try:
+            return EventLog.objects.filter(
+                object_id=self.id).exclude(
+                event__exact='JOB_STATUS_CHANGED').latest()
+        except EventLog.DoesNotExist:
+            return EventLog.objects.none()
 
     @property
     def done(self):

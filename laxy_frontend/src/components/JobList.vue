@@ -56,9 +56,14 @@
                                             {{ job.created_time| moment('from') }}
                                         </md-table-cell>
                                         <md-table-cell>
-                                        <span :style="{ color: getStatusColor(job.status) }">
-                                            {{ job.status }}
-                                        </span>
+                                            <span :style="{ color: getStatusColor(job.status) }">
+                                                {{ job.status }}
+                                            </span>
+                                            <br>
+                                            <span v-if="job.latest_event &&
+                                                       (job.status === 'failed' || job.status === 'running')">
+                                                    ({{ job.latest_event }})
+                                            </span>
                                         </md-table-cell>
                                         <md-table-cell>
                                             <md-toolbar class="md-dense md-transparent">
