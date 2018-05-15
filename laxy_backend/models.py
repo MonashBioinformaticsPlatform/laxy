@@ -503,7 +503,7 @@ class File(Timestamped, UUIDModel):
     """
 
     # The filename. Equivalent to path.basename(location) in most cases
-    _name = CharField(db_column='name', max_length=2048, blank=True, null=True)
+    name = CharField(db_column='name', max_length=2048, blank=True, null=True)
     # Any hash supported by hashlib, and xxhash, in the format:
     # hashtype:th3actualh4shits3lf
     # eg: md5:11fca9c1f654078189ad040b1132654c
@@ -540,30 +540,15 @@ class File(Timestamped, UUIDModel):
     #                  on_delete=models.CASCADE,
     #                  related_name='files')
 
-    # TODO: Consider removing this as a property,
-    # revert to simple name attribute over hidden _name
-    # Do this magic in a model creation as in .save method below.
-    # Also fix _name references in other parts of the code (eg FileSerializer)
-    @property
-    def name(self):
-        if self._name:
-            return self._name
-        else:
-            fn = Path(urlparse(self.location).path).name
-            self._name = fn
-            return self._name
+    def name_from_location(self):
+        return Path(urlparse(self.location).path).name
 
-    @name.setter
-    def name(self, value):
-        self._name = value
-
-    # def save(self, *args, **kwargs):
-    #     if not self.pk:  # only at creation time
-    #         # Derive a name based on the location URL
-    #         if not self.name:
-    #             fn = Path(urlparse(self.location).path).name
-    #             self.name = fn
-    #     super(File, self).save(*args, **kwargs)
+    def save(self, *args, **kwargs):
+        if not self.pk:  # only at creation time
+            # Derive a name based on the location URL
+            if not self.name:
+                self.name = self.name_from_location()
+        super(File, self).save(*args, **kwargs)
 
     # TODO: This could be triggered via a pre_save signal + async task upon
     # creation and when self.location changes
@@ -578,7 +563,7 @@ class File(Timestamped, UUIDModel):
         :rtype:
         """
         filename, size = find_filename_and_size_from_url(self.location)
-        self._name = filename
+        self.name = filename
         if size is not None:
             self.metadata['size'] = size
         if save:
@@ -731,6 +716,7 @@ class FileSet(Timestamped, UUIDModel):
         :rtype: django.models.query.QuerySet(File)
         """
         return File.objects.filter(id__in=self.files)
+        # return File.objects.in_bulk(self.files, field_name='id')
 
 
 @reversion.register()

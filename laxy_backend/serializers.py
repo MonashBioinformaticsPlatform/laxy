@@ -102,7 +102,7 @@ class PutSerializerResponse(serializers.Serializer):
 
 
 class FileSerializer(BaseModelSerializer):
-    name = serializers.CharField(source='_name')
+    name = serializers.CharField()
     location = serializers.CharField(
         max_length=2048,
         validators=[models.URIValidator()])
@@ -122,19 +122,24 @@ class FileSerializerPostRequest(FileSerializer):
 
 
 class FileSetSerializer(BaseModelSerializer):
-    files = serializers.ListField(required=True)
+    # files = serializers.ListField(required=True)
+    files = FileSerializer(source='get_files', read_only=True, many=True)
 
     class Meta:
         model = models.FileSet
         fields = ('id', 'name', 'owner', 'files',)
         read_only_fields = ('id', 'owner',)
+        depth = 0
         error_status_codes = status_codes()
 
 
 class FileSetSerializerPostRequest(FileSetSerializer):
+    files = serializers.ListField(required=True)
+
     class Meta(FileSetSerializer.Meta):
         model = models.FileSet
         fields = ('id', 'name', 'files',)
+        depth = 0
 
 
 class SampleSetSerializer(BaseModelSerializer):
