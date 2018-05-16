@@ -29,6 +29,7 @@ export class SampleSet extends UUIDModel {
 
 export class ComputeJob extends UUIDModel {
     public status: string;
+    public latest_event: string;
     public created_time: Date | null;
     public modified_time: Date | null;
     public completed_time: Date | null;

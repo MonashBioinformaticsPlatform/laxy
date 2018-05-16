@@ -140,13 +140,13 @@ export const DummyJobList: ComputeJob[] = [
                                 'fastq_ftp': [
                                     {
                                         'R1':
-                                            'ftp://ftp.sra.ebi.ac.uk/vol1/fastq/' +
-                                            'SRR181/008/SRR1819888/SRR1819888_1.fastq.gz'
+                                        'ftp://ftp.sra.ebi.ac.uk/vol1/fastq/' +
+                                        'SRR181/008/SRR1819888/SRR1819888_1.fastq.gz'
                                     },
                                     {
                                         'R2':
-                                            'ftp://ftp.sra.ebi.ac.uk/vol1/fastq/' +
-                                            'SRR181/008/SRR1819888/SRR1819888_2.fastq.gz'
+                                        'ftp://ftp.sra.ebi.ac.uk/vol1/fastq/' +
+                                        'SRR181/008/SRR1819888/SRR1819888_2.fastq.gz'
                                     }
                                 ],
                                 'fastq_md5': [
@@ -249,6 +249,7 @@ export const DummyJobList: ComputeJob[] = [
         'Ydi8WtkGzpK2CgrA96EK3fnTVjmxwSZswv9VqDPCaKRw5XzcINvAIWVgVkk3HLDPhihF' +
         'u9L5aPz2imiq9xD4lmBLRC3kAyCZchFLJ3GFZeUozLYpeHNShCC5dHjNnsE7OsBL',
         'status': 'running',
+        'latest_event': 'INPUT_DATA_DOWNLOAD_STARTED',
         'exit_code': null,
         'remote_id': '6035',
         'completed_time': null
@@ -394,8 +395,547 @@ export const DummyJobList: ComputeJob[] = [
         'exMMkEMTE26pBGHJrLSB7qNSIvr4YcO6124nfwKLW31U1F4UNedGZ5Yq1TbAIkN5xii7R6DX' +
         '7OwipZZAfaR0afXmk0ApHff5bpDSY7wlSFfatF83ueNYrFrqTW',
         'status': 'failed',
+        'latest_event': 'JOB_PIPELINE_FAILED',
         'exit_code': 1,
         'remote_id': '2910',
         'completed_time': null
     }
 ];
+
+export const DummyFileSet = {
+    'id': '25iqJL3P5KGcW9UwOb5eP3',
+    'name': 'Output files for job: 5CKQI21a9cHVTmPjnxgl03',
+    'owner': 1,
+    'files': [
+        {
+            'id': '26snbeaSatILEwUhCa778U',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/' +
+            '5CKQI21a9cHVTmPjnxgl03/' +
+            'output/RNAsik.bds.20180514_153905_725.report.html',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '2Yw2IlHmQugzMZhnNiR2on',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/download.log',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '7bPJVogGXqQx23G7LZaBXC',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/job_env.out',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '67BWICTJPVBuAc07tRTsBt',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/job.out',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '48bRO0bBcyVycFigU1C2au',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/RNAsik.bds.20180514_153905_725.dag.js',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '7Yd0foqRfDGm6x9s6p8e59',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/RNAsik.bds.20180514_153905_725/task.sikRefFiles.Copying_.._.._references_iGenomes_Saccharomyces_cerevisiae_Ensembl_R64_1_1_Annotation_Genes_genes.gtf_to_sikRun_refFiles.line_51.id_6.exitCode',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '66C2HYNkzdRiTmkQmQfeMv',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/RNAsik.bds.20180514_153905_725/task.sikRefFiles.Make_chrom_sizes_file.line_131.id_11.stdout',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': 'PdWEG6ydU7ULA8Z5FoupB',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/RNAsik.bds.20180514_153905_725/task.sikRefFiles.Making_dictionary_File.line_110.id_9.sh',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '4sc5XhaOlpz4PyKQHWNOQ9',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/RNAsik.bds.20180514_153905_725/task.sikRefFiles.Copying_.._.._references_iGenomes_Saccharomyces_cerevisiae_Ensembl_R64_1_1_Sequence_WholeGenomeFasta_genome.fa_to_sikRun_refFiles.line_51.id_4.exitCode',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': 'eCUbUieHlUx42KL4BFD1a',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/RNAsik.bds.20180514_153905_725/task.sikLog.Getting_versions_of_tools_in_use.line_132.id_1.sh',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': 'RpoIynnCHNGqaRaiC0eNn',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/RNAsik.bds.20180514_153905_725/task.sikRefFiles.Indexing_FASTA_file.line_122.id_13.stderr',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': 'HPHKdLAmYtIaq8sZnR8TJ',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/RNAsik.bds.20180514_153905_725/task.sikRefFiles.Making_dictionary_File.line_110.id_9.stdout',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '4LMcHAeWVCpT9pI6G7PLXr',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/RNAsik.bds.20180514_153905_725/task.sikRefFiles.Copying_.._.._references_iGenomes_Saccharomyces_cerevisiae_Ensembl_R64_1_1_Sequence_WholeGenomeFasta_genome.fa_to_sikRun_refFiles.line_51.id_4.stderr',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '44oaImELtS61JPAQEqlhlu',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/sikRun/logs/samples/fqFiles',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '1XrfUpisr1CVN3LRdS37B5',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/sikRun/logs/samples/samplesSheet',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '2tSO8jxkvZUDbzxLL2IYTP',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/RNAsik.bds.20180514_153905_725/task.sikRefFiles.Copying_.._.._references_iGenomes_Saccharomyces_cerevisiae_Ensembl_R64_1_1_Annotation_Genes_genes.gtf_to_sikRun_refFiles.line_51.id_6.sh',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '1o4DU1jbJTnCZLnGuSngxD',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/RNAsik.bds.20180514_153905_725/task.sikLog.Getting_versions_of_tools_in_use.line_132.id_1.exitCode',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '1gimnZ3KJbSDtvbOq7rX1L',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/RNAsik.bds.20180514_153905_725/task.sikRefFiles.Make_chrom_sizes_file.line_131.id_11.stderr',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '5Jbe8NG95JgGbhVsQQviSD',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/RNAsik.bds.20180514_153905_725/task.sikRefFiles.Make_chrom_sizes_file.line_131.id_11.sh',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '1xR3AN6ATTbHFlLQ7baAZl',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/RNAsik.bds.20180514_153905_725/task.sikRefFiles.Indexing_FASTA_file.line_122.id_13.stdout',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '1NSmjqmaBjZv1KUJySMir8',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/RNAsik.bds.20180514_153905_725/task.sikRefFiles.Copying_.._.._references_iGenomes_Saccharomyces_cerevisiae_Ensembl_R64_1_1_Sequence_WholeGenomeFasta_genome.fa_to_sikRun_refFiles.line_51.id_4.sh',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '1K8PrQOMEC0VH8qVHlQT9s',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/RNAsik.bds.20180514_153905_725/task.sikRefFiles.Copying_.._.._references_iGenomes_Saccharomyces_cerevisiae_Ensembl_R64_1_1_Sequence_WholeGenomeFasta_genome.fa_to_sikRun_refFiles.line_51.id_4.stdout',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '36H4eTjUs86xJdIklbLg2M',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/RNAsik.bds.20180514_153905_725/task.sikRefFiles.Making_dictionary_File.line_110.id_9.stderr',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '2VTfxVAiEMOfpfh2ZM8JOc',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/RNAsik.bds.20180514_153905_725/task.sikLog.Getting_versions_of_tools_in_use.line_132.id_1.stderr',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': 'iCDaypkWYsvmDn8vrJHca',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/RNAsik.bds.20180514_153905_725/task.sikRefFiles.Indexing_FASTA_file.line_122.id_13.exitCode',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '5NBHxgNsOCX6M4cxCoz9Wk',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/RNAsik.bds.20180514_153905_725/task.sikLog.Getting_versions_of_tools_in_use.line_132.id_1.stdout',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '7ZutHntfzZigT0R0aESxUC',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/RNAsik.bds.20180514_153905_725/task.sikRefFiles.Copying_.._.._references_iGenomes_Saccharomyces_cerevisiae_Ensembl_R64_1_1_Annotation_Genes_genes.gtf_to_sikRun_refFiles.line_51.id_6.stderr',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '78JB2gPYpPoF32zG0CuRj9',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/RNAsik.bds.20180514_153905_725/task.sikRefFiles.Make_chrom_sizes_file.line_131.id_11.exitCode',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '3nvxUoY7HJRVfUHgWKCMVE',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/RNAsik.bds.20180514_153905_725/task.sikRefFiles.Copying_.._.._references_iGenomes_Saccharomyces_cerevisiae_Ensembl_R64_1_1_Annotation_Genes_genes.gtf_to_sikRun_refFiles.line_51.id_6.stdout',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '7FEf5cMDDuQOr7c2cmKrp',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/RNAsik.bds.20180514_153905_725/task.sikRefFiles.Indexing_FASTA_file.line_122.id_13.sh',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '3GZMcUqQwpgH28rNR2ePWc',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/RNAsik.bds.20180514_153905_725.report.yaml',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': 'aBPtINkdjPQvVQJqER50j',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/job.err',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '459Di6JsHLgseW7uP76BY9',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/sikRun/logs/toolsOpts/featureCounts',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '5M3qK0cDmDcKssM8IzXort',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/sikRun/logs/data/addMetrics',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '65k80Kpajtr4saMXrQlcVQ',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/sikRun/logs/data/theBams',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '7kVXg9taZJFXv82qrCRzmP',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/sikRun/logs/data/featureCounts',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '5XgG87f2bLiM0Mbg7oN7Bq',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/sikRun/logs/data/bams',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': 'oiJapkaFBjFTapV296XSq',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/sikRun/logs/data/mdupsBams',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '4qMRkILDTJetg75DHgtYzS',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/sikRun/logs/data/covFiles',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '6evWWqHPr8KYVGPD3zCCJp',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/sikRun/logs/other/annotation',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': 'yx40ah4jS2dhW9zlFC9Zc',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/sikRun/logs/samples/fqMap',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '4Ph5AWzdyHyOdDDMDoSifk',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/sikRun/logs/versions/ReorderSam',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '3OAEHwMhfDT6PfruDQF1cG',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/sikRun/logs/versions/bwa',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '2mg0fvaPfrsAK3B3lBxiTR',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/sikRun/logs/versions/python',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '4U6i9kiZLuyRUnrbpoUzgh',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/sikRun/logs/versions/samtools',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '6OHX5EuYULoeiHJhqNHZXV',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/sikRun/logs/versions/multiqc',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '6HSAdzglHDFJJDBiAumqq8',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/sikRun/logs/versions/featureCounts',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '1lv7xXFomzvpPPkP2sBA4N',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/sikRun/logs/versions/bedtools2',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '2kO6u4jW1lA5QxIFUOxQjY',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/sikRun/logs/versions/fastqc',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '2PDWhwQvOPfzai49gGymhw',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/sikRun/logs/versions/RNAsik',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '53rI7sYfRo50984BY6ZfTi',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/sikRun/logs/versions/MarkDuplicates',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '5IeoxqodAHOhzDoi0bfDBL',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/sikRun/logs/versions/star',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '3aWdDviLnSwVN7pGKp9Dk9',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/sikRun/logs/versions/SortSam',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '6FSJTqG5i7SQMpQsgEp7gz',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/sikRun/logs/versions/qualimap',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '68D5iwLeFUpT0l1H7Skv9g',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/sikRun/logs/refFiles/fai',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '5D6zQWhkscU7BBpaPpcYVW',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/sikRun/logs/refFiles/chromSizes',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '6KggMK6vQ7XOff08IFuPDk',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/sikRun/logs/refFiles/fastaRef',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '1dxeCzfU3H18wjPsvlxvuV',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/sikRun/logs/refFiles/gtfFile',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '1AhaWN6tHFrnOnQP37zgxt',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/sikRun/logs/refFiles/picardDictFile',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': 'QIbJZkzhDgm5Ijinnz5Sc',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/sikRun/logs/refFiles/star',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '4gcrShdiaRIfa2BxVxINU6',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/sikRun/logs/refFiles/STAR',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '4UcN8BPPoxar1VfNbXrNdO',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/sikRun/samplesSheet.txt',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': 'yFOlzlfTbZRiock8DHC25',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/sikRun/refFiles/genome.chromSizes',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '58aJShuQMDbGofxj7gOFKF',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/sikRun/refFiles/genome.fa',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '60GJMogjEORBwAVCjOcC3k',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/sikRun/refFiles/genome.fa.fai',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        },
+        {
+            'id': '6CYpEI8wxADlRRN3IKr2wE',
+            'name': null,
+            'location': 'laxy+sftp://rML9cZ45bs4PdNanqdArU/5CKQI21a9cHVTmPjnxgl03/output/sikRun/refFiles/genes.gtf',
+            'owner': 1,
+            'checksum': null,
+            'metadata': {}
+        }
+    ]
+};

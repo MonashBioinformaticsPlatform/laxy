@@ -44,11 +44,13 @@
                                 </md-table-header>
                                 <md-table-body>
                                     <md-table-row v-for="job in jobs" :key="job.id">
-                                        <md-table-cell v-if="job.params.description">
-                                            <md-tooltip md-direction="top">Job ID: {{ job.id }}</md-tooltip>
-                                            {{ job.params.description }}
-                                        </md-table-cell>
-                                        <md-table-cell v-else="job.id">{{ job.id }}</md-table-cell>
+                                        <router-link :to="'/job/'+job.id">
+                                            <md-table-cell v-if="job.params.description">
+                                                <md-tooltip md-direction="top">Job ID: {{ job.id }}</md-tooltip>
+                                                {{ job.params.description }}
+                                            </md-table-cell>
+                                            <md-table-cell v-else="job.id">{{ job.id }}</md-table-cell>
+                                        </router-link>
                                         <md-table-cell>{{ job.params.pipeline }} ({{ job.params.params.genome }})
                                         </md-table-cell>
                                         <md-table-cell>
@@ -232,7 +234,7 @@
                 await this.$store.dispatch(FETCH_JOBS, this.pagination);
                 this.pagination.count = this.$store.state.jobs.total;
                 this.submitting = false;
-                // this.flashSnackBarMessage("Updated");
+                this.flashSnackBarMessage("Refreshed !", 500);
             } catch (error) {
                 console.log(error);
                 this.submitting = false;
@@ -252,7 +254,7 @@
                 this.submitting = true;
                 await WebAPI.cancelJob(id);
                 this.submitting = false;
-                // this.flashSnackBarMessage("Updated");
+                this.flashSnackBarMessage(`Job ${id} cancelled.`);
             } catch (error) {
                 console.log(error);
                 this.submitting = false;

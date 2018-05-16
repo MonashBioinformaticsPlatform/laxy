@@ -42,12 +42,22 @@ import SampleTable from './components/SampleTable.vue';
 import PipelineParams from './components/PipelineParams.vue';
 import ENAFlow from './components/ENAFlow.vue';
 import JobList from './components/JobList.vue';
+import JobPage from './components/JobPage.vue';
+import FileList from './components/FileList.vue';
 
 Vue.component('input-files-form', InputDataForm);
 Vue.component('sample-table', SampleTable);
 Vue.component('ena-search', ENAFileSelect);
 Vue.component('sample-cart', SampleCart);
 Vue.component('pipeline-params', PipelineParams);
+Vue.component('file-list', FileList);
+Vue.component('job-page', JobPage);
+
+import SpinnerCubeGrid from './components/spinners/SpinnerCubeGrid.vue';
+Vue.component('spinner-cube-grid', SpinnerCubeGrid);
+
+import SpinnerEq from './components/spinners/SpinnerEq.vue';
+Vue.component('spinner-eq', SpinnerEq);
 
 Vue.filter('numeral_format', function(value: number | string, format: string = '0 a') {
     if (!value) return '';
@@ -103,6 +113,12 @@ const router = new VueRouter({
             path: '/jobs',
             name: 'jobs',
             component: JobList,
+        },
+        {
+            path: '/job/:jobId',
+            name: 'job',
+            component: JobPage,
+            props: true,
         },
     ],
     // mode: 'history',
@@ -188,7 +204,7 @@ const App = new Vue({
             router.push('/');
         },
         routeTo(name: string) {
-            this.$router.push(name);
+            this.$router.push({name: name});
         },
         toggleLeftSidenav() {
             ((this.$refs as any).leftSidenav as any).toggle();

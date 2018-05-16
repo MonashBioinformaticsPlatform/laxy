@@ -40,6 +40,11 @@ python3.6 install -U -r requirements.txt
 python3.6 install -U -r requirements-dev.txt
 ```
 
+Run tests:
+```bash
+./manage.py test
+```
+
 Create a user and database on Postgres (run `psql`):
 ```postgresql
 CREATE ROLE laxy WITH LOGIN PASSWORD 'blablafooword';

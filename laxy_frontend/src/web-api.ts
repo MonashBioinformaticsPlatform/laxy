@@ -82,11 +82,29 @@ export class WebAPI {
         }
     }
 
+    public static async getJob(job_id: string) {
+        try {
+            return await this.fetcher.get(
+                `/api/v1/job/${job_id}/`) as AxiosResponse;
+        } catch (error) {
+            throw error;
+        }
+    }
+
     public static async cancelJob(id: string) {
         try {
             return await this.fetcher.patch(
                 `/api/v1/job/${id}/`,
                 {status: 'cancelled'}) as AxiosResponse;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    public static async getFileSet(fileset_id: string) {
+        try {
+            return await this.fetcher.get(
+                `/api/v1/fileset/${fileset_id}/`) as AxiosResponse;
         } catch (error) {
             throw error;
         }

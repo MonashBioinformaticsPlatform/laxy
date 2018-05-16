@@ -314,7 +314,7 @@
         }
 
         routeTo(name: string) {
-            this.$router.push(name);
+            this.$router.push({name: name});
         }
 
         // This ensures changes to sample table are committed to the vuex store

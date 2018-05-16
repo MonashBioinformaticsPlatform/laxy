@@ -3,6 +3,11 @@
   "extends": [
     "tslint:recommended"
   ],
+  "linterOptions": {
+    "exclude": [
+      "src/test-data.ts"
+    ]
+  },
   "jsRules": {},
   "rules": {
     "quotemark": [
