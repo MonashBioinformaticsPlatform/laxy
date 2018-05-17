@@ -33,7 +33,14 @@
 
                             <md-card-content>
                                 <md-layout md-align="center" class="pad-32">
-                                    <spinner-cube-grid v-if="job.status === 'running'"></spinner-cube-grid>
+                                    <spinner-cube-grid v-if="job.status === 'running'"
+                                                       :colors="['#3f51b5','#e91e63','#ff5722','black']"
+                                                       :time="1.5"
+                                                       :columns="4" :rows="4"
+                                                       :width="96" :height="96"
+                                                       :random-seed="hashCode(job.id)">
+
+                                    </spinner-cube-grid>
                                     <md-icon v-if="job.status === 'failed'" class="md-size-4x md-accent">error_outline
                                     </md-icon>
                                     <md-icon v-if="job.status === 'cancelled'" class="md-size-4x md-warn">
@@ -122,6 +129,7 @@
     import axios, {AxiosResponse} from "axios";
     import Vue, {ComponentOptions} from "vue";
     import VueMaterial from "vue-material";
+
     import Component from "vue-class-component";
     import {
         Emit,
@@ -186,6 +194,19 @@
                 color = "black";
             }
             return color;
+        }
+
+        // http://werxltd.com/wp/2010/05/13/javascript-implementation-of-javas-string-hashcode-method/
+        hashCode(s: string){
+                        console.log((Vue as any).material.currentTheme);
+            var hash = 0;
+            if (s.length == 0) return hash;
+            for (let i = 0; i < s.length; i++) {
+                let char = s.charCodeAt(i);
+                hash = ((hash<<5)-hash)+char;
+                hash = hash & hash; // Convert to 32bit integer
+            }
+            return hash;
         }
 
         async refresh() {
