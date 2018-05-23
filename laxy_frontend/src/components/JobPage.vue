@@ -34,7 +34,7 @@
                             <md-card-content>
                                 <md-layout md-align="center" class="pad-32">
                                     <spinner-cube-grid v-if="job.status === 'running'"
-                                                       :colors="['#3f51b5','#e91e63','#ff5722','black']"
+                                                       :colors="themeColors()"
                                                        :time="1.5"
                                                        :columns="4" :rows="4"
                                                        :width="96" :height="96"
@@ -129,6 +129,7 @@
     import axios, {AxiosResponse} from "axios";
     import Vue, {ComponentOptions} from "vue";
     import VueMaterial from "vue-material";
+    import {palette} from "../palette";
 
     import Component from "vue-class-component";
     import {
@@ -174,13 +175,14 @@
         }
 
         created() {
-            //this.jobId = _dummyJobList[0].id || '';
-            //this.job = _dummyJobList[0];
+            // this.jobId = _dummyJobList[0].id || '';
+            // this.job = _dummyJobList[0];
             // this.jobId = '5ozQUwFCJDoV0vWgmo4q6E';
             this.refresh();
         }
 
         // TODO: Refactor me somewhere to combine with the method in JobList
+        // TODO: Use primary, accent and warn colours from theme palette
         getStatusColor(status: string) {
             const status_colors: any = {
                 complete: "grey",
@@ -196,14 +198,30 @@
             return color;
         }
 
+        themeColors(shade: number = 500, whiteToBlack: boolean = true) {
+            const material = (Vue as any).material;
+            const namedColors = material.themes[material.currentTheme];
+            let names: string[] = _.values(namedColors);
+            if (whiteToBlack) {
+                const i = names.indexOf('white');
+                if (i != -1) {
+                    names[i] = 'black';
+                }
+            }
+            const hexValues = _.map(names, (name) => {
+                return palette[name][shade];
+            });
+            hexValues.sort();
+            return hexValues;
+        }
+
         // http://werxltd.com/wp/2010/05/13/javascript-implementation-of-javas-string-hashcode-method/
-        hashCode(s: string){
-                        console.log((Vue as any).material.currentTheme);
+        hashCode(s: string): number {
             var hash = 0;
             if (s.length == 0) return hash;
             for (let i = 0; i < s.length; i++) {
                 let char = s.charCodeAt(i);
-                hash = ((hash<<5)-hash)+char;
+                hash = ((hash << 5) - hash) + char;
                 hash = hash & hash; // Convert to 32bit integer
             }
             return hash;
