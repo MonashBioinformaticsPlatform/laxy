@@ -44,6 +44,7 @@ import ENAFlow from './components/ENAFlow.vue';
 import JobList from './components/JobList.vue';
 import JobPage from './components/JobPage.vue';
 import FileList from './components/FileList.vue';
+import EventLog from './components/EventLog.vue';
 
 Vue.component('input-files-form', InputDataForm);
 Vue.component('sample-table', SampleTable);
@@ -51,13 +52,14 @@ Vue.component('ena-search', ENAFileSelect);
 Vue.component('sample-cart', SampleCart);
 Vue.component('pipeline-params', PipelineParams);
 Vue.component('file-list', FileList);
+Vue.component('event-log', EventLog);
 Vue.component('job-page', JobPage);
 
 import SpinnerCubeGrid from './components/spinners/SpinnerCubeGrid.vue';
 Vue.component('spinner-cube-grid', SpinnerCubeGrid);
 
-import SpinnerEq from './components/spinners/SpinnerEq.vue';
-Vue.component('spinner-eq', SpinnerEq);
+// import SpinnerEq from './components/spinners/SpinnerEq.vue';
+// Vue.component('spinner-eq', SpinnerEq);
 
 Vue.filter('numeral_format', function(value: number | string, format: string = '0 a') {
     if (!value) return '';

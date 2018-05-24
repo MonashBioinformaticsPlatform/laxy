@@ -20,7 +20,7 @@
                                 <md-table-row v-for="file in files" :key="file.id">
                                     <md-table-cell>{{ file.name }}</md-table-cell>
                                     <md-table-cell>
-                                        <md-button class="md-icon-button"
+                                        <md-button class="md-icon-button push-right"
                                                    @click="viewFile(file.id)">
                                             <md-tooltip md-direction="top">View</md-tooltip>
                                             <md-icon>pageview</md-icon>

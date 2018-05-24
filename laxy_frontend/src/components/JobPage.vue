@@ -24,8 +24,8 @@
         <md-layout md-gutter>
             <md-layout v-if="job" md-column>
                 <md-layout md-gutter>
-                    <md-layout md-flex="20">
-                        <md-card md-with-hover>
+                    <md-layout md-flex="25">
+                        <md-card style="width: 100%;" md-with-hover>
                             <md-card-header>
                                 <div class="md-title">{{ job.params.pipeline }} job</div>
                                 <div class="md-subhead">{{ job.params.description }}</div>
@@ -92,10 +92,14 @@
                                     Cancel
                                 </md-button>
                             </md-card-actions>
+
+                            <event-log :job-id="jobId"></event-log>
+
                         </md-card>
                     </md-layout>
                     <md-layout>
-                        <file-list v-if="job != null && job.status !== 'running'"
+                        <file-list style="width: 100%;"
+                                   v-if="job != null && job.status !== 'running'"
                                    title="Key result files"
                                    :fileset-id="job.output_fileset_id"
                                    :regex-filters="['\\.html$', '\\.count$', '\\.bam$', '\\.bai$', '\\.log$', '\\.out$']"
@@ -203,9 +207,9 @@
             const namedColors = material.themes[material.currentTheme];
             let names: string[] = _.values(namedColors);
             if (whiteToBlack) {
-                const i = names.indexOf('white');
+                const i = names.indexOf("white");
                 if (i != -1) {
-                    names[i] = 'black';
+                    names[i] = "black";
                 }
             }
             const hexValues = _.map(names, (name) => {
