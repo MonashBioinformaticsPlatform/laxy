@@ -60,7 +60,7 @@
                                     <md-card-actions>
                                         <router-link tag="md-button"
                                                      class="md-primary md-raised"
-                                                     to="rnaseq">
+                                                     to="/ENAflow">
                                             Run an RNA-Seq analysis
                                         </router-link>
                                     </md-card-actions>
