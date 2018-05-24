@@ -1,13 +1,5 @@
 declare function require(path: string): any;
 
-declare interface Sample {
-    id?: string;
-    name: string;
-    files: any[];
-    metadata: {}; // {condition: '', ena: {}}
-    // condition?: string;
-}
-
 declare interface ENASample {
         // pair?: ENASample,
         run_accession?: string;
@@ -19,8 +11,8 @@ declare interface ENASample {
         read_count?: number;
         fastq_bytes?: number;
         fastq_md5?: string;
-        fastq_ftp?: string;
-    }
+        fastq_ftp?: any[];
+}
 
 declare interface ReferenceGenome {
     id: string;

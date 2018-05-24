@@ -77,7 +77,7 @@
         SET_PIPELINE_DESCRIPTION
     } from "../store";
 
-    import {SampleSet} from "../model";
+    import {Sample, SampleSet} from "../model";
     import {WebAPI} from "../web-api";
 
     import {DummySampleList as _dummySampleList} from "../test-data";

@@ -13,6 +13,21 @@ class UUIDModel {
     }
 }
 
+export class Sample {
+    public id?: string;
+    public name: string;
+    public files: any[];
+    public metadata: {}; // {condition: '', ena: {}}
+    // condition?: string;
+
+    constructor(obj: any) {
+        this.id = obj.id;
+        this.name = obj.name;
+        this.files = obj.files || [];
+        this.metadata = obj.metadata || {};
+    }
+}
+
 export class SampleSet extends UUIDModel {
     // [index: number]: Sample;
 

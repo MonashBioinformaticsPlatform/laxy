@@ -1,7 +1,7 @@
 import * as _ from 'lodash';
 import Vuex from 'vuex';
 import axios, {AxiosResponse} from 'axios';
-import {ComputeJob, SampleSet} from './model';
+import {ComputeJob, Sample, SampleSet} from './model';
 import {WebAPI} from './web-api';
 
 export const SET_USER_PROFILE = 'set_user_profile';

@@ -151,7 +151,7 @@
         namespace
     } from "vuex-class";
 
-    import {SampleSet} from "../model";
+    import {Sample, SampleSet} from "../model";
     import {SET_SAMPLES} from "../store";
     import {WebAPI} from "../web-api";
 
@@ -252,7 +252,9 @@
                 // }
                 this.submitting = false;
                 this.flashSnackBarMessage("Saved !");
-                this.populateSelectionList(response.data.samples);
+                // coerce JSON into a list of proper Sample objects, ensuring all properties are present
+                const _samples: Sample[] = _.map(response.data.samples, (s) => { return new Sample(s)});
+                this.populateSelectionList(_samples);
 
                 // TODO: Save and highlight validation issues (eg identical sample names)
                 //       Route to next step

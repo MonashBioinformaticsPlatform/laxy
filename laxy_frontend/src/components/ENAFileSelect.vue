@@ -153,6 +153,7 @@
         Watch
     } from "vue-property-decorator";
 
+    import {Sample} from "../model";
     import {ADD_SAMPLES} from "../store";
     import {WebAPI} from "../web-api";
 
@@ -264,13 +265,13 @@
             // run/experiment/study/sample_accession)
 
             console.log(this.selectedSamples);
-            const cart_samples = [];
+            const cart_samples: Sample[] = [];
             for (let ena of this.selectedSamples) {
                 cart_samples.push({
                     name: ena.sample_accession,
                     files: ena.fastq_ftp,
                     metadata: {condition: "", ena: ena},
-                });
+                } as Sample);
             }
             this.$store.commit(ADD_SAMPLES, cart_samples);
             let count = this.selectedSamples.length;

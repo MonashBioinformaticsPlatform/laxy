@@ -29,7 +29,7 @@
                     </span>
                     <span v-else-if="field === 'R1' || field === 'R2'">
                         <span v-for="file in sample.files">
-                            <span>{{ _.get(file, field, '').split('/').pop() }}
+                            <span>{{ file_basename(_.get(file, field, '')) }}
                                 <md-tooltip>{{ file[field] }}</md-tooltip>
                             </span><br/>
                         </span>
@@ -62,7 +62,7 @@
         Watch
     } from "vue-property-decorator";
 
-    import {SampleSet} from "../model";
+    import {Sample, SampleSet} from "../model";
 
     import {DummySampleList as _dummySampleList} from "../test-data";
 
@@ -93,6 +93,10 @@
         /* Sets/retrieves a property deeply.nested.in.an.object */
         deep_path(obj: any, path: string): any {
             return _.get(obj, path);
+        }
+
+        file_basename(filepath: string): string | undefined {
+            return filepath.split('/').pop();
         }
 
         created() {
