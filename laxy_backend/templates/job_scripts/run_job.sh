@@ -8,19 +8,29 @@ set -o xtrace
 # set -o errexit
 
 # These variables are overridden by environment vars if present
-# export DEBUG="${DEBUG:-yes}"
+export DEBUG="${DEBUG:-no}"
 # export JOB_ID="${JOB_ID:-}"
 # export JOB_COMPLETE_CALLBACK_URL="${JOB_COMPLETE_CALLBACK_URL:-}"
 # export JOB_COMPLETE_AUTH_HEADER="${JOB_COMPLETE_AUTH_HEADER:-}"
 
+readonly TMP="/tmp"
 readonly JOB_ID="{{ JOB_ID }}"
 readonly JOB_COMPLETE_CALLBACK_URL="{{ JOB_COMPLETE_CALLBACK_URL }}"
 readonly JOB_EVENT_URL="{{ JOB_EVENT_URL }}"
 readonly JOB_INPUT_STAGED="{{ JOB_INPUT_STAGED }}"
 readonly REFERENCE_GENOME="{{ REFERENCE_GENOME }}"
-
+readonly PIPELINE_VERSION="{{ PIPELINE_VERSION }}"
 readonly JOB_PATH=${PWD}
-readonly CONDA_BASE="../miniconda3"
+readonly CONDA_BASE="${JOB_PATH}/../miniconda3"
+
+readonly SCHEDULER="slurm"
+# readonly SCHEDULER="local"
+readonly SBATCH_OPTIONS="--cpus-per-task=8 --mem=31500 -t 7-0:00 --ntasks-per-node=1 --ntasks=1 --job-name=laxy:${JOB_ID}"
+
+PREFIX_JOB_CMD=""
+if [ "${SCHEDULER}" == "slurm" ]; then
+    PREFIX_JOB_CMD="srun ${SBATCH_OPTIONS} "
+fi
 
 function send_event() {
     event=${1:-"HEARTBEAT"}
@@ -32,11 +42,16 @@ function send_event() {
     # so if a curl call fails we don't bring down the whole script
     # NOTE: curl v7.55+ is required to use -H @filename
 
-    # --silent \
+    VERBOSITY="--silent"
+    if [ ${DEBUG} == "yes" ]; then
+        # NOTE: verbose mode should NOT be used in production since it prints
+        # full headers to stdout/stderr, including Authorization tokens.
+        VERBOSITY="-vvv"
+    fi
+
     curl -X POST \
          -H "Content-Type: application/json" \
          -H @"${JOB_PATH}/.private_request_headers" \
-         -vvv \
          -o /dev/null \
          -w "%{http_code}" \
          --connect-timeout 10 \
@@ -44,20 +59,54 @@ function send_event() {
          --retry 8 \
          --retry-max-time 600 \
          -d '{"event":"'"${event}"'","extra":'"${extra}"'}' \
+         ${VERBOSITY} \
          ""${JOB_EVENT_URL}"" || true
 }
 
-function init_conda_env() {
-    env_name="${1}"
+function install_miniconda() {
+    if [ ! -d "${CONDA_BASE}" ]; then
+         wget --directory-prefix "${TMP}" -c "https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh"
+         chmod +x "${TMP}"/Miniconda3-latest-Linux-x86_64.sh
+         "${TMP}"/Miniconda3-latest-Linux-x86_64.sh -b -p "${CONDA_BASE}"
+    fi
+}
 
-    # Conda activate misbehaves if nounset and errexit are set
-    # https://github.com/conda/conda/issues/3200
-    set +o nounset
-    conda install -n "${env_name}" \
-                 -c serine \
-                 -c bioconda \
-                 -c conda-forge \
-                 rnasik qualimap curl
+function init_conda_env() {
+    env_name="${1}-${PIPELINE_VERSION}"
+
+    if [ ! -d "${CONDA_BASE}/envs/${env_name}" ]; then
+
+        # Conda activate misbehaves if nounset and errexit are set
+        # https://github.com/conda/conda/issues/3200
+        set +o nounset
+        # First we update conda itself
+        ${CONDA_BASE}/bin/conda update --yes -n base conda
+
+        # Create a base environment
+        ${CONDA_BASE}/bin/conda create --yes -m -n "${env_name}"
+
+        # Install an up-to-date curl and GNU parallel
+        ${CONDA_BASE}/bin/conda install --yes -n "${env_name}" \
+                     -c serine \
+                     -c bioconda \
+                     -c conda-forge \
+                     curl parallel
+
+        # Then install rnasik
+        ${CONDA_BASE}/bin/conda install --yes -n "${env_name}" \
+                     -c serine \
+                     -c bioconda \
+                     -c conda-forge \
+                     rnasik=${PIPELINE_VERSION}
+
+        # Environment takes a very long time to solve if qualimap is included initially
+        ${CONDA_BASE}/bin/conda install --yes -n "${env_name}" \
+                     -c serine \
+                     -c bioconda \
+                     -c conda-forge \
+                     qualimap
+
+    fi
 
     source "${CONDA_BASE}/bin/activate" "${CONDA_BASE}/envs/${env_name}"
     set -o nounset
@@ -67,8 +116,10 @@ mkdir -p input
 mkdir -p output
 
 ####
-#### Import a Conda environment
+#### Setup and import a Conda environment
 ####
+
+install_miniconda
 
 # We import the environment early to ensure we have a recent version of curl (>=7.55)
 init_conda_env "rnasik"
@@ -111,7 +162,8 @@ send_event "JOB_PIPELINE_STARTING"
 # request with curl upon failure
 set +o errexit
 
-RNAsik -align star \
+${PREFIX_JOB_CMD} \
+   RNAsik -align star \
        -fastaRef ../../${GENOME_FASTA} \
        -fqDir ../input \
        -counts \

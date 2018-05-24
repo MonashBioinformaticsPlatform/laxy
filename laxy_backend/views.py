@@ -1080,6 +1080,8 @@ class JobCreate(JSONView):
                              # pipeline_run_config=pipeline_run.to_json(),
                              # gateway=settings.CLUSTER_MANAGEMENT_HOST,
                              environment={
+                                 'DEBUG': sh_bool(
+                                     getattr(settings, 'DEBUG', False)),
                                  'JOB_ID': job_id,
                                  'JOB_COMPLETE_CALLBACK_URL':
                                      callback_url,
@@ -1090,6 +1092,7 @@ class JobCreate(JSONView):
                                      callback_auth_header,
                                  'JOB_INPUT_STAGED': sh_bool(False),
                                  'REFERENCE_GENOME': reference_genome,
+                                 'PIPELINE_VERSION': '1.5.1',
                              })
 
             # TESTING: Start cluster, run job, (pre-existing data), stop cluster
@@ -1300,7 +1303,7 @@ class EventLogListView(generics.ListAPIView):
     def get_queryset(self):
         return (EventLog.objects
                 .filter(user=self.request.user)
-                .order_by('-created_time'))
+                .order_by('-timestamp'))
 
 
 class EventLogCreate(JSONView):

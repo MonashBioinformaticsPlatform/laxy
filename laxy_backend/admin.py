@@ -28,7 +28,7 @@ class Timestamped:
 
 
 class ComputeResourceAdmin(Timestamped, VersionAdmin):
-    list_display = ('uuid', 'address', 'created', 'status_html')
+    list_display = ('uuid', 'name', 'address', 'created', 'status_html')
     ordering = ('-created_time',)
 
     color_mappings = {
