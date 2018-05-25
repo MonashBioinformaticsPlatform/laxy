@@ -1,4 +1,5 @@
 from django.contrib import admin
+import django.forms
 from django.urls import reverse
 from django.contrib.humanize.templatetags import humanize
 from django.utils.html import format_html
@@ -11,6 +12,8 @@ from .models import (Job,
                      SampleSet,
                      PipelineRun,
                      EventLog)
+
+from .models import URIValidator
 
 
 class Timestamped:
@@ -85,12 +88,25 @@ class JobAdmin(Timestamped, VersionAdmin):
         )
 
 
+def do_nothing_validator(value):
+    return None
+
+
+class FileAdminForm(django.forms.ModelForm):
+    class Meta:
+        model = File
+        fields = '__all__'
+
+    location = django.forms.CharField(max_length=2048, validators=[URIValidator()])
+
+
 class FileAdmin(Timestamped, VersionAdmin):
     list_display = ('uuid',
                     '_location',
                     'created',
                     'modified')
     ordering = ('-created_time', '-modified_time',)
+    form = FileAdminForm
 
     def _location(self, obj):
         url = reverse('laxy_backend:file_download',

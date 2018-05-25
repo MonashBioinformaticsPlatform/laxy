@@ -9,6 +9,7 @@ import os
 import re
 import requests
 import jwt
+import base64
 import uuid
 from datetime import datetime, timedelta
 from collections import OrderedDict
@@ -309,18 +310,96 @@ class FileView(GetMixin,
         File is specified by it's UUID.
 
         If the `Content-Type: application/json` header is used, the
-        JSON record for the file is returned without content.
-        Other `Content-Type`s result in a file download.
+        JSON record for the file is returned without file content.
+
+        Other `Content-Type`s return the content of the file.
+
+        If the query parameter `download` is used, the file is downloaded via
+        the browser rather than viewed
+        (via the `Content-Disposition: attachment` header).
+
+        If file checksums (eg MD5) are present, these are included as a
+        header:
+
+        `Digest: MD5=thisIsABase64EnC0DeDMd5sum==`.
 
         A filename can optionally be specified as the last part of the the URL
         path, so that `wget` will 'just work' without requiring the
-        `--content-disposition` flag, eg:
+        `--content-disposition` flag. The filename must match the name stored
+        in the File record.
+
+        Examples:
+
+        ### File record data as JSON
+
+        **Request:**
+
+        `Content-Type: application/json`
+
+        `GET` http://laxy.org/api/v1/file/XXblafooXX/alignment.bam
+
+        **Response:**
+
+        ```json
+        {
+            "id": "XXblafooXX",
+            "name": "alignment.bam",
+            "location": "http://example.com/datasets/1/alignment.bam",
+            "owner": "admin",
+            "checksum": "md5:f3c90181aae57b887a38c4e5fe73db0c",
+            "metadata": { }
+        }
+        ```
+
+        ### File content (view in browser)
+
+        **Request:**
+
+        `Content-Type: application/octet-stream`
+
+        `GET` http://laxy.org/api/v1/file/XXblafooXX/alignment.bam
+
+        **Response:**
+
+        Headers:
+
+        `Content-Disposition: inline`
+
+        `Digest: MD5=thisIsABase64EnC0DeDMd5sum==`
+
+        Body:
+
+        .. file content ..
+
+        ### File content (download in browser)
+
+        **Request:**
+
+        `Content-Type: application/octet-stream`
+
+        `GET` http://laxy.org/api/v1/file/XXblafooXX/alignment.bam
+
+        **Response:**
+
+        Headers:
+
+        `Content-Disposition: attachment; filename=alignment.bam`
+
+        `Digest: MD5=thisIsABase64EnC0DeDMd5sum==`
+
+        Body:
+
+        .. file content ..
+
+
+        ## File download with `wget`
 
         `wget http://laxy.org/api/v1/file/XXblafooXX/alignment.bam`
-          vs.
+
+        or, without the filename:
+
         `wget --content-disposition http://laxy.org/api/v1/file/XXblafooXX/`
 
-        The filename must match the name stored in the File record.
 
         <!--
         :param request: The request object.
@@ -336,10 +415,26 @@ class FileView(GetMixin,
         if content_type == 'application/json':
             return super(FileView, self).get(request, uuid)
         else:
-            # File download is the default when no Content-Type is specified
-            return self.download(uuid, filename=filename)
+            # File view/download is the default when no Content-Type is specified
+            if 'download' in request.query_params:
+                return self.download(uuid, filename=filename)
+            else:
+                return self.view(uuid, filename=filename)
 
-    def download(self, uuid, filename=None):
+    def _add_metalink_headers(self, obj, response):
+
+        url = self.request.build_absolute_uri(obj.get_absolute_url())
+        response['Link'] = f'<{url}>; rel=duplicate'
+
+        if obj.checksum:
+            hashtype = obj.checksum_type
+            b64checksum = obj.checksum_hash_base64
+            response['Digest'] = f'{hashtype.upper()}={b64checksum}'
+            response['Etag'] = f'{obj.checksum}'
+
+        return response
+
+    def _stream_response(self, uuid, filename=None, download=True):
         obj = self.get_obj(uuid)
         if obj is None:
             return Response(status=status.HTTP_404_NOT_FOUND)
@@ -360,12 +455,26 @@ class FileView(GetMixin,
             if filename != obj.name:
                 return Response(status=status.HTTP_404_NOT_FOUND)
 
-        response['Content-Disposition'] = f'attachment; filename="{obj.name}"'
+        if download:
+            response['Content-Disposition'] = f'attachment; filename="{obj.name}"'
+        else:
+            response['Content-Disposition'] = 'inline'
+            # Make the browser guess the Content-Type
+            del response['Content-Type']
+
         size = obj.metadata.get('size', None)
         if size is not None:
             response['Content-Length'] = int(size)
 
+        self._add_metalink_headers(obj, response)
+
         return response
+
+    def download(self, uuid, filename=None):
+        return self._stream_response(uuid, filename, download=True)
+
+    def view(self, uuid, filename=None):
+        return self._stream_response(uuid, filename, download=False)
 
     @view_config(request_serializer=FileSerializer,
                  response_serializer=PatchSerializerResponse)

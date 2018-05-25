@@ -9,6 +9,7 @@ import urllib.request
 from typing import List
 from collections import OrderedDict, Sequence
 from datetime import datetime
+import math
 import json
 import csv
 import uuid
@@ -109,6 +110,10 @@ class URIValidator(URLValidator):
         except ValueError as e:
             raise ValidationError(self.message, code=self.code)
         super().__call__(value)
+
+
+class ExtendedURIField(URLField):
+    default_validators = [URIValidator()]
 
 
 class UserProfile(models.Model):
@@ -513,8 +518,7 @@ class File(Timestamped, UUIDModel):
                        null=True,
                        related_name='files')
     # The URL to the file. Could be file://, https://, s3://, sftp://
-    location = URLField(max_length=2048, blank=False, null=False,
-                        validators=[URIValidator()])
+    location = ExtendedURIField(max_length=2048, blank=False, null=False)
 
     # TODO: Consider adding a path (eg some/relative/path/dir) - this is
     # many times redundant to location, from which path can be derived,
@@ -570,6 +574,45 @@ class File(Timestamped, UUIDModel):
             self.save()
 
     @property
+    def checksum_type(self) -> str:
+        """
+        Get the type (algorithm) of the checksum, eg md5.
+
+        :return: The checksum type (algorithm), eg md5.
+        :rtype: str
+        """
+        if ':' in self.checksum:
+            return self.checksum.split(':', 1)[0]
+
+    @property
+    def checksum_hash(self) -> str:
+        """
+        Get the hash value eg f3c90181aae57b887a38c4e5fe73db0c.
+
+        :return: The hash value, eg f3c90181aae57b887a38c4e5fe73db0c.
+        :rtype: str
+        """
+        if ':' in self.checksum:
+            return self.checksum.split(':', 1).pop()
+
+    @property
+    def checksum_hash_base64(self) -> str:
+        """
+        Assuming the hash is a hexdigest string, convert to and return the
+        Base64 representation. Used for HTTP Digest headers.
+
+        :return: Base64 encoded hash value.
+        :rtype: str
+        """
+        c = self.checksum_hash
+        if c:
+            int_hash = int(c, 16)
+            return base64.b64encode(
+                int_hash.to_bytes(
+                    math.ceil(int_hash.bit_length() / 8), 'big')
+            ).decode('ascii')
+
+    @property
     def file(self):
         from laxy_backend.tasks.download import request_with_retries
 
@@ -612,6 +655,12 @@ class File(Timestamped, UUIDModel):
             filelike = getattr(response, 'raw', response)
             filelike.decode_content = True
             return filelike
+
+    def get_absolute_url(self):
+        from django.urls import reverse
+        url = reverse('laxy_backend:file_download',
+                      kwargs={'uuid': self.uuid(), 'filename': self.name})
+        return url
 
 
 @reversion.register()
