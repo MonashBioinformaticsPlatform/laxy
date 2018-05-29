@@ -2,12 +2,13 @@ declare function require(path: string): any;
 
 import 'es6-promise';
 import axios, {AxiosResponse} from 'axios';
+
 const Cookies = require('js-cookie');
 
 class NotImplementedError extends Error {
-  constructor(message: string) {
-    super(message);
-  }
+    constructor(message: string) {
+        super(message);
+    }
 }
 
 export class WebAPI {
@@ -17,7 +18,8 @@ export class WebAPI {
         baseURL: WebAPI.baseUrl,
         withCredentials: true,
         xsrfHeaderName: 'X-CSRFToken',
-        xsrfCookieName: 'csrftoken'});
+        xsrfCookieName: 'csrftoken'
+    });
 
     public static async getAuthToken(user: string, pass: string): Promise<string> {
         try {
@@ -114,6 +116,30 @@ export class WebAPI {
         try {
             return await this.fetcher.get(
                 `/api/v1/fileset/${fileset_id}/`) as AxiosResponse;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    public static viewFileUrl(file_id: string,
+                              filename: string | null = null): string {
+        if (filename) {
+            return `${this.baseUrl}/api/v1/file/${file_id}/${filename}?view`;
+        }
+        return `${this.baseUrl}/api/v1/file/${file_id}/?view`;
+    }
+
+    public static async viewFile(file_id: string,
+                                 filename: string | null = null,
+                                 contentType = 'text/html') {
+        try {
+            let url = `/api/v1/file/${file_id}/`;
+            if (filename) {
+                url = `/api/v1/file/${file_id}/${filename}`;
+            }
+            return await this.fetcher.get(
+                url,
+                {headers: {'Content-Type': contentType}}) as AxiosResponse;
         } catch (error) {
             throw error;
         }

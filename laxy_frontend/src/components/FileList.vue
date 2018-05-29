@@ -18,7 +18,7 @@
                         <md-table>
                             <md-table-body>
                                 <md-table-row v-for="file in files" :key="file.id">
-                                    <md-table-cell>{{ file.name }}</md-table-cell>
+                                    <md-table-cell><div class="truncate-text">{{ file.name }}</div></md-table-cell>
                                     <md-table-cell>
                                         <md-button class="md-icon-button push-right"
                                                    @click="viewFile(file.id)">
@@ -148,8 +148,13 @@
             const file = _.first(_.filter(this.fileset.files, (f) => {
                 return f.id === file_id;
             }));
-            this.error_alert_message = `Not implemented (yet!)<br><pre>${JSON.stringify(file, null, 2)}</pre>`;
-            this.openDialog("error_dialog");
+
+
+            // window.open(WebAPI.viewFileUrl(file.id, file.name), '_blank');
+            window.open(WebAPI.viewFileUrl(file.id, file.name));
+
+            // this.error_alert_message = `Not implemented (yet!)<br><pre>${JSON.stringify(file, null, 2)}</pre>`;
+            // this.openDialog("error_dialog");
         }
 
         async refresh() {
@@ -188,5 +193,12 @@
 <style scoped>
     .md-table-card {
         width: 100%;
+    }
+
+    .truncate-text {
+        width: 600px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 </style>
