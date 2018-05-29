@@ -122,6 +122,12 @@ const router = new VueRouter({
             component: JobPage,
             props: true,
         },
+        {
+            path: '/job/:jobId/:showTab',
+            name: 'job',
+            component: JobPage,
+            props: true,
+        },
     ],
     // mode: 'history',
     scrollBehavior(to, from, savedPosition) {
