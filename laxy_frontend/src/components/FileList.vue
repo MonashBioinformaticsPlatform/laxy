@@ -4,42 +4,36 @@
                          :md-content="error_alert_message" ref="error_dialog">
         </md-dialog-alert>
 
-        <md-layout md-column>
-            <md-layout md-gutter>
-                <md-layout>
-                    <md-spinner v-if="submitting" md-indeterminate></md-spinner>
-                    <md-table-card v-if="!submitting">
-                        <md-toolbar>
-                            <h1 class="md-title">{{ titleText }}</h1>
-                            <md-button v-if="!hideSearch" class="md-icon-button">
-                                <md-icon>search</md-icon>
-                            </md-button>
-                        </md-toolbar>
-                        <md-table>
-                            <md-table-body>
-                                <md-table-row v-for="file in files" :key="file.id">
-                                    <md-table-cell><div class="truncate-text">{{ file.name }}</div></md-table-cell>
-                                    <md-table-cell>
-                                        <md-button class="md-icon-button push-right"
-                                                   @click="viewFile(file.id)">
-                                            <md-tooltip md-direction="top">View</md-tooltip>
-                                            <md-icon>pageview</md-icon>
-                                        </md-button>
-                                    </md-table-cell>
-                                </md-table-row>
-                            </md-table-body>
-                        </md-table>
-                    </md-table-card>
-                </md-layout>
-            </md-layout>
+        <md-layout>
+            <md-spinner v-if="submitting" md-indeterminate></md-spinner>
+            <md-table-card v-if="!submitting">
+                <md-toolbar>
+                    <h1 class="md-title">{{ titleText }}</h1>
+                    <md-button v-if="!hideSearch" class="md-icon-button">
+                        <md-icon>search</md-icon>
+                    </md-button>
+                </md-toolbar>
+                <md-table>
+                    <md-table-body>
+                        <md-table-row v-for="file in files" :key="file.id">
+                            <md-table-cell>
+                                <div class="truncate-text">{{ file.name }}</div>
+                            </md-table-cell>
+                            <md-table-cell>
+                                <md-button class="md-icon-button push-right"
+                                           @click="viewFile(file.id)">
+                                    <md-tooltip md-direction="top">View</md-tooltip>
+                                    <md-icon>pageview</md-icon>
+                                </md-button>
+                            </md-table-cell>
+                        </md-table-row>
+                        <md-table-row v-if="files.length === 0">
+                            <md-table-cell>No files</md-table-cell>
+                        </md-table-row>
+                    </md-table-body>
+                </md-table>
+            </md-table-card>
         </md-layout>
-        <md-snackbar md-position="bottom center" ref="snackbar"
-                     :md-duration="snackbar_duration">
-            <span>{{ snackbar_message }}</span>
-            <md-button class="md-accent" @click="$refs.snackbar.close()">
-                Dismiss
-            </md-button>
-        </md-snackbar>
     </div>
 </template>
 
@@ -96,8 +90,6 @@
 
         public submitting: boolean = false;
         public error_alert_message: string = "Everything is fine. 🐺";
-        public snackbar_message: string = "Everything is fine. ☃";
-        public snackbar_duration: number = 2000;
 
         // for lodash in templates
         get _() {
@@ -163,11 +155,11 @@
                 const response = await WebAPI.getFileSet(this.filesetId);
                 this.fileset = response.data;
                 this.submitting = false;
-                // this.flashSnackBarMessage("Updated", 500);
+                // this.$emit("refresh-success", "Updated !");
             } catch (error) {
                 console.log(error);
                 this.submitting = false;
-                this.error_alert_message = error.toString();
+                this.$emit("refresh-error", error.toString());
                 this.openDialog("error_dialog");
                 throw error;
             }
@@ -180,20 +172,14 @@
         closeDialog(ref: string) {
             (this.$refs[ref] as MdDialog).close();
         }
-
-        flashSnackBarMessage(msg: string, duration: number = 2000) {
-            this.snackbar_message = msg;
-            this.snackbar_duration = duration;
-            (this.$refs.snackbar as any).open();
-        }
     };
 
 </script>
 
 <style scoped>
-    .md-table-card {
-        width: 100%;
-    }
+    /*.md-table-card {*/
+        /*width: 100%;*/
+    /*}*/
 
     .truncate-text {
         width: 600px;

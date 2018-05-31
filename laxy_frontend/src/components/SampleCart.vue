@@ -70,7 +70,7 @@
                                 </md-button>
 
                                 <md-menu-content>
-                                    <md-menu-item @click="routeTo('enaselect')">
+                                    <md-menu-item @click="routeTo('enaselect', {showButtons: true})">
                                         From public ENA data
                                     </md-menu-item>
                                     <md-menu-item>From my uploaded files
@@ -315,8 +315,8 @@
             this.$store.commit(SET_SAMPLES, this._samples);
         }
 
-        routeTo(name: string) {
-            this.$router.push({name: name});
+        routeTo(name: string, params: any = {}) {
+            this.$router.push({name: name, params: params});
         }
 
         // This ensures changes to sample table are committed to the vuex store

@@ -22,111 +22,54 @@
         </md-dialog>
 
         <md-layout md-gutter>
-            <md-layout md-flex="10" md-flex-medium="100">
+            <md-layout md-flex="10" md-hide-medium>
                 <md-list>
-                    <md-list-item>
-                        <router-link :to="`/job/${jobId}`" exact>Summary</router-link>
-                    </md-list-item>
-                    <md-list-item>
-                        <router-link :to="`/job/${jobId}/input`">Input</router-link>
-                    </md-list-item>
-                    <md-list-item>
-                        <router-link :to="`/job/${jobId}/output`">Output</router-link>
-                    </md-list-item>
+                    <nav class="vertical-sidebar-nav">
+                        <md-list-item>
+                            <router-link :to="`/job/${jobId}`" exact>Summary</router-link>
+                        </md-list-item>
+                        <md-list-item>
+                            <router-link :to="`/job/${jobId}/input`">Input</router-link>
+                        </md-list-item>
+                        <md-list-item>
+                            <router-link :to="`/job/${jobId}/output`">Output</router-link>
+                        </md-list-item>
+                        <md-list-item>
+                            <router-link :to="`/job/${jobId}/eventlog`">Event Log</router-link>
+                        </md-list-item>
+                    </nav>
                 </md-list>
+
             </md-layout>
-            <md-layout v-if="job" md-flex="80" md-flex-medium="100">
-                <!--<md-tabs>-->
-                <!--<md-tab id="summary" md-label="Summary">-->
-                <transition name="fade">
-                    <md-layout v-show="showTab === 'summary' || showTab == null">
-                        <md-layout md-gutter>
-                            <md-layout id="job-status-card" md-flex-large="25" md-flex-medium="100">
-                                <md-card style="width: 100%;" md-with-hover>
-                                    <md-card-header>
-                                        <md-layout>
-                                            <md-layout md-column>
-                                                <div class="md-title">{{ job.params.pipeline }} job</div>
-                                                <div class="md-subhead">{{ job.params.description }}</div>
-                                            </md-layout>
-                                            <md-layout md-flex="20">
-                                                <md-icon v-if="job.status === 'failed'"
-                                                         class="push-right md-size-2x md-accent">
-                                                    error_outline
-                                                </md-icon>
-                                                <md-icon v-if="job.status === 'cancelled'"
-                                                         class="push-right md-size-2x md-warn">
-                                                    cancel_presentation
-                                                </md-icon>
-                                                <md-icon v-if="job.status === 'complete'"
-                                                         class="push-right md-size-2x md-primary">
-                                                    check_circle_outline
-                                                </md-icon>
-                                            </md-layout>
-                                        </md-layout>
-                                    </md-card-header>
-
-                                    <md-card-content>
-                                        <md-layout v-if="job.status === 'running'" md-align="center" class="pad-32">
-                                            <spinner-cube-grid v-if="job.status === 'running'"
-                                                               :colors="themeColors()"
-                                                               :time="1.5"
-                                                               :columns="4" :rows="4"
-                                                               :width="96" :height="96"
-                                                               :random-seed="hashCode(job.id)">
-
-                                            </spinner-cube-grid>
-                                        </md-layout>
-                                        <md-table>
-                                            <md-table-body>
-                                                <md-table-row>
-                                                    <md-table-cell>Status</md-table-cell>
-                                                    <md-table-cell>
-                                                        <span :style="{ color: getStatusColor(job.status) }">{{ job.status }}</span>
-                                                    </md-table-cell>
-                                                </md-table-row>
-                                                <md-table-row>
-                                                    <md-table-cell>Created</md-table-cell>
-                                                    <md-table-cell>
-                                                        <md-tooltip md-direction="top">{{ job.created_time }}
-                                                        </md-tooltip>
-                                                        {{ job.created_time| moment('from') }}
-                                                    </md-table-cell>
-                                                </md-table-row>
-                                                <md-table-row v-if="job.completed_time">
-                                                    <md-table-cell>Completed</md-table-cell>
-                                                    <md-table-cell>
-                                                        <md-tooltip md-direction="top">{{ job.completed_time }}
-                                                        </md-tooltip>
-                                                        {{ job.completed_time| moment('from') }}
-                                                    </md-table-cell>
-                                                </md-table-row>
-                                                <md-table-row>
-                                                    <md-table-cell>Job ID</md-table-cell>
-                                                    <md-table-cell>{{ job.id }}</md-table-cell>
-                                                </md-table-row>
-                                            </md-table-body>
-                                        </md-table>
-                                    </md-card-content>
-
-                                    <md-card-actions>
-                                        <md-button v-if="job.status !== 'running'"
-                                                   @click="cloneJob(job.id)">
-                                            <md-icon>content_copy</md-icon>
-                                            Run again
-                                        </md-button>
-                                        <md-button v-if="job.status === 'running'"
-                                                   @click="askCancelJob(job.id)">
-                                            <md-icon>cancel</md-icon>
-                                            Cancel
-                                        </md-button>
-                                    </md-card-actions>
-
-                                    <event-log :job-id="jobId"></event-log>
-
-                                </md-card>
+            <md-layout md-hide-large-and-up md-flex-medium="100">
+                <md-toolbar class="md-transparent" style="width: 100%">
+                    <nav style="width: 100%">
+                        <router-link tag="md-button" active-class="md-primary" :to="`/job/${jobId}`" exact>
+                            Summary
+                        </router-link>
+                        <router-link tag="md-button" active-class="md-primary" :to="`/job/${jobId}/input`">
+                            Input
+                        </router-link>
+                        <router-link tag="md-button" active-class="md-primary" :to="`/job/${jobId}/output`">
+                            Output
+                        </router-link>
+                        <router-link tag="md-button" active-class="md-primary" :to="`/job/${jobId}/eventlog`">
+                            Event Log
+                        </router-link>
+                    </nav>
+                </md-toolbar>
+            </md-layout>
+            <md-layout v-if="job">
+                <md-layout id="top-panel" md-flex="90" md-flex-small="100">
+                    <!-- smaller iconish boxes in here. eg simple status -->
+                </md-layout>
+                <md-layout id="main-panel" md-flex="90">
+                    <transition name="fade">
+                        <md-layout v-show="showTab === 'summary' || showTab == null" md-column-medium="true" md-row-large="true">
+                            <md-layout id="left-panel" md-flex="40">
+                                <job-status-card :job="job" v-on:cancel-job-clicked="onAskCancelJob"></job-status-card>
                             </md-layout>
-                            <md-layout id="key-files-card" md-flex="40">
+                            <md-layout id="right-panel" md-flex="40">
                                 <file-list v-if="job != null && job.status !== 'running'"
                                            title="Key result files"
                                            :fileset-id="job.output_fileset_id"
@@ -135,28 +78,35 @@
                                 </file-list>
                             </md-layout>
                         </md-layout>
-                    </md-layout>
-                </transition>
-                <!--</md-tab>-->
-                <!--<md-tab id="input" md-label="Input files">-->
-                <transition name="fade">
-                    <md-layout v-show="showTab === 'input'">
-                        <file-list id="input-files-card"
-                                   v-if="job != null && job.status !== 'running'" title="Input files"
-                                   :fileset-id="job.input_fileset_id"></file-list>
-                    </md-layout>
-                </transition>
-                <!--</md-tab>-->
-                <!--<md-tab id="output" md-label="Output files">-->
-                <transition name="fade">
-                    <md-layout v-show="showTab === 'output'">
-                        <file-list id="output-files-card"
-                                   v-if="job != null && job.status !== 'running'" title="Output files"
-                                   :fileset-id="job.output_fileset_id"></file-list>
-                    </md-layout>
-                </transition>
-                <!--</md-tab>-->
-                <!--</md-tabs>-->
+                    </transition>
+                    <transition name="fade">
+                        <md-layout v-show="showTab === 'input'" md-column-medium>
+                            <md-layout id="left-panel">
+                                <file-list id="input-files-card"
+                                           v-if="job != null && job.status !== 'running'"
+                                           title="Input files"
+                                           :fileset-id="job.input_fileset_id"></file-list>
+                            </md-layout>
+                        </md-layout>
+                    </transition>
+                    <transition name="fade">
+                        <md-layout v-show="showTab === 'output'" md-column-medium>
+                            <md-layout id="left-panel">
+                                <file-list id="output-files-card"
+                                           v-if="job != null && job.status !== 'running'"
+                                           title="Output files"
+                                           :fileset-id="job.output_fileset_id"></file-list>
+                            </md-layout>
+                        </md-layout>
+                    </transition>
+                    <transition name="fade">
+                        <md-layout v-show="showTab === 'eventlog'" md-column-medium>
+                            <md-layout id="left-panel">
+                                <event-log :job-id="jobId"></event-log>
+                            </md-layout>
+                        </md-layout>
+                    </transition>
+                </md-layout>
             </md-layout>
         </md-layout>
         <md-snackbar md-position="bottom center" ref="snackbar"
@@ -217,7 +167,7 @@
         public job: ComputeJob | null = null;
         public jobId: string;
 
-        public showTab: "summary" | "input" | "output";
+        public showTab: "summary" | "input" | "output" | "eventlog";
 
         public submitting: boolean = false;
         public error_alert_message: string = "Everything is fine. 🐺";
@@ -302,6 +252,10 @@
             this.openDialog("cancel_job_dialog");
         }
 
+        onAskCancelJob(event: Event) {
+            this.openDialog("cancel_job_dialog");
+        }
+
         async cancelJobConfirmed(id: string) {
             try {
                 this.submitting = true;
@@ -352,7 +306,7 @@
         }
     }
 
-    a.router-link-active::after {
+    .vertical-sidebar-nav a.router-link-active::after {
         content: " »";
     }
 </style>

@@ -107,6 +107,7 @@
             {id: 'hg19', organism: 'Human'},
             {id: 'mm10', organism: 'Mouse'},
             {id: 'R64-1-1', organism: 'Saccharomyces cerevisiae'},
+            {id: 'WBcel235', organism: 'Caenorhabditis elegans'}
         ];
         // public reference_genome: string = this.available_genomes[0].id;
         // public description: string = '';

@@ -4,45 +4,25 @@
                          :md-content="error_alert_message" ref="error_dialog">
         </md-dialog-alert>
 
-        <!--
-        <md-card-header>
-            <div class="md-title">Event log</div>
-        </md-card-header>
-        <md-table>
-            <md-table-row v-for="event in events" :key="event.id">
-                <md-table-cell>{{ event.timestamp | moment('Do MMMM YYYY, h:mm:ss a') }}
-                </md-table-cell>
-                <md-table-cell>{{ event.event }}</md-table-cell>
-            </md-table-row>
-        </md-table>
-        -->
-        <md-list>
-            <md-list-item>
-                <md-icon>event_note</md-icon>
-                <span>Event log</span>
-                <md-list-expand>
-                    <md-list>
-                        <md-list-item v-for="event in events" :key="event.id">
-                            <div class="md-list-text-container">
-                                <span>{{ event.event }}<template
-                                        v-if="event.extra.to">: {{ event.extra.to }}</template></span>
-                                <span>
-                                  {{ event.timestamp | moment('Do MMMM YYYY, h:mm:ss a') }}
-                                </span>
-                            </div>
-                        </md-list-item>
-                    </md-list>
-                </md-list-expand>
-            </md-list-item>
-        </md-list>
+        <md-table-card>
+            <md-toolbar>
+                <h2 class="md-title">
+                    <md-icon>event_note</md-icon>&nbsp; Event log
+                </h2>
+            </md-toolbar>
+            <md-table>
 
-        <md-snackbar md-position="bottom center" ref="snackbar"
-                     :md-duration="snackbar_duration">
-            <span>{{ snackbar_message }}</span>
-            <md-button class="md-accent" @click="$refs.snackbar.close()">
-                Dismiss
-            </md-button>
-        </md-snackbar>
+                <md-table-row v-for="event in events" :key="event.id">
+                    <md-table-cell>{{ event.timestamp | moment('Do MMMM YYYY, h:mm:ss a') }}
+                    </md-table-cell>
+                    <md-table-cell>{{ event.event }} <span>{{ event.event }}<template
+                            v-if="event.extra.to">: {{ event.extra.to }}</template></span></md-table-cell>
+                </md-table-row>
+                <md-table-row v-if="events.length === 0">
+                    <md-table-cell>No event logs</md-table-cell>
+                </md-table-row>
+            </md-table>
+        </md-table-card>
     </div>
 </template>
 
@@ -89,8 +69,6 @@
 
         public submitting: boolean = false;
         public error_alert_message: string = "Everything is fine. 🐺";
-        public snackbar_message: string = "Everything is fine. ☃";
-        public snackbar_duration: number = 2000;
 
         // for lodash in templates
         get _() {
@@ -110,7 +88,7 @@
             } catch (error) {
                 console.log(error);
                 this.submitting = false;
-                this.error_alert_message = error.toString();
+                this.$emit("refresh-error", error.toString());
                 this.openDialog("error_dialog");
                 throw error;
             }
@@ -123,18 +101,12 @@
         closeDialog(ref: string) {
             (this.$refs[ref] as MdDialog).close();
         }
-
-        flashSnackBarMessage(msg: string, duration: number = 2000) {
-            this.snackbar_message = msg;
-            this.snackbar_duration = duration;
-            (this.$refs.snackbar as any).open();
-        }
     };
 
 </script>
 
 <style scoped>
-    .md-table-card {
+    .md-table {
         width: 100%;
     }
 </style>

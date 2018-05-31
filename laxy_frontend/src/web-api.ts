@@ -124,9 +124,17 @@ export class WebAPI {
     public static viewFileUrl(file_id: string,
                               filename: string | null = null): string {
         if (filename) {
-            return `${this.baseUrl}/api/v1/file/${file_id}/${filename}?view`;
+            return `${this.baseUrl}/api/v1/file/${file_id}/${filename}`;
         }
-        return `${this.baseUrl}/api/v1/file/${file_id}/?view`;
+        return `${this.baseUrl}/api/v1/file/${file_id}/`;
+    }
+
+    public static downloadFileUrl(file_id: string,
+                                  filename: string | null = null): string {
+        if (filename) {
+            return `${this.baseUrl}/api/v1/file/${file_id}/${filename}?download`;
+        }
+        return `${this.baseUrl}/api/v1/file/${file_id}/?download`;
     }
 
     public static async viewFile(file_id: string,

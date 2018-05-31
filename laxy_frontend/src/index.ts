@@ -43,6 +43,7 @@ import PipelineParams from './components/PipelineParams.vue';
 import ENAFlow from './components/ENAFlow.vue';
 import JobList from './components/JobList.vue';
 import JobPage from './components/JobPage.vue';
+import JobStatusCard from './components/JobStatusCard.vue';
 import FileList from './components/FileList.vue';
 import EventLog from './components/EventLog.vue';
 
@@ -54,6 +55,7 @@ Vue.component('pipeline-params', PipelineParams);
 Vue.component('file-list', FileList);
 Vue.component('event-log', EventLog);
 Vue.component('job-page', JobPage);
+Vue.component('job-status-card', JobStatusCard);
 
 import SpinnerCubeGrid from './components/spinners/SpinnerCubeGrid.vue';
 Vue.component('spinner-cube-grid', SpinnerCubeGrid);
@@ -80,41 +82,49 @@ const router = new VueRouter({
             path: '/',
             name: 'home',
             component: FrontPage,
+            props: true,
         },
         {
             path: '/ENAflow',
             name: 'ENAflow',
             component: ENAFlow,
+            props: true,
         },
         {
             path: '/files',
             name: 'files',
             component: FileBrowser,
+            props: true,
         },
         {
             path: '/rnaseq',
             name: 'rnaseq',
             component: RNASeqSetup,
+            props: true,
         },
         {
             path: '/enaselect',
             name: 'enaselect',
             component: ENAFileSelect,
+            props: true,
         },
         {
             path: '/cart',
             name: 'cart',
             component: SampleCart,
+            props: true,
         },
         {
             path: '/setupRun',
             name: 'setupRun',
             component: PipelineParams,
+            props: true,
         },
         {
             path: '/jobs',
             name: 'jobs',
             component: JobList,
+            props: true,
         },
         {
             path: '/job/:jobId',
@@ -124,7 +134,7 @@ const router = new VueRouter({
         },
         {
             path: '/job/:jobId/:showTab',
-            name: 'job',
+            name: 'jobTab',
             component: JobPage,
             props: true,
         },
@@ -211,8 +221,8 @@ const App = new Vue({
             // this.$refs["avatarMenu"].close();
             router.push('/');
         },
-        routeTo(name: string) {
-            this.$router.push({name: name});
+        routeTo(name: string, params: any = {}) {
+            this.$router.push({name: name, params: params});
         },
         toggleLeftSidenav() {
             ((this.$refs as any).leftSidenav as any).toggle();
