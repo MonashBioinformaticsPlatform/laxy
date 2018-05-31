@@ -13,7 +13,7 @@ export DEBUG="${DEBUG:-no}"
 # export JOB_COMPLETE_CALLBACK_URL="${JOB_COMPLETE_CALLBACK_URL:-}"
 # export JOB_COMPLETE_AUTH_HEADER="${JOB_COMPLETE_AUTH_HEADER:-}"
 
-readonly TMP="/tmp"
+readonly TMP="${PWD}/../tmp"
 readonly JOB_ID="{{ JOB_ID }}"
 readonly JOB_COMPLETE_CALLBACK_URL="{{ JOB_COMPLETE_CALLBACK_URL }}"
 readonly JOB_EVENT_URL="{{ JOB_EVENT_URL }}"
@@ -22,6 +22,7 @@ readonly REFERENCE_GENOME="{{ REFERENCE_GENOME }}"
 readonly PIPELINE_VERSION="{{ PIPELINE_VERSION }}"
 readonly JOB_PATH=${PWD}
 readonly CONDA_BASE="${JOB_PATH}/../miniconda3"
+readonly REFERENCE_BASE="${PWD}/../references/iGenomes"
 
 readonly SCHEDULER="slurm"
 # readonly SCHEDULER="local"
@@ -112,6 +113,29 @@ function init_conda_env() {
     set -o nounset
 }
 
+function get_reference_data_aws() {
+    # TODO: Be smarter about what we pull in - eg only the reference required,
+    #       not the whole lot. Assume reference is present if appropriate
+    #       directory is there
+    if [ ! -d "${REFERENCE_BASE}" ]; then
+        prev="${PWD}"
+        mkdir -p "${REFERENCE_BASE}"
+        cd "${REFERENCE_BASE}"
+        aws s3 cp s3://bioinformatics-au/iGenomes .
+        cd "${prev}"
+    fi
+}
+
+####
+#### Pull in reference data from S3
+####
+
+# TODO: Detect if we are on AWS and do this conditionally
+#       (maybe via ComputeResource metadata passed to task)
+
+get_reference_data_aws
+
+mkdir -p "${TMP}"
 mkdir -p input
 mkdir -p output
 
@@ -153,8 +177,8 @@ env >job_env.out
 #### Job happens in here
 ####
 
-GENOME_FASTA="references/iGenomes/${REFERENCE_GENOME}/Sequence/WholeGenomeFasta/genome.fa"
-GENOME_GTF="references/iGenomes/${REFERENCE_GENOME}/Annotation/Genes/genes.gtf"
+GENOME_FASTA="${REFERENCE_BASE}/${REFERENCE_GENOME}/Sequence/WholeGenomeFasta/genome.fa"
+GENOME_GTF="${REFERENCE_BASE}/${REFERENCE_GENOME}/Annotation/Genes/genes.gtf"
 
 send_event "JOB_PIPELINE_STARTING"
 
@@ -164,10 +188,10 @@ set +o errexit
 
 ${PREFIX_JOB_CMD} \
    RNAsik -align star \
-       -fastaRef ../../${GENOME_FASTA} \
+       -fastaRef ${GENOME_FASTA} \
        -fqDir ../input \
        -counts \
-       -gtfFile ../../${GENOME_GTF} \
+       -gtfFile ${GENOME_GTF} \
        -all \
        -paired \
        -extn ".fastq.gz" \
