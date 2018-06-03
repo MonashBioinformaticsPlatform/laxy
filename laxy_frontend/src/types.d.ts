@@ -23,3 +23,19 @@ declare interface MdDialog extends Element {
     open: Function;
     close: Function;
 }
+
+declare interface LaxyFile {
+            id: string;
+            name: string;
+            location: string;
+            owner: number | string;
+            checksum: string;
+            metadata: any;
+}
+
+declare interface LaxyFileSet {
+            id: string;
+            name: string;
+            owner: number | string;
+            files: LaxyFile[];
+}
