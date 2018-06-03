@@ -20,7 +20,7 @@
                                     <md-button class="md-icon-button"
                                                @click="viewFile(file.id)">
                                         <md-tooltip md-direction="top">View</md-tooltip>
-                                        <md-icon>pageview</md-icon>
+                                        <md-icon>remove_red_eye</md-icon>
                                     </md-button>
                                     <md-menu md-size="4">
                                         <md-button class="md-icon-button push-right" md-menu-trigger>
@@ -28,13 +28,10 @@
                                         </md-button>
 
                                         <md-menu-content>
-                                            <md-menu-item @click="viewFile(file.id)">
-                                                <md-icon>open_in_new</md-icon>
-                                                <span>Open in new tab</span>
-                                            </md-menu-item>
-                                            <md-menu-item @click="downloadFile(file.id)">
-                                                <md-icon>cloud_download</md-icon>
-                                                <span>Download file</span>
+                                            <md-menu-item v-for="view in viewMethods" :key="view.text"
+                                                          @click="view.method(file.id)">
+                                                <md-icon>{{ view.icon }}</md-icon>
+                                                <span>{{ view.text }}</span>
                                             </md-menu-item>
                                         </md-menu-content>
                                     </md-menu>
@@ -102,6 +99,19 @@
         public regexFilters: string[];
         public hideSearch: boolean;
 
+        private viewMethods = [
+            {
+                text: "Open in new tab",
+                icon: "open_in_new",
+                method: (file_id: string) => { this.viewFile(file_id) }
+            },
+            {
+                text: "Download file",
+                icon: "cloud_download",
+                method: (file_id: string) => { this.downloadFile(file_id) }
+            },
+        ];
+
         public submitting: boolean = false;
 
         // for lodash in templates
@@ -164,7 +174,7 @@
                 // window.open(WebAPI.viewFileUrl(file.id, file.name), '_blank');
                 window.open(WebAPI.viewFileUrl(file.id, file.name));
             } else {
-                console.error(`Invalid file_id: ${file_id}`)
+                console.error(`Invalid file_id: ${file_id}`);
             }
         }
 
@@ -173,7 +183,7 @@
             if (file) {
                 window.open(WebAPI.downloadFileUrl(file.id, file.name));
             } else {
-                console.error(`Invalid file_id: ${file_id}`)
+                console.error(`Invalid file_id: ${file_id}`);
             }
         }
 
