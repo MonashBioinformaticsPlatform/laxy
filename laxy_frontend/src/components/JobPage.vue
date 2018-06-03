@@ -187,62 +187,16 @@
             // this.jobId = _dummyJobList[0].id || '';
             // this.job = _dummyJobList[0];
             // this.jobId = '5ozQUwFCJDoV0vWgmo4q6E';
-            this.refresh();
+            this.refresh(null);
         }
 
-        // TODO: Refactor me somewhere to combine with the method in JobList
-        // TODO: Use primary, accent and warn colours from theme palette
-        getStatusColor(status: string) {
-            const status_colors: any = {
-                complete: "grey",
-                running: "green",
-                failed: "red",
-                cancelled: "black",
-            };
-
-            let color: any = status_colors[status];
-            if (color == null) {
-                color = "black";
-            }
-            return color;
-        }
-
-        themeColors(shade: number = 500, whiteToBlack: boolean = true) {
-            const material = (Vue as any).material;
-            const namedColors = material.themes[material.currentTheme];
-            let names: string[] = _.values(namedColors);
-            if (whiteToBlack) {
-                const i = names.indexOf("white");
-                if (i != -1) {
-                    names[i] = "black";
-                }
-            }
-            const hexValues = _.map(names, (name) => {
-                return palette[name][shade];
-            });
-            hexValues.sort();
-            return hexValues;
-        }
-
-        // http://werxltd.com/wp/2010/05/13/javascript-implementation-of-javas-string-hashcode-method/
-        hashCode(s: string): number {
-            var hash = 0;
-            if (s.length == 0) return hash;
-            for (let i = 0; i < s.length; i++) {
-                let char = s.charCodeAt(i);
-                hash = ((hash << 5) - hash) + char;
-                hash = hash & hash; // Convert to 32bit integer
-            }
-            return hash;
-        }
-
-        async refresh() {
+        async refresh(successMessage: string | null = "Updated") {
             try {
                 this.submitting = true;
                 const response = await WebAPI.getJob(this.jobId);
                 this.job = response.data as ComputeJob;
                 this.submitting = false;
-                this.flashSnackBarMessage("Updated", 500);
+                if (successMessage) this.flashSnackBarMessage(successMessage, 500);
             } catch (error) {
                 console.log(error);
                 this.submitting = false;
@@ -276,7 +230,7 @@
             }
 
             this.closeDialog("cancel_job_dialog");
-            this.refresh();
+            this.refresh(null);
         }
 
         showErrorDialog(message: string) {
