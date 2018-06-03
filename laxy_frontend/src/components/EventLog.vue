@@ -1,28 +1,25 @@
 <template>
     <div class="eventlog">
-        <md-dialog-alert :md-content-html="error_alert_message"
-                         :md-content="error_alert_message" ref="error_dialog">
-        </md-dialog-alert>
-
-        <md-table-card>
-            <md-toolbar>
+        <md-layout>
+            <md-toolbar class="md-transparent">
                 <h2 class="md-title">
                     <md-icon>event_note</md-icon>&nbsp; Event log
                 </h2>
             </md-toolbar>
             <md-table>
-
-                <md-table-row v-for="event in events" :key="event.id">
-                    <md-table-cell>{{ event.timestamp | moment('Do MMMM YYYY, h:mm:ss a') }}
-                    </md-table-cell>
-                    <md-table-cell>{{ event.event }} <span>{{ event.event }}<template
-                            v-if="event.extra.to">: {{ event.extra.to }}</template></span></md-table-cell>
-                </md-table-row>
-                <md-table-row v-if="events.length === 0">
-                    <md-table-cell>No event logs</md-table-cell>
-                </md-table-row>
+                <md-table-body>
+                    <md-table-row v-for="event in events" :key="event.id">
+                        <md-table-cell>{{ event.timestamp | moment('Do MMMM YYYY, h:mm:ss a') }}
+                        </md-table-cell>
+                        <md-table-cell>{{ event.event }} <span>{{ event.event }}<template
+                                v-if="event.extra.to">: {{ event.extra.to }}</template></span></md-table-cell>
+                    </md-table-row>
+                    <md-table-row v-if="events.length === 0">
+                        <md-table-cell>No event logs</md-table-cell>
+                    </md-table-row>
+                </md-table-body>
             </md-table>
-        </md-table-card>
+        </md-layout>
     </div>
 </template>
 
@@ -68,7 +65,6 @@
         public jobId: string;
 
         public submitting: boolean = false;
-        public error_alert_message: string = "Everything is fine. 🐺";
 
         // for lodash in templates
         get _() {
@@ -89,17 +85,8 @@
                 console.log(error);
                 this.submitting = false;
                 this.$emit("refresh-error", error.toString());
-                this.openDialog("error_dialog");
                 throw error;
             }
-        }
-
-        openDialog(ref: string) {
-            (this.$refs[ref] as MdDialog).open();
-        }
-
-        closeDialog(ref: string) {
-            (this.$refs[ref] as MdDialog).close();
         }
     };
 

@@ -137,6 +137,7 @@ export class WebAPI {
         return `${this.baseUrl}/api/v1/file/${file_id}/?download`;
     }
 
+    /*
     public static async viewFile(file_id: string,
                                  filename: string | null = null,
                                  contentType = 'text/html') {
@@ -152,4 +153,5 @@ export class WebAPI {
             throw error;
         }
     }
+    */
 }

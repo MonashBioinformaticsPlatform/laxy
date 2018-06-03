@@ -65,7 +65,7 @@
                 </md-layout>
                 <md-layout id="main-panel" md-flex="90">
                     <transition name="fade">
-                        <md-layout v-show="showTab === 'summary' || showTab == null" md-column-medium="true" md-row-large="true">
+                        <md-layout v-show="showTab === 'summary' || showTab == null" :md-column-medium="true" :md-row-large="true">
                             <md-layout id="left-panel" md-flex="40">
                                 <job-status-card :job="job" v-on:cancel-job-clicked="onAskCancelJob"></job-status-card>
                             </md-layout>
@@ -74,7 +74,8 @@
                                            title="Key result files"
                                            :fileset-id="job.output_fileset_id"
                                            :regex-filters="['\\.html$', '\\.count$', '\\.bam$', '\\.bai$', '\\.log$', '\\.out$']"
-                                           :hide-search="false">
+                                           :hide-search="false"
+                                           @refresh-error="showErrorDialog">
                                 </file-list>
                             </md-layout>
                         </md-layout>
@@ -85,7 +86,8 @@
                                 <file-list id="input-files-card"
                                            v-if="job != null && job.status !== 'running'"
                                            title="Input files"
-                                           :fileset-id="job.input_fileset_id"></file-list>
+                                           :fileset-id="job.input_fileset_id"
+                                           @refresh-error="showErrorDialog"></file-list>
                             </md-layout>
                         </md-layout>
                     </transition>
@@ -95,14 +97,16 @@
                                 <file-list id="output-files-card"
                                            v-if="job != null && job.status !== 'running'"
                                            title="Output files"
-                                           :fileset-id="job.output_fileset_id"></file-list>
+                                           :fileset-id="job.output_fileset_id"
+                                           @refresh-error="showErrorDialog"></file-list>
                             </md-layout>
                         </md-layout>
                     </transition>
                     <transition name="fade">
                         <md-layout v-show="showTab === 'eventlog'" md-column-medium>
                             <md-layout id="left-panel">
-                                <event-log :job-id="jobId"></event-log>
+                                <event-log :job-id="jobId"
+                                           @refresh-error="showErrorDialog"></event-log>
                             </md-layout>
                         </md-layout>
                     </transition>
@@ -273,6 +277,11 @@
 
             this.closeDialog("cancel_job_dialog");
             this.refresh();
+        }
+
+        showErrorDialog(message: string) {
+            this.error_alert_message = message;
+            this.openDialog("error_dialog");
         }
 
         openDialog(ref: string) {

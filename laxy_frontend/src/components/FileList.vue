@@ -1,15 +1,11 @@
 <template>
-    <div>
-        <md-dialog-alert :md-content-html="error_alert_message"
-                         :md-content="error_alert_message" ref="error_dialog">
-        </md-dialog-alert>
-
+    <div class="filelist">
         <md-layout>
             <md-spinner v-if="submitting" md-indeterminate></md-spinner>
-            <md-table-card v-if="!submitting">
-                <md-toolbar>
+            <md-layout v-if="!submitting">
+                <md-toolbar class="md-transparent fill-width">
                     <h1 class="md-title">{{ titleText }}</h1>
-                    <md-button v-if="!hideSearch" class="md-icon-button">
+                    <md-button v-if="!hideSearch" class="md-icon-button push-right">
                         <md-icon>search</md-icon>
                     </md-button>
                 </md-toolbar>
@@ -20,11 +16,29 @@
                                 <div class="truncate-text">{{ file.name }}</div>
                             </md-table-cell>
                             <md-table-cell>
-                                <md-button class="md-icon-button push-right"
-                                           @click="viewFile(file.id)">
-                                    <md-tooltip md-direction="top">View</md-tooltip>
-                                    <md-icon>pageview</md-icon>
-                                </md-button>
+                                <div class="push-right">
+                                    <md-button class="md-icon-button"
+                                               @click="viewFile(file.id)">
+                                        <md-tooltip md-direction="top">View</md-tooltip>
+                                        <md-icon>pageview</md-icon>
+                                    </md-button>
+                                    <md-menu md-size="4">
+                                        <md-button class="md-icon-button push-right" md-menu-trigger>
+                                            <md-icon>arrow_drop_down</md-icon>
+                                        </md-button>
+
+                                        <md-menu-content>
+                                            <md-menu-item @click="viewFile(file.id)">
+                                                <md-icon>open_in_new</md-icon>
+                                                <span>Open in new tab</span>
+                                            </md-menu-item>
+                                            <md-menu-item @click="downloadFile(file.id)">
+                                                <md-icon>cloud_download</md-icon>
+                                                <span>Download file</span>
+                                            </md-menu-item>
+                                        </md-menu-content>
+                                    </md-menu>
+                                </div>
                             </md-table-cell>
                         </md-table-row>
                         <md-table-row v-if="files.length === 0">
@@ -32,7 +46,7 @@
                         </md-table-row>
                     </md-table-body>
                 </md-table>
-            </md-table-card>
+            </md-layout>
         </md-layout>
     </div>
 </template>
@@ -84,12 +98,11 @@
 
         public filesetId: string;
         public title: string;
-        public fileset: any = {};
+        public fileset: LaxyFileSet;
         public regexFilters: string[];
         public hideSearch: boolean;
 
         public submitting: boolean = false;
-        public error_alert_message: string = "Everything is fine. 🐺";
 
         // for lodash in templates
         get _() {
@@ -136,41 +149,47 @@
             return this.title == null ? this.fileset.name : this.title;
         }
 
-        viewFile(file_id: string) {
-            const file = _.first(_.filter(this.fileset.files, (f) => {
+        fileById(file_id: string): LaxyFile | undefined {
+            if (this.fileset == null) {
+                return undefined;
+            }
+            return _.first(_.filter(this.fileset.files, (f) => {
                 return f.id === file_id;
             }));
+        }
 
+        viewFile(file_id: string) {
+            const file = this.fileById(file_id);
+            if (file) {
+                // window.open(WebAPI.viewFileUrl(file.id, file.name), '_blank');
+                window.open(WebAPI.viewFileUrl(file.id, file.name));
+            } else {
+                console.error(`Invalid file_id: ${file_id}`)
+            }
+        }
 
-            // window.open(WebAPI.viewFileUrl(file.id, file.name), '_blank');
-            window.open(WebAPI.viewFileUrl(file.id, file.name));
-
-            // this.error_alert_message = `Not implemented (yet!)<br><pre>${JSON.stringify(file, null, 2)}</pre>`;
-            // this.openDialog("error_dialog");
+        downloadFile(file_id: string) {
+            const file = this.fileById(file_id);
+            if (file) {
+                window.open(WebAPI.downloadFileUrl(file.id, file.name));
+            } else {
+                console.error(`Invalid file_id: ${file_id}`)
+            }
         }
 
         async refresh() {
             try {
                 this.submitting = true;
                 const response = await WebAPI.getFileSet(this.filesetId);
-                this.fileset = response.data;
+                this.fileset = response.data as LaxyFileSet;
                 this.submitting = false;
-                // this.$emit("refresh-success", "Updated !");
+                this.$emit("refresh-success", "Updated !");
             } catch (error) {
                 console.log(error);
                 this.submitting = false;
-                this.$emit("refresh-error", error.toString());
-                this.openDialog("error_dialog");
+                this.$emit("refresh-error", error.toString() + ` (filesetId: ${this.filesetId})`);
                 throw error;
             }
-        }
-
-        openDialog(ref: string) {
-            (this.$refs[ref] as MdDialog).open();
-        }
-
-        closeDialog(ref: string) {
-            (this.$refs[ref] as MdDialog).close();
         }
     };
 
@@ -178,7 +197,7 @@
 
 <style scoped>
     /*.md-table-card {*/
-        /*width: 100%;*/
+    /*width: 100%;*/
     /*}*/
 
     .truncate-text {
