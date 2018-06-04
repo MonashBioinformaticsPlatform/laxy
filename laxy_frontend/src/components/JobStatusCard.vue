@@ -1,5 +1,5 @@
 <template>
-    <md-card style="width: 100%;" md-with-hover>
+    <md-card class="fill-width" md-with-hover>
         <md-card-header>
             <md-layout>
                 <md-layout md-column>
@@ -88,6 +88,7 @@
                 Cancel
             </md-button>
         </md-card-actions>
+
     </md-card>
 </template>
 
@@ -100,7 +101,7 @@
     import axios, {AxiosResponse} from "axios";
     import Vue, {ComponentOptions} from "vue";
     import VueMaterial from "vue-material";
-    import {palette} from "../palette";
+    import {palette, getStatusColor, themeColors} from "../palette";
 
     import Component from "vue-class-component";
     import {
@@ -132,44 +133,10 @@
     export default class JobStatusCard extends Vue {
         public job: ComputeJob | null;
 
+        getStatusColor = getStatusColor;
+        themeColors = themeColors;
         // for lodash in templates
-        get _() {
-            return _;
-        }
-
-        // TODO: Refactor me somewhere to combine with the method in JobList
-        // TODO: Use primary, accent and warn colours from theme palette
-        getStatusColor(status: string) {
-            const status_colors: any = {
-                complete: "grey",
-                running: "green",
-                failed: "red",
-                cancelled: "black",
-            };
-
-            let color: any = status_colors[status];
-            if (color == null) {
-                color = "black";
-            }
-            return color;
-        }
-
-        themeColors(shade: number = 500, whiteToBlack: boolean = true) {
-            const material = (Vue as any).material;
-            const namedColors = material.themes[material.currentTheme];
-            let names: string[] = _.values(namedColors);
-            if (whiteToBlack) {
-                const i = names.indexOf("white");
-                if (i != -1) {
-                    names[i] = "black";
-                }
-            }
-            const hexValues = _.map(names, (name) => {
-                return palette[name][shade];
-            });
-            hexValues.sort();
-            return hexValues;
-        }
+        _ = _;
 
         // http://werxltd.com/wp/2010/05/13/javascript-implementation-of-javas-string-hashcode-method/
         hashCode(s: string): number {
@@ -185,6 +152,10 @@
 
         askCancelJob(id: string) {
             this.$emit("cancel-job-clicked", id);
+        }
+
+        cloneJob(id: string) {
+            this.$emit("clone-job-clicked", id);
         }
     };
 

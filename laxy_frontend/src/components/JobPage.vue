@@ -60,29 +60,67 @@
                 </md-toolbar>
             </md-layout>
             <md-layout v-if="job">
-                <md-layout id="top-panel" md-flex="90" md-flex-small="100">
+                <md-layout id="top-panel" md-flex="90" :md-row="true">
                     <!-- smaller iconish boxes in here. eg simple status -->
+                    <!-- -->
+                    <md-layout md-flex="25" md-flex-medium="100">
+                        <job-status-pip class="fill-width" :job="job"></job-status-pip>
+                    </md-layout>
+                    <!-- -->
+                    <!-- multiqc report link (maybe a generic 'file-link-pip' component -->
+                    <md-card style="background-color: #9fa8da">
+                        <md-card-header>
+                            <md-card-header-text>
+                                <div class="md-title">MultiQC report
+                                </div>
+                                <div class="md-subhead">I'm an incomplete placeholder</div>
+                            </md-card-header-text>
+
+                            <md-card-media>
+                                <md-icon class="md-size-4x">view_list</md-icon>
+                            </md-card-media>
+                        </md-card-header>
+
+                        <md-card-actions>
+                            <md-button @click="openFile">
+                                <md-icon>remove_red_eye</md-icon>
+                                View
+                            </md-button>
+                        </md-card-actions>
+                    </md-card>
+
+                    <!-- input and output file total sizes in pip card -->
+                    <!-- pipeline reference genome (icon on organism or DNA double-helix for non-model) -->
+                    <!-- pipeline type and version -->
+
                 </md-layout>
                 <md-layout id="main-panel" md-flex="90">
                     <transition name="fade">
-                        <md-layout v-show="showTab === 'summary' || showTab == null" :md-column-medium="true" :md-row-large="true">
-                            <md-layout id="left-panel" md-flex="40">
-                                <job-status-card :job="job" v-on:cancel-job-clicked="onAskCancelJob"></job-status-card>
-                            </md-layout>
-                            <md-layout id="right-panel" md-flex="40">
-                                <file-list v-if="job != null && job.status !== 'running'"
-                                           title="Key result files"
-                                           :fileset-id="job.output_fileset_id"
-                                           :regex-filters="['\\.html$', '\\.count$', '\\.bam$', '\\.bai$', '\\.log$', '\\.out$']"
-                                           :hide-search="false"
-                                           @refresh-error="showErrorDialog">
-                                </file-list>
-                            </md-layout>
+                        <md-layout md-flex="40" md-flex-medium="100"
+                                   v-show="showTab === 'summary' || showTab == null" :md-column-medium="true"
+                                   :md-row-large="true">
+                            <job-status-card :job="job"
+                                             v-on:cancel-job-clicked="onAskCancelJob"
+                                             v-on:clone-job-clicked="cloneJob"></job-status-card>
+                        </md-layout>
+                    </transition>
+                    <transition name="fade">
+                        <md-layout md-flex="40" md-flex-medium="100"
+                                   v-show="showTab === 'summary' || showTab == null" :md-column-medium="true"
+                                   :md-row-large="true">
+                            <file-list v-if="job != null && job.status !== 'running'"
+                                       class="fill-width"
+                                       title="Key result files"
+                                       :fileset-id="job.output_fileset_id"
+                                       :regex-filters="['\\.html$', '\\.count$', '\\.bam$', '\\.bai$', '\\.log$', '\\.out$']"
+                                       :hide-search="false"
+                                       @refresh-error="showErrorDialog">
+                            </file-list>
                         </md-layout>
                     </transition>
                     <transition name="fade">
                         <md-layout v-show="showTab === 'input'" md-column-medium>
-                            <md-layout id="left-panel">
+                            <md-layout id="input-files-panel">
                                 <file-list id="input-files-card"
                                            v-if="job != null && job.status !== 'running'"
                                            title="Input files"
@@ -93,7 +131,7 @@
                     </transition>
                     <transition name="fade">
                         <md-layout v-show="showTab === 'output'" md-column-medium>
-                            <md-layout id="left-panel">
+                            <md-layout id="output-files-panel">
                                 <file-list id="output-files-card"
                                            v-if="job != null && job.status !== 'running'"
                                            title="Output files"
@@ -104,7 +142,7 @@
                     </transition>
                     <transition name="fade">
                         <md-layout v-show="showTab === 'eventlog'" md-column-medium>
-                            <md-layout id="left-panel">
+                            <md-layout id="eventlog-panel">
                                 <event-log :job-id="jobId"
                                            @refresh-error="showErrorDialog"></event-log>
                             </md-layout>
@@ -133,7 +171,6 @@
     import axios, {AxiosResponse} from "axios";
     import Vue, {ComponentOptions} from "vue";
     import VueMaterial from "vue-material";
-    import {palette} from "../palette";
 
     import Component from "vue-class-component";
     import {
@@ -153,12 +190,16 @@
         namespace
     } from "vuex-class";
 
+    import {NotImplementedError} from "../exceptions";
     import {ComputeJob} from "../model";
     import {WebAPI} from "../web-api";
+    import {palette, getStatusColor, themeColors, getThemeColor, getThemedStatusColor} from "../palette";
 
     import {DummyJobList as _dummyJobList} from "../test-data";
+    import JobStatusPip from "./JobStatusPip";
 
     @Component({
+        components: {JobStatusPip},
         props: {
             jobId: {type: String, default: ""},
             showTab: {type: String, default: "summary"}
@@ -167,6 +208,7 @@
     })
     export default class JobPage extends Vue {
         _DEBUG: boolean = false;
+        private refreshPollTime = 10000; // ms
 
         public job: ComputeJob | null = null;
         public jobId: string;
@@ -178,16 +220,28 @@
         public snackbar_message: string = "Everything is fine. ☃";
         public snackbar_duration: number = 2000;
 
+        getStatusColor = getStatusColor;
+        themeColors = themeColors;
+        getThemeColor = getThemeColor;
+        getThemedStatusColor = getThemedStatusColor;
         // for lodash in templates
-        get _() {
-            return _;
-        }
+        _ = _;
 
         created() {
             // this.jobId = _dummyJobList[0].id || '';
             // this.job = _dummyJobList[0];
             // this.jobId = '5ozQUwFCJDoV0vWgmo4q6E';
             this.refresh(null);
+        }
+
+        mounted() {
+            setTimeout(() => {
+                this.refresh();
+            }, this.refreshPollTime);
+        }
+
+        openFile(filepath: string) {
+            window.open('http://118.138.240.175:8001/api/v1/file/Ko2z7tjLuaQuk8MJgAjDI/sikRun/multiqc_report.html');
         }
 
         async refresh(successMessage: string | null = "Updated") {
@@ -206,11 +260,7 @@
             }
         }
 
-        askCancelJob(id: string) {
-            this.openDialog("cancel_job_dialog");
-        }
-
-        onAskCancelJob(event: Event) {
+        onAskCancelJob(job_id: string) {
             this.openDialog("cancel_job_dialog");
         }
 
@@ -231,6 +281,10 @@
 
             this.closeDialog("cancel_job_dialog");
             this.refresh(null);
+        }
+
+        cloneJob(job_id: string) {
+            throw new NotImplementedError("Job cloning isn't yet implemented.");
         }
 
         showErrorDialog(message: string) {

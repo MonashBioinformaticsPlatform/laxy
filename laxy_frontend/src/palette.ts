@@ -7,6 +7,68 @@
  usable form.
  */
 
+import * as _ from 'lodash';
+import Vue from 'vue';
+
+export const statusColorClass: any = {
+    complete: 'primary',
+    running: 'primary',
+    failed: 'accent',
+    cancelled: 'warn',
+};
+
+export function getStatusColor(status: string) {
+    const status_colors: any = {
+        complete: 'grey',
+        running: 'green',
+        failed: 'red',
+        cancelled: 'black',
+    };
+
+    let color: any = status_colors[status];
+    if (color == null) {
+        color = 'black';
+    }
+    return color;
+}
+
+export function getThemedStatusColor(status: string) {
+    let color: any = statusColorClass[status];
+    if (color == null) {
+        return 'black';
+    }
+    return getThemeColor(color);
+}
+
+export function getThemeColor(colorClass: string, shade: number = 500) {
+    // colorClass = 'primary' | 'accent' | 'warn' | 'transparent'
+    const material = (Vue as any).material;
+    const namedColors = material.themes[material.currentTheme];
+    return palette[namedColors[colorClass]][shade];
+}
+
+export function themeColors(shade: number = 500, whiteToBlack: boolean = true) {
+    const material = (Vue as any).material;
+    const namedColors = material.themes[material.currentTheme];
+    let names: string[] = _.values(namedColors);
+    if (whiteToBlack) {
+        const i = names.indexOf('white');
+        if (i != -1) {
+            names[i] = 'black';
+        }
+    }
+    const hexValues = _.map(names, (name) => {
+        return palette[name][shade];
+    });
+    hexValues.sort();
+    return hexValues;
+}
+
+export function cssGradient(color: string, angle: number = 140) {
+    return `background: ${color};
+                    background: linear-gradient(${angle}deg, ${color} 0%, rgba(0, 255, 255, 0) 10%);`;
+}
+
 export const palette: any = {
     red: {
         50: '#ffebee',

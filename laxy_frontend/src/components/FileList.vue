@@ -15,8 +15,8 @@
                             <md-table-cell>
                                 <div class="truncate-text">{{ file.name }}</div>
                             </md-table-cell>
-                            <md-table-cell>
-                                <div class="push-right">
+                            <md-table-cell md-numeric>
+                                <!--<div class="push-right">-->
                                     <md-button class="md-icon-button"
                                                @click="viewFile(file.id)">
                                         <md-tooltip md-direction="top">View</md-tooltip>
@@ -35,7 +35,7 @@
                                             </md-menu-item>
                                         </md-menu-content>
                                     </md-menu>
-                                </div>
+                                <!--</div>-->
                             </md-table-cell>
                         </md-table-row>
                         <md-table-row v-if="files.length === 0">
