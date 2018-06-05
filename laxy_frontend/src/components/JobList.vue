@@ -158,10 +158,7 @@
         public jobToCancel: string = "";
         public pagination: { [k: string]: number } = {page_size: 10, page: 1, count: 0};
 
-        /*
-        private _jobPollerId: number | null = null;
-        private _pollInterval: number = 10000;  // ms
-        */
+        private _refreshPollerId: number | null = null;
 
         public submitting: boolean = false;
         public error_alert_message: string = "Everything is fine. 🐺";
@@ -182,24 +179,15 @@
             this.refresh();
         }
 
-        /*
-        // TODO: Make this polling work
         mounted() {
-            if (this._jobPollerId == null) {
-                this._jobPollerId = setInterval(
-                    () => {
-                        if (!this.submitting) {
-                            this.refresh();
-                        }
-                    },
-                    this._pollInterval);
-            }
+            this._refreshPollerId = setInterval(() => {
+                this.refresh(null);
+            }, 10000);  // ms
         }
 
         beforeDestroy() {
-            if (this._jobPollerId != null) clearInterval(this._jobPollerId);
+            if (this._refreshPollerId != null) clearInterval(this._refreshPollerId);
         }
-        */
 
         getStatusColor(status: string) {
             const status_colors: any = {
@@ -228,13 +216,13 @@
             }
         }
 
-        async refresh() {
+        async refresh(successMessage: string | null = "Refreshed !") {
             try {
                 this.submitting = true;
                 await this.$store.dispatch(FETCH_JOBS, this.pagination);
                 this.pagination.count = this.$store.state.jobs.total;
                 this.submitting = false;
-                this.flashSnackBarMessage("Refreshed !", 500);
+                if (successMessage) this.flashSnackBarMessage(successMessage, 500);
             } catch (error) {
                 console.log(error);
                 this.submitting = false;

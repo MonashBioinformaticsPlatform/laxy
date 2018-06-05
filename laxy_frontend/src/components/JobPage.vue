@@ -208,7 +208,6 @@
     })
     export default class JobPage extends Vue {
         _DEBUG: boolean = false;
-        private refreshPollTime = 10000; // ms
 
         public job: ComputeJob | null = null;
         public jobId: string;
@@ -219,6 +218,8 @@
         public error_alert_message: string = "Everything is fine. 🐺";
         public snackbar_message: string = "Everything is fine. ☃";
         public snackbar_duration: number = 2000;
+
+        private _refreshPollerId: number | null = null;
 
         getStatusColor = getStatusColor;
         themeColors = themeColors;
@@ -235,13 +236,17 @@
         }
 
         mounted() {
-            setTimeout(() => {
-                this.refresh();
-            }, this.refreshPollTime);
+            this._refreshPollerId = setInterval(() => {
+                this.refresh(null);
+            }, 10000);  // ms
+        }
+
+        beforeDestroy() {
+            if (this._refreshPollerId != null) clearInterval(this._refreshPollerId);
         }
 
         openFile(filepath: string) {
-            window.open('http://118.138.240.175:8001/api/v1/file/Ko2z7tjLuaQuk8MJgAjDI/sikRun/multiqc_report.html');
+            window.open("http://118.138.240.175:8001/api/v1/file/Ko2z7tjLuaQuk8MJgAjDI/sikRun/multiqc_report.html");
         }
 
         async refresh(successMessage: string | null = "Updated") {
