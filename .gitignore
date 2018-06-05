@@ -87,3 +87,5 @@ ENV/
 node_modules
 
 !.gitkeep
+
+.ignore
