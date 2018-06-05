@@ -500,15 +500,16 @@ def new_job_event_log(sender, instance, created,
 class File(Timestamped, UUIDModel):
     """
     File model.
-
-    name - The file name.
-    url - A URI describing the (cached) location of the input file.
-    origin - A URI describing the original location of the file, where we
-             initially downloaded it from.
     """
+    # The filename. Equivalent to path.basename(location) in most cases.
+    # Longest filename on most Linux filesystems is 255, hence max_length.
+    name = CharField(db_column='name', max_length=255, blank=True, null=True)
 
-    # The filename. Equivalent to path.basename(location) in most cases
-    name = CharField(db_column='name', max_length=2048, blank=True, null=True)
+    # We store the file path (minus the filename) since the location URL won't
+    # always contain it (eg shortened links). Longest Linux path on most
+    # filesystems is 4096, hence max_length
+    path = CharField(max_length=4096, blank=True, null=True)
+
     # Any hash supported by hashlib, and xxhash, in the format:
     # hashtype:th3actualh4shits3lf
     # eg: md5:11fca9c1f654078189ad040b1132654c
@@ -519,17 +520,6 @@ class File(Timestamped, UUIDModel):
                        related_name='files')
     # The URL to the file. Could be file://, https://, s3://, sftp://
     location = ExtendedURIField(max_length=2048, blank=False, null=False)
-
-    # TODO: Consider adding a path (eg some/relative/path/dir) - this is
-    # many times redundant to location, from which path can be derived,
-    # but there could be cases where the URL doesn't contain enough information
-    # to reconsititute the path. By storing it here, we make it possible to
-    # provide endpoints like:
-    # https://laxy.org/jobs/XXblaFooXX/output/some/path/filename.txt
-    # Alternative would be to make _name the relative path, including filename.
-    # path = CharField(max_length=2048, blank=True, null=True)
-
-    # origin = URLFieldExtra(max_length=2048)
 
     # Arbitrary metadata.
     metadata = JSONField(default=OrderedDict)
@@ -547,11 +537,16 @@ class File(Timestamped, UUIDModel):
     def name_from_location(self):
         return Path(urlparse(self.location).path).name
 
+    def path_from_location(self):
+        return Path(urlparse(self.location).path).parent
+
     def save(self, *args, **kwargs):
         if not self.pk:  # only at creation time
-            # Derive a name based on the location URL
+            # Derive a name and path based on the location URL
             if not self.name:
                 self.name = self.name_from_location()
+            if not self.path:
+                self.path = self.path_from_location()
         super(File, self).save(*args, **kwargs)
 
     # TODO: This could be triggered via a pre_save signal + async task upon

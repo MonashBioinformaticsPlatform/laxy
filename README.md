@@ -115,6 +115,15 @@ docker container exec -it laxy_django_1 \
                              User.objects.create_superuser('admin', 'admin@example.com', 'adminpass')"
 ```
 
+Migrate database in Docker container:
+```bash
+docker container exec -it laxy_django_1  python manage.py migrate
+
+# or if the container isn't running:
+# docker-compose -f docker-compose.yml -f docker-compose.dev.yml run django python manage.py migrate
+
+```
+
 Dump fixtures (JSON formatted database records):
 ```bash
 docker container exec -it laxy_django_1  python manage.py dumpdata --indent 2

@@ -1,4 +1,5 @@
-from django.contrib.sites.models import Site
+from django.db.utils import ProgrammingError
+from django.conf import settings
 
 from drf_openapi.views import SchemaView
 from drf_openapi.entities import OpenApiSchemaGenerator
@@ -102,6 +103,20 @@ class PublicOpenAPISchemaView(SchemaView):
         return response.Response(generator.get_schema(request))
 
 
+def get_domain():
+    if 'django.contrib.sites' in settings.INSTALLED_APPS:
+        # If we don't catch this we get errors during initial migrations
+        # Since this code runs when `manage.py migrate` runs, but before
+        # the actual migrations, the Site tables don't yet exist.
+        try:
+            from django.contrib.sites.models import Site
+            return Site.objects.get_current().domain
+        except ProgrammingError as ex:
+            return ''
+
+    return ''
+
+
 class LaxyOpenAPISchemaView(PublicOpenAPISchemaView):
     title = 'Laxy API'
     description = \
@@ -121,4 +136,4 @@ curl --header "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.x.x" \
 ```
 
 _YMMV_.
-""".format(api_url='?format=yaml-openapi', server=Site.objects.get_current().domain)
+""".format(api_url='?format=yaml-openapi', server=get_domain())
