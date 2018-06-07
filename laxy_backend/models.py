@@ -533,21 +533,18 @@ class File(Timestamped, UUIDModel):
     #                  related_name='files')
 
     def name_from_location(self):
-        return Path(urlparse(self.location).path).name
+        try:
+            return Path(urlparse(self.location).path).name
+        except:
+            return None
 
     def path_from_location(self):
-        return Path(urlparse(self.location).path).parent
+        try:
+            return Path(urlparse(self.location).path).parent
+        except:
+            return None
 
-    def save(self, *args, **kwargs):
-        if not self.pk:  # only at creation time
-            # Derive a name and path based on the location URL
-            if not self.name:
-                self.name = self.name_from_location()
-            if not self.path:
-                self.path = self.path_from_location()
-        super(File, self).save(*args, **kwargs)
-
-    # TODO: This could be triggered via a pre_save signal + async task upon
+    # TODO: This could be triggered via a post_save signal + async task upon
     # creation and when self.location changes
     def set_metadata_from_location(self, save=True):
         """
@@ -654,6 +651,19 @@ class File(Timestamped, UUIDModel):
         url = reverse('laxy_backend:file_download',
                       kwargs={'uuid': self.uuid(), 'filename': self.name})
         return url
+
+
+@receiver(pre_save, sender=File)
+def auto_file_fields(sender, instance, raw, using, update_fields, **kwargs):
+    """
+    Set name and path on a File based on the location URL, if not specified.
+    """
+    if instance._state.adding is True:
+        # Derive a name and path based on the location URL
+        if not instance.name:
+            instance.name = instance.name_from_location()
+        if not instance.path:
+            instance.path = instance.path_from_location()
 
 
 @reversion.register()

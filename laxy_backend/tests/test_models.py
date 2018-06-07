@@ -1,8 +1,12 @@
 # from __future__ import absolute_import
 import unittest
+import os
 import random
 # from compare import expect, ensure, matcher
 import json
+import tempfile
+from pathlib import Path
+
 import jwt
 
 from django.test import TestCase
@@ -18,7 +22,6 @@ from ..jwt_helpers import (get_jwt_user_header_dict,
                            make_jwt_header_dict,
                            create_jwt_user_token)
 
-
 # from ..authorization import JWTAuthorizedClaimPermission
 
 
@@ -29,7 +32,7 @@ def _create_user_and_login(username='testuser',
     admin_user.is_superuser = is_superuser
     admin_user.save()
 
-    client = Client()
+    client = APIClient(HTTP_CONTENT_TYPE='application/json')
     client.login(username=username, password=password)
     return (admin_user, client)
 
@@ -170,22 +173,24 @@ class FileViewTest(TestCase):
 
     def test_create_file(self):
         job_json = {
-            'location': 'http://example.com/file_c.txt',
+            'location': 'http://example.com/file_examp.txt',
             'checksum': 'xxh64:c70492d07ce72425',
             'metadata': {'tags': ['text', 'interesting']}
         }
 
         response = self.user_client.post(
             reverse('laxy_backend:create_file'),
-            data=json.dumps(job_json),
-            content_type='application/json'
+            data=job_json,
+            format='json',
         )
 
         self.assertEqual(response.status_code, 200)
         file_id = response.data.get('id')
         new_file = File.objects.get(id=file_id)
-        self.assertEqual(new_file.location, 'http://example.com/file_c.txt')
-        self.assertEqual(new_file.name, 'file_c.txt')
+        self.assertEqual(new_file.location, 'http://example.com/file_examp.txt')
+        # Note how the name get's automatically assigned based on the URL
+        # (if possible)
+        self.assertEqual(new_file.name, 'file_examp.txt')
         self.assertEqual(new_file.checksum, 'xxh64:c70492d07ce72425')
         self.assertEqual(new_file.owner, self.user)
         self.assertDictEqual(new_file.metadata,
@@ -193,7 +198,7 @@ class FileViewTest(TestCase):
 
     def test_create_file_with_scheme_file(self):
         job_json = {
-            'location': 'file:///tmp/file_c.txt',
+            'location': 'file:///tmp/file_on_disk.txt',
         }
 
         response = self.user_client.post(
@@ -211,12 +216,15 @@ class FileViewTest(TestCase):
     def test_get_file_unauthenticated(self):
         client = APIClient()
         response = client.get(reverse('laxy_backend:file',
-                                      args=[self.file_a.uuid()]))
+                                      args=[self.file_a.uuid()]),
+                              content_type='application/json')
         self.assertEqual(response.status_code, 401)
 
     def test_get_file(self):
-        response = self.user_client.get(reverse('laxy_backend:file',
-                                                args=[self.file_a.uuid()]))
+        response = self.user_client.get(
+            reverse('laxy_backend:file', args=[self.file_a.uuid()]),
+            content_type='application/json')
+
         self.assertEqual(response.status_code, 200)
         json_data = response.data
         self.assertEqual(json_data.get('id'), self.file_a.id)
@@ -247,6 +255,49 @@ class FileViewTest(TestCase):
 
         self.assertEqual(response.status_code, 400)
 
+    def test_create_patch_file_metadata_RFC7386(self):
+        file_c = File(owner=self.user,
+                      name="file_RFC7386",
+                      path="tmp",
+                      location="file:///tmp/file_RFC7386",
+                      metadata={"tags": ["A", "B"],
+                                "size": 3142})
+        file_c.save()
+
+        original_metdata = dict(file_c.metadata)
+        patch = json.loads('{"size": null, "tags": ["D"]}')
+        response = self.user_client.patch(
+            reverse('laxy_backend:file', args=[file_c.id]),
+            data=json.dumps({'metadata': patch}),
+            content_type='application/merge-patch+json'
+        )
+
+        self.assertEqual(response.status_code, 204)
+
+        obj = File.objects.get(name="file_RFC7386")
+        self.assertDictEqual(obj.metadata, {"tags": ["D"]})
+
+    def test_create_patch_file_metadata_RFC6902(self):
+        file_c = File(owner=self.user,
+                      name="file_RFC6902",
+                      path="tmp",
+                      location="file:///tmp/file_RFC6902",
+                      metadata={"tags": ["A", "B"],
+                                "size": 3142})
+        file_c.save()
+
+        patch = json.loads('[{ "op": "add", "path": "/tags/2", "value": "C" }]')
+        response = self.user_client.patch(
+            reverse('laxy_backend:file', args=[file_c.id]),
+            data=json.dumps({'metadata': patch}),
+            content_type='application/json-patch+json'
+        )
+
+        self.assertEqual(response.status_code, 204)
+
+        obj = File.objects.get(name="file_RFC6902")
+        self.assertDictEqual(obj.metadata, {"size": 3142, "tags": ["A", "B", "C"]})
+
 
 class JobViewTest(TestCase):
     def setUp(self):
@@ -272,7 +323,7 @@ class JobViewTest(TestCase):
         self.admin_user.delete()
 
     def test_unauthenticated_access(self):
-        client = APIClient()
+        client = APIClient(HTTP_CONTENT_TYPE='application/json')
         response = client.get(reverse('laxy_backend:job',
                                       args=[self.job.uuid()]))
         self.assertEqual(response.status_code, 401)
@@ -338,7 +389,7 @@ class JobViewTest(TestCase):
 
     def test_verify_jwt_token(self):
         token = create_jwt_user_token('testuser')[0]
-        client = APIClient()
+        client = APIClient(HTTP_CONTENT_TYPE='application/json')
         response = client.post(
             reverse('jwt-verify-token'),
             data={'token': token},
@@ -365,7 +416,7 @@ class JobViewTest(TestCase):
         # jwt_header = {'HTTP_AUTHORIZATION': jwt_header['Authorization']}
         # jwt_client = Client()
 
-        client = APIClient()
+        client = APIClient(HTTP_CONTENT_TYPE='application/json')
         client.credentials(HTTP_AUTHORIZATION=jwt_header['Authorization'])
 
         response = client.get(
@@ -389,10 +440,9 @@ class JobViewTest(TestCase):
                 reverse('laxy_backend:job', args=[self.job.uuid()]),
                 {'status': Job.STATUS_COMPLETE}, format='json')
 
-    # @unittest.skip("JWT Authentication not working")
     def test_jwt_auth_access(self):
         jwt_header = get_jwt_user_header_dict('testuser')
-        client = APIClient()
+        client = APIClient(HTTP_CONTENT_TYPE='application/json')
         client.credentials(HTTP_AUTHORIZATION=jwt_header['Authorization'])
         url = reverse('laxy_backend:job', args=[self.job.uuid()])
         response = client.get(url, format='json')

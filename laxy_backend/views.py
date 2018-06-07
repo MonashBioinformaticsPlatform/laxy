@@ -1,7 +1,7 @@
 from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.pagination import PageNumberPagination
-from typing import Dict, List
+from typing import Dict, List, Sequence
 from django.shortcuts import render
 
 import logging
@@ -14,6 +14,8 @@ import uuid
 from datetime import datetime, timedelta
 from collections import OrderedDict
 from wsgiref.util import FileWrapper
+import json_merge_patch
+import jsonpatch
 
 from django.conf import settings
 from django.shortcuts import render
@@ -30,6 +32,7 @@ from django.contrib.auth.models import User
 from rest_framework import generics, viewsets, mixins
 from rest_framework import status
 from rest_framework.parsers import JSONParser, MultiPartParser
+from rest_framework.decorators import parser_classes as use_parser_classes
 
 from rest_framework.response import Response
 from rest_framework.request import Request
@@ -289,6 +292,14 @@ class FileCreate(JSONView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class JSONPatchRFC7386Parser(JSONParser):
+    media_type = 'application/merge-patch+json'
+
+
+class JSONPatchRFC6902Parser(JSONParser):
+    media_type = 'application/json-patch+json'
+
+
 class FileView(GetMixin,
                DeleteMixin,
                PatchMixin,
@@ -300,6 +311,11 @@ class FileView(GetMixin,
 
     queryset = Meta.model.objects.all()
     serializer_class = Meta.serializer
+    parser_classes = (JSONParser,
+                      MultiPartParser,
+                      CSVTextParser,
+                      JSONPatchRFC7386Parser,
+                      JSONPatchRFC6902Parser)
 
     # permission_classes = (DjangoObjectPermissions,)
 
@@ -476,9 +492,91 @@ class FileView(GetMixin,
     def view(self, uuid, filename=None):
         return self._stream_response(uuid, filename, download=False)
 
+    def _try_json_patch(self, request, uuid):
+        content_type = get_request_content_type(request)
+        if content_type in ['application/merge-patch+json',
+                            'application/json-patch+json']:
+            obj = self.get_obj(uuid)
+            if obj is None:
+                return Response(status=status.HTTP_404_NOT_FOUND)
+
+            if 'id' in request.data:
+                return HttpResponse(status=status.HTTP_400_BAD_REQUEST,
+                                    reason="id cannot be updated")
+
+            metadata = request.data.get('metadata', None)
+            if metadata is not None:
+                if isinstance(metadata, list):
+                    patch = [OrderedDict(op) for op in metadata]
+                else:
+                    patch = OrderedDict(metadata)
+
+                # https://tools.ietf.org/html/rfc7386
+                if content_type == 'application/merge-patch+json':
+                    request.data['metadata'] = json_merge_patch.merge(
+                        OrderedDict(obj.metadata),
+                        patch)
+                # https://tools.ietf.org/html/rfc6902
+                if content_type == 'application/json-patch+json':
+                    request.data['metadata'] = jsonpatch.apply_patch(
+                        OrderedDict(obj.metadata),
+                        patch)
+
+            serializer = self.Meta.serializer(obj,
+                                              data=request.data,
+                                              context={'request': request},
+                                              partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(status=status.HTTP_204_NO_CONTENT)
+
+        return None
+
     @view_config(request_serializer=FileSerializer,
                  response_serializer=PatchSerializerResponse)
     def patch(self, request, uuid=None, version=None):
+        """
+        Partial update of fields on File.
+
+        If the header `Content-Type: application/merge-patch+json` is set,
+        the `metadata` field is patched as per the specification in
+        [RFC 7386](https://tools.ietf.org/html/rfc7386). eg, if the existing
+        metadata was:
+
+        ```json
+        {"metadata": {"tags": ["A"], "name": "seqs.fastq.gz", "path": "/tmp"}}
+        ```
+
+        The patch in a request:
+
+        ```json
+        {"metadata": {"tags": ["B", "C"], "path": null}}
+        ```
+
+        Would change it to:
+
+        ```json
+        {"metadata": {"tags": ["B", "C"], "name": "seqs.fastq.gz"}}
+        ```
+
+        If `Content-Type: application/json-patch+json` is set, `metadata`
+        should be an array of mutation operations to apply as per
+        [RFC 6902](https://tools.ietf.org/html/rfc6902).
+
+        :param request:
+        :type request:
+        :param uuid:
+        :type uuid:
+        :param version:
+        :type version:
+        :return:
+        :rtype:
+        """
+
+        resp = self._try_json_patch(request, uuid)
+        if resp is not None:
+            return resp
+
         return super(FileView, self).patch(request, uuid)
 
     @view_config(request_serializer=FileSerializerPostRequest,
@@ -1407,6 +1505,7 @@ class EventLogListView(generics.ListAPIView):
     serializer_class = EventLogSerializer
     filter_backends = (DjangoFilterBackend,)
     filter_fields = ('user', 'object_id', 'event',)
+
     # permission_classes = (IsAuthenticated,)
 
     def get_queryset(self):

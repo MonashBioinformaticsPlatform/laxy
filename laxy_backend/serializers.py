@@ -37,6 +37,7 @@ class SchemalessJsonResponseSerializer(serializers.Serializer):
 
     def update(self, instance, validated_data):
         instance = validated_data
+        return instance
 
     def to_internal_value(self, data):
         if isinstance(data, str):
@@ -74,6 +75,24 @@ class BaseModelSerializer(serializers.ModelSerializer):
         obj.save()
         return obj
 
+    def _update_attrs(self, instance, validated_data):
+        """
+        Updates the non-readonly attributes on a model instance with
+        the given validated_data (dictionary) values.
+
+        :param instance: The model instance to update
+        :type instance: django.db.models.Model
+        :param validated_data: The new data that will replace attribute
+                               values in instance.
+        :type validated_data: dict
+        :return: The updated model instance.
+        :rtype: django.db.models.Model
+        """
+        for k, v in validated_data.items():
+            if k not in getattr(self.Meta, 'read_only_fields', []):
+                setattr(instance, k, v)
+        return instance
+
 
 class PatchSerializerResponse(serializers.Serializer):
     """
@@ -102,7 +121,7 @@ class PutSerializerResponse(serializers.Serializer):
 
 
 class FileSerializer(BaseModelSerializer):
-    name = serializers.CharField()
+    name = serializers.CharField(required=False)
     location = serializers.CharField(
         max_length=2048,
         validators=[models.URIValidator()])
@@ -114,6 +133,12 @@ class FileSerializer(BaseModelSerializer):
         fields = ('id', 'name', 'location', 'owner', 'checksum', 'metadata')
         read_only_fields = ('id', 'owner',)
         error_status_codes = status_codes()
+
+    def update(self, instance, validated_data):
+        instance = self._update_attrs(instance, validated_data)
+        instance.metadata = validated_data.get('metadata', instance.metadata)
+        instance.save()
+        return instance
 
 
 class FileSerializerPostRequest(FileSerializer):
@@ -363,9 +388,10 @@ class PipelineRunCreateSerializer(PipelineRunSerializer):
     def update(self, instance, validated_data):
         # FIXME: This is not the right way to update the instance - we really should be
         # doing it via the serializer (as commented out below).
-        for k, v in validated_data.items():
-            if k not in self.Meta.read_only_fields:
-                setattr(instance, k, v)
+        # for k, v in validated_data.items():
+        #     if k not in self.Meta.read_only_fields:
+        #         setattr(instance, k, v)
+        instance = self._update_attrs(instance, validated_data)
         instance.save()
         return instance
 

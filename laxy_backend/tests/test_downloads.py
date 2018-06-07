@@ -21,6 +21,7 @@ class DownloadTaskTest(TestCase):
         self.admin_user.save()
 
         self.file_sra_ftp = File(
+            name="SRR950078_1.fastq.gz",
             location="ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR950/SRR950078/"
                      "SRR950078_1.fastq.gz",
             # name='SRR950078_1.fastq.gz',
@@ -28,6 +29,7 @@ class DownloadTaskTest(TestCase):
         self.file_sra_ftp.save()
 
         self.file_ftp = File(
+            name="ls-lR.gz",
             location="ftp://ftp.monash.edu.au/pub/linux/debian/ls-lR.gz",
             # location="ftp://ftp.gnu.org/gnu/Licenses/gpl-3.0.txt",
             # location="ftp://ftp.ubuntu.com/ubuntu/ls-lR.gz",
@@ -56,6 +58,9 @@ class DownloadTaskTest(TestCase):
             'ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR950/SRR950086/SRR950086_2.fastq.gz',
             'ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR950/SRR950087/SRR950087_1.fastq.gz',
             'ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR950/SRR950087/SRR950087_2.fastq.gz']
+
+    def tearDown(self):
+        pass
 
     def assetFileExists(self, file):
         return self.assertTrue(os.path.exists(file))
@@ -100,7 +105,7 @@ class DownloadTaskTest(TestCase):
     def test_ena_create_fileset(self):
         accession = 'PRJNA214799'
         fileset = create_fastq_fileset(accession,
-                                       owner=self.admin_user,
+                                       owner=self.admin_user.id,
                                        save=True)
 
         self.assertEqual(len(fileset.files), 20)
