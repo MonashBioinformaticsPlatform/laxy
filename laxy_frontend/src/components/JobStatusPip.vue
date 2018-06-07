@@ -4,7 +4,12 @@
             <md-card-header-text>
                 <div class="md-title">Job {{ job.status }}
                 </div>
-                <div class="md-subhead">It took about {{ job.created_time | moment("from", job.completed_time, true) }}</div>
+                <div v-if="job.status != 'running' && job.completed_time" class="md-subhead">
+                    after about {{ job.created_time | moment("from", job.completed_time, true) }}
+                </div>
+                <div v-if="job.status == 'running'" class="md-subhead">
+                    for {{ job.created_time | moment("from", 'now', true) }}
+                </div>
             </md-card-header-text>
 
             <md-card-media>
