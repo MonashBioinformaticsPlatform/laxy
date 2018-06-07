@@ -223,7 +223,7 @@
 
         // public accession_input: string = 'PRJNA319904'; // ~6000 files !
         // public accession_input: string = 'PRJEB3366'; // many !
-        public accession_input: string = "PRJNA276493, SRR950078, " +
+        public accession_input: string = "PRJNA268110, SRR2566273, PRJNA276493, SRR950078, " +
             "SRR1174042, SRR1174149, " +
             "SRR5963441, SRR5963442, SRR5963435, SRR5963436";
         public hoveredSampleDetails: string = "";
