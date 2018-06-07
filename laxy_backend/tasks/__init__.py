@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import logging
 import os
 from os.path import join, expanduser
@@ -188,7 +190,7 @@ def index_remote_files(self, task_data=None, **kwargs):
     compute_id = job.compute_resource.id
     message = "No message."
 
-    def create_file_objects(remote_path, location_base=''):
+    def create_file_objects(remote_path, prefix_path='', location_base=''):
         """
         Returns a list of (unsaved) File objects from a recursive 'find'
         of a remote directory.
@@ -209,8 +211,13 @@ def index_remote_files(self, task_data=None, **kwargs):
             ]
 
             file_objs = []
-            for location, fpath in urls:
-                f = File(location=location, owner=job.owner, name=fpath)
+            for location, filepath in urls:
+                fname = Path(filepath).name
+                fpath = Path(prefix_path) / Path(filepath).parent
+                f = File(location=location,
+                         owner=job.owner,
+                         name=fname,
+                         path=fpath)
                 file_objs.append(f)
 
         return file_objs
@@ -228,14 +235,18 @@ def index_remote_files(self, task_data=None, **kwargs):
 
             output_files = create_file_objects(
                 output_dir,
+                prefix_path='output',
                 location_base=f'laxy+sftp://{compute_id}/{job_id}/output')
+            job.output_files.path = 'output'
             job.output_files.add(output_files)
 
             # TODO: This should really be done at job start, or once input data
             #       has been staged on the compute node.
             input_files = create_file_objects(
                 input_dir,
+                prefix_path='input',
                 location_base=f'laxy+sftp://{compute_id}/{job_id}/input')
+            job.input_files.path = 'input'
             job.input_files.add(input_files)
 
         succeeded = True

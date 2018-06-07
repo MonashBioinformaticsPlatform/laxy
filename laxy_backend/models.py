@@ -457,9 +457,7 @@ def update_job_completed_time(sender, instance,
     except sender.DoesNotExist:
         pass
     else:
-        if instance.status == Job.STATUS_COMPLETE and \
-                obj.status != Job.STATUS_COMPLETE and \
-                not obj.completed_time:
+        if instance.done and not obj.done and not obj.completed_time:
             instance.completed_time = datetime.now()
 
 
@@ -503,7 +501,7 @@ class File(Timestamped, UUIDModel):
     """
     # The filename. Equivalent to path.basename(location) in most cases.
     # Longest filename on most Linux filesystems is 255, hence max_length.
-    name = CharField(db_column='name', max_length=255, blank=True, null=True)
+    name = CharField(max_length=255, blank=True, null=True)
 
     # We store the file path (minus the filename) since the location URL won't
     # always contain it (eg shortened links). Longest Linux path on most
@@ -669,6 +667,8 @@ class FileSet(Timestamped, UUIDModel):
     """
 
     name = CharField(max_length=2048)
+    path = CharField(max_length=4096, blank=True, null=True)
+
     owner = ForeignKey(User,
                        on_delete=models.CASCADE,
                        blank=True,
