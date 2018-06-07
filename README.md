@@ -42,7 +42,7 @@ python3.6 install -U -r requirements-dev.txt
 
 Run tests:
 ```bash
-./manage.py test
+./manage.py test --noinput
 ```
 
 Create a user and database on Postgres (run `psql`):
@@ -64,6 +64,7 @@ Initialize the database, create an admin user:
 ```bash
 ./manage.py migrate
 ./manage.py makemigrations django_celery_results
+./manage.py makemigrations sites
 ./manage.py makemigrations laxy_backend
 ./manage.py migrate --fake-initial
 ./manage.py createinitialrevisions
@@ -127,6 +128,12 @@ docker container exec -it laxy_django_1  python manage.py migrate
 Dump fixtures (JSON formatted database records):
 ```bash
 docker container exec -it laxy_django_1  python manage.py dumpdata --indent 2
+
+# Or a single model of interest, by primary key:
+docker container exec -it laxy_django_1  python manage.py dumpdata \
+       laxy_backend.sampleset \
+       --pks 3lSCcJPlvkMq1oCO6hM4XL \
+       --indent 2
 ```
 
 Load fixtures:
