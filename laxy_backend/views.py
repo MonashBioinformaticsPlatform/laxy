@@ -295,16 +295,11 @@ class FileCreate(JSONView):
 class FileTypeTagsView(JSONView):
     class Meta:
         model = File
-        serializer = FileSerializer
 
     queryset = Meta.model.objects.all()
-    serializer_class = Meta.serializer
 
     # permission_classes = (DjangoObjectPermissions,)
 
-    @view_config(request_serializer=FileSerializerPostRequest,
-                 response_serializer=FileSerializer)
-    # @method_decorator(csrf_exempt)
     def get(self, request: Request, uuid, tag, version=None):
         obj: File = self.get_obj(uuid)
         if obj is None:
@@ -316,16 +311,11 @@ class FileTypeTagsView(JSONView):
 class FileTypeTagsModify(JSONView):
     class Meta:
         model = File
-        serializer = FileSerializer
 
     queryset = Meta.model.objects.all()
-    serializer_class = Meta.serializer
 
     # permission_classes = (DjangoObjectPermissions,)
 
-    @view_config(request_serializer=FileSerializerPostRequest,
-                 response_serializer=FileSerializer)
-    # @method_decorator(csrf_exempt)
     def put(self, request: Request, uuid, tag, version=None):
         obj: File = self.get_obj(uuid)
         if obj is None:
