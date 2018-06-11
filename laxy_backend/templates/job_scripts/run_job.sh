@@ -113,6 +113,12 @@ function init_conda_env() {
     set -o nounset
 }
 
+
+function patch_bds_config_slurm() {
+    # Will only work after conda env with bds has been imported
+    sed -i 's/#system = "local"/system = "generic"/' $(which bds).config
+}
+
 function get_reference_data_aws() {
     # TODO: Be smarter about what we pull in - eg only the reference required,
     #       not the whole lot. Assume reference is present if appropriate
