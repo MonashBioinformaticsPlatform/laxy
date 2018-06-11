@@ -112,7 +112,7 @@
                                        class="fill-width"
                                        title="Key result files"
                                        :fileset-id="job.output_fileset_id"
-                                       :regex-filters="['\\.html$', '\\.count$', '\\.bam$', '\\.bai$', '\\.log$', '\\.out$']"
+                                       :regex-filters="['\\.html$', '\\.counts$', 'StrandedCounts.*\\.txt$', '^strandInfo\\.txt$', '\\.bam$', '\\.bai$', '\\.log$', '\\.out$']"
                                        :hide-search="false"
                                        @refresh-error="showErrorDialog">
                             </file-list>
