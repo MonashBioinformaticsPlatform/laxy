@@ -301,6 +301,28 @@ class FileTypeTagsView(JSONView):
     # permission_classes = (DjangoObjectPermissions,)
 
     def get(self, request: Request, uuid, tag, version=None):
+        """
+        Return the list of `file_type_tags` associated with this `File`.
+
+        These could be MIME types like `text/html` or `application/fastq`,
+        EDAM ontology types like `http://edamontology.org/format_2545`
+        or simple tags like `degust`. Frontend applications decide how
+        to use these tags - typically they will be used to identify files
+        to be passed to external applications.
+
+        <!--
+        :param request:
+        :type request:
+        :param uuid:
+        :type uuid:
+        :param tag:
+        :type tag:
+        :param version:
+        :type version:
+        :return:
+        :rtype:
+        -->
+        """
         obj: File = self.get_obj(uuid)
         if obj is None:
             return Response(status=status.HTTP_404_NOT_FOUND)
@@ -317,6 +339,22 @@ class FileTypeTagsModify(JSONView):
     # permission_classes = (DjangoObjectPermissions,)
 
     def put(self, request: Request, uuid, tag, version=None):
+        """
+        Add a tag to the `file_type_tags` list.
+
+        <!--
+        :param request:
+        :type request:
+        :param uuid:
+        :type uuid:
+        :param tag:
+        :type tag:
+        :param version:
+        :type version:
+        :return:
+        :rtype:
+        -->
+        """
         obj: File = self.get_obj(uuid)
         if obj is None:
             return Response(status=status.HTTP_404_NOT_FOUND)
@@ -324,6 +362,22 @@ class FileTypeTagsModify(JSONView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def delete(self, request: Request, uuid, tag, version=None):
+        """
+        Remove a tag from the `file_type_tags` list.
+
+        <!--
+        :param request:
+        :type request:
+        :param uuid:
+        :type uuid:
+        :param tag:
+        :type tag:
+        :param version:
+        :type version:
+        :return:
+        :rtype:
+        -->
+        """
         obj: File = self.get_obj(uuid)
         if obj is None:
             return Response(status=status.HTTP_404_NOT_FOUND)
@@ -651,6 +705,7 @@ class FileView(StreamFileMixin,
         should be an array of mutation operations to apply as per
         [RFC 6902](https://tools.ietf.org/html/rfc6902).
 
+        <!--
         :param request:
         :type request:
         :param uuid:
@@ -659,6 +714,7 @@ class FileView(StreamFileMixin,
         :type version:
         :return:
         :rtype:
+        -->
         """
 
         resp = self._try_json_patch(request, uuid)
