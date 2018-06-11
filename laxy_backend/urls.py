@@ -19,7 +19,8 @@ from django.contrib import admin
 from rest_framework import routers
 from rest_framework.urlpatterns import format_suffix_patterns
 from laxy_backend.views import (JobView, JobCreate,
-                                FileCreate, FileView,
+                                FileCreate, FileView, FileContentDownload,
+                                FileTypeTagsView, FileTypeTagsModify,
                                 FileSetCreate, FileSetView,
                                 SampleSetView, SampleSetCreate,
                                 PipelineRunView, PipelineRunCreate,
@@ -48,6 +49,10 @@ class UUID62Converter:
 
 register_converter(UUID62Converter, 'uuid62')
 
+# URL style guide:
+# - api/v1/use-dashes-in-the-path/
+# - ?use_underscores=in_query_params
+
 api_urls = [
     # New format Django URLs - disabled until drf_openapi can properly format
     # them without escaping backslashes
@@ -59,10 +64,10 @@ api_urls = [
     #     JobCreate.as_view(),
     #     name='create_job'),
     # path(
-    #     'compute_resource/<uuid62:uuid>/',
+    #     'compute-resource/<uuid62:uuid>/',
     #     ComputeResourceView.as_view(),
     #     name='compute_resource'),
-    # path('compute_resource/',
+    # path('compute-resource/',
     #     ComputeResourceCreate.as_view(),
     #     name='compute_resource'),
 
@@ -89,8 +94,14 @@ api_urls = [
     re_path(r'file/(?P<uuid>[a-zA-Z0-9\-_]+)/$',
             FileView.as_view(),
             name='file'),
-    re_path(r'file/(?P<uuid>[a-zA-Z0-9\-_]+)/(?P<filename>.*)$',
-            FileView.as_view(),
+    re_path(r'file/(?P<uuid>[a-zA-Z0-9\-_]+)/type-tags/(?P<tag>.*)$',
+            FileTypeTagsModify.as_view(),
+            name='file_type_tags'),
+    re_path(r'file/(?P<uuid>[a-zA-Z0-9\-_]+)/type-tags/$',
+            FileTypeTagsView.as_view(),
+            name='file_type_tags'),
+    re_path(r'file/(?P<uuid>[a-zA-Z0-9\-_]+)/content/(?P<filename>.*)$',
+            FileContentDownload.as_view(),
             name='file_download'),
     re_path(r'fileset/(?P<uuid>[a-zA-Z0-9\-_]+)/$',
             FileSetView.as_view(),
@@ -111,10 +122,10 @@ api_urls = [
             PipelineRunCreate.as_view(),
             name='create_pipelinerun'),
     re_path(
-        r'compute_resource/(?P<uuid>[a-zA-Z0-9\-_]+)/$',
+        r'compute-resource/(?P<uuid>[a-zA-Z0-9\-_]+)/$',
         ComputeResourceView.as_view(),
         name='compute_resource'),
-    re_path(r'compute_resource/$',
+    re_path(r'compute-resource/$',
             ComputeResourceCreate.as_view(),
             name='compute_resource'),
 

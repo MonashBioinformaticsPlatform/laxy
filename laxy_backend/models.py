@@ -6,7 +6,7 @@
 #                       str, super, zip)
 import urllib
 import urllib.request
-from typing import List
+from typing import List, Union
 from collections import OrderedDict, Sequence
 from datetime import datetime
 import math
@@ -562,6 +562,56 @@ class File(Timestamped, UUIDModel):
             self.metadata['size'] = size
         if save:
             self.save()
+
+    def add_type_tag(self, tags: Union[List[str], str], save=True):
+        """
+        Add file type tag(s) to the metadata field. Enforces uniqueness.
+
+        :param tags: A single tag or a list of tags
+        :type tags: Union[List[str], str]
+        :param save: Automatically call save()
+        :type save: bool
+        :return:
+        :rtype:
+        """
+        if isinstance(tags, str):
+            tags = [tags]
+
+        if self.metadata is None:
+            self.metadata = OrderedDict()
+
+        existing = self.metadata.get('file_type_tags', [])
+        existing.extend(tags)
+        self.metadata.update({'file_type_tags': unique(existing)})
+        self.save()
+
+    def remove_type_tag(self, tags: Union[List[str], str], save=True):
+        """
+        Remove file type tag(s) from the metadata field. Enforces uniqueness.
+
+        :param tags: A single tag or a list of tags
+        :type tags: Union[List[str], str]
+        :param save: Automatically call save()
+        :type save: bool
+        :return:
+        :rtype:
+        """
+        if self.metadata is None:
+            return
+
+        if isinstance(tags, str):
+            tags = [tags]
+
+        existing = unique(self.metadata.get('file_type_tags', []))
+        if existing:
+            for t in tags:
+                try:
+                    existing.remove(t)
+                except ValueError:
+                    continue
+            self.metadata.update({'file_type_tags': existing})
+
+        self.save()
 
     @property
     def checksum_type(self) -> str:

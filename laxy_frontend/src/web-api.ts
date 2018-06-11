@@ -118,7 +118,7 @@ export class WebAPI {
     public static viewFileUrl(file_id: string,
                               filename: string | null = null): string {
         if (filename) {
-            return `${this.baseUrl}/api/v1/file/${file_id}/${filename}`;
+            return `${this.baseUrl}/api/v1/file/${file_id}/content/${filename}`;
         }
         return `${this.baseUrl}/api/v1/file/${file_id}/`;
     }
@@ -126,7 +126,7 @@ export class WebAPI {
     public static downloadFileUrl(file_id: string,
                                   filename: string | null = null): string {
         if (filename) {
-            return `${this.baseUrl}/api/v1/file/${file_id}/${filename}?download`;
+            return `${this.baseUrl}/api/v1/file/${file_id}/content/${filename}?download`;
         }
         return `${this.baseUrl}/api/v1/file/${file_id}/?download`;
     }
@@ -138,7 +138,7 @@ export class WebAPI {
         try {
             let url = `/api/v1/file/${file_id}/`;
             if (filename) {
-                url = `/api/v1/file/${file_id}/${filename}`;
+                url = `/api/v1/file/${file_id}/content/${filename}`;
             }
             return await this.fetcher.get(
                 url,

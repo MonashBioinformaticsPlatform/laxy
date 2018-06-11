@@ -292,6 +292,55 @@ class FileCreate(JSONView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class FileTypeTagsView(JSONView):
+    class Meta:
+        model = File
+        serializer = FileSerializer
+
+    queryset = Meta.model.objects.all()
+    serializer_class = Meta.serializer
+
+    # permission_classes = (DjangoObjectPermissions,)
+
+    @view_config(request_serializer=FileSerializerPostRequest,
+                 response_serializer=FileSerializer)
+    # @method_decorator(csrf_exempt)
+    def get(self, request: Request, uuid, tag, version=None):
+        obj: File = self.get_obj(uuid)
+        if obj is None:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        return Response(status=status.HTTP_200_OK,
+                        data=obj.metadata.get('file_type_tags', []))
+
+
+class FileTypeTagsModify(JSONView):
+    class Meta:
+        model = File
+        serializer = FileSerializer
+
+    queryset = Meta.model.objects.all()
+    serializer_class = Meta.serializer
+
+    # permission_classes = (DjangoObjectPermissions,)
+
+    @view_config(request_serializer=FileSerializerPostRequest,
+                 response_serializer=FileSerializer)
+    # @method_decorator(csrf_exempt)
+    def put(self, request: Request, uuid, tag, version=None):
+        obj: File = self.get_obj(uuid)
+        if obj is None:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        obj.add_type_tag(tag)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def delete(self, request: Request, uuid, tag, version=None):
+        obj: File = self.get_obj(uuid)
+        if obj is None:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        obj.remove_type_tag(tag)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 class JSONPatchRFC7386Parser(JSONParser):
     media_type = 'application/merge-patch+json'
 
@@ -300,155 +349,7 @@ class JSONPatchRFC6902Parser(JSONParser):
     media_type = 'application/json-patch+json'
 
 
-class FileView(GetMixin,
-               DeleteMixin,
-               PatchMixin,
-               PutMixin,
-               JSONView):
-    class Meta:
-        model = File
-        serializer = FileSerializer
-
-    queryset = Meta.model.objects.all()
-    serializer_class = Meta.serializer
-    parser_classes = (JSONParser,
-                      MultiPartParser,
-                      CSVTextParser,
-                      JSONPatchRFC7386Parser,
-                      JSONPatchRFC6902Parser)
-
-    # permission_classes = (DjangoObjectPermissions,)
-
-    @view_config(response_serializer=FileSerializer)
-    def get(self, request: Request, uuid=None, filename=None, version=None):
-        """
-        Downloads the content of a File, or returns info about the file.
-        File is specified by it's UUID.
-
-        If the `Content-Type: application/json` header is used, the
-        JSON record for the file is returned without file content.
-
-        Other `Content-Type`s return the content of the file.
-
-        If the query parameter `download` is used, the file is downloaded via
-        the browser rather than viewed
-        (via the `Content-Disposition: attachment` header).
-
-        If file checksums (eg MD5) are present, these are included as a
-        header:
-
-        `Digest: MD5=thisIsABase64EnC0DeDMd5sum==`.
-
-        A filename can optionally be specified as the last part of the the URL
-        path, so that `wget` will 'just work' without requiring the
-        `--content-disposition` flag. The filename must match the name stored
-        in the File record.
-
-        Examples:
-
-        ### File record data as JSON
-
-        **Request:**
-
-        `Content-Type: application/json`
-
-        `GET` http://laxy.org/api/v1/file/XXblafooXX/alignment.bam
-
-        **Response:**
-
-        ```json
-        {
-            "id": "XXblafooXX",
-            "name": "alignment.bam",
-            "location": "http://example.com/datasets/1/alignment.bam",
-            "owner": "admin",
-            "checksum": "md5:f3c90181aae57b887a38c4e5fe73db0c",
-            "metadata": { }
-        }
-        ```
-
-        ### File content (view in browser)
-
-        **Request:**
-
-        `Content-Type: application/octet-stream`
-
-        `GET` http://laxy.org/api/v1/file/XXblafooXX/alignment.bam
-
-        **Response:**
-
-        Headers:
-
-        `Content-Disposition: inline`
-
-        `Digest: MD5=thisIsABase64EnC0DeDMd5sum==`
-
-        Body:
-
-        .. file content ..
-
-        ### File content (download in browser)
-
-        **Request:**
-
-        `Content-Type: application/octet-stream`
-
-        `GET` http://laxy.org/api/v1/file/XXblafooXX/alignment.bam
-
-        **Response:**
-
-        Headers:
-
-        `Content-Disposition: attachment; filename=alignment.bam`
-
-        `Digest: MD5=thisIsABase64EnC0DeDMd5sum==`
-
-        Body:
-
-        .. file content ..
-
-
-        ## File download with `wget`
-
-        `wget http://laxy.org/api/v1/file/XXblafooXX/alignment.bam`
-
-        or, without the filename:
-
-        `wget --content-disposition http://laxy.org/api/v1/file/XXblafooXX/`
-
-
-        <!--
-        :param request: The request object.
-        :type request: rest_framework.request.Request
-        :param uuid: The URL-encoded UUID.
-        :type uuid: str
-        :return: The response object.
-        :rtype: rest_framework.response.Response
-        -->
-        """
-
-        content_type = get_request_content_type(request)
-        if content_type == 'application/json':
-            return super(FileView, self).get(request, uuid)
-        else:
-            # File view/download is the default when no Content-Type is specified
-            if 'download' in request.query_params:
-                return self.download(uuid, filename=filename)
-            else:
-                return self.view(uuid, filename=filename)
-
-    def _add_metalink_headers(self, obj, response):
-
-        url = self.request.build_absolute_uri(obj.get_absolute_url())
-        response['Link'] = f'<{url}>; rel=duplicate'
-
-        if obj.checksum:
-            hashtype = obj.checksum_type
-            b64checksum = obj.checksum_hash_base64
-            response['Digest'] = f'{hashtype.upper()}={b64checksum}'
-            response['Etag'] = f'{obj.checksum}'
-
-        return response
+class StreamFileMixin(JSONView):
 
     def _stream_response(self, uuid, filename=None, download=True):
         obj = self.get_obj(uuid)
@@ -485,6 +386,203 @@ class FileView(GetMixin,
         self._add_metalink_headers(obj, response)
 
         return response
+
+    def _add_metalink_headers(self, obj, response):
+
+        url = self.request.build_absolute_uri(obj.get_absolute_url())
+        response['Link'] = f'<{url}>; rel=duplicate'
+
+        if hasattr(obj, 'checksum') and obj.checksum:
+            hashtype = obj.checksum_type
+            b64checksum = obj.checksum_hash_base64
+            response['Digest'] = f'{hashtype.upper()}={b64checksum}'
+            response['Etag'] = f'{obj.checksum}'
+
+        return response
+
+
+class FileContentDownload(StreamFileMixin,
+                          GetMixin,
+                          JSONView):
+    class Meta:
+        model = File
+        serializer = FileSerializer
+
+    queryset = Meta.model.objects.all()
+    serializer_class = Meta.serializer
+
+    # permission_classes = (DjangoObjectPermissions,)
+
+    @view_config(response_serializer=FileSerializer)
+    def get(self, request: Request, uuid=None, filename=None, version=None):
+        """
+        Downloads the content of a File.
+
+        When using a web browser, if the query parameter `download` is included
+        the file will be downloaded rather than viewed in a new tab
+        (via the `Content-Disposition: attachment` header).
+
+        If file checksums (eg MD5) are present, these are included as a
+        header:
+
+        `Digest: MD5=thisIsABase64EnC0DeDMd5sum==`.
+
+        A filename can optionally be specified as the last part of the the URL
+        path, so that `wget` will 'just work' without requiring the
+        `--content-disposition` flag. The filename must match the name stored
+        in the File record.
+
+        Examples:
+
+        ### File content (view in browser)
+
+        **Request:**
+
+        `Content-Type: application/octet-stream`
+
+        `GET` http://laxy.org/api/v1/file/XXblafooXX/content/alignment.bam
+
+        **Response:**
+
+        Headers:
+
+        `Content-Disposition: inline`
+
+        `Digest: MD5=thisIsABase64EnC0DeDMd5sum==`
+
+        Body:
+
+        .. file content ..
+
+        ### File content (download in browser)
+
+        **Request:**
+
+        `Content-Type: application/octet-stream`
+
+        `GET` http://laxy.org/api/v1/file/XXblafooXX/content/alignment.bam
+
+        **Response:**
+
+        Headers:
+
+        `Content-Disposition: attachment; filename=alignment.bam`
+
+        `Digest: MD5=thisIsABase64EnC0DeDMd5sum==`
+
+        Body:
+
+        .. file content ..
+
+
+        ## File download with `wget`
+
+        `wget http://laxy.org/api/v1/file/XXblafooXX/content/alignment.bam`
+
+        <!--
+        :param request: The request object.
+        :type request: rest_framework.request.Request
+        :param uuid: The URL-encoded UUID.
+        :type uuid: str
+        :return: The response object.
+        :rtype: rest_framework.response.Response
+        -->
+        """
+        # File view/download is the default when no Content-Type is specified
+        if 'download' in request.query_params:
+            return self.download(uuid, filename=filename)
+        else:
+            return self.view(uuid, filename=filename)
+
+    def download(self, uuid, filename=None):
+        return self._stream_response(uuid, filename, download=True)
+
+    def view(self, uuid, filename=None):
+        return self._stream_response(uuid, filename, download=False)
+
+
+class FileView(StreamFileMixin,
+               GetMixin,
+               DeleteMixin,
+               PatchMixin,
+               PutMixin,
+               JSONView):
+    class Meta:
+        model = File
+        serializer = FileSerializer
+
+    queryset = Meta.model.objects.all()
+    serializer_class = Meta.serializer
+    parser_classes = (JSONParser,
+                      MultiPartParser,
+                      CSVTextParser,
+                      JSONPatchRFC7386Parser,
+                      JSONPatchRFC6902Parser)
+
+    # permission_classes = (DjangoObjectPermissions,)
+
+    @view_config(response_serializer=FileSerializer)
+    def get(self, request: Request, uuid=None, filename=None, version=None):
+        """
+        Returns info about a file or downloads the content.
+        File is specified by it's UUID.
+
+        If the `Content-Type: application/json` header is used, the
+        JSON record for the file is returned.
+
+        Other `Content-Type`s return the content of the file.
+
+        See the [file/{uuid}/content/ docs](#operation/v1_file_content_read) for
+        details about file content downloads (this endpoint behaves the same with
+        regard to downloads, except that the filename is omitted from the URL)
+
+        Examples:
+
+        ### File record data as JSON
+
+        **Request:**
+
+        `Content-Type: application/json`
+
+        `GET` http://laxy.org/api/v1/file/XXblafooXX/content/alignment.bam
+
+        **Response:**
+
+        ```json
+        {
+            "id": "XXblafooXX",
+            "name": "alignment.bam",
+            "location": "http://example.com/datasets/1/alignment.bam",
+            "owner": "admin",
+            "checksum": "md5:f3c90181aae57b887a38c4e5fe73db0c",
+            "metadata": { }
+        }
+        ```
+
+        To correctly set the filename:
+
+        `wget --content-disposition http://laxy.org/api/v1/file/XXblafooXX/`
+
+
+        <!--
+        :param request: The request object.
+        :type request: rest_framework.request.Request
+        :param uuid: The URL-encoded UUID.
+        :type uuid: str
+        :return: The response object.
+        :rtype: rest_framework.response.Response
+        -->
+        """
+
+        content_type = get_request_content_type(request)
+        if content_type == 'application/json':
+            return super(FileView, self).get(request, uuid)
+        else:
+            # File view/download is the default when no Content-Type is specified
+            if 'download' in request.query_params:
+                return self.download(uuid, filename=filename)
+            else:
+                return self.view(uuid, filename=filename)
 
     def download(self, uuid, filename=None):
         return self._stream_response(uuid, filename, download=True)

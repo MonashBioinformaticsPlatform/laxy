@@ -141,6 +141,15 @@ Load fixtures:
 docker container exec -it laxy_django_1  python manage.py loaddata fixtures.json
 ```
 
+Dropping the test database when it's in use (eg, if tests we terminate prematurely before cleanup). 
+Run `psql`:
+```postgresql
+SELECT pg_terminate_backend(pid)
+FROM pg_stat_activity
+WHERE datname = 'test_laxy';
+DROP DATABASE test_laxy;
+```
+
 ##### To manually restart just the `django` service without bringing the whole stack down/up
 ```bash
 docker-compose restart django

@@ -22,6 +22,7 @@ from ..jwt_helpers import (get_jwt_user_header_dict,
                            make_jwt_header_dict,
                            create_jwt_user_token)
 
+
 # from ..authorization import JWTAuthorizedClaimPermission
 
 
@@ -66,6 +67,12 @@ class FileModelTest(TestCase):
             owner_id=self.user.id)
         self.file_complex_http.save()
 
+    def assertListSameItems(self, list1, list2, msg=None):
+        return self.assertListEqual(sorted(list1), sorted(list2), msg=msg)
+        # if len(list1) != len(list2):
+        #     raise AssertionError("Lists are different lengths.")
+        # return self.assertSetEqual(set(list1), set(list2), msg=msg)
+
     def test_filename_guessing(self):
         self.assertEqual(self.file_sra_ftp.name, 'SRR950078_1.fastq.gz')
         self.assertEqual(self.file_ftp.name, 'ls-lR.gz')
@@ -85,6 +92,42 @@ class FileModelTest(TestCase):
                  owner=User.objects.get(username='testuser'))
         content = f.file.read().decode()
         raise NotImplementedError()
+
+    def test_add_remove_type_tags(self):
+        f = File(location='https://www.apache.org/licenses/LICENSE-2.0.txt',
+                 owner=User.objects.get(username='testuser'))
+
+        # Removing non-existant tags does nothing
+        f.remove_type_tag(['test2', 'licence'])
+        self.assertListSameItems(f.metadata.get('file_type_tags', []), [])
+
+        # Add a single tag (as a string)
+        f.add_type_tag('text/plain')
+        self.assertListSameItems(f.metadata['file_type_tags'], ['text/plain'])
+
+        # Add multiple tags (list of strings)
+        f.add_type_tag(['license', 'test', 'test2'])
+        self.assertListSameItems(f.metadata['file_type_tags'],
+                                 ['text/plain', 'license', 'test', 'test2'])
+
+        # Add a tag a second time - list should not contain duplicates
+        f.add_type_tag('text/plain')
+        self.assertListEqual(sorted(f.metadata['file_type_tags']),
+                             sorted(['text/plain', 'license', 'test', 'test2']))
+
+        # Remove a single tag
+        f.remove_type_tag('test')
+        self.assertListSameItems(f.metadata['file_type_tags'],
+                                 ['text/plain', 'license', 'test2'])
+
+        # Check that the changes were saved to the database
+        newf = File.objects.get(id=f.id)
+        self.assertListSameItems(newf.metadata['file_type_tags'],
+                                 ['text/plain', 'license', 'test2'])
+
+        # Remove multiple tags
+        f.remove_type_tag(['test2', 'license'])
+        self.assertListSameItems(f.metadata['file_type_tags'], ['text/plain'])
 
 
 class FileSetModelTest(TestCase):
