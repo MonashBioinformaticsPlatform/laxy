@@ -184,13 +184,15 @@ TEMPLATES = [
 ]
 
 # https://github.com/ottoyiu/django-cors-headers#configuration
-# CORS_ORIGIN_ALLOW_ALL = True
+if DEBUG:
+    CORS_ORIGIN_ALLOW_ALL = True
+else:
+    CORS_ORIGIN_WHITELIST = ('localhost:8002',
+                             'erc.monash.edu',
+                             'erc.monash.edu.au',
+                             '118.138.240.175:8002',
+                             )
 CORS_ALLOW_CREDENTIALS = True
-CORS_ORIGIN_WHITELIST = ('localhost:8002',
-                         'erc.monash.edu',
-                         'erc.monash.edu.au',
-                         '118.138.240.175:8002',
-                         )
 # CSRF_TRUSTED_ORIGINS = ('localhost:8000',)
 
 REST_FRAMEWORK = {
