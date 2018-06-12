@@ -62,6 +62,7 @@ def unique(l):
 
 
 SCHEME_STORAGE_CLASS_MAPPING = {
+    'file': 'django.core.files.storage.FileSystemStorage',
     'sftp': 'storages.backends.sftpstorage.SFTPStorage',
     'laxy+sftp': 'storages.backends.sftpstorage.SFTPStorage',
 
@@ -404,6 +405,17 @@ class Job(Timestamped, UUIDModel):
 
     completed_time = DateTimeField(blank=True, null=True)
 
+    def save(self, *args, **kwargs):
+        super(Job, self).save(*args, **kwargs)
+
+        # For a single-use ('disposable') ComputeResource associated with a
+        # single job, we automatically name the resource based on the associated
+        # job UUID.
+        compute = self.compute_resource
+        if compute and compute.disposable and not compute.name:
+            compute.name = generate_cluster_stack_name(self)
+            compute.save()
+
     def events(self):
         return EventLog.objects.filter(object_id=self.id)
 
@@ -414,6 +426,10 @@ class Job(Timestamped, UUIDModel):
                 event__exact='JOB_STATUS_CHANGED').latest()
         except EventLog.DoesNotExist:
             return EventLog.objects.none()
+
+    def get_files(self) -> models.query.QuerySet:
+        # Combine querysets
+        return self.input_files.get_files() | self.output_files.get_files()
 
     @property
     def done(self):
@@ -427,17 +443,6 @@ class Job(Timestamped, UUIDModel):
         return (self.status == Job.STATUS_COMPLETE or
                 self.status == Job.STATUS_CANCELLED or
                 self.status == Job.STATUS_FAILED)
-
-    def save(self, *args, **kwargs):
-        super(Job, self).save(*args, **kwargs)
-
-        # For a single-use ('disposable') ComputeResource associated with a
-        # single job, we automatically name the resource based on the associated
-        # job UUID.
-        compute = self.compute_resource
-        if compute and compute.disposable and not compute.name:
-            compute.name = generate_cluster_stack_name(self)
-            compute.save()
 
 
 # Alternatives to a pre_save signal here might be using:
@@ -496,6 +501,11 @@ def new_job_event_log(sender, instance, created,
 
 @reversion.register()
 class File(Timestamped, UUIDModel):
+    class Meta:
+        indexes = [
+            models.Index(fields=['name', 'path']),
+        ]
+
     """
     File model.
     """
@@ -649,8 +659,12 @@ class File(Timestamped, UUIDModel):
             int_hash = int(c, 16)
             return base64.b64encode(
                 int_hash.to_bytes(
-                    math.ceil(int_hash.bit_length() / 8), 'big')
+                    int(math.ceil(int_hash.bit_length() / 8)), 'big')
             ).decode('ascii')
+
+    @property
+    def absolute_path(self):
+        return Path(self.path) / Path(self.name)
 
     @property
     def file(self):
@@ -683,9 +697,11 @@ class File(Timestamped, UUIDModel):
                           pkey=RSAKey.from_private_key(StringIO(private_key)))
             # storage = SFTPStorage(host=host, params=params)
             storage = storage_class(host=host, params=params)
-            file_path = path.join(base_dir, Path(url.path).relative_to('/'))
+            file_path = str(Path(base_dir) / Path(url.path).relative_to('/'))
 
             return storage.open(file_path)
+        elif scheme == 'file':
+            return storage_class(location='/').open(self.absolute_path)
         else:
             response = request_with_retries(
                 'GET', self.location,
