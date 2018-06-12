@@ -1,6 +1,7 @@
 import csv
-from typing import List
+from typing import List, Union
 
+from rest_framework.request import Request
 from rest_framework.response import Response
 from django.http import HttpResponse
 from rest_framework import status
@@ -63,7 +64,7 @@ class CSVTextParser(BaseParser):
 
 
 class GetMixin:
-    def get(self, request, uuid):
+    def get(self, request: Request, uuid: str) -> Response:
         """
         Returns info about a model instance retrieved by UUID.
 
@@ -85,7 +86,9 @@ class GetMixin:
 
 
 class PatchMixin:
-    def patch(self, request, uuid):
+    def patch(self,
+              request: Request,
+              uuid: str) -> Union[Response, HttpResponse]:
         """
 
         PATCH: https://tools.ietf.org/html/rfc5789
@@ -121,7 +124,10 @@ class PatchMixin:
 
 
 class PutMixin:
-    def put(self, request, uuid, serializer_class=None):
+    def put(self,
+            request: Request,
+            uuid: str,
+            serializer_class=None) -> Union[Response, HttpResponse]:
         """
         Replacing an existing resource.
         (Creating a new resource via specifying a UUID is not allowed)
@@ -158,7 +164,9 @@ class PutMixin:
 
 
 class DeleteMixin:
-    def delete(self, request, uuid):
+    def delete(self,
+               request: Request,
+               uuid: str) -> Response:
         """
         Deletes the object specified via UUID.
 
@@ -181,7 +189,7 @@ class DeleteMixin:
 
 
 class PostMixin:
-    def post(self, request):
+    def post(self, request: Request) -> Response:
         """
         Create a new model instance. UUIDs are autoassigned.
 
