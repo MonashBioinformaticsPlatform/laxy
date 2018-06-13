@@ -1,16 +1,15 @@
+from pathlib import Path
+
 from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.generics import UpdateAPIView
 from rest_framework.pagination import PageNumberPagination
-from typing import Dict, List, Sequence
+from typing import Dict, List, Sequence, Union
 from django.shortcuts import render
 
 import logging
 import os
-import re
 import requests
-import jwt
-import base64
-import uuid
 from datetime import datetime, timedelta
 from collections import OrderedDict
 from wsgiref.util import FileWrapper
@@ -18,6 +17,7 @@ import json_merge_patch
 import jsonpatch
 
 from django.conf import settings
+from django.db import models
 from django.shortcuts import render
 from django.contrib.sites.shortcuts import get_current_site
 from django.urls import reverse
@@ -87,7 +87,8 @@ from .serializers import (PatchSerializerResponse,
                           PipelineRunCreateSerializer,
                           SchemalessJsonResponseSerializer,
                           JobListSerializerResponse,
-                          EventLogSerializer, JobEventLogSerializer)
+                          EventLogSerializer, JobEventLogSerializer,
+                          JobFileSerializerCreateRequest)
 
 from . import tasks
 from .tasks import orchestration
@@ -102,7 +103,16 @@ logger = logging.getLogger(__name__)
 PUBLIC_IP = requests.get('http://api.ipify.org').text
 
 
-def get_request_content_type(request):
+def get_content_type(request: Request) -> str:
+    """
+    Returns the simple Content-Type (MIME type/media type) for an HTTP Request
+    object.
+
+    :param request: The request.
+    :type request: Request
+    :return: The content type, eg text/html or application/json
+    :rtype: str
+    """
     return request.content_type.split(';')[0].strip()
 
 
@@ -395,12 +405,45 @@ class JSONPatchRFC6902Parser(JSONParser):
 
 class StreamFileMixin(JSONView):
 
-    def _stream_response(self, uuid, filename=None, download=True):
-        obj = self.get_obj(uuid)
+    def _as_file_obj(self, obj_ref: Union[str, File]):
+        """
+        Convert a File UUID string to a File instance, if required.
+        """
+
+        if isinstance(obj_ref, str):
+            obj = self.get_obj(obj_ref)
+        else:
+            obj = obj_ref
+
+        return obj
+
+    def _add_metalink_headers(self, obj, response):
+
+        url = self.request.build_absolute_uri(obj.get_absolute_url())
+        response['Link'] = f'<{url}>; rel=duplicate'
+
+        if hasattr(obj, 'checksum') and obj.checksum:
+            hashtype = obj.checksum_type
+            b64checksum = obj.checksum_hash_base64
+            response['Digest'] = f'{hashtype.upper()}={b64checksum}'
+            response['Etag'] = f'{obj.checksum}'
+
+        return response
+
+    def _stream_response(
+            self,
+            obj_ref: Union[str, File],
+            filename: str = None,
+            download: bool = True) -> Union[StreamingHttpResponse, Response]:
+
+        obj = self._as_file_obj(obj_ref)
+
         if obj is None:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
         renderer = StreamingFileDownloadRenderer()
+        # TODO: For local file:// URLs, django.http.response.FileResponse
+        #       will probably preform better
         response = StreamingHttpResponse(
             renderer.render(obj.file),
             content_type=StreamingFileDownloadRenderer.media_type)
@@ -431,18 +474,13 @@ class StreamFileMixin(JSONView):
 
         return response
 
-    def _add_metalink_headers(self, obj, response):
+    def download(self, obj_ref: Union[str, File], filename=None):
+        obj = self._as_file_obj(obj_ref)
+        return self._stream_response(obj, filename, download=True)
 
-        url = self.request.build_absolute_uri(obj.get_absolute_url())
-        response['Link'] = f'<{url}>; rel=duplicate'
-
-        if hasattr(obj, 'checksum') and obj.checksum:
-            hashtype = obj.checksum_type
-            b64checksum = obj.checksum_hash_base64
-            response['Digest'] = f'{hashtype.upper()}={b64checksum}'
-            response['Etag'] = f'{obj.checksum}'
-
-        return response
+    def view(self, obj_ref: Union[str, File], filename=None):
+        obj = self._as_file_obj(obj_ref)
+        return self._stream_response(obj, filename, download=False)
 
 
 class FileContentDownload(StreamFileMixin,
@@ -504,7 +542,7 @@ class FileContentDownload(StreamFileMixin,
 
         `Content-Type: application/octet-stream`
 
-        `GET` http://laxy.org/api/v1/file/XXblafooXX/content/alignment.bam
+        `GET` http://laxy.org/api/v1/file/XXblafooXX/content/alignment.bam?download
 
         **Response:**
 
@@ -534,15 +572,9 @@ class FileContentDownload(StreamFileMixin,
         """
         # File view/download is the default when no Content-Type is specified
         if 'download' in request.query_params:
-            return self.download(uuid, filename=filename)
+            return super().download(uuid, filename=filename)
         else:
-            return self.view(uuid, filename=filename)
-
-    def download(self, uuid, filename=None):
-        return self._stream_response(uuid, filename, download=True)
-
-    def view(self, uuid, filename=None):
-        return self._stream_response(uuid, filename, download=False)
+            return super().view(uuid, filename=filename)
 
 
 class FileView(StreamFileMixin,
@@ -558,8 +590,6 @@ class FileView(StreamFileMixin,
     queryset = Meta.model.objects.all()
     serializer_class = Meta.serializer
     parser_classes = (JSONParser,
-                      MultiPartParser,
-                      CSVTextParser,
                       JSONPatchRFC7386Parser,
                       JSONPatchRFC6902Parser)
 
@@ -618,24 +648,18 @@ class FileView(StreamFileMixin,
         -->
         """
 
-        content_type = get_request_content_type(request)
+        content_type = get_content_type(request)
         if content_type == 'application/json':
-            return super(FileView, self).get(request, uuid)
+            return super().get(request, uuid)
         else:
             # File view/download is the default when no Content-Type is specified
             if 'download' in request.query_params:
-                return self.download(uuid, filename=filename)
+                return super().download(uuid, filename=filename)
             else:
-                return self.view(uuid, filename=filename)
-
-    def download(self, uuid, filename=None):
-        return self._stream_response(uuid, filename, download=True)
-
-    def view(self, uuid, filename=None):
-        return self._stream_response(uuid, filename, download=False)
+                return super().view(uuid, filename=filename)
 
     def _try_json_patch(self, request, uuid):
-        content_type = get_request_content_type(request)
+        content_type = get_content_type(request)
         if content_type in ['application/merge-patch+json',
                             'application/json-patch+json']:
             obj = self.get_obj(uuid)
@@ -743,6 +767,129 @@ class FileView(StreamFileMixin,
             serializer_class=FileSerializerPostRequest)
 
 
+class JobFileView(StreamFileMixin,
+                  GetMixin,
+                  JSONView):
+    class Meta:
+        model = Job
+        serializer = FileSerializer
+
+    queryset = Meta.model.objects.all()
+    serializer_class = Meta.serializer
+    parser_classes = (JSONParser,)
+
+    def get(self,
+            request: Request,
+            job_id: str,
+            file_path: str,
+            version=None):
+        """
+        Get a `File` by path, associated with this `Job`.
+
+        See the documentation for `file/{uuid}/content/` endpoints for a
+        description on how `Content-Types` and the `?download` query string are
+        handled (JSON response vs. download vs. view).
+
+        Valid values for `file_path` are:
+
+         - `input`
+         - `output`
+
+        corresponding to the input and output FileSets respectively.
+
+        <!--
+        :param request:
+        :type request:
+        :param job_id:
+        :type job_id:
+        :param file_path:
+        :type file_path:
+        :return:
+        :rtype:
+        -->
+        """
+        job = self.get_obj(job_id)
+        if job is None:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        fname = Path(file_path).name
+        fpath = Path(file_path).parent
+        file_obj = job.get_files().filter(name=fname, path=fpath).first()
+        if file_obj is None:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        # serializer = self.Meta.serializer(file_obj)
+        # return Response(serializer.data, status=status.HTTP_200_OK)
+
+        content_type = get_content_type(request)
+        if content_type == 'application/json':
+            return super().get(request, file_obj.id)
+        else:
+            # File view/download is the default when no Content-Type is specified
+            if 'download' in request.query_params:
+                return super().download(file_obj, filename=fname)
+            else:
+                return super().view(file_obj, filename=fname)
+
+        # return super(FileView, self).get(request, file_obj.id)
+
+    @transaction.atomic()
+    @view_config(request_serializer=JobFileSerializerCreateRequest,
+                 response_serializer=FileSerializer)
+    def put(self,
+            request: Request,
+            job_id: str,
+            file_path: str,
+            version=None):
+        try:
+            job = Job.objects.get(id=job_id)
+        except Job.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        fname = Path(file_path).name
+        fpath = Path(file_path).parent
+
+        fileset_path = fpath.parts[0]
+
+        if fileset_path == 'output':
+            fileset = job.output_files
+        elif fileset_path == 'input':
+            fileset = job.input_files
+        else:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        file_obj = fileset.get_files().filter(name=fname, path=fpath).first()
+        if file_obj is None:
+
+            # Create new file. Inferred location based on job+compute
+            data = dict(request.data)
+            if 'location' not in data:
+                data['location'] = (f'laxy+sftp://{job.compute_resource.id}/'
+                                    f'{job_id}/{fpath}/{fname}')
+
+            serializer = self.request_serializer(data=data,
+                                                 context={'request': request})
+
+            if serializer.is_valid():
+                serializer.save()
+                fileset.add(serializer.instance, save=True)
+                data = self.response_serializer(serializer.instance).data
+                return Response(data, status=status.HTTP_201_CREATED)
+        else:
+            # Update existing File
+            serializer = JobFileSerializerCreateRequest(
+                file_obj,
+                data=request.data,
+                context={'request': request})
+
+            if serializer.is_valid():
+                serializer.save()
+                return Response(status=status.HTTP_200_OK,
+                                data=serializer.validated_data)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 class FileSetCreate(PostMixin,
                     JSONView):
     class Meta:
@@ -828,7 +975,7 @@ class SampleSetCreateUpdate(JSONView):
         :rtype:
         """
 
-        content_type = get_request_content_type(request)
+        content_type = get_content_type(request)
         encoding = 'utf-8'
 
         if content_type == 'multipart/form-data':

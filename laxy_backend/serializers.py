@@ -146,6 +146,17 @@ class FileSerializerPostRequest(FileSerializer):
         fields = ('name', 'location', 'checksum', 'metadata')
 
 
+# naming is hard
+class JobFileSerializerCreateRequest(FileSerializer):
+    location = serializers.CharField(
+        max_length=2048,
+        validators=[models.URIValidator()],
+        required=False)
+
+    class Meta(FileSerializer.Meta):
+        fields = ('location', 'checksum', 'metadata')
+
+
 class FileSetSerializer(BaseModelSerializer):
     # files = serializers.ListField(required=True)
     files = FileSerializer(source='get_files', read_only=True, many=True)

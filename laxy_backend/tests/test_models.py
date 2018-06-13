@@ -17,7 +17,8 @@ from django.contrib.auth.models import User
 from rest_framework.test import APIClient
 
 from ..util import ordereddicts_to_dicts
-from ..models import Job, File, FileSet, SampleSet
+from ..util import reverse_querystring
+from ..models import Job, File, FileSet, SampleSet, ComputeResource
 from ..jwt_helpers import (get_jwt_user_header_dict,
                            make_jwt_header_dict,
                            create_jwt_user_token)
@@ -214,6 +215,21 @@ class FileViewTest(TestCase):
         self.file_a.save()
         self.file_b.save()
 
+        self.file_on_disk_content = b'test data\nline 2\n'
+        self.file_on_disk_b64md5 = 'nROVtwU1zae3eOK/dZyRZw=='
+        fd, fpath = tempfile.mkstemp()
+        os.write(fd, self.file_on_disk_content)
+        os.close(fd)
+
+        self.file_on_disk = File(
+            location=f'file://{fpath}',
+            name=Path(fpath).name,
+            path=Path(fpath).parent,
+            checksum='md5:9d1395b70535cda7b778e2bf759c9167',
+            metadata={'file_type_tags': ['text', 'test']},
+            owner_id=self.user.id)
+        self.file_on_disk.save()
+
     def test_create_file(self):
         job_json = {
             'location': 'http://example.com/file_examp.txt',
@@ -340,6 +356,129 @@ class FileViewTest(TestCase):
 
         obj = File.objects.get(name="file_RFC6902")
         self.assertDictEqual(obj.metadata, {"size": 3142, "tags": ["A", "B", "C"]})
+
+    def test_file_view_octet_stream(self):
+        response = self.user_client.get(
+            reverse('laxy_backend:file', args=[self.file_on_disk.uuid()]),
+            content_type='application/octet-stream')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-disposition'],
+                         f'inline')
+        self.assertEqual(response['digest'], f'MD5={self.file_on_disk_b64md5}')
+
+        content = b''.join([chunk
+                            for chunk in response.streaming_content])
+        self.assertEqual(content, self.file_on_disk_content)
+
+    def test_file_download_octet_stream(self):
+        url = reverse('laxy_backend:file', args=[self.file_on_disk.uuid()])
+        response = self.user_client.get(f'{url}?download',
+                                        content_type='application/octet-stream')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-disposition'],
+                         f'attachment; filename="{self.file_on_disk.name}"')
+        self.assertEqual(response['digest'], f'MD5={self.file_on_disk_b64md5}')
+
+        content = b''.join([chunk
+                            for chunk in response.streaming_content])
+        self.assertEqual(content, self.file_on_disk_content)
+
+    def test_file_view_content(self):
+        url = reverse('laxy_backend:file_download',
+                      args=[self.file_on_disk.uuid(), self.file_on_disk.name])
+        response = self.user_client.get(url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-disposition'],
+                         f'inline')
+        self.assertEqual(response['digest'], f'MD5={self.file_on_disk_b64md5}')
+
+        content = b''.join([chunk
+                            for chunk in response.streaming_content])
+        self.assertEqual(content, self.file_on_disk_content)
+
+    def test_file_download_content(self):
+        url = reverse('laxy_backend:file_download',
+                      args=[self.file_on_disk.uuid(), self.file_on_disk.name])
+        response = self.user_client.get(f'{url}?download')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-disposition'],
+                         f'attachment; filename="{self.file_on_disk.name}"')
+        self.assertEqual(response['digest'], f'MD5={self.file_on_disk_b64md5}')
+
+        content = b''.join([chunk
+                            for chunk in response.streaming_content])
+        self.assertEqual(content, self.file_on_disk_content)
+
+    def test_job_file_download_content(self):
+        compute = ComputeResource(host='localhost',
+                                  status='online',
+                                  owner=self.user,
+                                  disposable=False)
+        compute.save()
+
+        input_files = FileSet()
+        input_files.save()
+        output_files = FileSet()
+        output_files.add(self.file_on_disk)
+        output_files.save()
+
+        job = Job(input_files=input_files,
+                  output_files=output_files,
+                  owner=self.user,
+                  compute_resource=compute)
+        job.save()
+
+        url = reverse('laxy_backend:job_file',
+                      args=[job.id, f'{self.file_on_disk.absolute_path}'])
+        response = self.user_client.get(f'{url}?download')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-disposition'],
+                         f'attachment; filename="{self.file_on_disk.name}"')
+        self.assertEqual(response['digest'], f'MD5={self.file_on_disk_b64md5}')
+
+        content = b''.join([chunk
+                            for chunk in response.streaming_content])
+        self.assertEqual(content, self.file_on_disk_content)
+
+    def test_job_file_put(self):
+        compute = ComputeResource(host='localhost',
+                                  status='online',
+                                  owner=self.user,
+                                  disposable=False)
+        compute.save()
+
+        input_files = FileSet()
+        input_files.save()
+        output_files = FileSet()
+        output_files.save()
+
+        job = Job(input_files=input_files,
+                  output_files=output_files,
+                  owner=self.user,
+                  compute_resource=compute)
+        job.save()
+
+        url = reverse('laxy_backend:create_job_file',
+                      args=[job.id, f'output/{self.file_on_disk.absolute_path}'])
+        response = self.user_client.put(
+            url,
+            data=json.dumps(
+                {'location': self.file_on_disk.location,
+                 'checksum': self.file_on_disk.checksum_hash,
+                 'metadata': {}}),
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 201)
+        f_obj = File.objects.get(id=response.data.get('id'))
+        self.assertEqual(f_obj.location, self.file_on_disk.location)
+        job = Job.objects.get(id=job.id)
+        self.assertEqual(f_obj, job.output_files.get_files().first())
 
 
 class JobViewTest(TestCase):

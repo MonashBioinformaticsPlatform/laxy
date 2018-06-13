@@ -26,7 +26,8 @@ from laxy_backend.views import (JobView, JobCreate,
                                 PipelineRunView, PipelineRunCreate,
                                 ComputeResourceView, ComputeResourceCreate,
                                 ENAQueryView, ENAFastqUrlQueryView, JobListView,
-                                EventLogCreate, EventLogListView, JobEventLogCreate)
+                                EventLogCreate, EventLogListView, JobEventLogCreate,
+                                JobFileView)
 
 from laxy_backend.view_auth import Login, Logout, view_user_profile
 
@@ -88,6 +89,16 @@ api_urls = [
             # JobListView.as_view({'get': 'list'}),
             JobListView.as_view(),
             name='list_jobs'),
+    re_path(r'job/(?P<job_id>[a-zA-Z0-9\-_]+)/event/$',
+            JobEventLogCreate.as_view(),
+            name='create_job_eventlog'),
+    re_path(r'job/(?P<job_id>[a-zA-Z0-9\-_]+)/files/(?P<file_path>.*)$',
+            JobFileView.as_view(),  # GET
+            name='job_file'),
+    re_path(r'job/(?P<job_id>[a-zA-Z0-9\-_]+)/files/(?P<file_path>.*)$',
+            JobFileView.as_view(),  # PUT
+            name='create_job_file'),
+
     re_path(r'file/$',
             FileCreate.as_view(),
             name='create_file'),
@@ -103,24 +114,28 @@ api_urls = [
     re_path(r'file/(?P<uuid>[a-zA-Z0-9\-_]+)/content/(?P<filename>.*)$',
             FileContentDownload.as_view(),
             name='file_download'),
+
     re_path(r'fileset/(?P<uuid>[a-zA-Z0-9\-_]+)/$',
             FileSetView.as_view(),
             name='fileset'),
     re_path(r'fileset/$',
             FileSetCreate.as_view(),
             name='create_fileset'),
+
     re_path(r'sampleset/(?P<uuid>[a-zA-Z0-9\-_]+)/$',
             SampleSetView.as_view(),
             name='sampleset'),
     re_path(r'sampleset/$',
             SampleSetCreate.as_view(),
             name='create_sampleset'),
+
     re_path(r'pipelinerun/(?P<uuid>[a-zA-Z0-9\-_]+)/$',
             PipelineRunView.as_view(),
             name='pipelinerun'),
     re_path(r'pipelinerun/$',
             PipelineRunCreate.as_view(),
             name='create_pipelinerun'),
+
     re_path(
         r'compute-resource/(?P<uuid>[a-zA-Z0-9\-_]+)/$',
         ComputeResourceView.as_view(),
@@ -142,9 +157,6 @@ api_urls = [
     re_path(r'eventlog/$',
             EventLogCreate.as_view(),
             name='create_eventlog'),
-    re_path(r'job/(?P<job_id>[a-zA-Z0-9\-_]+)/event/$',
-            JobEventLogCreate.as_view(),
-            name='create_job_eventlog'),
 ]
 
 urlpatterns = [
