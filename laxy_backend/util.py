@@ -10,6 +10,8 @@ import cgi
 import os
 from urllib.parse import urlparse
 
+from django.urls import reverse
+from django.utils.http import urlencode
 
 def sh_bool(boolean):
     """
@@ -107,3 +109,19 @@ def find_filename_and_size_from_url(url, **kwargs):
         raise ValueError('Could not find a filename for: %s' % url)
 
     return filename, file_size
+
+
+def reverse_querystring(view, urlconf=None, args=None, kwargs=None,
+                        current_app=None, query_kwargs=None):
+    """
+    Custom reverse to handle query strings.
+
+    Usage:
+        reverse('app.views.my_view', kwargs={'pk': 123}, query_kwargs={'search', 'Bob'})
+
+    https://gist.github.com/benbacardi/227f924ec1d9bedd242b
+    """
+    base_url = reverse(view, urlconf=urlconf, args=args, kwargs=kwargs, current_app=current_app)
+    if query_kwargs:
+        return '{}?{}'.format(base_url, urlencode(query_kwargs))
+    return base_url
