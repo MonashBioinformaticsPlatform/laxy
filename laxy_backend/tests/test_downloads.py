@@ -1,6 +1,6 @@
 # from __future__ import absolute_import
-import unittest
 # from compare import expect, ensure, matcher
+import unittest
 import os
 import tempfile
 from pathlib import Path
@@ -60,7 +60,9 @@ class DownloadTaskTest(TestCase):
             'ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR950/SRR950087/SRR950087_2.fastq.gz']
 
     def tearDown(self):
-        pass
+        self.admin_user.delete()
+        self.file_sra_ftp.delete()
+        self.file_ftp.delete()
 
     def assetFileExists(self, file):
         return self.assertTrue(os.path.exists(file))
