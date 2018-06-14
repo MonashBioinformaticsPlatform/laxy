@@ -12,6 +12,7 @@ import os
 import requests
 from datetime import datetime, timedelta
 from collections import OrderedDict
+from urllib.parse import urlparse
 from wsgiref.util import FileWrapper
 import json_merge_patch
 import jsonpatch
@@ -685,6 +686,7 @@ class JobFileView(StreamFileMixin,
     serializer_class = Meta.serializer
     parser_classes = (JSONParser,)
 
+    @view_config(response_serializer=FileSerializer)
     def get(self,
             request: Request,
             job_id: str,
@@ -693,9 +695,9 @@ class JobFileView(StreamFileMixin,
         """
         Get a `File` by path, associated with this `Job`.
 
-        See the documentation for `file/{uuid}/content/` endpoints for a
-        description on how `Content-Types` and the `?download` query string are
-        handled (JSON response vs. download vs. view).
+        See the documentation for [file/{uuid}/content/ docs](#operation/v1_file_content_read)
+        endpoints for a description on how `Content-Types` and the `?download`
+        query strings are handled (JSON response vs. download vs. view).
 
         Valid values for `file_path` are:
 
@@ -748,6 +750,35 @@ class JobFileView(StreamFileMixin,
             job_id: str,
             file_path: str,
             version=None):
+        """
+        Create (or replace) a File record by job ID and path. This endpoint
+        is generally intended to be called by the job script on a compute node
+        to register files with specific `checksum`, `metadata`, `type_tags`
+        and possibly `location` fields.
+
+        `file_path` is the relative path of the file in the job directory. It
+        must begin with `input/` or `output/`, corresponding to the input and
+        output FileSets.
+
+        Typically you should not set `location` - it is automatically generated
+        to be a URL pointing to data accessible on the ComputeResource.
+
+        `location` can be set if your job script manually stages the job files
+        to another location (eg, stores outputs in an object store like S3).
+
+        <!--
+        :param request:
+        :type request:
+        :param job_id:
+        :type job_id:
+        :param file_path:
+        :type file_path:
+        :param version:
+        :type version:
+        :return:
+        :rtype:
+        -->
+        """
         try:
             job = Job.objects.get(id=job_id)
         except Job.DoesNotExist:
@@ -765,17 +796,49 @@ class JobFileView(StreamFileMixin,
         else:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
-        file_obj = fileset.get_files().filter(name=fname, path=fpath).first()
+        # Generate a location URL if not set explicitly
+        data = dict(request.data)
+        data['name'] = fname
+        data['path'] =  str(fpath)
+        location = data.get('location', None)
+        if not location:
+            data['location'] = (f'laxy+sftp://{job.compute_resource.id}/'
+                                f'{job_id}/{fpath}/{fname}')
+
+        elif not urlparse(location).scheme:
+            return HttpResponse(status=status.HTTP_400_BAD_REQUEST,
+                                reason="Location must be a valid URL.")
+
+        # TODO: consider how best to handle file:// URLs here
+        # file:// URLs could be used in the location field if the job
+        # directories are mounted on both the compute node and the server.
+        # We could treat them as a path relative to the job directory (given
+        # that we know the job here).
+        # We need to be careful when creating Files with file:// locations -
+        # there is the potential for a tricky user to create locations
+        # that point to anywhere on the server filesystem (eg absolute path to
+        # /etc/passwd). For the moment they are disallowed here
+        if urlparse(location).scheme == 'file':
+            return HttpResponse(status=status.HTTP_400_BAD_REQUEST,
+                                reason="file:// locations are not allowed "
+                                       "using this API endpoint.")
+
+            # # we make the path relative, even if there is a leading /
+            # cleaned = location.lstrip('file://').lstrip('/')
+            # if '../' in cleaned:
+            #     return HttpResponse(status=status.HTTP_400_BAD_REQUEST,
+            #                         reason="file:// location cannot contain "
+            #                                "../ in relative paths.")
+            #
+            # data['location'] = (f'laxy+file://'
+            #                     f'{job.compute_resource.id}/{job_id}/{cleaned}')
+
+        file_obj = fileset.get_files_by_path(file_path).first()
         if file_obj is None:
-
             # Create new file. Inferred location based on job+compute
-            data = dict(request.data)
-            if 'location' not in data:
-                data['location'] = (f'laxy+sftp://{job.compute_resource.id}/'
-                                    f'{job_id}/{fpath}/{fname}')
-
-            serializer = self.request_serializer(data=data,
-                                                 context={'request': request})
+            # We actually use the POST serializer to include name and path etc
+            serializer = FileSerializerPostRequest(data=data,
+                                                   context={'request': request})
 
             if serializer.is_valid():
                 serializer.save()
@@ -784,7 +847,7 @@ class JobFileView(StreamFileMixin,
                 return Response(data, status=status.HTTP_201_CREATED)
         else:
             # Update existing File
-            serializer = JobFileSerializerCreateRequest(
+            serializer = self.request_serializer(
                 file_obj,
                 data=request.data,
                 context={'request': request})

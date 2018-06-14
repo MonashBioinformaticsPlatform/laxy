@@ -20,7 +20,6 @@ from rest_framework import routers
 from rest_framework.urlpatterns import format_suffix_patterns
 from laxy_backend.views import (JobView, JobCreate,
                                 FileCreate, FileView, FileContentDownload,
-                                FileTypeTagsView, FileTypeTagsModify,
                                 FileSetCreate, FileSetView,
                                 SampleSetView, SampleSetCreate,
                                 PipelineRunView, PipelineRunCreate,
@@ -93,11 +92,8 @@ api_urls = [
             JobEventLogCreate.as_view(),
             name='create_job_eventlog'),
     re_path(r'job/(?P<job_id>[a-zA-Z0-9\-_]+)/files/(?P<file_path>.*)$',
-            JobFileView.as_view(),  # GET
+            JobFileView.as_view(),  # GET, PUT
             name='job_file'),
-    re_path(r'job/(?P<job_id>[a-zA-Z0-9\-_]+)/files/(?P<file_path>.*)$',
-            JobFileView.as_view(),  # PUT
-            name='create_job_file'),
 
     re_path(r'file/$',
             FileCreate.as_view(),
@@ -105,12 +101,6 @@ api_urls = [
     re_path(r'file/(?P<uuid>[a-zA-Z0-9\-_]+)/$',
             FileView.as_view(),
             name='file'),
-    re_path(r'file/(?P<uuid>[a-zA-Z0-9\-_]+)/type-tags/(?P<tag>.*)$',
-            FileTypeTagsModify.as_view(),
-            name='file_type_tags'),
-    re_path(r'file/(?P<uuid>[a-zA-Z0-9\-_]+)/type-tags/$',
-            FileTypeTagsView.as_view(),
-            name='file_type_tags'),
     re_path(r'file/(?P<uuid>[a-zA-Z0-9\-_]+)/content/(?P<filename>.*)$',
             FileContentDownload.as_view(),
             name='file_download'),

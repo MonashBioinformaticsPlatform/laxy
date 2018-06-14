@@ -130,7 +130,14 @@ class FileSerializer(BaseModelSerializer):
 
     class Meta:
         model = models.File
-        fields = ('id', 'name', 'location', 'owner', 'checksum', 'metadata')
+        fields = ('id',
+                  'owner',
+                  'name',
+                  'path',
+                  'location',
+                  'checksum',
+                  'type_tags',
+                  'metadata')
         read_only_fields = ('id', 'owner',)
         error_status_codes = status_codes()
 
@@ -143,7 +150,12 @@ class FileSerializer(BaseModelSerializer):
 
 class FileSerializerPostRequest(FileSerializer):
     class Meta(FileSerializer.Meta):
-        fields = ('name', 'location', 'checksum', 'metadata')
+        fields = ('name',
+                  'path',
+                  'location',
+                  'checksum',
+                  'type_tags',
+                  'metadata')
 
 
 # naming is hard
