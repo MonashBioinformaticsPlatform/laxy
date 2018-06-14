@@ -34,7 +34,7 @@ from django.core.serializers import serialize
 from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError
 from django.db.models import Model, CharField, TextField, UUIDField, \
-    URLField, ForeignKey, BooleanField, IntegerField, DateTimeField
+    URLField, ForeignKey, BooleanField, IntegerField, DateTimeField, QuerySet
 from django.contrib.postgres.fields import ArrayField, HStoreField
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.fields import GenericForeignKey
@@ -509,13 +509,14 @@ class File(Timestamped, UUIDModel):
     """
     File model.
     """
-    # The filename. Equivalent to path.basename(location) in most cases.
+    # The filename, as might be used on a POSIX filesystem.
     # Longest filename on most Linux filesystems is 255, hence max_length.
+    # Often equivalent to path.basename(location), but not always.
     name = CharField(max_length=255, blank=True, null=True)
 
     # We store the file path (minus the filename) since the location URL won't
-    # always contain it (eg shortened links). Longest Linux path on most
-    # filesystems is 4096, hence max_length
+    # always contain it (eg shortened links). Longest path on most Linux
+    # filesystems is 4096, hence max_length.
     path = CharField(max_length=4096, blank=True, null=True)
 
     # Any hash supported by hashlib, and xxhash, in the format:
@@ -528,6 +529,10 @@ class File(Timestamped, UUIDModel):
                        related_name='files')
     # The URL to the file. Could be file://, https://, s3://, sftp://
     location = ExtendedURIField(max_length=2048, blank=False, null=False)
+
+    type_tags = ArrayField(models.CharField(max_length=255),
+                           default=[],
+                           blank=True)
 
     # Arbitrary metadata.
     metadata = JSONField(default=OrderedDict)
@@ -575,7 +580,11 @@ class File(Timestamped, UUIDModel):
 
     def add_type_tag(self, tags: Union[List[str], str], save=True):
         """
-        Add file type tag(s) to the metadata field. Enforces uniqueness.
+        Add file type tag(s). These tags are intended to be used to flag a
+        file as a specific type (eg, csv, tsv, fastq, bam), or for use with
+        a particular external application (eg degust, jbrowse).
+
+        Enforces uniqueness.
 
         :param tags: A single tag or a list of tags
         :type tags: Union[List[str], str]
@@ -590,14 +599,15 @@ class File(Timestamped, UUIDModel):
         if self.metadata is None:
             self.metadata = OrderedDict()
 
-        existing = self.metadata.get('file_type_tags', [])
-        existing.extend(tags)
-        self.metadata.update({'file_type_tags': unique(existing)})
-        self.save()
+        self.type_tags.extend(tags)
+        self.type_tags = unique(self.type_tags)
+
+        if save:
+            self.save()
 
     def remove_type_tag(self, tags: Union[List[str], str], save=True):
         """
-        Remove file type tag(s) from the metadata field. Enforces uniqueness.
+        Remove file type tag(s). Enforces uniqueness.
 
         :param tags: A single tag or a list of tags
         :type tags: Union[List[str], str]
@@ -612,16 +622,17 @@ class File(Timestamped, UUIDModel):
         if isinstance(tags, str):
             tags = [tags]
 
-        existing = unique(self.metadata.get('file_type_tags', []))
+        existing = unique(self.type_tags)
         if existing:
             for t in tags:
                 try:
                     existing.remove(t)
                 except ValueError:
                     continue
-            self.metadata.update({'file_type_tags': existing})
+            self.type_tags = existing
 
-        self.save()
+        if save:
+            self.save()
 
     @property
     def checksum_type(self) -> str:
@@ -663,7 +674,7 @@ class File(Timestamped, UUIDModel):
             ).decode('ascii')
 
     @property
-    def absolute_path(self):
+    def full_path(self):
         return Path(self.path) / Path(self.name)
 
     @property
@@ -700,8 +711,10 @@ class File(Timestamped, UUIDModel):
             file_path = str(Path(base_dir) / Path(url.path).relative_to('/'))
 
             return storage.open(file_path)
+        # TODO: This needs to be carefully reworked or removed. Too much
+        #       scope for reading arbitrary files on the server.
         elif scheme == 'file':
-            return storage_class(location='/').open(self.absolute_path)
+            return storage_class(location='/').open(self.full_path)
         else:
             response = request_with_retries(
                 'GET', self.location,
@@ -828,7 +841,7 @@ class FileSet(Timestamped, UUIDModel):
         if save:
             self.save()
 
-    def get_files(self):
+    def get_files(self) -> QuerySet:
         """
         Return all the File objects associated with this FileSet.
 
@@ -837,6 +850,11 @@ class FileSet(Timestamped, UUIDModel):
         """
         return File.objects.filter(id__in=self.files)
         # return File.objects.in_bulk(self.files, field_name='id')
+
+    def get_files_by_path(self, file_path: Union[str, Path]) -> QuerySet:
+        fname = Path(file_path).name
+        fpath = Path(file_path).parent
+        return File.objects.filter(name=fname, path=fpath)
 
 
 @reversion.register()

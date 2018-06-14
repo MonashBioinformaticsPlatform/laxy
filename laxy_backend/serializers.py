@@ -154,7 +154,7 @@ class JobFileSerializerCreateRequest(FileSerializer):
         required=False)
 
     class Meta(FileSerializer.Meta):
-        fields = ('location', 'checksum', 'metadata')
+        fields = ('location', 'checksum', 'type_tags', 'metadata')
 
 
 class FileSetSerializer(BaseModelSerializer):

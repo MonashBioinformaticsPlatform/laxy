@@ -64,7 +64,7 @@ class FileViewTest(TestCase):
             name=Path(fpath).name,
             path=Path(fpath).parent,
             checksum='md5:9d1395b70535cda7b778e2bf759c9167',
-            metadata={'file_type_tags': ['text', 'test']},
+            type_tags=['text', 'test'],
             owner_id=self.user.id)
         self.file_on_disk.save()
 

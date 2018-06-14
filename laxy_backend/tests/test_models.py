@@ -100,35 +100,35 @@ class FileModelTest(TestCase):
 
         # Removing non-existant tags does nothing
         f.remove_type_tag(['test2', 'licence'])
-        self.assertListSameItems(f.metadata.get('file_type_tags', []), [])
+        self.assertListSameItems(f.type_tags, [])
 
         # Add a single tag (as a string)
         f.add_type_tag('text/plain')
-        self.assertListSameItems(f.metadata['file_type_tags'], ['text/plain'])
+        self.assertListSameItems(f.type_tags, ['text/plain'])
 
         # Add multiple tags (list of strings)
         f.add_type_tag(['license', 'test', 'test2'])
-        self.assertListSameItems(f.metadata['file_type_tags'],
+        self.assertListSameItems(f.type_tags,
                                  ['text/plain', 'license', 'test', 'test2'])
 
         # Add a tag a second time - list should not contain duplicates
         f.add_type_tag('text/plain')
-        self.assertListEqual(sorted(f.metadata['file_type_tags']),
+        self.assertListEqual(sorted(f.type_tags),
                              sorted(['text/plain', 'license', 'test', 'test2']))
 
         # Remove a single tag
         f.remove_type_tag('test')
-        self.assertListSameItems(f.metadata['file_type_tags'],
+        self.assertListSameItems(f.type_tags,
                                  ['text/plain', 'license', 'test2'])
 
         # Check that the changes were saved to the database
         newf = File.objects.get(id=f.id)
-        self.assertListSameItems(newf.metadata['file_type_tags'],
+        self.assertListSameItems(newf.type_tags,
                                  ['text/plain', 'license', 'test2'])
 
         # Remove multiple tags
         f.remove_type_tag(['test2', 'license'])
-        self.assertListSameItems(f.metadata['file_type_tags'], ['text/plain'])
+        self.assertListSameItems(f.type_tags, ['text/plain'])
 
 
 class FileSetModelTest(TestCase):
