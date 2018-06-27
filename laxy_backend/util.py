@@ -13,6 +13,7 @@ from urllib.parse import urlparse
 from django.urls import reverse
 from django.utils.http import urlencode
 
+
 def sh_bool(boolean):
     """
     Formats a boolean to be passed to a bash script environment (eg run_job.sh)
@@ -125,3 +126,27 @@ def reverse_querystring(view, urlconf=None, args=None, kwargs=None,
     if query_kwargs:
         return '{}?{}'.format(base_url, urlencode(query_kwargs))
     return base_url
+
+
+def unique(l):
+    return list(set(l))
+
+
+def laxy_sftp_url(job, path: str = None) -> str:
+    """
+    Generate internal laxy+sftp:// URL strings based on a job and file path.
+
+    :param job: A Job instance
+    :type job: models.Job
+    :param path: The path/filename
+    :type path: str
+    :return: The internal laxy+sftp:// URL
+    :rtype: str
+    """
+
+    url = f'laxy+sftp://{job.compute_resource.id}/{job.id}'
+
+    if path:
+        url = f'{url}/{path}'
+
+    return url

@@ -143,7 +143,8 @@
                     <transition name="fade">
                         <md-layout v-show="showTab === 'eventlog'" md-column-medium>
                             <md-layout id="eventlog-panel">
-                                <event-log :job-id="jobId"
+                                <event-log ref="eventlog"
+                                           :job-id="jobId"
                                            @refresh-error="showErrorDialog"></event-log>
                             </md-layout>
                         </md-layout>
@@ -254,14 +255,19 @@
                 this.submitting = true;
                 const response = await WebAPI.getJob(this.jobId);
                 this.job = response.data as ComputeJob;
+                if (this.showTab == 'eventlog') {
+                    (this.$refs['eventlog'] as any).refresh();
+                }
                 this.submitting = false;
                 if (successMessage) this.flashSnackBarMessage(successMessage, 500);
             } catch (error) {
-                console.log(error);
+                console.log(JSON.parse(JSON.stringify(error)));
                 this.submitting = false;
                 this.error_alert_message = error.toString();
-                this.openDialog("error_dialog");
-                throw error;
+                if (error.response.status != 401) {
+                   this.openDialog("error_dialog");
+                   throw error;
+                }
             }
         }
 

@@ -26,7 +26,7 @@ from laxy_backend.views import (JobView, JobCreate,
                                 ComputeResourceView, ComputeResourceCreate,
                                 ENAQueryView, ENAFastqUrlQueryView, JobListView,
                                 EventLogCreate, EventLogListView, JobEventLogCreate,
-                                JobFileView)
+                                JobFileView, JobFileBulkRegistration, trigger_file_registration)
 
 from laxy_backend.view_auth import Login, Logout, view_user_profile
 
@@ -91,6 +91,9 @@ api_urls = [
     re_path(r'job/(?P<job_id>[a-zA-Z0-9\-_]+)/event/$',
             JobEventLogCreate.as_view(),
             name='create_job_eventlog'),
+    re_path(r'job/(?P<job_id>[a-zA-Z0-9\-_]+)/files/$',
+            JobFileBulkRegistration.as_view(),  # POST (csv, tsv)
+            name='job_file_bulk'),
     re_path(r'job/(?P<job_id>[a-zA-Z0-9\-_]+)/files/(?P<file_path>.*)$',
             JobFileView.as_view(),  # GET, PUT
             name='job_file'),
@@ -149,11 +152,19 @@ api_urls = [
             name='create_eventlog'),
 ]
 
+admin_urls = [
+    re_path(r'tasks/register_job_files/(?P<job_id>[a-zA-Z0-9\-_]+)/$',
+            trigger_file_registration,
+            name='task_register_job_files')
+]
+
 urlpatterns = [
     re_path('^accounts/profile/', view_user_profile),
 
     # re_path(r'^api/(?P<version>(v1|v2))/', include(api_urls)),
     re_path(r'^api/v1/', include(api_urls)),
+
+    re_path(r'^api/v1/admin/', include(admin_urls)),
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)

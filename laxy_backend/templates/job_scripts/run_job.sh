@@ -8,7 +8,7 @@ set -o xtrace
 # set -o errexit
 
 # These variables are overridden by environment vars if present
-export DEBUG="${DEBUG:-no}"
+export DEBUG="${DEBUG:-{{ DEBUG }}}"
 # export JOB_ID="${JOB_ID:-}"
 # export JOB_COMPLETE_CALLBACK_URL="${JOB_COMPLETE_CALLBACK_URL:-}"
 # export JOB_COMPLETE_AUTH_HEADER="${JOB_COMPLETE_AUTH_HEADER:-}"
@@ -17,6 +17,7 @@ readonly TMP="${PWD}/../tmp"
 readonly JOB_ID="{{ JOB_ID }}"
 readonly JOB_COMPLETE_CALLBACK_URL="{{ JOB_COMPLETE_CALLBACK_URL }}"
 readonly JOB_EVENT_URL="{{ JOB_EVENT_URL }}"
+readonly JOB_FILE_REGISTRATION_URL="{{ JOB_FILE_REGISTRATION_URL }}"
 readonly JOB_INPUT_STAGED="{{ JOB_INPUT_STAGED }}"
 readonly REFERENCE_GENOME="{{ REFERENCE_GENOME }}"
 readonly PIPELINE_VERSION="{{ PIPELINE_VERSION }}"
@@ -26,16 +27,21 @@ readonly REFERENCE_BASE="${PWD}/../references/iGenomes"
 
 readonly SCHEDULER="slurm"
 # readonly SCHEDULER="local"
-readonly SBATCH_OPTIONS="--cpus-per-task=8 --mem=31500 -t 7-0:00 --ntasks-per-node=1 --ntasks=1 --job-name=laxy:${JOB_ID}"
+MEM=31500
+if [[ "$REFERENCE_GENOME" == "Saccharomyces_cerevisiae/Ensembl/R64-1-1" ]]; then
+    MEM=16000 # yeast (uses ~ 8Gb)
+fi
+readonly CPUS=8
+readonly SBATCH_OPTIONS="--cpus-per-task=${CPUS} --mem=${MEM} -t 1-0:00 --ntasks-per-node=1 --ntasks=1 --job-name=laxy:${JOB_ID}"
 
 PREFIX_JOB_CMD=""
-if [ "${SCHEDULER}" == "slurm" ]; then
+if [[ "${SCHEDULER}" == "slurm" ]]; then
     PREFIX_JOB_CMD="srun ${SBATCH_OPTIONS} "
 fi
 
 function send_event() {
-    event=${1:-"HEARTBEAT"}
-    extra=${2:-"{}"}
+    local event=${1:-"HEARTBEAT"}
+    local extra=${2:-"{}"}
     # escape double quotes since this is JSON nested inside JSON ?
     # extra=$(sed 's/"/\\"/g' <<< "${extra}")
 
@@ -73,7 +79,7 @@ function install_miniconda() {
 }
 
 function init_conda_env() {
-    env_name="${1}-${PIPELINE_VERSION}"
+    local env_name="${1}-${PIPELINE_VERSION}"
 
     if [ ! -d "${CONDA_BASE}/envs/${env_name}" ]; then
 
@@ -83,31 +89,29 @@ function init_conda_env() {
         # First we update conda itself
         ${CONDA_BASE}/bin/conda update --yes -n base conda
 
+        # Add required channels
+        ${CONDA_BASE}/bin/conda config --add channels serine/label/dev \
+                                       --add channels serine \
+                                       --add channels bioconda \
+                                       --add channels conda-forge
+
         # Create a base environment
         ${CONDA_BASE}/bin/conda create --yes -m -n "${env_name}"
 
         # Install an up-to-date curl and GNU parallel
-        ${CONDA_BASE}/bin/conda install --yes -n "${env_name}" \
-                     -c serine \
-                     -c bioconda \
-                     -c conda-forge \
-                     curl parallel
+        ${CONDA_BASE}/bin/conda install --yes -n "${env_name}" curl parallel jq
 
         # Then install rnasik
         ${CONDA_BASE}/bin/conda install --yes -n "${env_name}" \
-                     -c serine \
-                     -c bioconda \
-                     -c conda-forge \
                      rnasik=${PIPELINE_VERSION}
 
         # Environment takes a very long time to solve if qualimap is included initially
-        ${CONDA_BASE}/bin/conda install --yes -n "${env_name}" \
-                     -c serine \
-                     -c bioconda \
-                     -c conda-forge \
-                     qualimap
+        ${CONDA_BASE}/bin/conda install --yes -n "${env_name}" qualimap
 
     fi
+
+    # We shouldn't need to do this .. but it seems required for _some_ environments (ie M3)
+    export JAVA_HOME="${CONDA_BASE}/envs/${env_name}/jre"
 
     source "${CONDA_BASE}/bin/activate" "${CONDA_BASE}/envs/${env_name}"
     set -o nounset
@@ -127,8 +131,45 @@ function get_reference_data_aws() {
         prev="${PWD}"
         mkdir -p "${REFERENCE_BASE}"
         cd "${REFERENCE_BASE}"
-        aws s3 cp s3://bioinformatics-au/iGenomes .
+        aws s3 sync s3://bioinformatics-au/iGenomes .
         cd "${prev}"
+    fi
+}
+
+function find_filetype() {
+    # eg, *.fastq.gz or *.bam
+    local pattern=$1
+    # eg, fastq,bam,bam.sorted
+    local tags=$2
+    # checksum,filepath,type_tags
+    find . -name "${pattern}" -type f -exec bash -c 'echo -e "md5:$(md5sum {} | sed -e "s/  */,/g"),\"'${tags}'\""' \;
+}
+
+function register_files() {
+    echo "checksum,filepath,type_tags" >${JOB_PATH}/manifest.csv
+    find_filetype "*.bam" "bam,alignment" >>${JOB_PATH}/manifest.csv
+    find_filetype "*.bai" bai >>${JOB_PATH}/manifest.csv
+    find_filetype "*.fastq.gz" fastq >>${JOB_PATH}/manifest.csv
+    find_filetype "multiqc_report.html" "multiqc,html,report" >>${JOB_PATH}/manifest.csv
+
+    curl -X POST \
+     -H "Content-Type: text/csv" \
+     -H @"${JOB_PATH}/.private_request_headers" \
+     --silent \
+     -o /dev/null \
+     -w "%{http_code}" \
+     --connect-timeout 10 \
+     --max-time 10 \
+     --retry 8 \
+     --retry-max-time 600 \
+     --data-binary @manifest.csv \
+     ""${JOB_FILE_REGISTRATION_URL}""
+}
+
+function setup_bds_config() {
+    BDS_CONFIG="${JOB_PATH}/../BigDataScript/config/bds.config"
+    if [ -f "${BDS_CONFIG}" ]; then
+        export RNASIK_BDS_CONFIG="${BDS_CONFIG}"
     fi
 }
 
@@ -186,6 +227,8 @@ env >job_env.out
 GENOME_FASTA="${REFERENCE_BASE}/${REFERENCE_GENOME}/Sequence/WholeGenomeFasta/genome.fa"
 GENOME_GTF="${REFERENCE_BASE}/${REFERENCE_GENOME}/Annotation/Genes/genes.gtf"
 
+setup_bds_config
+
 send_event "JOB_PIPELINE_STARTING"
 
 # Don't exit on error, since we want to capture exit code and do an HTTP
@@ -218,15 +261,16 @@ else
   send_event "JOB_PIPELINE_COMPLETED" '{"exit_code":'${EXIT_CODE}'}'
 fi
 
+
+cd ${JOB_PATH}
+register_files
+
 ####
 #### Notify service we are done
 ####
 
 # Authorization header is stored in a file so it doesn't
 # leak in 'ps' etc.
-
-# -H "Content-Type: application/json" \
-# -H "${JOB_COMPLETE_AUTH_HEADER}" \
 
 curl -X PATCH \
      -H "Content-Type: application/json" \
@@ -242,4 +286,6 @@ curl -X PATCH \
      ""${JOB_COMPLETE_CALLBACK_URL}""
 
 # Extra security: Remove the access token now that we don't need it anymore
-# rm ../.private_request_headers
+if [ ${DEBUG} != "yes" ]; then
+  rm ../.private_request_headers
+fi

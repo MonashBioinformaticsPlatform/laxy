@@ -10,7 +10,10 @@
     <!-- <link rel="stylesheet" href="https://unpkg.com/vue-material/dist/vue-material.css"> -->
     <!-- <script src="//unpkg.com/vue"></script> -->
     <!-- <script src="//unpkg.com/vue-material"></script> -->
+
     <style>
+        @import url('https://fonts.googleapis.com/css?family=Pacifico');
+
         [v-cloak] {
             display: none;
         }
@@ -60,6 +63,11 @@
             opacity: 0;
         }
 
+        .logo-text {
+            font-family: 'Pacifico', cursive;
+            font-size: 96px;
+        }
+
     </style>
     <title>Laxy</title>
 </head>
@@ -70,7 +78,7 @@
             <md-button class="md-icon-button" @click="toggleLeftSidenav">
                 <md-icon>menu</md-icon>
             </md-button>
-            <h1 class="md-title">
+            <h1 class="md-title logo-text">
                 <router-link to="/" class="title-link">Laxy</router-link>
             </h1>
             <!--

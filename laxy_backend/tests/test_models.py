@@ -1,4 +1,6 @@
 # from __future__ import absolute_import
+from datetime import datetime
+
 import unittest
 import os
 import random
@@ -16,7 +18,8 @@ from django.urls import reverse
 from django.contrib.auth.models import User
 from rest_framework.test import APIClient
 
-from ..util import ordereddicts_to_dicts
+from laxy_backend import models
+from ..util import ordereddicts_to_dicts, laxy_sftp_url
 from ..util import reverse_querystring
 from ..models import Job, File, FileSet, SampleSet, ComputeResource
 from ..jwt_helpers import (get_jwt_user_header_dict,
@@ -89,7 +92,7 @@ class FileModelTest(TestCase):
 
     @unittest.skip("Test not implemented")
     def test_fileobj_from_laxysftp_url(self):
-        f = File(location='laxy+sftp://{compute_id}/{job_id}/output.txt',
+        f = File(location=laxy_sftp_url(job, 'output.txt'),
                  owner=User.objects.get(username='testuser'))
         content = f.file.read().decode()
         raise NotImplementedError()
@@ -243,3 +246,79 @@ SampleC,ftp://foo2_lane5_1.fastq.gz,ftp://foo2_lane5_2.fastq.gz
         sampleset.from_csv(self.csv_text, save=False)
         csv_txt = sampleset.to_csv()
         self.assertListEqual(self.from_csv_text.splitlines(), csv_txt.splitlines())
+
+
+class JobModelTest(TestCase):
+    def setUp(self):
+        self.admin_user = User.objects.create_user('adminuser', '', 'testpass')
+        self.admin_user.is_superuser = True
+        self.admin_user.save()
+
+        self.user = User.objects.create_user('testuser', '', 'testpass')
+        self.user.is_superuser = False
+        self.user.save()
+
+        self.compute = ComputeResource(owner=self.user,
+                                       host='127.0.0.1',
+                                       disposable=False,
+                                       status=ComputeResource.STATUS_ONLINE,
+                                       name='default',
+                                       extra={})
+
+        self.job_one = Job(owner=self.user, status=Job.STATUS_COMPLETE,
+                           remote_id='999', exit_code=0, params={},
+                           compute_resource=self.compute,
+                           completed_time=datetime.now())
+
+    def tearDown(self):
+        self.compute.delete()
+        self.job_one.delete()
+        self.admin_user.delete()
+        self.user.delete()
+
+    def _assert_add_files_from_tsv(self, job):
+        self.assertEqual(len(job.input_files.files), 3)
+        self.assertEqual(len(job.output_files.files), 2)
+        self.assertListEqual([c.checksum for c in job.input_files.get_files()],
+                             ['md5:7d9960c77b363e2c2f41b77733cf57d4',
+                              'md5:d0cfb796d371b0182cd39d589b1c1ce3',
+                              'md5:a97e04b6d1a0be20fcd77ba164b1206f'])
+        f_two = job.input_files.get_files()[1]
+        self.assertEqual(f_two.name, 'sample1_R2.fastq.gz')
+        self.assertEqual(f_two.path, 'input/some_dir')
+        self.assertListEqual(job.output_files.get_files()[0].type_tags,
+                             ['bam', 'alignment', 'bam.sorted', 'jbrowse'])
+
+    def test_add_files_from_tsv(self):
+        # Note that we use commas for the list in the type_tags column (and don't require quotes around it)
+        tsv = [
+            b'filepath\tchecksum\ttype_tags\tmetadata\n',
+            b'input/some_dir/table.txt \tmd5:7d9960c77b363e2c2f41b77733cf57d4 \ttext,csv,google-sheets\t{}\n',
+            b'input/some_dir/sample1_R2.fastq.gz\tmd5:d0cfb796d371b0182cd39d589b1c1ce3\tfastq\t{}\n',
+            b'input/some_dir/sample2_R2.fastq.gz\tmd5:a97e04b6d1a0be20fcd77ba164b1206f\tfastq\t{}\n',
+            b'output/sample2/alignments/sample2.bam\tmd5:7c9f22c433ae679f0d82b12b9a71f5d3\tbam,alignment,bam.sorted,jbrowse\t{"some": "metdatas"}\n',
+            b'output/sample2/alignments/sample2.bai\tmd5:e57ea180602b69ab03605dad86166fa7\tbai,jbrowse\t{}\n',
+        ]
+        tsv = b''.join(tsv)
+
+        self.job_one.add_files_from_tsv(tsv, save=True)
+        self.job_one.save()
+        updated = Job.objects.get(id=self.job_one.id)
+        self._assert_add_files_from_tsv(updated)
+
+    def test_add_files_from_csv(self):
+        # Note: we require quotes in the type_tags column due to nested comma-separated list
+        csv = [
+            b'checksum,filepath,metadata,type_tags\n',
+            b'md5:7d9960c77b363e2c2f41b77733cf57d4,input/some_dir/table.txt,{},"text,csv,google-sheets"\n',
+            b'md5:d0cfb796d371b0182cd39d589b1c1ce3,input/some_dir/sample1_R2.fastq.gz,{},fastq\n',
+            b'md5:a97e04b6d1a0be20fcd77ba164b1206f,input/some_dir/sample2_R2.fastq.gz,{},fastq\n',
+            b'md5:7c9f22c433ae679f0d82b12b9a71f5d3,output/sample2/alignments/sample2.bam,{"some": "metdatas"},"bam ,alignment, bam.sorted, jbrowse"\n',
+            b'md5:e57ea180602b69ab03605dad86166fa7,output/sample2/alignments/sample2.bai,{},"bai,jbrowse"\n',
+        ]
+        csv = b''.join(csv)
+
+        self.job_one.add_files_from_tsv(csv, save=True)
+        self.job_one.save()
+        updated = Job.objects.get(id=self.job_one.id)
+        self._assert_add_files_from_tsv(updated)

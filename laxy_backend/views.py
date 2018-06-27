@@ -1,71 +1,48 @@
-from pathlib import Path
-
-from django.db import transaction
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.generics import UpdateAPIView
-from rest_framework.pagination import PageNumberPagination
-from typing import Dict, List, Sequence, Union
-from django.shortcuts import render
-
+from collections import OrderedDict
+import coreapi
+import coreschema
+import json_merge_patch
+import jsonpatch
 import logging
 import os
 import requests
-from datetime import datetime, timedelta
-from collections import OrderedDict
+import rest_framework_jwt
+from celery import chain
+from celery import shared_task
+from datetime import datetime
+from django.conf import settings
+from django.contrib.auth.models import User
+from django.contrib.admin.views.decorators import user_passes_test
+from django.db import transaction
+from django.http import HttpResponse, StreamingHttpResponse
+from django.urls import reverse
+from django.utils.encoding import force_text
+from django_filters.rest_framework import DjangoFilterBackend
+from pathlib import Path
+from rest_framework import generics
+from rest_framework import status
+from rest_framework.authtoken.models import Token
+from rest_framework.decorators import (api_view,
+                                       renderer_classes,
+                                       permission_classes,
+                                       authentication_classes)
+from rest_framework.filters import BaseFilterBackend
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.parsers import JSONParser, MultiPartParser
+from rest_framework.permissions import IsAdminUser
+from rest_framework.renderers import JSONRenderer, BaseRenderer
+from rest_framework.request import Request
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from typing import Dict, List, Union
 from urllib.parse import urlparse
 from wsgiref.util import FileWrapper
-import json_merge_patch
-import jsonpatch
 
-from django.conf import settings
-from django.db import models
-from django.shortcuts import render
-from django.contrib.sites.shortcuts import get_current_site
-from django.urls import reverse
-from django.contrib.auth import views as auth_views
-from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
-from django.http import Http404
-from django.contrib.contenttypes.models import ContentType
-from django.contrib.auth.models import User
-
-from rest_framework import generics, viewsets, mixins
-from rest_framework import status
-from rest_framework.parsers import JSONParser, MultiPartParser
-from rest_framework.decorators import parser_classes as use_parser_classes
-
-from rest_framework.response import Response
-from rest_framework.request import Request
-from django.http import HttpResponse, StreamingHttpResponse
-# from django.http import HttpResponse, JsonResponse
-
-from rest_framework.views import APIView
-from rest_framework.renderers import JSONRenderer, BaseRenderer
-from rest_framework.authtoken.models import Token
-from rest_framework.authentication import (TokenAuthentication,
-                                           SessionAuthentication,
-                                           BasicAuthentication)
-from rest_framework.permissions import (AllowAny,
-                                        IsAuthenticated,
-                                        IsAdminUser,
-                                        DjangoObjectPermissions)
-from rest_framework_jwt.authentication import JSONWebTokenAuthentication
-from django.utils.encoding import force_text
-import coreschema
-import coreapi
-from rest_framework.filters import BaseFilterBackend
 from drf_openapi.utils import view_config
-
-from celery import shared_task
-from celery import chain, group
-
-import reversion
-
-from braces.views import LoginRequiredMixin, CsrfExemptMixin
-
+from . import bcbio
+from . import ena
+from . import tasks
 from .jwt_helpers import (get_jwt_user_header_dict,
-                          create_jwt_user_token,
                           get_jwt_user_header_str)
 from .models import (Job,
                      ComputeResource,
@@ -89,15 +66,12 @@ from .serializers import (PatchSerializerResponse,
                           SchemalessJsonResponseSerializer,
                           JobListSerializerResponse,
                           EventLogSerializer, JobEventLogSerializer,
-                          JobFileSerializerCreateRequest)
-
-from . import tasks
-from .tasks import orchestration
-from . import ena
-from . import bcbio
-from .util import sh_bool
+                          JobFileSerializerCreateRequest, InputOutputFilesResponse)
+from .util import sh_bool, laxy_sftp_url
 from .view_mixins import (JSONView, GetMixin, PatchMixin,
-                          DeleteMixin, PostMixin, CSVTextParser, PutMixin)
+                          DeleteMixin, PostMixin, CSVTextParser, PutMixin, RowsCSVTextParser)
+
+# from django.http import HttpResponse, JsonResponse
 
 logger = logging.getLogger(__name__)
 
@@ -282,7 +256,6 @@ class FileCreate(JSONView):
 
     @view_config(request_serializer=FileSerializerPostRequest,
                  response_serializer=FileSerializer)
-    # @method_decorator(csrf_exempt)
     def post(self, request: Request, version=None):
         """
         Create a new File. UUIDs are autoassigned.
@@ -799,11 +772,10 @@ class JobFileView(StreamFileMixin,
         # Generate a location URL if not set explicitly
         data = dict(request.data)
         data['name'] = fname
-        data['path'] =  str(fpath)
+        data['path'] = str(fpath)
         location = data.get('location', None)
         if not location:
-            data['location'] = (f'laxy+sftp://{job.compute_resource.id}/'
-                                f'{job_id}/{fpath}/{fname}')
+            data['location'] = laxy_sftp_url(job, f'{fpath}/{fname}')
 
         elif not urlparse(location).scheme:
             return HttpResponse(status=status.HTTP_400_BAD_REQUEST,
@@ -860,6 +832,83 @@ class JobFileView(StreamFileMixin,
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class JobFileBulkRegistration(JSONView):
+    class Meta:
+        model = Job
+        serializer = JobSerializerResponse
+
+    queryset = Meta.model.objects.all()
+    serializer_class = Meta.serializer
+    parser_classes = (JSONParser, RowsCSVTextParser,)
+    # permission_classes = (DjangoObjectPermissions,)
+
+    @view_config(request_serializer=JobFileSerializerCreateRequest,
+                 response_serializer=JobSerializerResponse)
+    def post(self, request, job_id, version=None):
+        """
+        Bulk registration of Job files (input and output filesets).
+
+        Use `Content-Type: text/csv`, with CSV or TSV like:
+
+        ```
+        checksum,filepath,metadata,type_tags
+        md5:7d9960c77b363e2c2f41b77733cf57d4,input/some_dir/table.txt,{},"text,csv,google-sheets"
+        md5:d0cfb796d371b0182cd39d589b1c1ce3,input/some_dir/sample1_R2.fastq.gz,{},fastq
+        md5:a97e04b6d1a0be20fcd77ba164b1206f,input/some_dir/sample2_R2.fastq.gz,{},fastq
+        md5:7c9f22c433ae679f0d82b12b9a71f5d3,output/sample2/alignments/sample2.bam,{"some":"metdatas"},"bam,alignment,bam.sorted,jbrowse"
+        md5:e57ea180602b69ab03605dad86166fa7,output/sample2/alignments/sample2.bai,{},"bai,jbrowse"
+        ```
+
+        File paths must begin with `input` or `output`.
+
+        A `location` column can also be added with a URL to specify the location of files.
+        You should only use this if the job stages files itself to another location
+        (eg S3, Object store, ftp:// or sftp:// location).
+        Otherwise Laxy handles creating the correct `location` field.
+
+        <!--
+        :param request:
+        :type request:
+        :param job_id:
+        :type job_id:
+        :param version:
+        :type version:
+        :return:
+        :rtype:
+        -->
+        """
+
+        job = self.get_obj(job_id)
+
+        if job is None:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        content_type = get_content_type(request)
+
+        if content_type == 'application/json':
+            serializer = JobFileSerializerCreateRequest(data=request.data,
+                                                        many=True)
+            if serializer.is_valid():
+                # TODO: accept JSON for bulk file registration
+                # separate into input and output files, add files to
+                # job.input_files and job.output_files
+                pass
+            raise NotImplementedError()
+
+        elif content_type == 'text/csv':
+            tsv_table = request.stream.read()
+            infiles, outfiles = job.add_files_from_tsv(tsv_table)
+
+            i = FileSerializer(infiles, many=True)
+            o = FileSerializer(outfiles, many=True)
+            resp_data = {
+                'input_files': i.data,
+                'output_files': o.data
+            }
+
+            return Response(resp_data, status=status.HTTP_200_OK)
+
+
 class FileSetCreate(PostMixin,
                     JSONView):
     class Meta:
@@ -873,7 +922,6 @@ class FileSetCreate(PostMixin,
 
     @view_config(request_serializer=FileSetSerializerPostRequest,
                  response_serializer=FileSetSerializer)
-    # @method_decorator(csrf_exempt)
     def post(self, request: Request, version=None):
         """
         Create a new FileSet. UUIDs are autoassigned.
@@ -978,7 +1026,6 @@ class SampleSetCreate(SampleSetCreateUpdate):
 
     @view_config(request_serializer=SampleSetSerializer,
                  response_serializer=SampleSetSerializer)
-    # @method_decorator(csrf_exempt)
     def post(self, request: Request, version=None):
         """
         Create a new SampleSet. UUIDs are autoassigned.
@@ -1196,7 +1243,6 @@ class ComputeResourceCreate(PostMixin,
 
     @view_config(request_serializer=ComputeResourceSerializer,
                  response_serializer=ComputeResourceSerializer)
-    # @method_decorator(csrf_exempt)
     def post(self, request: Request, version=None):
         """
         Create a new ComputeResource. UUIDs are autoassigned.
@@ -1383,6 +1429,8 @@ class JobView(JSONView):
         if job is None:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
+        original_status = job.status
+
         serializer = self.Meta.serializer(job,
                                           data=request.data,
                                           partial=True)
@@ -1400,9 +1448,11 @@ class JobView(JSONView):
             serializer.save()
 
             job = self.get_obj(job_id)
+            new_status = job.status
 
-            if (job.status == Job.STATUS_COMPLETE or
-                    job.status == Job.STATUS_FAILED):
+            if (new_status != original_status and
+                    (new_status == Job.STATUS_COMPLETE or
+                     new_status == Job.STATUS_FAILED)):
                 task_data = dict(job_id=job_id)
                 result = tasks.index_remote_files.apply_async(
                     args=(task_data,))
@@ -1464,7 +1514,6 @@ class JobCreate(JSONView):
 
     @view_config(request_serializer=JobSerializerRequest,
                  response_serializer=JobSerializerResponse)
-    # @method_decorator(csrf_exempt)
     def post(self, request: Request, version=None):
         """
         Create a new Job. UUIDs are autoassigned.
@@ -1517,10 +1566,13 @@ class JobCreate(JSONView):
             job_id = job.id
 
             callback_url = request.build_absolute_uri(
-                reverse('laxy_backend:job', args=[job_id]))
+                reverse('laxy_backend:job', args=[job.id]))
 
             job_event_url = request.build_absolute_uri(
-                reverse('laxy_backend:create_job_eventlog', args=[job_id]))
+                reverse('laxy_backend:create_job_eventlog', args=[job.id]))
+
+            job_file_bulk_url = request.build_absolute_uri(reverse(
+                'laxy_backend:job_file_bulk', args=[job_id]))
 
             # port = request.META.get('SERVER_PORT', 8001)
             # # domain = get_current_site(request).domain
@@ -1544,6 +1596,7 @@ class JobCreate(JSONView):
             reference_genome = "Saccharomyces_cerevisiae/Ensembl/R64-1-1"
 
             task_data = dict(job_id=job_id,
+                             clobber=False,
                              # this is job.params
                              # pipeline_run_config=pipeline_run.to_json(),
                              # gateway=settings.CLUSTER_MANAGEMENT_HOST,
@@ -1554,13 +1607,14 @@ class JobCreate(JSONView):
                                  'JOB_COMPLETE_CALLBACK_URL':
                                      callback_url,
                                  'JOB_EVENT_URL': job_event_url,
+                                 'JOB_FILE_REGISTRATION_URL': job_file_bulk_url,
                                  # TODO: We should pass this in as it's own
                                  # key not in the environment
                                  'JOB_AUTH_HEADER':
                                      callback_auth_header,
                                  'JOB_INPUT_STAGED': sh_bool(False),
                                  'REFERENCE_GENOME': reference_genome,
-                                 'PIPELINE_VERSION': '1.5.1',
+                                 'PIPELINE_VERSION': '1.5.1+c53adf6',  # '1.5.1',
                              })
 
             # TESTING: Start cluster, run job, (pre-existing data), stop cluster
@@ -1587,7 +1641,7 @@ class JobCreate(JSONView):
 
             # apparently validated_data doesn't include this (if it's flagged
             # read-only ?), so we add it back
-            # serializer.validated_data.update(id=job.id)
+            # serializer.validated_data.update(id=job_id)
 
             job = Job.objects.get(id=job_id)
             if result.state == 'FAILURE':
@@ -1602,7 +1656,6 @@ class JobCreate(JSONView):
 
     @view_config(request_serializer=JobSerializerRequest,
                  response_serializer=JobSerializerResponse)
-    # @method_decorator(csrf_exempt)
     def _cfn_cluster_create_flow(self, request: Request, version=None):
         serializer = JobSerializerRequest(data=request.data,
                                           context={'request': request})
@@ -1715,7 +1768,7 @@ class JobCreate(JSONView):
                 compute_resource=job.compute_resource.id)
             # apparently validated_data doesn't include this (if it's flagged
             # read-only ?), so we add it back
-            serializer.validated_data.update(id=job.id)
+            serializer.validated_data.update(id=job_id)
 
             return Response(serializer.validated_data,
                             status=status.HTTP_201_CREATED)
@@ -1842,6 +1895,23 @@ class JobEventLogCreate(EventLogCreate):
         return super(JobEventLogCreate, self).post(request,
                                                    version=version,
                                                    subject_obj=job)
+
+
+@api_view(['GET'])  # TODO: This should really be POST
+@renderer_classes([JSONRenderer])
+@permission_classes([IsAdminUser])
+def trigger_file_registration(request, job_id, version=None):
+    try:
+        job = Job.objects.get(id=job_id)
+    except Job.DoesNotExist:
+        return HttpResponse(status=404, reason=f"Job {job_id} doesn't exist.")
+
+    task_data = dict(job_id=job_id)
+    result = tasks.index_remote_files.apply_async(
+        args=(task_data,))
+    return Response(data={'task_id': result.id},
+                    content_type='application/json',
+                    status=200)
 
 
 def _get_or_create_drf_token(user):

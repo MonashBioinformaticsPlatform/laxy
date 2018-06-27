@@ -1,5 +1,6 @@
 alabaster==0.7.10
 amqp==2.2.2
+attrdict==2.0.0
 attrs==17.4.0
 Babel==2.5.3
 backoff==1.4.3
@@ -75,6 +76,7 @@ PyYAML==3.12
 redis==2.10.6
 requests==2.18.4
 requests-oauthlib==0.8.0
+rows==0.3.1
 s3transfer==0.1.12
 simplejson==3.13.2
 six==1.11.0

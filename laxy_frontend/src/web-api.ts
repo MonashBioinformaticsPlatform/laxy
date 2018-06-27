@@ -38,6 +38,7 @@ export class WebAPI {
     public static async logout() {
         try {
             return await this.fetcher.get(`/api/v1/auth/logout/`) as AxiosResponse;
+            // TODO: unset Vuex store user_profile here
         } catch (error) {
             throw error;
         }

@@ -29,6 +29,8 @@ from fabric.api import put, run, shell_env, local, cd, show
 
 # logging.config.fileConfig('logging_config.ini')
 # logger = logging.getLogger(__name__)
+from laxy_backend.util import laxy_sftp_url
+
 logger = get_task_logger(__name__)
 
 
@@ -174,6 +176,7 @@ def index_remote_files(self, task_data=None, **kwargs):
     job_id = task_data.get('job_id')
     job = Job.objects.get(id=job_id)
     result = task_data.get('result')
+    clobber = task_data.get('clobber', False)
     master_ip = job.compute_resource.host
     gateway = job.compute_resource.gateway_server
 
@@ -190,10 +193,12 @@ def index_remote_files(self, task_data=None, **kwargs):
     compute_id = job.compute_resource.id
     message = "No message."
 
-    def create_file_objects(remote_path, prefix_path='', location_base=''):
+    def create_update_file_objects(remote_path, fileset=None,
+                                   prefix_path='', location_base=''):
         """
         Returns a list of (unsaved) File objects from a recursive 'find'
-        of a remote directory.
+        of a remote directory. If a file of the same path exists in the FileSet,
+        update the file object location (if unset) rather than create a new one.
 
         :param remote_path: Path on the remote server.
         :type remote_path: str
@@ -214,10 +219,20 @@ def index_remote_files(self, task_data=None, **kwargs):
             for location, filepath in urls:
                 fname = Path(filepath).name
                 fpath = Path(prefix_path) / Path(filepath).parent
-                f = File(location=location,
-                         owner=job.owner,
-                         name=fname,
-                         path=fpath)
+
+                if fileset:
+                    f = fileset.get_file_by_path(
+                        Path(fpath) / Path(fname))
+
+                if not f:
+                    f = File(location=location,
+                             owner=job.owner,
+                             name=fname,
+                             path=fpath)
+                elif not f.location:
+                    f.location = location
+                    f.owner = job.owner
+
                 file_objs.append(f)
 
         return file_objs
@@ -233,20 +248,32 @@ def index_remote_files(self, task_data=None, **kwargs):
             input_dir = os.path.join(working_dir, 'input')
             output_dir = os.path.join(working_dir, 'output')
 
-            output_files = create_file_objects(
+            output_files = create_update_file_objects(
                 output_dir,
+                fileset=job.output_files,
                 prefix_path='output',
-                location_base=f'laxy+sftp://{compute_id}/{job_id}/output')
+                location_base=laxy_sftp_url(job, 'output'),
+            )
             job.output_files.path = 'output'
+
+            if clobber:
+                job.output_files.remove(job.output_files, delete=True)
+
             job.output_files.add(output_files)
 
             # TODO: This should really be done at job start, or once input data
             #       has been staged on the compute node.
-            input_files = create_file_objects(
+            input_files = create_update_file_objects(
                 input_dir,
+                fileset=job.input_files,
                 prefix_path='input',
-                location_base=f'laxy+sftp://{compute_id}/{job_id}/input')
+                location_base=laxy_sftp_url(job, 'input')
+            )
             job.input_files.path = 'input'
+
+            if clobber:
+                job.input_files.remove(job.input_files, delete=True)
+
             job.input_files.add(input_files)
 
         succeeded = True

@@ -15,7 +15,9 @@ toolz
 xxhash
 lxml
 pandas
+rows
 enasearch
+attrdict
 
 
 # Base Django packages

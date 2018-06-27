@@ -1,5 +1,6 @@
 import json
 from collections import OrderedDict
+from pathlib import Path
 
 import pydash
 from django.db import transaction
@@ -8,10 +9,13 @@ from django.core.validators import URLValidator
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from rest_framework.fields import CurrentUserDefault
+from typing import Sequence
+
 from drf_openapi.entities import VersionedSerializers
 from http.client import responses as response_code_messages
 
-from laxy_backend.models import SampleSet, PipelineRun
+from laxy_backend.models import SampleSet, PipelineRun, File
+from laxy_backend.util import unique
 from . import models
 
 default_status_codes = (400, 401, 403, 404)
@@ -121,7 +125,8 @@ class PutSerializerResponse(serializers.Serializer):
 
 
 class FileSerializer(BaseModelSerializer):
-    name = serializers.CharField(required=False)
+    name = serializers.CharField(max_length=255, required=False)
+    path = serializers.CharField(max_length=4096, required=False)
     location = serializers.CharField(
         max_length=2048,
         validators=[models.URIValidator()])
@@ -158,6 +163,42 @@ class FileSerializerPostRequest(FileSerializer):
                   'metadata')
 
 
+class FileBulkRegisterSerializer(FileSerializer):
+    class Meta(FileSerializer.Meta):
+        fields = ('name',
+                  'path',
+                  'location',
+                  'checksum',
+                  'type_tags',
+                  'metadata')
+
+    def to_internal_value(self, data):
+        row = data
+        if isinstance(row.get('type_tags', ''), str):
+            row['type_tags'] = row['type_tags'].split(',')
+        if 'filepath' in row:
+            row['name'] = Path(row['filepath']).name
+            row['path'] = str(Path(row['filepath']).parent)
+            del row['filepath']
+
+        # Trim any whitespace in values
+        for field in self.Meta.fields:
+            if field in row and isinstance(row[field], str):
+                row[field] = row[field].strip()
+            if field in row and isinstance(row[field], list):
+                row[field] = [item.strip() for item in row[field]]
+
+        return row
+
+    # Only add type_tags, don't replace list
+    # def update(self, instance: File, validated_data):
+    #     validated_data['type_tags'].extend(instance.type_tags)
+    #     validated_data['type_tags'] = unique(validated_data['type_tags'])
+    #     instance = self._update_attrs(instance, validated_data)
+    #     instance.save()
+    #     return instance
+
+
 # naming is hard
 class JobFileSerializerCreateRequest(FileSerializer):
     location = serializers.CharField(
@@ -188,6 +229,13 @@ class FileSetSerializerPostRequest(FileSetSerializer):
         model = models.FileSet
         fields = ('id', 'name', 'files',)
         depth = 0
+
+
+class InputOutputFilesResponse(serializers.Serializer):
+    input_files = FileSerializer(many=True, read_only=True,
+                                 required=False, allow_null=True)
+    output_files = FileSerializer(many=True, read_only=True,
+                                  required=False, allow_null=True)
 
 
 class SampleSetSerializer(BaseModelSerializer):

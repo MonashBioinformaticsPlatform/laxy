@@ -75,7 +75,7 @@
             this.refresh();
         }
 
-        async refresh() {
+        public async refresh() {
             try {
                 this.submitting = true;
                 const response = await WebAPI.getJobEventLog(this.jobId);

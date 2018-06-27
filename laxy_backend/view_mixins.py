@@ -1,5 +1,9 @@
-import csv
+from io import StringIO, BytesIO
 from typing import List, Union
+
+import csv
+import json
+import rows
 
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -26,6 +30,20 @@ class JSONView(APIView):
     #
     #     return Response(schema)
 
+    # TODO: This should be replaced by proper use of permission_classes
+    #       on views (eg with django-guardian).
+    def _check_owner(self, obj):
+        user = self.request.user
+        if user.is_superuser:
+            return obj
+
+        if hasattr(obj, 'owner'):
+            if user != obj.owner:
+                return None
+                # return HttpResponse(status=status.HTTP_403_FORBIDDEN,
+                #                    reason="Permission denied.")
+        return obj
+
     def get_obj(self, uuid):
         try:
             # if we are using a native UUIDField on the model (rather than a
@@ -33,7 +51,9 @@ class JSONView(APIView):
             # into an actual uuid.UUID instance to do the query.
             # uuid = Job.b64uuid_to_uuid(uuid)
             ModelClass = self.Meta.model
-            return ModelClass.objects.get(id=uuid)
+            obj = ModelClass.objects.get(id=uuid)
+            return self._check_owner(obj)
+
         except (ModelClass.DoesNotExist, ValueError):
             return None
 
@@ -54,13 +74,41 @@ class CSVTextParser(BaseParser):
         """
         # return list(csv.reader(stream, dialect='excel'))
 
-        charset = 'utf-8'
         media_type_params = dict([param.strip().split('=') for param in media_type.split(';')[1:]])
         charset = media_type_params.get('charset', 'utf-8')
         dialect = media_type_params.get('dialect', 'excel')
         txt = stream.read().decode(charset)
         csv_table = list(csv.reader(txt.splitlines(), dialect=dialect))
         return csv_table
+
+
+class RowsCSVTextParser(BaseParser):
+    """
+    A CSV parser for DRF APIViews, using the `rows` Python library for parsing.
+
+    Based on the RFC 4180 text/csv MIME type.
+
+    https://tools.ietf.org/html/rfc4180
+    """
+    media_type = 'text/csv'
+
+    def parse(self, stream, media_type=None, parser_context=None) -> List[dict]:
+        """
+        Return a list of lists representing the rows of a CSV file.
+        """
+        media_type_params = dict([param.strip().split('=') for param in media_type.split(';')[1:]])
+        charset = media_type_params.get('charset', 'utf-8')
+        dialect = media_type_params.get('dialect', 'excel')
+        txt = stream.read()
+        try:
+            table = rows.import_from_csv(BytesIO(txt),
+                                         encoding=charset,
+                                         dialect=dialect,
+                                         skip_header=False)
+        except Exception as ex:
+            raise ex
+        table = json.loads(rows.export_to_json(table))
+        return table
 
 
 class GetMixin:

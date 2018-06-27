@@ -4,38 +4,31 @@
 # from builtins import (ascii, bytes, chr, dict, filter, hex, input,
 #                       int, map, next, oct, open, pow, range, round,
 #                       str, super, zip)
-import urllib
-import urllib.request
+from django.core.handlers.wsgi import WSGIRequest
 from typing import List, Union
 from collections import OrderedDict, Sequence
 from datetime import datetime
 import math
 import json
 import csv
-import uuid
 from pathlib import Path
-from os import path
 from urllib.parse import urlparse
 import base64
-from basehash import base62
-import xxhash
-from io import StringIO
-from contextlib import closing
+from io import StringIO, BytesIO
 
+import rows
 from paramiko.rsakey import RSAKey
-from storages.backends.sftpstorage import SFTPStorage
 
 from django.conf import settings
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.db import models, transaction
-from django.core.files.storage import get_storage_class, default_storage
+from django.core.files.storage import get_storage_class
 from django.core.serializers import serialize
 from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError
-from django.db.models import Model, CharField, TextField, UUIDField, \
-    URLField, ForeignKey, BooleanField, IntegerField, DateTimeField, QuerySet
-from django.contrib.postgres.fields import ArrayField, HStoreField
+from django.db.models import Model, CharField, URLField, ForeignKey, BooleanField, IntegerField, DateTimeField, QuerySet
+from django.contrib.postgres.fields import ArrayField
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
@@ -43,8 +36,7 @@ from django.utils import timezone
 import reversion
 from rest_framework.authtoken.models import Token
 
-from django.db import connection
-
+from laxy_backend.util import unique
 from .tasks import orchestration
 from .cfncluster import generate_cluster_stack_name
 from .util import (generate_uuid,
@@ -55,11 +47,6 @@ if 'postgres' not in settings.DATABASES['default']['ENGINE']:
     from jsonfield import JSONField
 else:
     from django.contrib.postgres.fields import JSONField
-
-
-def unique(l):
-    return list(set(l))
-
 
 SCHEME_STORAGE_CLASS_MAPPING = {
     'file': 'django.core.files.storage.FileSystemStorage',
@@ -405,6 +392,22 @@ class Job(Timestamped, UUIDModel):
 
     completed_time = DateTimeField(blank=True, null=True)
 
+    @transaction.atomic()
+    def _init_filesets(self, save=True):
+        if not self.input_files:
+            self.input_files = FileSet(name='input',
+                                       path='input',
+                                       owner=self.owner)
+            if save:
+                self.input_files.save()
+
+        if not self.output_files:
+            self.output_files = FileSet(name='input',
+                                        path='input',
+                                        owner=self.owner)
+            if save:
+                self.output_files.save()
+
     def save(self, *args, **kwargs):
         super(Job, self).save(*args, **kwargs)
 
@@ -443,6 +446,83 @@ class Job(Timestamped, UUIDModel):
         return (self.status == Job.STATUS_COMPLETE or
                 self.status == Job.STATUS_CANCELLED or
                 self.status == Job.STATUS_FAILED)
+
+    @transaction.atomic()
+    def add_files_from_tsv(self,
+                           tsv_table: Union[List[dict], str, bytes],
+                           save=True):
+        """
+
+        ```tsv
+        filepath	checksum	type_tags	metadata
+        input/some_dir/table.txt	md5:7d9960c77b363e2c2f41b77733cf57d4	text,csv,google-sheets	{}
+        input/some_dir/sample1_R2.fastq.gz	md5:d0cfb796d371b0182cd39d589b1c1ce3	fastq	{}
+        input/some_dir/sample2_R2.fastq.gz	md5:a97e04b6d1a0be20fcd77ba164b1206f	fastq	{}
+        output/sample2/alignments/sample2.bam	md5:7c9f22c433ae679f0d82b12b9a71f5d3	bam,alignment,bam.sorted,jbrowse	{}
+        output/sample2/alignments/sample2.bai	md5:e57ea180602b69ab03605dad86166fa7	bai,jbrowse	{}
+        ```
+
+        :param tsv_string:
+        :type tsv_string:
+        :param save:
+        :type save:
+        :return:
+        :rtype:
+        """
+        from laxy_backend.serializers import FileBulkRegisterSerializer
+
+        # https://colab.research.google.com/drive/1pWRRlthtJ1FGjmPJLRivlsJk716Ckaze
+        if isinstance(tsv_table, str) or isinstance(tsv_table, bytes):
+            table = rows.import_from_csv(BytesIO(tsv_table), skip_header=False)
+            print(table)
+            table = json.loads(rows.export_to_json(table))
+        elif isinstance(tsv_table, list):
+            table = tsv_table
+        else:
+            raise ValueError("tsv_table must be str, bytes or a list of dicts")
+
+        in_files = []
+        out_files = []
+
+        self._init_filesets()
+
+        for row in table:
+            f = FileBulkRegisterSerializer(data=row)
+            if f.is_valid(raise_exception=True):
+
+                # Check if file exists by path in input/output filesets already,
+                # if so, update existing file
+                fullpath = Path(f.validated_data['path']) / Path(f.validated_data['name'])
+                existing_infile = self.input_files.get_files_by_path(fullpath).first()
+                existing_outfile = self.output_files.get_files_by_path(fullpath).first()
+                for existing in [existing_infile, existing_outfile]:
+                    if existing:
+                        f = FileBulkRegisterSerializer(existing,
+                                                       data=row, partial=True)
+                        f.is_valid(raise_exception=True)
+                        f_obj = f.instance
+
+                if not any([existing_infile, existing_outfile]):
+                    f_obj = f.create(f.validated_data)
+
+                f_obj.owner = self.owner
+                if save:
+                    f_obj = f.save()
+
+            pathbits = Path(f.validated_data.get('path', '').strip('/')).parts
+            if pathbits and pathbits[0] == 'input':
+                self.input_files.add(f_obj, save=save)
+                in_files.append(f_obj)
+
+            elif pathbits and pathbits[0] == 'output':
+                self.output_files.add(f_obj, save=save)
+                out_files.append(f_obj)
+
+            else:
+                raise ValueError("File paths for a Job must begin with input/ "
+                                 "or output/")
+
+        return in_files, out_files
 
 
 # Alternatives to a pre_save signal here might be using:
@@ -483,6 +563,12 @@ def job_status_changed_event_log(sender, instance,
                 user=instance.owner,
                 obj=obj,
                 extra=OrderedDict({'from': obj.status, 'to': instance.status}))
+
+
+@receiver(pre_save, sender=Job)
+def job_init_filesets(sender, instance: Job,
+                      raw, using, update_fields, **kwargs):
+    instance._init_filesets()
 
 
 @receiver(post_save, sender=Job)
@@ -532,6 +618,7 @@ class File(Timestamped, UUIDModel):
 
     type_tags = ArrayField(models.CharField(max_length=255),
                            default=[],
+                           null=True,
                            blank=True)
 
     # Arbitrary metadata.
@@ -776,8 +863,11 @@ class FileSet(Timestamped, UUIDModel):
         Add a File or Files to the FileSet. Takes a File object or it's ID,
         or a list of Files or IDs.
 
-        :param file: The File object or it's ID, or a list of these.
-        :type file: File | str | Sequence[File] | Sequence[str]
+        :param files: The File object or it's ID, or a list of these.
+        :type files: File | str | Sequence[File] | Sequence[str]
+        :param save: Save the added File instances and this FileSet after
+                     adding the file(s).
+        :type save: bool
         :return: None
         :rtype: NoneType
         """
@@ -824,19 +914,42 @@ class FileSet(Timestamped, UUIDModel):
             self.save()
 
     @transaction.atomic
-    def remove(self, files, save=True, delete=False):
+    def remove(self, files: Union[str, File, List[str], List[File]],
+               save=True, delete=False):
+        """
+        Remove a File or Files to the FileSet. Takes a File object or it's ID,
+        or a list of Files or IDs.
+
+        :param files: The File object or it's ID, or a list of these.
+        :type files: File | str | Sequence[File] | Sequence[str]
+        :param save: Save this FileSet after removing the file(s).
+        :type save: bool
+        :param delete: Delete the Files after removing them from this FileSet
+                       (doesn't check if other FileSets or database objects still
+                        hold a reference to this file, in the case that they are
+                        using non-relational JSON blobs)
+        :type delete: bool
+        :return: None
+        :rtype: NoneType
+        """
         if isinstance(files, str) or not isinstance(files, Sequence):
             files = [files]
 
         for f in files:
-            if isinstance(f, File):
-                self.files.remove(f.id)
-            elif isinstance(f, str):
-                self.files.remove(f)
+            f_id = getattr(f, 'id', str(f))
+            try:
+                self.files.remove(f_id)
+            except ValueError:
+                # if item isn't in list
+                pass
 
             if delete:
-                f = File.objects.get(id=getattr(f, 'id', str(f)))
-                f.delete()
+                try:
+                    f = File.objects.get(id=f_id)
+                    f.delete()
+                except File.DoesNotExist:
+                    # can't delete what doesn't exist
+                    pass
 
         if save:
             self.save()
@@ -854,7 +967,14 @@ class FileSet(Timestamped, UUIDModel):
     def get_files_by_path(self, file_path: Union[str, Path]) -> QuerySet:
         fname = Path(file_path).name
         fpath = Path(file_path).parent
-        return File.objects.filter(name=fname, path=fpath)
+        queryset = self.get_files().filter(name=fname, path=fpath)
+        return queryset
+
+    def get_file_by_path(self, file_path: Union[str, Path]) -> File:
+        fname = Path(file_path).name
+        fpath = Path(file_path).parent
+        f = self.get_files().filter(name=fname, path=fpath).first()
+        return f
 
 
 @reversion.register()
