@@ -144,6 +144,7 @@ INSTALLED_APPS = [
     'django_extensions',
     'django_celery_results',
     'django_celery_beat',
+    'django_object_actions',
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',

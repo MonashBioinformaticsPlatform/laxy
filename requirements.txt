@@ -30,6 +30,7 @@ django-extensions==2.0.0
 django-filter==1.1.0
 django-guardian==1.4.9
 hg+https://bitbucket.org/schinckel/django-jsonfield#egg=django-jsonfield
+django-object-actions==1.0.0
 django-rest-swagger==2.1.2
 django-reversion==2.0.13
 django-storages==1.6.6

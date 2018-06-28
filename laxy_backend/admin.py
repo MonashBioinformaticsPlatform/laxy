@@ -5,6 +5,10 @@ from django.contrib.humanize.templatetags import humanize
 from django.utils.html import format_html
 from reversion.admin import VersionAdmin
 
+from django_object_actions import (DjangoObjectActions,
+                                   takes_instance_or_queryset)
+
+from laxy_backend import tasks
 from .models import (Job,
                      ComputeResource,
                      File,
@@ -63,6 +67,7 @@ class JobAdmin(Timestamped, VersionAdmin):
                     '_compute_resource',
                     '_status')
     ordering = ('-created_time', '-completed_time', '-modified_time',)
+    actions = ('trigger_file_ingestion',)
 
     color_mappings = {
         Job.STATUS_FAILED: 'red',
@@ -86,6 +91,22 @@ class JobAdmin(Timestamped, VersionAdmin):
             self.color_mappings.get(obj.status, 'black'),
             obj.get_status_display(),
         )
+
+    @takes_instance_or_queryset
+    def trigger_file_ingestion(self, request, queryset):
+        failed = []
+        for obj in queryset:
+            task_data = dict(job_id=obj.id)
+            result = tasks.index_remote_files.apply_async(args=(task_data,))
+            if result.failed():
+                failed.append(obj.id)
+        if not failed:
+            self.message_user(request, "Ingesting !")
+        else:
+            self.message_user(request, "Errors trying to ingest %s" %
+                              ','.join(failed))
+
+    trigger_file_ingestion.short_description = "Ingest files"
 
 
 def do_nothing_validator(value):
