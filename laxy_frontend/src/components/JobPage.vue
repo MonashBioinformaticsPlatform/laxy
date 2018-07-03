@@ -67,27 +67,14 @@
                         <job-status-pip class="fill-width" :job="job"></job-status-pip>
                     </md-layout>
                     <!-- -->
-                    <!-- multiqc report link (maybe a generic 'file-link-pip' component -->
-                    <md-card style="background-color: #9fa8da">
-                        <md-card-header>
-                            <md-card-header-text>
-                                <div class="md-title">MultiQC report
-                                </div>
-                                <div class="md-subhead">I'm an incomplete placeholder</div>
-                            </md-card-header-text>
-
-                            <md-card-media>
-                                <md-icon class="md-size-4x">view_list</md-icon>
-                            </md-card-media>
-                        </md-card-header>
-
-                        <md-card-actions>
-                            <md-button @click="openFileByTag('multiqc')">
-                                <md-icon>remove_red_eye</md-icon>
-                                View
-                            </md-button>
-                        </md-card-actions>
-                    </md-card>
+                    <md-layout md-flex="25" md-flex-medium="100">
+                        <file-link-pip v-if="hasMultiQCReport"
+                                       :url="fileUrlByTag('multiqc')"
+                                       style="background-color: #9fa8da">
+                            <span slot="title">MultiQC report</span>
+                            <span slot="subtitle">Open in new tab</span>
+                        </file-link-pip>
+                    </md-layout>
 
                     <!-- input and output file total sizes in pip card -->
                     <!-- pipeline reference genome (icon on organism or DNA double-helix for non-model) -->
@@ -212,9 +199,10 @@
     import {FETCH_FILESET, FETCH_JOB} from "../store";
     import {DummyJobList as _dummyJobList} from "../test-data";
     import JobStatusPip from "./JobStatusPip";
+    import FileLinkPip from "./FileLinkPip";
 
     @Component({
-        components: {JobStatusPip},
+        components: {FileLinkPip, JobStatusPip},
         props: {
             jobId: {type: String, default: ""},
             showTab: {type: String, default: "summary"}
@@ -246,13 +234,7 @@
         _ = _;
 
         get files(): LaxyFile[] {
-            if (!this.job) {
-                return [];
-            }
-            const getFileset = this.$store.getters.fileset;
-            let f = getFileset(this.job.input_fileset_id).files;
-            f.push(...getFileset(this.job.output_fileset_id).files);
-            return f;
+            return this.$store.getters.currentJobFiles;
         }
 
         // @Getter("currentInputFileset")
@@ -285,10 +267,29 @@
         }
 
         openFileByTag(tag: string) {
-            const file = this.filesByTag(tag)[0];
+            const file = this.filesByTag(tag).shift();
             if (file && file.id) {
                 window.open(WebAPI.viewFileByIdUrl(file.id));
             }
+        }
+
+        fileUrlByTag(tag: string): string | null {
+            const file = this.filesByTag(tag).shift();
+            if (file && file.id) {
+                // return WebAPI.viewFileByIdUrl(file.id);
+                return WebAPI.viewJobFileByPathUrl(
+                    this.jobId,
+                    `${file.path}/${file.name}`);
+            }
+            return null;
+        }
+
+        hasFileTagged(tag: string): boolean {
+            return this.filesByTag(tag).length > 0;
+        }
+
+        get hasMultiQCReport(): boolean {
+            return this.hasFileTagged("multiqc");
         }
 
         filesByTag(tag: string): LaxyFile[] {
@@ -313,17 +314,17 @@
                 //     ]);
                 // }
 
-                if (this.showTab == 'summary') {
+                if (this.showTab == "summary") {
                     (this.$refs.keyFiles as any).refresh();
                 }
-                if (this.showTab == 'output') {
+                if (this.showTab == "output") {
                     (this.$refs.output as any).refresh();
                 }
-                if (this.showTab == 'input') {
+                if (this.showTab == "input") {
                     (this.$refs.input as any).refresh();
                 }
 
-                if (this.showTab == 'eventlog') {
+                if (this.showTab == "eventlog") {
                     (this.$refs.eventlog as any).refresh();
                 }
 

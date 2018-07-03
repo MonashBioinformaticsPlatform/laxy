@@ -54,6 +54,18 @@ export const Store = new Vuex.Store({
         jobs: state => {
             return state.jobs;
         },
+        currentJobFiles: (state, getters) => {
+            const job =  state.currentViewedJob;
+            if (!job) {
+                return [];
+            }
+            const getFileset = getters.fileset;
+            const infiles = getFileset(job.input_fileset_id);
+            const outfiles = getFileset(job.output_fileset_id);
+            const filez = infiles && infiles.files || [];
+            filez.push(...(outfiles && outfiles.files || []));
+            return filez;
+        },
         // Call like: this.$store.getters.fileset('SomeBlafooLongId')
         fileset: state => {
             return (fileset_id: string) => {
