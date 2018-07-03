@@ -1,5 +1,6 @@
 import * as _ from 'lodash';
 import Vuex from 'vuex';
+import Vue from 'Vue';
 import axios, {AxiosResponse} from 'axios';
 import {ComputeJob, Sample, SampleSet} from './model';
 import {WebAPI} from './web-api';
@@ -11,9 +12,13 @@ export const SET_SAMPLES_ID = 'set_samples_id';
 export const SET_PIPELINE_PARAMS = 'set_pipeline_params';
 export const SET_PIPELINE_DESCRIPTION = 'set_pipeline_description';
 export const SET_JOBS = 'set_jobs';
+export const SET_FILESET = 'set_fileset';
+export const SET_VIEWED_JOB = 'set_viewed_job';
 
 export const FETCH_USER_PROFILE = 'fetch_user_profile';
 export const FETCH_JOBS = 'fetch_jobs';
+export const FETCH_FILESET = 'fetch_fileset';
+export const FETCH_JOB = 'fetch_job';
 
 interface JobsPage {
     total: number;  // total number of jobs on all pages
@@ -30,6 +35,8 @@ export const Store = new Vuex.Store({
             description: '',
         },
         jobs: {total: 0, jobs: [] as ComputeJob[]} as JobsPage,
+        filesets: {} as { [key: string]: LaxyFileSet },
+        currentViewedJob: {} as ComputeJob,
     },
     getters: {
         samples: state => {
@@ -46,7 +53,22 @@ export const Store = new Vuex.Store({
         },
         jobs: state => {
             return state.jobs;
-        }
+        },
+        // Call like: this.$store.getters.fileset('SomeBlafooLongId')
+        fileset: state => {
+            return (fileset_id: string) => {
+                return state.filesets[fileset_id];
+            };
+        },
+        filesets: state => {
+            return state.filesets;
+        },
+        // currentInputFileset: (state, getters) => {
+        //     return state.filesets[(state.currentViewedJob as any).input_fileset_id];
+        // },
+        // currentOutputFileset: (state, getters) => {
+        //     return state.filesets[(state.currentViewedJob as any).output_fileset_id];
+        // },
     },
     mutations: {
         [SET_USER_PROFILE](state, profile_info: {}) {
@@ -70,6 +92,13 @@ export const Store = new Vuex.Store({
         },
         [SET_JOBS](state, jobs: JobsPage) {
             state.jobs = jobs;
+        },
+        [SET_FILESET](state, fileset: LaxyFileSet) {
+            // state.filesets[fileset.id] = fileset; // don't preserve reactivity
+            Vue.set(state.filesets, fileset.id, fileset); // reactive
+        },
+        [SET_VIEWED_JOB](state, job: ComputeJob) {
+            state.currentViewedJob = job;
         }
     },
     actions: {
@@ -77,7 +106,7 @@ export const Store = new Vuex.Store({
             try {
                 const response = await WebAPI.getUserProfile();
                 const profile_info = _.pick(response.data,
-                    ['full_name', 'username', 'email', 'profile_pic'])
+                    ['full_name', 'username', 'email', 'profile_pic']);
                 commit(SET_USER_PROFILE, profile_info);
             } catch (error) {
                 console.log(error);
@@ -130,6 +159,24 @@ export const Store = new Vuex.Store({
                     });
                 }
                 commit(SET_JOBS, jobs);
+            } catch (error) {
+                console.log(error);
+                throw error;
+            }
+        },
+        async [FETCH_FILESET]({commit, state}, fileset_id: string) {
+            try {
+                const response = await WebAPI.getFileSet(fileset_id);
+                commit(SET_FILESET, response.data);
+            } catch (error) {
+                console.log(error);
+                throw error;
+            }
+        },
+        async [FETCH_JOB]({commit, state}, job_id: string) {
+            try {
+                const response = await WebAPI.getJob(job_id);
+                commit(SET_VIEWED_JOB, response.data);
             } catch (error) {
                 console.log(error);
                 throw error;

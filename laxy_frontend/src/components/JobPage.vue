@@ -82,7 +82,7 @@
                         </md-card-header>
 
                         <md-card-actions>
-                            <md-button @click="openFile">
+                            <md-button @click="openFileByTag('multiqc')">
                                 <md-icon>remove_red_eye</md-icon>
                                 View
                             </md-button>
@@ -109,11 +109,13 @@
                                    v-show="showTab === 'summary' || showTab == null" :md-column-medium="true"
                                    :md-row-large="true">
                             <file-list v-if="job != null && job.status !== 'running'"
+                                       ref="keyFiles"
                                        class="fill-width"
                                        title="Key result files"
                                        :fileset-id="job.output_fileset_id"
                                        :regex-filters="['\\.html$', '\\.counts$', 'StrandedCounts.*\\.txt$', '^strandInfo\\.txt$', '\\.bam$', '\\.bai$', '\\.log$', '\\.out$']"
                                        :hide-search="false"
+                                       :job-id="jobId"
                                        @refresh-error="showErrorDialog">
                             </file-list>
                         </md-layout>
@@ -122,9 +124,12 @@
                         <md-layout v-show="showTab === 'input'" md-column-medium>
                             <md-layout id="input-files-panel">
                                 <file-list id="input-files-card"
+                                           ref="input"
                                            v-if="job != null && job.status !== 'running'"
                                            title="Input files"
                                            :fileset-id="job.input_fileset_id"
+                                           :job-id="jobId"
+                                           :hide-search="false"
                                            @refresh-error="showErrorDialog"></file-list>
                             </md-layout>
                         </md-layout>
@@ -132,10 +137,12 @@
                     <transition name="fade">
                         <md-layout v-show="showTab === 'output'" md-column-medium>
                             <md-layout id="output-files-panel">
-                                <file-list id="output-files-card"
+                                <file-list ref="output"
+                                           id="output-files-card"
                                            v-if="job != null && job.status !== 'running'"
                                            title="Output files"
                                            :fileset-id="job.output_fileset_id"
+                                           :hide-search="false"
                                            @refresh-error="showErrorDialog"></file-list>
                             </md-layout>
                         </md-layout>
@@ -194,8 +201,15 @@
     import {NotImplementedError} from "../exceptions";
     import {ComputeJob} from "../model";
     import {WebAPI} from "../web-api";
-    import {palette, getStatusColor, themeColors, getThemeColor, getThemedStatusColor} from "../palette";
+    import {
+        palette,
+        getStatusColor,
+        themeColors,
+        getThemeColor,
+        getThemedStatusColor
+    } from "../palette";
 
+    import {FETCH_FILESET, FETCH_JOB} from "../store";
     import {DummyJobList as _dummyJobList} from "../test-data";
     import JobStatusPip from "./JobStatusPip";
 
@@ -211,11 +225,13 @@
         _DEBUG: boolean = false;
 
         public job: ComputeJob | null = null;
+        // TODO: Put file list / job record in Vuex, make this a read only
+        //       computed property derived from the store
         public jobId: string;
 
         public showTab: "summary" | "input" | "output" | "eventlog";
 
-        public submitting: boolean = false;
+        public refreshing: boolean = false;
         public error_alert_message: string = "Everything is fine. 🐺";
         public snackbar_message: string = "Everything is fine. ☃";
         public snackbar_duration: number = 2000;
@@ -229,14 +245,32 @@
         // for lodash in templates
         _ = _;
 
+        get files(): LaxyFile[] {
+            if (!this.job) {
+                return [];
+            }
+            const getFileset = this.$store.getters.fileset;
+            let f = getFileset(this.job.input_fileset_id).files;
+            f.push(...getFileset(this.job.output_fileset_id).files);
+            return f;
+        }
+
+        // @Getter("currentInputFileset")
+        // inputFileset: LaxyFileSet;
+        //
+        // @Getter("currentOutputFileset")
+        // outputFileset: LaxyFileSet;
+
         created() {
             // this.jobId = _dummyJobList[0].id || '';
             // this.job = _dummyJobList[0];
             // this.jobId = '5ozQUwFCJDoV0vWgmo4q6E';
-            this.refresh(null);
+            // this.refresh(null);
         }
 
         mounted() {
+            this.refresh(null);
+
             this._refreshPollerId = setInterval(() => {
                 this.refresh(null);
             }, 10000);  // ms
@@ -246,27 +280,62 @@
             if (this._refreshPollerId != null) clearInterval(this._refreshPollerId);
         }
 
-        openFile(filepath: string) {
-            window.open("http://118.138.240.175:8001/api/v1/file/Ko2z7tjLuaQuk8MJgAjDI/sikRun/multiqc_report.html");
+        openFileByPath(filepath: string) {
+            window.open(WebAPI.viewJobFileByPathUrl(this.jobId, filepath));
+        }
+
+        openFileByTag(tag: string) {
+            const file = this.filesByTag(tag)[0];
+            if (file && file.id) {
+                window.open(WebAPI.viewFileByIdUrl(file.id));
+            }
+        }
+
+        filesByTag(tag: string): LaxyFile[] {
+            return _.filter(this.files, (f) => {
+                return f.type_tags.includes(tag);
+            });
         }
 
         async refresh(successMessage: string | null = "Updated") {
             try {
-                this.submitting = true;
-                const response = await WebAPI.getJob(this.jobId);
-                this.job = response.data as ComputeJob;
-                if (this.showTab == 'eventlog') {
-                    (this.$refs['eventlog'] as any).refresh();
+                this.refreshing = true;
+                // const response = await WebAPI.getJob(this.jobId);
+                // this.job = response.data as ComputeJob;
+                await this.$store.dispatch(FETCH_JOB, this.jobId);
+                this.job = this.$store.state.currentViewedJob;
+                // if (this.job &&
+                //     this.job.input_fileset_id &&
+                //     this.job.output_fileset_id) {
+                //     await Promise.all([
+                //         this.$store.dispatch(FETCH_FILESET, this.job.input_fileset_id),
+                //         this.$store.dispatch(FETCH_FILESET, this.job.output_fileset_id)
+                //     ]);
+                // }
+
+                if (this.showTab == 'summary') {
+                    (this.$refs.keyFiles as any).refresh();
                 }
-                this.submitting = false;
+                if (this.showTab == 'output') {
+                    (this.$refs.output as any).refresh();
+                }
+                if (this.showTab == 'input') {
+                    (this.$refs.input as any).refresh();
+                }
+
+                if (this.showTab == 'eventlog') {
+                    (this.$refs.eventlog as any).refresh();
+                }
+
+                this.refreshing = false;
                 if (successMessage) this.flashSnackBarMessage(successMessage, 500);
             } catch (error) {
                 console.log(JSON.parse(JSON.stringify(error)));
-                this.submitting = false;
+                this.refreshing = false;
                 this.error_alert_message = error.toString();
-                if (error.response.status != 401) {
-                   this.openDialog("error_dialog");
-                   throw error;
+                if (error.response && error.response.status != 401) {
+                    this.openDialog("error_dialog");
+                    throw error;
                 }
             }
         }
@@ -277,13 +346,13 @@
 
         async cancelJobConfirmed(id: string) {
             try {
-                this.submitting = true;
+                this.refreshing = true;
                 await WebAPI.cancelJob(this.jobId);
-                this.submitting = false;
+                this.refreshing = false;
                 this.flashSnackBarMessage("Job cancelled.");
             } catch (error) {
                 console.log(error);
-                this.submitting = false;
+                this.refreshing = false;
                 this.error_alert_message = error.toString();
                 this.closeDialog("cancel_job_dialog");
                 this.openDialog("error_dialog");

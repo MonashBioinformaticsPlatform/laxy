@@ -27,10 +27,12 @@ declare interface MdDialog extends Element {
 declare interface LaxyFile {
             id: string;
             name: string;
+            path: string;
             location: string;
             owner: number | string;
             checksum: string;
             metadata: any;
+            type_tags: string[];
 }
 
 declare interface LaxyFileSet {

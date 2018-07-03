@@ -116,20 +116,30 @@ export class WebAPI {
         }
     }
 
-    public static viewFileUrl(file_id: string,
-                              filename: string | null = null): string {
+    public static viewFileByIdUrl(file_id: string,
+                                  filename: string | null = null): string {
         if (filename) {
             return `${this.baseUrl}/api/v1/file/${file_id}/content/${filename}`;
         }
         return `${this.baseUrl}/api/v1/file/${file_id}/`;
     }
 
-    public static downloadFileUrl(file_id: string,
-                                  filename: string | null = null): string {
+    public static downloadFileByIdUrl(file_id: string,
+                                      filename: string | null = null): string {
         if (filename) {
             return `${this.baseUrl}/api/v1/file/${file_id}/content/${filename}?download`;
         }
         return `${this.baseUrl}/api/v1/file/${file_id}/?download`;
+    }
+
+    public static viewJobFileByPathUrl(job_id: string,
+                                       filepath: string): string {
+        return `${this.baseUrl}/api/v1/job/${job_id}/files/${filepath}`;
+    }
+
+    public static downloadJobFileByPathUrl(job_id: string,
+                                           filepath: string): string {
+        return `${this.baseUrl}/api/v1/job/${job_id}/files/${filepath}?download`;
     }
 
     /*

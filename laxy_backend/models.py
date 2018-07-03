@@ -961,7 +961,7 @@ class FileSet(Timestamped, UUIDModel):
         :return: The File object in this FileSet (as a Django QuerySet).
         :rtype: django.models.query.QuerySet(File)
         """
-        return File.objects.filter(id__in=self.files)
+        return File.objects.filter(id__in=self.files).order_by('path', 'name')
         # return File.objects.in_bulk(self.files, field_name='id')
 
     def get_files_by_path(self, file_path: Union[str, Path]) -> QuerySet:
