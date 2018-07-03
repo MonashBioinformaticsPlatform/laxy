@@ -290,15 +290,13 @@
             this.samples = [];
             this.selectedSamples = [];
 
-            // split on commas and spaces, make items unique, rejoin as comma separated list
-            let accession_list = _.uniq(_.compact(accessions.trim().split(/[\s,]+/))).join(",");
-            const url = `/api/v1/ena/fastqs?accessions=${accession_list}`;
-            // console.log(url);
-            const fetcher = WebAPI.fetcher;
+            // split on commas and spaces, make items unique
+            let accession_list: string[] =
+                _.uniq(_.compact(accessions.trim().split(/[\s,]+/)));
 
             try {
                 this.submitting = true;
-                const response = await fetcher.get(url) as AxiosResponse;
+                const response = await WebAPI.enaSearch(accession_list);
                 this.submitting = false;
                 // if (response.data.status === "error") {
                 //     this.error_alert_message = `${response.status} ${response.statusText}`;

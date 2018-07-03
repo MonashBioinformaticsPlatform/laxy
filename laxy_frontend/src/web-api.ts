@@ -70,6 +70,12 @@ export class WebAPI {
         return Cookies.get('csrftoken');
     }
 
+    public static async enaSearch(accession_list: string[]): Promise<AxiosResponse> {
+        const accessions = accession_list.join(',');
+        const url = `/api/v1/ena/fastqs/?accessions=${accessions}`;
+        return await this.fetcher.get(url);
+    }
+
     public static async getJobs(page: number, page_size: number) {
         try {
             return await this.fetcher.get(
@@ -141,6 +147,8 @@ export class WebAPI {
                                            filepath: string): string {
         return `${this.baseUrl}/api/v1/job/${job_id}/files/${filepath}?download`;
     }
+
+
 
     /*
     public static async viewFile(file_id: string,
