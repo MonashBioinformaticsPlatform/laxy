@@ -107,20 +107,14 @@ function init_conda_env() {
 
         # Environment takes a very long time to solve if qualimap is included initially
         ${CONDA_BASE}/bin/conda install --yes -n "${env_name}" qualimap
-
     fi
 
     # We shouldn't need to do this .. but it seems required for _some_ environments (ie M3)
     export JAVA_HOME="${CONDA_BASE}/envs/${env_name}/jre"
 
     source "${CONDA_BASE}/bin/activate" "${CONDA_BASE}/envs/${env_name}"
+
     set -o nounset
-}
-
-
-function patch_bds_config_slurm() {
-    # Will only work after conda env with bds has been imported
-    sed -i 's/#system = "local"/system = "generic"/' $(which bds).config
 }
 
 function get_reference_data_aws() {
@@ -167,7 +161,16 @@ function register_files() {
 }
 
 function setup_bds_config() {
-    BDS_CONFIG="${JOB_PATH}/../BigDataScript/config/bds.config"
+    BDS_CONFIG="${JOB_PATH}/bds.config"
+    cp $(which bds).config ${BDS_CONFIG}
+
+    # TODO: This won't work yet since the default bds.config contains
+    # ~/.bds/clusterGeneric/* paths to the SLURM wrapper scripts.
+    # The SLURM wrappers don't appear to come with the bds conda package (yet)
+    # if [[ "${SCHEDULER}" == "slurm" ]]; then
+    #     sed -i 's/#system = "local"/system = "generic"/' ${BDS_CONFIG}
+    # fi
+
     if [ -f "${BDS_CONFIG}" ]; then
         export RNASIK_BDS_CONFIG="${BDS_CONFIG}"
     fi
@@ -195,6 +198,8 @@ install_miniconda
 # We import the environment early to ensure we have a recent version of curl (>=7.55)
 init_conda_env "rnasik"
 
+# Make a copy of the bds.config in the $JOB_PATH, possibly modified for SLURM
+setup_bds_config
 
 ####
 #### Stage input data ###
@@ -226,8 +231,6 @@ env >job_env.out
 
 GENOME_FASTA="${REFERENCE_BASE}/${REFERENCE_GENOME}/Sequence/WholeGenomeFasta/genome.fa"
 GENOME_GTF="${REFERENCE_BASE}/${REFERENCE_GENOME}/Annotation/Genes/genes.gtf"
-
-setup_bds_config
 
 send_event "JOB_PIPELINE_STARTING"
 
