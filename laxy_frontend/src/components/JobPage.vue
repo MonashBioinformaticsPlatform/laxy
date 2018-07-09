@@ -100,7 +100,7 @@
                                        class="fill-width"
                                        title="Key result files"
                                        :fileset-id="job.output_fileset_id"
-                                       :regex-filters="['\\.html$', '\\.counts$', 'StrandedCounts.*\\.txt$', '^strandInfo\\.txt$', '\\.bam$', '\\.bai$', '\\.log$', '\\.out$']"
+                                       :tag-filters="['bam', 'bai', 'counts', 'degust', 'report']"
                                        :hide-search="false"
                                        :job-id="jobId"
                                        @refresh-error="showErrorDialog">
@@ -331,7 +331,7 @@
                 this.refreshing = false;
                 if (successMessage) this.flashSnackBarMessage(successMessage, 500);
             } catch (error) {
-                console.log(JSON.parse(JSON.stringify(error)));
+                console.log(error);
                 this.refreshing = false;
                 this.error_alert_message = error.toString();
                 if (error.response && error.response.status != 401) {

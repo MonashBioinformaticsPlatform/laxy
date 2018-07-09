@@ -130,6 +130,7 @@ class FileSerializer(BaseModelSerializer):
     location = serializers.CharField(
         max_length=2048,
         validators=[models.URIValidator()])
+    type_tags = serializers.ListField(default=[])
     # metadata = serializers.JSONField()
     metadata = SchemalessJsonResponseSerializer(required=False)  # becomes OpenAPI 'object' type
 
@@ -504,3 +505,8 @@ class JobEventLogSerializer(EventLogSerializer):
 class LoginRequestSerializer(serializers.Serializer):
     username = serializers.CharField(required=True)
     password = serializers.CharField(required=True)
+
+
+class RedirectResponseSerializer(serializers.Serializer):
+    redirect = serializers.URLField(required=True)
+    status = serializers.IntegerField(required=True)

@@ -797,7 +797,11 @@ class File(Timestamped, UUIDModel):
             storage = storage_class(host=host, params=params)
             file_path = str(Path(base_dir) / Path(url.path).relative_to('/'))
 
-            return storage.open(file_path)
+            # 'SFTPStorageFile' file-like object has no 'name', so we add it
+            filelike = storage.open(file_path)
+            setattr(filelike, 'name', self.name)
+            return filelike
+
         # TODO: This needs to be carefully reworked or removed. Too much
         #       scope for reading arbitrary files on the server.
         elif scheme == 'file':

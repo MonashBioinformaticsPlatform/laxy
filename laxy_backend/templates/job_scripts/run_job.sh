@@ -11,7 +11,6 @@ set -o xtrace
 export DEBUG="${DEBUG:-{{ DEBUG }}}"
 # export JOB_ID="${JOB_ID:-}"
 # export JOB_COMPLETE_CALLBACK_URL="${JOB_COMPLETE_CALLBACK_URL:-}"
-# export JOB_COMPLETE_AUTH_HEADER="${JOB_COMPLETE_AUTH_HEADER:-}"
 
 readonly TMP="${PWD}/../tmp"
 readonly JOB_ID="{{ JOB_ID }}"
@@ -27,11 +26,12 @@ readonly REFERENCE_BASE="${PWD}/../references/iGenomes"
 
 readonly SCHEDULER="slurm"
 # readonly SCHEDULER="local"
-MEM=31500
+MEM=64000
+CPUS=12
 if [[ "$REFERENCE_GENOME" == "Saccharomyces_cerevisiae/Ensembl/R64-1-1" ]]; then
     MEM=16000 # yeast (uses ~ 8Gb)
+    CPUS=8
 fi
-readonly CPUS=8
 readonly SBATCH_OPTIONS="--cpus-per-task=${CPUS} --mem=${MEM} -t 1-0:00 --ntasks-per-node=1 --ntasks=1 --job-name=laxy:${JOB_ID}"
 
 PREFIX_JOB_CMD=""
@@ -99,7 +99,7 @@ function init_conda_env() {
         ${CONDA_BASE}/bin/conda create --yes -m -n "${env_name}"
 
         # Install an up-to-date curl and GNU parallel
-        ${CONDA_BASE}/bin/conda install --yes -n "${env_name}" curl parallel jq
+        ${CONDA_BASE}/bin/conda install --yes -n "${env_name}" curl parallel jq awscli
 
         # Then install rnasik
         ${CONDA_BASE}/bin/conda install --yes -n "${env_name}" \
@@ -130,6 +130,15 @@ function get_reference_data_aws() {
     fi
 }
 
+function get_igenome_aws() {
+     local REF_ID=$1
+     aws s3 --no-sign-request --region eu-west-1 sync \
+         s3://ngi-igenomes/igenomes/${REF_ID}/Annotation/Genes/ ${REFERENCE_BASE}/${REF_ID}/Annotation/Genes/ --exclude "*" --include "genes.gtf"
+    aws s3 --no-sign-request --region eu-west-1 sync \
+        s3://ngi-igenomes/igenomes/${REF_ID}/Sequence/WholeGenomeFasta/${REFERENCE_BASE}/${REF_ID}/Sequence/WholeGenomeFasta/
+
+}
+
 function find_filetype() {
     # eg, *.fastq.gz or *.bam
     local pattern=$1
@@ -142,9 +151,11 @@ function find_filetype() {
 function register_files() {
     echo "checksum,filepath,type_tags" >${JOB_PATH}/manifest.csv
     find_filetype "*.bam" "bam,alignment" >>${JOB_PATH}/manifest.csv
-    find_filetype "*.bai" bai >>${JOB_PATH}/manifest.csv
-    find_filetype "*.fastq.gz" fastq >>${JOB_PATH}/manifest.csv
+    find_filetype "*.bai" "bai" >>${JOB_PATH}/manifest.csv
+    find_filetype "*.fastq.gz" "fastq" >>${JOB_PATH}/manifest.csv
     find_filetype "multiqc_report.html" "multiqc,html,report" >>${JOB_PATH}/manifest.csv
+    find_filetype "RNAsik.bds.*.html" "bds,logs,html,report" >>${JOB_PATH}/manifest.csv
+    find_filetype "*StrandedCounts*.txt" "counts,degust" >>${JOB_PATH}/manifest.csv
 
     curl -X POST \
      -H "Content-Type: text/csv" \
@@ -183,8 +194,6 @@ function setup_bds_config() {
 # TODO: Detect if we are on AWS and do this conditionally
 #       (maybe via ComputeResource metadata passed to task)
 
-get_reference_data_aws
-
 mkdir -p "${TMP}"
 mkdir -p input
 mkdir -p output
@@ -197,6 +206,9 @@ install_miniconda
 
 # We import the environment early to ensure we have a recent version of curl (>=7.55)
 init_conda_env "rnasik"
+
+# get_reference_data_aws
+get_igenome_aws "${REFERENCE_GENOME}"
 
 # Make a copy of the bds.config in the $JOB_PATH, possibly modified for SLURM
 setup_bds_config

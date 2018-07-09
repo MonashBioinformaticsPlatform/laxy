@@ -26,7 +26,8 @@ from laxy_backend.views import (JobView, JobCreate,
                                 ComputeResourceView, ComputeResourceCreate,
                                 ENAQueryView, ENAFastqUrlQueryView, JobListView,
                                 EventLogCreate, EventLogListView, JobEventLogCreate,
-                                JobFileView, JobFileBulkRegistration, trigger_file_registration)
+                                JobFileView, JobFileBulkRegistration, trigger_file_registration,
+                                SendFileToDegust)
 
 from laxy_backend.view_auth import Login, Logout, view_user_profile
 
@@ -150,6 +151,10 @@ api_urls = [
     re_path(r'eventlog/$',
             EventLogCreate.as_view(),
             name='create_eventlog'),
+
+    re_path(r'_action/send_to/degust/(?P<file_id>[a-zA-Z0-9\-_]+)/$',
+            SendFileToDegust.as_view(),
+            name='send_to_degust'),
 ]
 
 admin_urls = [

@@ -18,8 +18,8 @@
                                v-model="reference_genome">
                         <md-option v-for="genome in available_genomes"
                                    :key="genome.id"
-                                   :value="genome.id">{{ genome.id }} ({{
-                            genome.organism }})
+                                   :value="genome.id">
+                            {{ get_genome_description(genome) }}
                         </md-option>
                     </md-select>
                 </md-input-container>
@@ -104,10 +104,18 @@
         public selectedSamples: Array<Sample> = [];
 
         public available_genomes: Array<ReferenceGenome> = [
-            {id: 'hg19', organism: 'Human'},
-            {id: 'mm10', organism: 'Mouse'},
-            {id: 'R64-1-1', organism: 'Saccharomyces cerevisiae'},
-            {id: 'WBcel235', organism: 'Caenorhabditis elegans'}
+            {id: "Homo_sapiens/Ensembl/GRCh37", organism: "Human"},
+            {id: "Homo_sapiens/UCSC/hg19", organism: "Human"},
+            {id: "Homo_sapiens/NCBI/build37.2", organism: "Human"},
+            {id: "Mus_musculus/Ensembl/GRCm38", organism: "Mouse"},
+            {id: "Mus_musculus/UCSC/mm10", organism: "Mouse"},
+            {id: "Mus_musculus/NCBI/GRCm38", organism: "Mouse"},
+            {id: "Saccharomyces_cerevisiae/Ensembl/R64-1-1", organism: "Saccharomyces cerevisiae"},
+            // {id: "Saccharomyces_cerevisiae/UCSC/sacCer3", organism: "Saccharomyces cerevisiae"},
+            // {id: "Saccharomyces_cerevisiae/NCBI/build3.1", organism: "Saccharomyces cerevisiae"},
+            {id: "Caenorhabditis_elegans/Ensembl/WBcel235", organism: "Caenorhabditis elegans"},
+            {id: "Caenorhabditis_elegans/UCSC/ce10", organism: "Caenorhabditis elegans"},
+            {id: "Caenorhabditis_elegans/NCBI/WS195", organism: "Caenorhabditis elegans"},
         ];
         // public reference_genome: string = this.available_genomes[0].id;
         // public description: string = '';
@@ -126,6 +134,7 @@
         get description() {
             return this.$store.getters.pipelineParams.description;
         }
+
         set description(txt: string) {
             this.$store.commit(SET_PIPELINE_PARAMS, {
                 description: txt,
@@ -136,11 +145,17 @@
         get reference_genome() {
             return this.$store.getters.pipelineParams.reference_genome;
         }
+
         set reference_genome(id: string) {
             this.$store.commit(SET_PIPELINE_PARAMS, {
                 description: this.description,
                 reference_genome: id,
             });
+        }
+
+        get_genome_description(reference: ReferenceGenome): string {
+            const [org, centre, build] = reference.id.split('/');
+            return `${build} [${centre}] (${reference.organism})`;
         }
 
         created() {

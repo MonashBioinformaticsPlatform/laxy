@@ -41,7 +41,7 @@ class JSONView(APIView):
             if user != obj.owner:
                 return None
                 # return HttpResponse(status=status.HTTP_403_FORBIDDEN,
-                #                    reason="Permission denied.")
+                #                     reason="Permission denied.")
         return obj
 
     def get_obj(self, uuid):

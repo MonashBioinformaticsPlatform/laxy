@@ -75,14 +75,18 @@ def start_job(self, task_data=None, **kwargs):
     # secret = None
 
     environment = task_data.get('environment', {})
+    job_auth_header = task_data.get('job_auth_header', '')
     # environment.update(JOB_ID=job_id)
     _init_fabric_env()
     private_key = job.compute_resource.private_key
     remote_username = job.compute_resource.extra.get('username', None)
     base_dir = job.compute_resource.extra.get('base_dir', '/tmp/')
+
+    job_script_template_vars = dict(environment)
+    job_script_template_vars['JOB_AUTH_HEADER'] = job_auth_header
     job_script = render_to_string('job_scripts/run_job.sh',
-                                  context=environment)
-    curl_headers = StringIO("%s\n" % environment.get('JOB_AUTH_HEADER', ''))
+                                  context=job_script_template_vars)
+    curl_headers = StringIO("%s\n" % job_auth_header)
     job_script = StringIO(job_script)
     config_json = StringIO(json.dumps(job.params))
 

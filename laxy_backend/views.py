@@ -1,3 +1,4 @@
+import asyncio
 from collections import OrderedDict
 import coreapi
 import coreschema
@@ -18,7 +19,10 @@ from django.http import HttpResponse, StreamingHttpResponse
 from django.urls import reverse
 from django.utils.encoding import force_text
 from django_filters.rest_framework import DjangoFilterBackend
+from io import BytesIO
 from pathlib import Path
+import paramiko
+from robobrowser import RoboBrowser
 from rest_framework import generics
 from rest_framework import status
 from rest_framework.authtoken.models import Token
@@ -29,7 +33,7 @@ from rest_framework.decorators import (api_view,
 from rest_framework.filters import BaseFilterBackend
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import JSONParser, MultiPartParser
-from rest_framework.permissions import IsAdminUser
+from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
 from rest_framework.renderers import JSONRenderer, BaseRenderer
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -66,7 +70,7 @@ from .serializers import (PatchSerializerResponse,
                           SchemalessJsonResponseSerializer,
                           JobListSerializerResponse,
                           EventLogSerializer, JobEventLogSerializer,
-                          JobFileSerializerCreateRequest, InputOutputFilesResponse)
+                          JobFileSerializerCreateRequest, InputOutputFilesResponse, RedirectResponseSerializer)
 from .util import sh_bool, laxy_sftp_url
 from .view_mixins import (JSONView, GetMixin, PatchMixin,
                           DeleteMixin, PostMixin, CSVTextParser, PutMixin, RowsCSVTextParser)
@@ -76,6 +80,28 @@ from .view_mixins import (JSONView, GetMixin, PatchMixin,
 logger = logging.getLogger(__name__)
 
 PUBLIC_IP = requests.get('http://api.ipify.org').text
+
+# This maps reference identifiers, sent via web API requests, to a relative path containing
+# the reference genome (iGenomes directory structure), like {id: path}.
+# TODO: This should be a default config somewhere, pipeline/plugin specific.
+#       Each compute resource should be able to override this setting.
+REFERENCE_GENOME_MAPPINGS = {
+    "Homo_sapiens/Ensembl/GRCh37": "Homo_sapiens/Ensembl/GRCh37",
+    "Homo_sapiens/UCSC/hg19": "Homo_sapiens/UCSC/hg19",
+    "Homo_sapiens/NCBI/build37.2": "Homo_sapiens/NCBI/build37.2",
+
+    "Mus_musculus/UCSC/mm10": "Mus_musculus/UCSC/mm10",
+    "Mus_musculus/Ensembl/GRCm38": "Mus_musculus/Ensembl/GRCm38",
+    "Mus_musculus/NCBI/GRCm38": "Mus_musculus/NCBI/GRCm38",
+
+    "Saccharomyces_cerevisiae/Ensembl/R64-1-1": "Saccharomyces_cerevisiae/Ensembl/R64-1-1",
+    # "Saccharomyces_cerevisiae/UCSC/sacCer3": "Saccharomyces_cerevisiae/UCSC/sacCer3",
+    # "Saccharomyces_cerevisiae/NCBI/build3.1": "Saccharomyces_cerevisiae/NCBI/build3.1",
+
+    "Caenorhabditis_elegans/Ensembl/WBcel235": "Caenorhabditis_elegans/Ensembl/WBcel235",
+    "Caenorhabditis_elegans/UCSC/ce10": "Caenorhabditis_elegans/UCSC/ce10",
+    "Caenorhabditis_elegans/NCBI/WS195": "Caenorhabditis_elegans/NCBI/WS195",
+}
 
 
 def get_content_type(request: Request) -> str:
@@ -510,6 +536,7 @@ class FileView(StreamFileMixin,
             "location": "http://example.com/datasets/1/alignment.bam",
             "owner": "admin",
             "checksum": "md5:f3c90181aae57b887a38c4e5fe73db0c",
+            "type_tags": ['bam', 'bam.sorted', 'alignment']
             "metadata": { }
         }
         ```
@@ -534,10 +561,16 @@ class FileView(StreamFileMixin,
             return super().get(request, uuid)
         else:
             # File view/download is the default when no Content-Type is specified
-            if 'download' in request.query_params:
-                return super().download(uuid, filename=filename)
-            else:
-                return super().view(uuid, filename=filename)
+            try:
+                if 'download' in request.query_params:
+                    return super().download(uuid, filename=filename)
+                else:
+                    return super().view(uuid, filename=filename)
+            except (paramiko.ssh_exception.AuthenticationException,
+                    paramiko.ssh_exception.SSHException) as ex:
+                return HttpResponse(
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    reason="paramiko.ssh_exception.AuthenticationException")
 
     def _try_json_patch(self, request, uuid):
         content_type = get_content_type(request)
@@ -840,6 +873,7 @@ class JobFileBulkRegistration(JSONView):
     queryset = Meta.model.objects.all()
     serializer_class = Meta.serializer
     parser_classes = (JSONParser, RowsCSVTextParser,)
+
     # permission_classes = (DjangoObjectPermissions,)
 
     @view_config(request_serializer=JobFileSerializerCreateRequest,
@@ -1564,6 +1598,7 @@ class JobCreate(JSONView):
                 job.save()
 
             job_id = job.id
+            job = Job.objects.get(id=job_id)
 
             callback_url = request.build_absolute_uri(
                 reverse('laxy_backend:job', args=[job.id]))
@@ -1591,15 +1626,30 @@ class JobCreate(JSONView):
             callback_auth_header = get_jwt_user_header_str(
                 request.user.username)
 
-            # TODO: Generate this from job.params.get('reference_genome')
-            #       via the mappings in templates/genomes.json
-            reference_genome = "Saccharomyces_cerevisiae/Ensembl/R64-1-1"
+            # TODO: Maybe use the mappings in templates/genomes.json
+            #       Maybe do all genome_id to path resolution in run_job.sh
+            # reference_genome_id = "Saccharomyces_cerevisiae/Ensembl/R64-1-1"
+            reference_genome_id = job.params.get('params').get('genome')
+            # TODO: This ID check should probably move into the PipelineRun
+            #       params serializer.
+            if reference_genome_id not in REFERENCE_GENOME_MAPPINGS:
+                job.status = Job.STATUS_FAILED
+                job.save()
+                # job.delete()
+                return HttpResponse(reason='Unknown reference genome',
+                                    status=status.HTTP_400_BAD_REQUEST)
 
             task_data = dict(job_id=job_id,
                              clobber=False,
                              # this is job.params
                              # pipeline_run_config=pipeline_run.to_json(),
                              # gateway=settings.CLUSTER_MANAGEMENT_HOST,
+
+                             # We don't pass JOB_AUTH_HEADER as 'environment'
+                             # since we don't want it to leak into the shell env
+                             # or any output of the run_job.sh script.
+                             job_auth_header=callback_auth_header,
+
                              environment={
                                  'DEBUG': sh_bool(
                                      getattr(settings, 'DEBUG', False)),
@@ -1608,12 +1658,8 @@ class JobCreate(JSONView):
                                      callback_url,
                                  'JOB_EVENT_URL': job_event_url,
                                  'JOB_FILE_REGISTRATION_URL': job_file_bulk_url,
-                                 # TODO: We should pass this in as it's own
-                                 # key not in the environment
-                                 'JOB_AUTH_HEADER':
-                                     callback_auth_header,
                                  'JOB_INPUT_STAGED': sh_bool(False),
-                                 'REFERENCE_GENOME': reference_genome,
+                                 'REFERENCE_GENOME': reference_genome_id,
                                  'PIPELINE_VERSION': '1.5.1+c53adf6',  # '1.5.1',
                              })
 
@@ -1912,6 +1958,118 @@ def trigger_file_registration(request, job_id, version=None):
     return Response(data={'task_id': result.id},
                     content_type='application/json',
                     status=200)
+
+
+class SendFileToDegust(JSONView):
+    class Meta:
+        model = File
+        serializer = FileSerializer
+
+    queryset = Meta.model.objects.all()
+    serializer_class = Meta.serializer
+
+    # permission_classes = (DjangoObjectPermissions,)
+
+    # Non-async version
+    # @view_config(response_serializer=RedirectResponseSerializer)
+    # def post(self, request: Request, file_id: str, version=None):
+    #
+    #     counts_file: File = self.get_obj(file_id)
+    #
+    #     if not counts_file:
+    #         return HttpResponse(status=status.HTTP_404_NOT_FOUND,
+    #                             reason="File ID does not exist, (or your are not"
+    #                                    "authorized to access it).")
+    #
+    #     url = 'http://degust.erc.monash.edu/upload'
+    #
+    #     browser = RoboBrowser(history=True, parser='lxml')
+    #     browser.open(url)
+    #
+    #     form = browser.get_form()
+    #
+    #     # filelike = BytesIO(counts_file.file.read())
+    #
+    #     form['filename'].value = counts_file.file  # filelike
+    #     browser.submit_form(form)
+    #     degust_url = browser.url
+    #
+    #     counts_file.metadata['degust_url'] = degust_url
+    #     counts_file.save()
+    # #
+    #     data = RedirectResponseSerializer(data={
+    #         'status': browser.response.status_code,
+    #         'redirect': degust_url})
+    #     if data.is_valid():
+    #         return Response(data=data.validated_data,
+    #                         status=status.HTTP_200_OK)
+    #     else:
+    #         return HttpResponse(status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+    #                             reason="Error contacting Degust.")
+
+    @view_config(response_serializer=RedirectResponseSerializer)
+    def post(self, request: Request, file_id: str, version=None):
+        counts_file: File = self.get_obj(file_id)
+
+        if not counts_file:
+            return HttpResponse(status=status.HTTP_404_NOT_FOUND,
+                                reason="File ID does not exist, (or your are not"
+                                       "authorized to access it).")
+
+        saved_degust_url = counts_file.metadata.get('degust_url', None)
+        if saved_degust_url:
+            data = RedirectResponseSerializer(data={
+                'status': status.HTTP_200_OK,
+                'redirect': saved_degust_url})
+            if data.is_valid():
+                return Response(data=data.validated_data,
+                                status=status.HTTP_200_OK)
+
+        url = 'http://degust.erc.monash.edu/upload'
+        browser = RoboBrowser(history=True, parser='lxml')
+        loop = asyncio.new_event_loop()
+
+        # This does the fetch of the form and the counts file simultaneously
+        async def get_form_and_file(url, fileish):
+            def get_upload_form(url):
+                browser.open(url)
+                return browser.get_form()
+
+            def get_counts_file_content(fh):
+                filelike = BytesIO(fh.read())
+                return filelike
+
+            future_form = loop.run_in_executor(None,
+                                               get_upload_form,
+                                               url)
+            future_file = loop.run_in_executor(None,
+                                               get_counts_file_content,
+                                               fileish)
+            form = await future_form
+            filelike = await future_file
+
+            return form, filelike
+
+        form, filelike = loop.run_until_complete(
+            get_form_and_file(url, counts_file.file))
+        loop.close()
+
+        form['filename'].value = filelike
+        browser.submit_form(form)
+        degust_url = browser.url
+
+        counts_file.metadata['degust_url'] = degust_url
+        counts_file.save()
+
+        data = RedirectResponseSerializer(data={
+            'status': browser.response.status_code,
+            'redirect': degust_url})
+        if data.is_valid():
+            return Response(data=data.validated_data,
+                            status=status.HTTP_200_OK)
+        else:
+            return HttpResponse(status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                reason="Error contacting Degust.")
 
 
 def _get_or_create_drf_token(user):

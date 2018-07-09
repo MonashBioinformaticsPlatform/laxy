@@ -41,3 +41,10 @@ declare interface LaxyFileSet {
             owner: number | string;
             files: LaxyFile[];
 }
+
+declare interface ViewMethod {
+    text: string;
+    icon: string;
+    tags: string[];
+    method: Function;
+}

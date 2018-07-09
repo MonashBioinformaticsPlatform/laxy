@@ -44,20 +44,21 @@
                                 </md-table-header>
                                 <md-table-body>
                                     <md-table-row v-for="job in jobs" :key="job.id">
-                                        <router-link :to="'/job/'+job.id">
-                                            <md-table-cell v-if="job.params.description">
-                                                <md-tooltip md-direction="top">Job ID: {{ job.id }}</md-tooltip>
-                                                {{ job.params.description }}
-                                            </md-table-cell>
-                                            <md-table-cell v-else="job.id">{{ job.id }}</md-table-cell>
-                                        </router-link>
-                                        <md-table-cell>{{ job.params.pipeline }} ({{ job.params.params.genome }})
+                                        <md-table-cell v-if="job.params.description"
+                                                       @click.native="routeTo('job', {jobId: job.id})">
+                                            <md-tooltip md-direction="top">Job ID: {{ job.id }}</md-tooltip>
+                                            {{ job.params.description }}
                                         </md-table-cell>
-                                        <md-table-cell>
+                                        <md-table-cell v-else="job.id">{{ job.id }}</md-table-cell>
+
+                                        <md-table-cell @click.native="routeTo('job', {jobId: job.id})">{{
+                                            job.params.pipeline }} ({{ job.params.params.genome }})
+                                        </md-table-cell>
+                                        <md-table-cell @click.native="routeTo('job', {jobId: job.id})">
                                             <md-tooltip md-direction="top">{{ job.created_time }}</md-tooltip>
                                             {{ job.created_time| moment('from') }}
                                         </md-table-cell>
-                                        <md-table-cell>
+                                        <md-table-cell @click.native="routeTo('job', {jobId: job.id})">
                                             <span :style="{ color: getStatusColor(job.status) }">
                                                 {{ job.status }}
                                             </span>
@@ -187,6 +188,10 @@
 
         beforeDestroy() {
             if (this._refreshPollerId != null) clearInterval(this._refreshPollerId);
+        }
+
+        routeTo(name: string, params: any = {}) {
+            this.$router.push({name: name, params: params});
         }
 
         getStatusColor(status: string) {

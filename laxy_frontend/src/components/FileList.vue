@@ -18,10 +18,19 @@
                             </md-table-cell>
                             <md-table-cell md-numeric>
                                 <!--<div class="push-right">-->
-                                <md-button class="md-icon-button"
-                                           @click="viewFile(file.id)">
-                                    <md-tooltip md-direction="top">View</md-tooltip>
-                                    <md-icon>remove_red_eye</md-icon>
+                                <md-button v-if="getDefaultViewMethod(file)"
+                                           class="md-icon-button"
+                                           @click="getDefaultViewMethod(file).method(file.id)">
+                                    <md-tooltip md-direction="top">
+                                            {{ getDefaultViewMethod(file).text }}
+                                    </md-tooltip>
+                                    <md-icon>{{ getDefaultViewMethod(file).icon }}</md-icon>
+                                </md-button>
+                                <md-button v-else
+                                           :disabled="true"
+                                           class="md-icon-button">
+                                    <!-- empty placeholder button to preserve layout -->
+                                    <md-icon></md-icon>
                                 </md-button>
                                 <md-menu md-size="4">
                                     <md-button class="md-icon-button push-right" md-menu-trigger>
@@ -29,7 +38,9 @@
                                     </md-button>
 
                                     <md-menu-content>
-                                        <md-menu-item v-for="view in viewMethods" :key="view.text"
+                                        <i class="md-caption" style="padding-left: 16px">{{ file.id }}</i>
+                                        <!--  -->
+                                        <md-menu-item v-for="view in getViewMethodsForTags(file.type_tags)" :key="view.text"
                                                       @click="view.method(file.id)">
                                             <md-icon>{{ view.icon }}</md-icon>
                                             <span>{{ view.text }}</span>
@@ -54,6 +65,7 @@
     import "vue-material/dist/vue-material.css";
 
     import * as _ from "lodash";
+    import { Memoize } from 'lodash-decorators';
     import "es6-promise";
 
     import axios, {AxiosResponse} from "axios";
@@ -136,10 +148,11 @@
             return this.$store.getters.fileset(this.filesetId);
         }
 
-        private viewMethods = [
+        private viewMethods: ViewMethod[] = [
             {
                 text: "Open in new tab",
                 icon: "open_in_new",
+                tags: [],
                 method: (file_id: string) => {
                     this.viewFile(file_id);
                 }
@@ -147,8 +160,51 @@
             {
                 text: "Download file",
                 icon: "cloud_download",
+                tags: [],
                 method: (file_id: string) => {
                     this.downloadFile(file_id);
+                }
+            },
+            {
+                text: "View report",
+                icon: "remove_red_eye",
+                tags: ['html', 'report'],
+                method: (file_id: string) => {
+                    this.viewFile(file_id);
+                }
+            },
+            {
+                text: "Open in Degust",
+                icon: "dashboard",
+                tags: ['counts', 'degust'],
+                method: async (file_id: string) => {
+                    // This won't work clientside due to CSRF tokens and Cross-Origin rules
+                    // (Degust could provide a proper API and get friendly with
+                    //  it's CORS config / headers to fix this)
+                    //
+                    // const url = 'http://degust.erc.monash.edu/upload'
+                    // const file = this.fileById(file_id);
+                    // const get_file_resp: AxiosResponse = await WebAPI.fetcher.get(
+                    //     WebAPI.downloadFileByIdUrl(file_id));
+                    // const file_content = get_file_resp.data;
+                    // let form = new FormData();
+                    // form.append('filename', file_content, 'counts.txt');
+                    // const resp = await axios.post(url, form,
+                    //     { headers: { 'Content-Type': 'multipart/form-data' } });
+                    // window.open(resp.url);
+
+                    // We POST the counts file to Degust serverside, then
+                    // return the resulting '?code=' URL from Degust back
+                    // to the client to open a new tab.
+                    // Sadly needs popup whitelisting by the user.
+                    const url = `/api/v1/_action/send_to/degust/${file_id}/`;
+                    const resp = await WebAPI.fetcher.post(url);
+                    if (resp.data.status == 200) {
+                        window.open(resp.data.redirect);
+                    } else {
+                        console.error(`Failed sending to Degust`);
+                        console.log(resp);
+                    }
                 }
             },
         ];
@@ -173,11 +229,35 @@
             });
         }
 
+        hasIntersection(a: any[] | null, b: any[] | null): boolean {
+            if (a == null || b == null ||
+                a.length === 0 || b.length === 0) return false;
+
+            return _.some(a, i => b.includes(i));
+        }
+
+        hasSharedTagOrEmpty(viewMethodTags: any[], file_type_tags: any[]) {
+            return viewMethodTags.length == 0 ||
+                this.hasIntersection(viewMethodTags, file_type_tags);
+        }
+
+        getViewMethodsForTags(tags: string[]) {
+            return _.filter(this.viewMethods,
+                vm => this.hasSharedTagOrEmpty(vm.tags, tags))
+        }
+
+        @Memoize((file: LaxyFile) => file.id)
+        getDefaultViewMethod(file: LaxyFile) {
+            return _(this.viewMethods)
+                .filter(vm => this.hasIntersection(vm.tags, file.type_tags))
+                .first();
+        }
+
         get regexPatterns(): RegExp[] {
             return this.strToRegex(this.regexFilters);
         }
 
-        _filterByTag(files: LaxyFile[], tags: string[]): LaxyFile[] {
+        _filterByTag(files: LaxyFile[], tags: string[] | null): LaxyFile[] {
             if (tags == null || tags.length === 0) {
                 return files;
             }
@@ -185,7 +265,8 @@
             let tag_filtered: LaxyFile[] = [];
             for (let file of fileset.files) {
                 for (let tag of tags) {
-                    if (file.type_tags.includes(tag)) {
+                    if (file.type_tags.includes(tag) &&
+                        !tag_filtered.includes(file)) {
                         tag_filtered.push(file);
                     }
                 }
@@ -194,14 +275,15 @@
             return tag_filtered;
         }
 
-        _filterByRegex(files: LaxyFile[], patterns: RegExp[]): LaxyFile[] {
+        _filterByRegex(files: LaxyFile[], patterns: RegExp[] | null): LaxyFile[] {
             if (patterns == null || patterns.length === 0) {
                 return files;
             }
             let regex_filtered: LaxyFile[] = [];
             for (let file of files) {
                 for (let regex of patterns) {
-                    if (regex.test(file.name)) {
+                    if (regex.test(file.name) &&
+                        !regex_filtered.includes(file)) {
                         regex_filtered.push(file);
                     }
                 }
@@ -219,7 +301,7 @@
             }
 
             let filtered: LaxyFile[] = fileset.files;
-            // filtered = this._filterByTag(filtered, this.tagFilters);
+            filtered = this._filterByTag(filtered, this.tagFilters);
             filtered = this._filterByRegex(filtered, this.regexPatterns);
 
             // const filtered = _.filter(this.fileset.files, (f) => {
