@@ -8,11 +8,16 @@ const Cookies = require('js-cookie');
 export class WebAPI {
     private static baseUrl: string = 'http://118.138.240.175:8001';
     // private static baseUrl: string = 'http://localhost:8001';
+    /* Axios has this silly quirk where the Content-Type header is removed
+       unless you have 'data'. So we add empty data.
+     */
     public static fetcher = axios.create({
         baseURL: WebAPI.baseUrl,
         withCredentials: true,
         xsrfHeaderName: 'X-CSRFToken',
-        xsrfCookieName: 'csrftoken'
+        xsrfCookieName: 'csrftoken',
+        headers: {'Content-Type': 'application/json'},
+        data: {},
     });
 
     public static async getAuthToken(user: string, pass: string): Promise<string> {
@@ -122,6 +127,15 @@ export class WebAPI {
         }
     }
 
+    public static async getFileRecord(file_id: string) {
+        try {
+            return await this.fetcher.get(
+                this.viewFileByIdUrl(file_id)) as AxiosResponse;
+        } catch (error) {
+            throw error;
+        }
+    }
+
     public static viewFileByIdUrl(file_id: string,
                                   filename: string | null = null): string {
         if (filename) {
@@ -147,8 +161,6 @@ export class WebAPI {
                                            filepath: string): string {
         return `${this.baseUrl}/api/v1/job/${job_id}/files/${filepath}?download`;
     }
-
-
 
     /*
     public static async viewFile(file_id: string,

@@ -207,6 +207,14 @@
                     }
                 }
             },
+            {
+                text: "View genome",
+                icon: "open_in_new",
+                tags: ['bam'],
+                method: (file_id: string) => {
+                    window.open(this.getDallianceUrl(this.jobId, file_id));
+                }
+            },
         ];
 
         public refreshing: boolean = false;
@@ -351,6 +359,12 @@
             } else {
                 console.error(`Invalid file_id: ${file_id}`);
             }
+        }
+
+        getDallianceUrl(job_id: string | null, file_id: string): string {
+            const a = document.createElement('a');
+            a.href = this.$router.resolve(`/view/dalliance/${job_id}/${file_id}`).href;
+            return `${a.protocol}//${a.host}${a.pathname}${a.search}${a.hash}`;
         }
 
         async refresh(force: boolean = false) {

@@ -5,6 +5,7 @@
   "main": "main.js",
   "scripts": {
     "build": "webpack",
+    "build_with_dalliance": "cd local_node_modules/dalliance && npm run compile && cd ../../ && webpack",
     "watch": "webpack -d --watch --progress",
     "dev": "webpack-dev-server -d --progress --watch --port 8002 --open --content-base ./ && python3 ../manage.py runserver 8001",
     "django": "python3 ../manage.py runserver 8001",
@@ -16,7 +17,9 @@
   "license": "ISC",
   "//dev": {
     "@types/vue-material": "git+https://github.com/calebsander/vue-material-types.git#master",
-    "vue-material": "git+https://github.com/pansapiens/vue-material.git#custom-0.8.1"
+    "vue-material": "git+https://github.com/pansapiens/vue-material.git#custom-0.8.1",
+    "dalliance": "https://www.biodalliance.org/prerelease/dalliance-0.13.90-alpha.1.tgz",
+    "vue2-dropzone": "^2.3.6"
   },
   "//dev2": {
     "vue-material": "^0.8.1",
@@ -33,6 +36,7 @@
     "css-loader": "^0.28.11",
     "extract-text-webpack-plugin": "^3.0.2",
     "file-loader": "^0.11.2",
+    "npm": "^5.8.0",
     "nyan-progress-webpack-plugin": "^1.2.0",
     "style-loader": "^0.18.2",
     "ts-loader": "^2.0.3",
@@ -47,11 +51,11 @@
   },
   "dependencies": {
     "axios": "^0.16.2",
+    "dalliance": "file:local_node_modules/dalliance",
     "es6-promise": "^4.2.4",
     "js-cookie": "^2.2.0",
     "lodash": "^4.17.10",
     "lodash-decorators": "^6.0.0",
-    "npm": "^5.8.0",
     "numeral": "^2.0.6",
     "pluralize": "^7.0.0",
     "vue": "^2.5.16",
@@ -60,7 +64,6 @@
     "vue-moment": "^2.2.0",
     "vue-property-decorator": "^6.0.0",
     "vue-router": "^3.0.1",
-    "vue2-dropzone": "^2.3.6",
     "vuex": "^3.0.1",
     "vuex-class": "^0.3.1"
   }

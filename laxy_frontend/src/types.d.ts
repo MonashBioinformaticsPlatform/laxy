@@ -1,4 +1,5 @@
 declare function require(path: string): any;
+// declare module '*';
 
 declare interface ENASample {
         // pair?: ENASample,

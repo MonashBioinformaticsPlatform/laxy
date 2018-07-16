@@ -195,6 +195,21 @@ else:
                              '118.138.240.175:8002',
                              )
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = (
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+    # Non-default options below
+    'range',    # for biodalliance
+    'max-age'   # for biodalliance
+)
+
 
 REST_FRAMEWORK = {
     'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.URLPathVersioning',

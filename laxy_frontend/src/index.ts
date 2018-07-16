@@ -46,6 +46,7 @@ import JobPage from './components/JobPage.vue';
 import JobStatusCard from './components/JobStatusCard.vue';
 import FileList from './components/FileList.vue';
 import EventLog from './components/EventLog.vue';
+import BiodallianceView from './components/BiodallianceView';
 
 Vue.component('input-files-form', InputDataForm);
 Vue.component('sample-table', SampleTable);
@@ -136,6 +137,12 @@ const router = new VueRouter({
             path: '/job/:jobId/:showTab',
             name: 'jobTab',
             component: JobPage,
+            props: true,
+        },
+        {
+            path: '/view/dalliance/:jobId/:fileId',
+            name: 'dalliance',
+            component: BiodallianceView,
             props: true,
         },
     ],
