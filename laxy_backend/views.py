@@ -2036,8 +2036,9 @@ class SendFileToDegust(JSONView):
                 return browser.get_form()
 
             def get_counts_file_content(fh):
-                filelike = BytesIO(fh.read())
-                return filelike
+                # filelike = BytesIO(fh.read())
+                # return filelike
+                return fh
 
             future_form = loop.run_in_executor(None,
                                                get_upload_form,
