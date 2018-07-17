@@ -71,6 +71,13 @@ class FileModelTest(TestCase):
             owner_id=self.user.id)
         self.file_complex_http.save()
 
+    def tearDown(self):
+        self.admin_user.delete()
+        self.user.delete()
+        self.file_sra_ftp.delete()
+        self.file_ftp.delete()
+        self.file_complex_http.delete()
+
     def assertListSameItems(self, list1, list2, msg=None):
         return self.assertListEqual(sorted(list1), sorted(list2), msg=msg)
         # if len(list1) != len(list2):
@@ -151,6 +158,18 @@ class FileSetModelTest(TestCase):
 
         self.fileset = FileSet(name='test-fileset-1', owner=self.user)
 
+    def tearDown(self):
+        self.user.delete()
+        try:
+            self.file_a.delete()
+        except:
+            pass
+        try:
+            self.file_b.delete()
+        except:
+            pass
+        self.fileset.delete()
+
     def test_fileset(self):
         id_list = sorted([self.file_a.id, self.file_b.id])
 
@@ -158,43 +177,29 @@ class FileSetModelTest(TestCase):
         file_a = self.file_a
         file_b = self.file_b
 
-        # Add files to a FileSet via File object or it's ID
+        # Add Files to a FileSet
         fileset.add(file_a)
-        self.assertIn(file_a.id, fileset.files)
-        # Since we did save=False, the database record shouldn't be updated
-        # until after we've actually saved
-        fileset.add(file_b.id, save=False)
-        self.assertListEqual(id_list, fileset.files)
-        db_fileset = FileSet.objects.get(id=fileset.id)
-        self.assertNotIn(file_b.id, db_fileset.files)
-        self.assertIn(file_a.id, db_fileset.files)
-        fileset.save()
-        db_fileset = FileSet.objects.get(id=fileset.id)
-        self.assertIn(file_b.id, db_fileset.files)
-        self.assertIn(file_a.id, db_fileset.files)
+        self.assertIn(file_a, list(fileset.files.all()))
+        self.assertNotIn(file_b, list(fileset.files.all()))
+        fileset.add(file_b)
+        self.assertIn(file_b, list(fileset.files.all()))
 
         # Adding twice shouldn't create duplicates in the file list
-        fileset.add([file_a.id, file_b])
-        self.assertListEqual(id_list, fileset.files)
-        fileset.add([file_a, file_a])
-        self.assertListEqual(id_list, fileset.files)
+        fileset.add([file_a, file_b])
+        self.assertListEqual(id_list,
+                             sorted([f.id for f in fileset.files.all()]))
+        fileset.add([file_a, file_a, file_a])
+        self.assertListEqual(id_list,
+                             sorted([f.id for f in fileset.files.all()]))
 
-        # Remove files from a FileSet (via File ID and object)
-        self.fileset.remove(file_b.id)
-        self.assertNotIn(file_b.id, fileset.files)
-
-        self.fileset.remove(file_a, save=False)
-        self.assertNotIn(file_a.id, fileset.files)
-        # Since we did save=False, the database record shouldn't be updated
-        # until after we've actually saved
-        db_fileset = FileSet.objects.get(id=fileset.id)
-        self.assertIn(file_a.id, db_fileset.files)
-        self.fileset.save()
-        db_fileset = FileSet.objects.get(id=fileset.id)
-        self.assertNotIn(file_a.id, db_fileset.files)
+        # Remove files from a FileSet
+        self.fileset.remove(file_b)
+        self.assertNotIn(file_b, list(fileset.files.all()))
+        self.fileset.remove(file_a)
+        self.assertNotIn(file_a, list(fileset.files.all()))
 
         # The delete flag removes the associated File record
-        fileset.add([file_a.id, file_b])
+        fileset.add([file_a, file_b])
         self.fileset.remove(file_a, delete=True)
         with self.assertRaises(ObjectDoesNotExist):
             db_file_a = File.objects.get(id=file_a.id)
@@ -277,17 +282,19 @@ class JobModelTest(TestCase):
         self.user.delete()
 
     def _assert_add_files_from_tsv(self, job):
-        self.assertEqual(len(job.input_files.files), 3)
-        self.assertEqual(len(job.output_files.files), 2)
-        self.assertListEqual([c.checksum for c in job.input_files.get_files()],
-                             ['md5:7d9960c77b363e2c2f41b77733cf57d4',
-                              'md5:d0cfb796d371b0182cd39d589b1c1ce3',
-                              'md5:a97e04b6d1a0be20fcd77ba164b1206f'])
-        f_two = job.input_files.get_files()[1]
-        self.assertEqual(f_two.name, 'sample1_R2.fastq.gz')
-        self.assertEqual(f_two.path, 'input/some_dir')
+        self.assertEqual(job.input_files.files.count(), 3)
+        self.assertEqual(job.output_files.files.count(), 2)
+        self.assertListEqual(sorted([c.checksum for c in job.input_files.get_files()]),
+                             sorted(['md5:7d9960c77b363e2c2f41b77733cf57d4',
+                                     'md5:d0cfb796d371b0182cd39d589b1c1ce3',
+                                     'md5:a97e04b6d1a0be20fcd77ba164b1206f']))
+        # FileSet.get_files() returns sorted by path/name, so the second file
+        # is 'sample2_R2.fastq.gz'.
+        s2_r2 = job.input_files.get_files()[1]
+        self.assertEqual(s2_r2.name, 'sample2_R2.fastq.gz')
+        self.assertEqual(s2_r2.path, 'input/some_dir')
         self.assertListEqual(job.output_files.get_files()[0].type_tags,
-                             ['bam', 'alignment', 'bam.sorted', 'jbrowse'])
+                             ['bai', 'jbrowse'])
 
     def test_add_files_from_tsv(self):
         # Note that we use commas for the list in the type_tags column (and don't require quotes around it)

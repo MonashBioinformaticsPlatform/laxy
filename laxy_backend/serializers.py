@@ -14,7 +14,7 @@ from typing import Sequence
 from drf_openapi.entities import VersionedSerializers
 from http.client import responses as response_code_messages
 
-from laxy_backend.models import SampleSet, PipelineRun, File
+from laxy_backend.models import SampleSet, PipelineRun, File, FileSet
 from laxy_backend.util import unique
 from . import models
 
@@ -130,6 +130,8 @@ class FileSerializer(BaseModelSerializer):
     location = serializers.CharField(
         max_length=2048,
         validators=[models.URIValidator()])
+    fileset = serializers.PrimaryKeyRelatedField(queryset=FileSet.objects.all(),
+                                                 required=False)
     type_tags = serializers.ListField(default=[])
     # metadata = serializers.JSONField()
     metadata = SchemalessJsonResponseSerializer(required=False)  # becomes OpenAPI 'object' type
@@ -142,6 +144,7 @@ class FileSerializer(BaseModelSerializer):
                   'path',
                   'location',
                   'checksum',
+                  'fileset',
                   'type_tags',
                   'metadata')
         read_only_fields = ('id', 'owner',)
@@ -160,6 +163,7 @@ class FileSerializerPostRequest(FileSerializer):
                   'path',
                   'location',
                   'checksum',
+                  'fileset',
                   'type_tags',
                   'metadata')
 
@@ -212,8 +216,12 @@ class JobFileSerializerCreateRequest(FileSerializer):
 
 
 class FileSetSerializer(BaseModelSerializer):
-    # files = serializers.ListField(required=True)
-    files = FileSerializer(source='get_files', read_only=True, many=True)
+
+    files = FileSerializer(many=True, required=False, allow_null=True)
+
+    # This lists only only IDs
+    # files = serializers.PrimaryKeyRelatedField(many=True,
+    #                                            queryset=File.objects.all())
 
     class Meta:
         model = models.FileSet
@@ -224,12 +232,8 @@ class FileSetSerializer(BaseModelSerializer):
 
 
 class FileSetSerializerPostRequest(FileSetSerializer):
-    files = serializers.ListField(required=True)
-
     class Meta(FileSetSerializer.Meta):
-        model = models.FileSet
         fields = ('id', 'name', 'files',)
-        depth = 0
 
 
 class InputOutputFilesResponse(serializers.Serializer):

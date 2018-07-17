@@ -110,8 +110,7 @@ class DownloadTaskTest(TestCase):
                                        owner=self.admin_user.id,
                                        save=True)
 
-        self.assertEqual(len(fileset.files), 20)
+        self.assertEqual(fileset.files.count(), 20)
         query = FileSet.objects.filter(name=accession)
         self.assertTrue(query.exists())
-        file_id_list = query.first().files
-        self.assertEqual(len(file_id_list), 20)
+        self.assertEqual(query.first().files.count(), 20)

@@ -847,7 +847,7 @@ class JobFileView(StreamFileMixin,
 
             if serializer.is_valid():
                 serializer.save()
-                fileset.add(serializer.instance, save=True)
+                fileset.add(serializer.instance)
                 data = self.response_serializer(serializer.instance).data
                 return Response(data, status=status.HTTP_201_CREATED)
         else:

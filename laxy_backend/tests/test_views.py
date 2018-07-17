@@ -72,6 +72,12 @@ class FileViewTest(TestCase):
             owner_id=self.user.id)
         self.file_on_disk.save()
 
+    def tearDown(self):
+        self.user.delete()
+        self.file_a.delete()
+        self.file_b.delete()
+        self.file_on_disk.delete()
+
     def test_create_file(self):
         job_json = {
             'location': 'http://example.com/file_examp.txt',
@@ -545,17 +551,19 @@ class JobViewTest(TestCase):
         response = client.post(url, data=csv, content_type='text/csv; charset=utf-8')
         self.assertEqual(response.status_code, 200)
         job = Job.objects.get(id=self.user_job.id)
-        self.assertEqual(len(job.input_files.files), 3)
-        self.assertEqual(len(job.output_files.files), 2)
-        self.assertListEqual([c.checksum for c in job.input_files.get_files()],
-                             ['md5:7d9960c77b363e2c2f41b77733cf57d4',
-                              'md5:d0cfb796d371b0182cd39d589b1c1ce3',
-                              'md5:a97e04b6d1a0be20fcd77ba164b1206f'])
-        f_two = job.input_files.get_files()[1]
-        self.assertEqual(f_two.name, 'sample1_R2.fastq.gz')
-        self.assertEqual(f_two.path, 'input/some_dir')
+        self.assertEqual(job.input_files.files.count(), 3)
+        self.assertEqual(job.output_files.files.count(), 2)
+        self.assertListEqual(sorted([c.checksum for c in job.input_files.get_files()]),
+                             sorted(['md5:7d9960c77b363e2c2f41b77733cf57d4',
+                                     'md5:d0cfb796d371b0182cd39d589b1c1ce3',
+                                     'md5:a97e04b6d1a0be20fcd77ba164b1206f']))
+        # FileSet.get_files() returns sorted by path/name, so the second file
+        # is 'sample2_R2.fastq.gz'.
+        s2_r2 = job.input_files.get_files()[1]
+        self.assertEqual(s2_r2.name, 'sample2_R2.fastq.gz')
+        self.assertEqual(s2_r2.path, 'input/some_dir')
         self.assertListEqual(job.output_files.get_files()[0].type_tags,
-                             ['bam', 'alignment', 'bam.sorted', 'jbrowse'])
+                             ['bai', 'jbrowse'])
 
     def test_job_files_from_csv_with_location(self):
         csv = [
@@ -576,8 +584,8 @@ class JobViewTest(TestCase):
         response = client.post(url, data=csv, content_type='text/csv; charset=utf-8')
         self.assertEqual(response.status_code, 200)
         job = Job.objects.get(id=self.user_job.id)
-        self.assertEqual(len(job.input_files.files), 1)
-        self.assertEqual(len(job.output_files.files), 0)
+        self.assertEqual(job.input_files.files.count(), 1)
+        self.assertEqual(job.output_files.files.count(), 0)
         self.assertListEqual([c.location for c in job.input_files.get_files()],
                              ['ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR596/006/SRR5963436/SRR5963436_1.fastq.gz'])
         f_one = job.input_files.get_files()[0]

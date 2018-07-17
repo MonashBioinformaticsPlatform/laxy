@@ -462,8 +462,8 @@ class Job(Timestamped, UUIDModel):
         output/sample2/alignments/sample2.bai	md5:e57ea180602b69ab03605dad86166fa7	bai,jbrowse	{}
         ```
 
-        :param tsv_string:
-        :type tsv_string:
+        :param tsv_table:
+        :type tsv_table:
         :param save:
         :type save:
         :return:
@@ -511,11 +511,11 @@ class Job(Timestamped, UUIDModel):
 
             pathbits = Path(f.validated_data.get('path', '').strip('/')).parts
             if pathbits and pathbits[0] == 'input':
-                self.input_files.add(f_obj, save=save)
+                self.input_files.add(f_obj)
                 in_files.append(f_obj)
 
             elif pathbits and pathbits[0] == 'output':
-                self.output_files.add(f_obj, save=save)
+                self.output_files.add(f_obj)
                 out_files.append(f_obj)
 
             else:
@@ -615,6 +615,9 @@ class File(Timestamped, UUIDModel):
                        related_name='files')
     # The URL to the file. Could be file://, https://, s3://, sftp://
     location = ExtendedURIField(max_length=2048, blank=False, null=False)
+
+    fileset = ForeignKey('FileSet', related_name='files', null=True,
+                         on_delete=models.SET_NULL)
 
     type_tags = ArrayField(models.CharField(max_length=255),
                            default=[],
@@ -856,78 +859,46 @@ class FileSet(Timestamped, UUIDModel):
                        related_name='filesets')
 
     # a list of File ids eg ['2VSd4mZvmYX0OXw07dGfnV', '3XSd4mZvmYX0OXw07dGfmZ']
-    files = ArrayField(CharField(max_length=22), blank=True, default=list)
+    # old_file_list = ArrayField(CharField(max_length=22), blank=True, default=list)
 
     # IDEA: a list of FileSet ids (effectively like subdirectories) ?
     # filesets = ArrayField(CharField(max_length=22), blank=True, default=list)
 
     @transaction.atomic
-    def add(self, files, save=True):
+    def add(self, files: Union[File, List[File]]):
         """
-        Add a File or Files to the FileSet. Takes a File object or it's ID,
-        or a list of Files or IDs.
+        Add a File or Files to the FileSet. Takes a single File object,
+        or a list of Files. Files passed to the method are always saved
+        (via File.save()).
 
-        :param files: The File object or it's ID, or a list of these.
-        :type files: File | str | Sequence[File] | Sequence[str]
-        :param save: Save the added File instances and this FileSet after
-                     adding the file(s).
-        :type save: bool
+        :param files: A single File object or a list of File objects.
+        :type files: File | Sequence[File]
         :return: None
         :rtype: NoneType
         """
-        if isinstance(files, str):
+        if not isinstance(files, Sequence):
             files = [files]
-        elif isinstance(files, File):
-            if save:
-                files.save()
-            files = [files.id]
-        elif isinstance(files, Sequence):
-            _files = []
-            with transaction.atomic():
-                for f in files:
-                    if isinstance(f, str):
-                        _files.append(f)
-                    elif isinstance(f, File):
-                        _files.append(f.id)
-                        if save:
-                            f.save()
-                    else:
-                        raise ValueError(
-                            "You must provide a File, a list or Files, "
-                            "a string ID or a list of string IDs")
-            files = _files
-        # if isinstance(files, Sequence) and \
-        #    all([isinstance(f, str) for f in files]):
-        #     files = files
-        # if isinstance(files, Sequence) and \
-        #    all([isinstance(f, File) for f in files]):
-        #     files = [f.id for f in files]
-        else:
-            raise ValueError("You must provide a File, a list or Files, "
-                             "a string ID or a list of string IDs")
 
-        # we ensure all IDs in the list are unique
+        # we ensure all Files in the list are unique
         files = unique(files)
 
-        if File.objects.filter(id__in=files).count() != len(files):
-            raise ValueError("One or more File IDs do not exist.")
+        with transaction.atomic():
 
-        self.files.extend(files)
-        self.files = sorted(unique(self.files))  # remove any duplicates
-        if save:
-            self.save()
+            # unsaved Files must be saved before calling self.files.add
+            [f.save() for f in files if not f.pk]
+
+            # bulk=False causes Files the File.save() method to be called for
+            # each file, including pre_save/post_save hooks.
+            self.files.add(*files, bulk=False)
 
     @transaction.atomic
-    def remove(self, files: Union[str, File, List[str], List[File]],
-               save=True, delete=False):
+    def remove(self, files: Union[File, List[File]], delete=False):
         """
-        Remove a File or Files to the FileSet. Takes a File object or it's ID,
-        or a list of Files or IDs.
+        Remove a File or Files to the FileSet. Takes a File object or a list
+        of Files.
 
-        :param files: The File object or it's ID, or a list of these.
-        :type files: File | str | Sequence[File] | Sequence[str]
-        :param save: Save this FileSet after removing the file(s).
-        :type save: bool
+        :param files: A single File object or a list of File objects.
+        :type files: File | Sequence[File]
         :param delete: Delete the Files after removing them from this FileSet
                        (doesn't check if other FileSets or database objects still
                         hold a reference to this file, in the case that they are
@@ -936,27 +907,18 @@ class FileSet(Timestamped, UUIDModel):
         :return: None
         :rtype: NoneType
         """
-        if isinstance(files, str) or not isinstance(files, Sequence):
+        if not isinstance(files, Sequence):
             files = [files]
 
-        for f in files:
-            f_id = getattr(f, 'id', str(f))
-            try:
-                self.files.remove(f_id)
-            except ValueError:
-                # if item isn't in list
-                pass
+        files = unique(files)
+
+        with transaction.atomic():
+            # bulk=False causes Files the File.delete() method to be called for
+            # each file, including pre_save/post_save hooks.
+            self.files.remove(*files, bulk=False)
 
             if delete:
-                try:
-                    f = File.objects.get(id=f_id)
-                    f.delete()
-                except File.DoesNotExist:
-                    # can't delete what doesn't exist
-                    pass
-
-        if save:
-            self.save()
+                [f.delete() for f in files]
 
     def get_files(self) -> QuerySet:
         """
@@ -965,8 +927,7 @@ class FileSet(Timestamped, UUIDModel):
         :return: The File object in this FileSet (as a Django QuerySet).
         :rtype: django.models.query.QuerySet(File)
         """
-        return File.objects.filter(id__in=self.files).order_by('path', 'name')
-        # return File.objects.in_bulk(self.files, field_name='id')
+        return self.files.order_by('path', 'name')
 
     def get_files_by_path(self, file_path: Union[str, Path]) -> QuerySet:
         fname = Path(file_path).name
