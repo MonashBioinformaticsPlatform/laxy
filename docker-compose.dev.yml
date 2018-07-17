@@ -1,6 +1,11 @@
 version: '3.2'
 services:
 
+  db:
+    ports:
+      # postgres accessible on the host at 5433 for debugging
+      - "5433:5432"
+
   django:
     build: .
     environment:
