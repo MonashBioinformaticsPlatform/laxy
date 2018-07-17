@@ -2,6 +2,7 @@ from django.contrib import admin
 import django.forms
 from django.urls import reverse
 from django.contrib.humanize.templatetags import humanize
+from django.template.defaultfilters import truncatechars
 from django.utils.html import format_html
 from reversion.admin import VersionAdmin
 
@@ -36,6 +37,8 @@ class Timestamped:
 
 class ComputeResourceAdmin(Timestamped, VersionAdmin):
     list_display = ('uuid', 'name', 'address', 'created', 'status_html')
+    search_fields = ('id', 'name', 'host', 'status',)
+    list_filter = ('status',)
     ordering = ('-created_time',)
 
     color_mappings = {
@@ -67,6 +70,8 @@ class JobAdmin(Timestamped, VersionAdmin):
                     '_compute_resource',
                     '_status')
     ordering = ('-created_time', '-completed_time', '-modified_time',)
+    search_fields = ('id', 'status', 'compute_resource', 'remote_id',)
+    list_filter = ('status',)
     actions = ('trigger_file_ingestion',)
 
     color_mappings = {
@@ -123,23 +128,56 @@ class FileAdminForm(django.forms.ModelForm):
 
 class FileAdmin(Timestamped, VersionAdmin):
     list_display = ('uuid',
+                    '_path',
+                    '_name',
                     '_location',
                     'created',
                     'modified')
     ordering = ('-created_time', '-modified_time',)
+    search_fields = ('id', 'path', 'name',)
     form = FileAdminForm
+
+    truncate_to = 32
+
+    def _path(self, obj):
+        return truncatechars(obj.path, self.truncate_to)
+
+    def _name(self, obj):
+        return truncatechars(obj.name, self.truncate_to)
 
     def _location(self, obj):
         url = reverse('laxy_backend:file_download',
                       kwargs={'uuid': obj.uuid(), 'filename': obj.name})
-        return format_html('<a href="{}">{}</a>', url, obj.name)
+        return format_html('<a href="{}">{}</a>',
+                           url,
+                           truncatechars(obj.name, self.truncate_to))
+
+
+class JobInputFilesInline(admin.StackedInline):
+    model = Job
+    can_delete = False
+    verbose_name_plural = 'Associated Job (as input FileSet)'
+    fk_name = 'input_files'
+    extra = 0
+
+
+class JobOutputFilesInline(admin.StackedInline):
+    model = Job
+    can_delete = False
+    verbose_name_plural = 'Associated Job (as output FileSet)'
+    fk_name = 'output_files'
+    extra = 0
 
 
 class FileSetAdmin(Timestamped, VersionAdmin):
     list_display = ('uuid',
+                    'path',
+                    'name',
                     'created',
                     'modified')
     ordering = ('-created_time', '-modified_time',)
+    search_fields = ('id', 'name', 'path',)
+    inlines = (JobInputFilesInline, JobOutputFilesInline,)
 
 
 class SampleSetAdmin(Timestamped, VersionAdmin):
@@ -161,7 +199,8 @@ class EventLogAdmin(admin.ModelAdmin):
                     'event',
                     'obj',
                     'extra',)
-    search_fields = ('object_id',
+    search_fields = ('id',
+                     'object_id',
                      'user__username',
                      'user__email',
                      'extra',)
