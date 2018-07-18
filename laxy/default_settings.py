@@ -110,6 +110,12 @@ DATABASES = {
                               default='postgres:///postgres:postgres@db:5432')
 }
 
+# We can set a longer than default timeout for the database, mostly so that
+# Django waits longer for the database to come online when initially
+# bringing up the Docker Compose stack.
+# if 'postgres' in DATABASES['default'].get('ENGINE', ''):
+#     DATABASES['default']['OPTIONS'] = {'connect_timeout': 10}
+
 SITE_ID = 1
 
 BROKER_URL = env('BROKER_URL')
@@ -132,6 +138,8 @@ STATIC_URL = str(env('STATIC_URL'))
 STATIC_ROOT = str(env('STATIC_ROOT'))
 
 # Application definition
+
+AUTH_USER_MODEL = 'laxy_backend.User'
 
 INSTALLED_APPS = [
     'django.contrib.admin',

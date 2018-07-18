@@ -29,7 +29,8 @@ from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError
 from django.db.models import Model, CharField, URLField, ForeignKey, BooleanField, IntegerField, DateTimeField, QuerySet
 from django.contrib.postgres.fields import ArrayField
-from django.contrib.auth.models import User
+# from django.contrib.auth.models import User
+from django.contrib.auth.models import AbstractUser
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
@@ -104,13 +105,6 @@ class ExtendedURIField(URLField):
     default_validators = [URIValidator()]
 
 
-class UserProfile(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE,
-                             blank=False,
-                             related_name='profile')
-    # favorite_color = models.CharField(default='2196F3', max_length=6)
-
-
 class Timestamped(Model):
     class Meta:
         abstract = True
@@ -145,6 +139,17 @@ class UUIDModel(Model):
 
     def __unicode__(self):
         return self.id
+
+
+class User(AbstractUser, UUIDModel):
+    pass
+
+
+class UserProfile(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE,
+                             blank=False,
+                             related_name='profile')
+    # favorite_color = models.CharField(default='2196F3', max_length=6)
 
 
 class JSONSerializable():

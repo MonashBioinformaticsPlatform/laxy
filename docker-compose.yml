@@ -7,7 +7,7 @@ services:
     environment:
       - LAXY_DATABASE_URL=postgres://postgres:postgres@db:5432/postgres
       - LAXY_BROKER_URL=amqp://guest@rabbitmq
-    command: bash -c "python3 manage.py runserver 0.0.0.0:8001"
+    command: bash -c "sleep 10 && python3 manage.py runserver 0.0.0.0:8001"
 #    ports:
 #      - "8001:8001"
     depends_on:

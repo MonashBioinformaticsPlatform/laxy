@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin
 import django.forms
 from django.urls import reverse
 from django.contrib.humanize.templatetags import humanize
@@ -18,7 +19,7 @@ from .models import (Job,
                      PipelineRun,
                      EventLog)
 
-from .models import URIValidator
+from .models import URIValidator, User
 
 
 class Timestamped:
@@ -206,7 +207,7 @@ class EventLogAdmin(admin.ModelAdmin):
                      'extra',)
 
 
-# admin.site.register(TaskMeta, TaskMetaAdmin)
+admin.site.register(User, UserAdmin)  # for our custom User model
 admin.site.register(Job, JobAdmin)
 admin.site.register(ComputeResource, ComputeResourceAdmin)
 admin.site.register(File, FileAdmin)

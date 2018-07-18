@@ -6,12 +6,15 @@ import tempfile
 from pathlib import Path
 
 from django.test import TestCase
-from django.contrib.auth.models import User
 
 from ..models import Job, File, FileSet
 from ..ena import get_fastq_urls, create_file_objects, create_fastq_fileset
 
 from ..tasks.download import download_url, download_file
+
+# from ..models import User
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 
 class DownloadTaskTest(TestCase):

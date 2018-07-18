@@ -104,17 +104,26 @@ DRF CoreAPI docs: http://localhost:8000/coreapi/
 
 #### Development
 
+##### Building and running the stack
+
+Laxy (and associated services) can run under Docker Compose.
+
 ```bash
 docker-compose -f docker-compose.yml -f docker-compose.dev.yml build
 docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+```
 
-# To manually create the admin user (docker-compose.dev.yml does this itself using
-# the LAXY_ADMIN_USERNAME and LAXY_ADMIN_PASSWORD environment variables)
+To manually create the admin user (`docker-compose.dev.yml` does this itself using
+the `LAXY_ADMIN_USERNAME` and `LAXY_ADMIN_PASSWORD` environment variables):
+
+```bash
 docker container exec -it laxy_django_1 \
-  python manage.py shell -c "from django.contrib.auth.models import User; \
+  python manage.py shell -c "from django.contrib.auth import get_user_model; User = get_user_model(); \
                              User.objects.filter(username='admin').count() or \
                              User.objects.create_superuser('admin', 'admin@example.com', 'adminpass')"
 ```
+
+##### Database dumps and migrations
 
 Migrate database in Docker container:
 ```bash
@@ -128,6 +137,11 @@ docker container exec -it laxy_django_1  python manage.py migrate
 Dump fixtures (JSON formatted database records):
 ```bash
 docker container exec -it laxy_django_1  python manage.py dumpdata --indent 2
+
+# Just the defined ComputeResource records:
+docker container exec -it laxy_django_1  python manage.py dumpdata \
+       laxy_backend.computeresource \
+       --indent 2
 
 # Or a single model of interest, by primary key:
 docker container exec -it laxy_django_1  python manage.py dumpdata \
@@ -149,6 +163,34 @@ FROM pg_stat_activity
 WHERE datname = 'test_laxy';
 DROP DATABASE test_laxy;
 ```
+
+###### Cloning the Postgres data volume
+
+In the Docker Compose setup the Postgres database lives in an attached volume container
+named `laxy_dbdata` (`dbdata`, as defined by `PGDATA` in `docker-compose.yml`).
+
+Assuming the Postgres (executable) container is `laxy_db_1` and it's data volume is `laxy_dbdata`,
+we can export a tar archive of the database files like:
+
+```bash
+docker run --rm --volumes-from laxy_db_1 -v $(pwd):/backup busybox tar cvf /backup/postgres-dbdata.tar /var/lib/postgresql/data/pgdata
+```
+
+We can copy this archive back into a new volume container (`database_copy`) like:
+
+```bash
+docker run -d -v /var/lib/postgresql/data/pgdata --name database_copy busybox echo "Data-only container"
+docker run --rm --volumes-from database_copy -v $(pwd):/backup busybox tar xvf /backup/postgres-dbdata-*.tar
+```
+
+To clone the volume 'directly' into a new volume, use the 
+`docker_clone_volume.sh` script found here: https://github.com/gdiepen/docker-convenience-scripts like:
+
+```bash
+./docker_clone_volume.sh laxy_dbdata laxy_dbdata.bak
+./docker_get_data_volume_info.sh
+```
+
 
 ##### To manually restart just the `django` service without bringing the whole stack down/up
 ```bash

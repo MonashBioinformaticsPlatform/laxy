@@ -12,7 +12,6 @@ from celery import chain
 from celery import shared_task
 from datetime import datetime
 from django.conf import settings
-from django.contrib.auth.models import User
 from django.contrib.admin.views.decorators import user_passes_test
 from django.db import transaction
 from django.http import HttpResponse, StreamingHttpResponse
@@ -70,12 +69,17 @@ from .serializers import (PatchSerializerResponse,
                           SchemalessJsonResponseSerializer,
                           JobListSerializerResponse,
                           EventLogSerializer, JobEventLogSerializer,
-                          JobFileSerializerCreateRequest, InputOutputFilesResponse, RedirectResponseSerializer)
+                          JobFileSerializerCreateRequest,
+                          InputOutputFilesResponse,
+                          RedirectResponseSerializer)
 from .util import sh_bool, laxy_sftp_url
 from .view_mixins import (JSONView, GetMixin, PatchMixin,
-                          DeleteMixin, PostMixin, CSVTextParser, PutMixin, RowsCSVTextParser)
+                          DeleteMixin, PostMixin, CSVTextParser,
+                          PutMixin, RowsCSVTextParser)
 
-# from django.http import HttpResponse, JsonResponse
+# from .models import User
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 logger = logging.getLogger(__name__)
 

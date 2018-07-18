@@ -8,11 +8,13 @@ import csv
 from lxml import etree
 import pandas
 from django.db import transaction
-from django.contrib.auth.models import User
 import enasearch
 
 from .models import File, FileSet
 
+# from .models import User
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 # def parse_fastq_table_flatten(table: str) -> Dict[str, Dict]:
 #     """

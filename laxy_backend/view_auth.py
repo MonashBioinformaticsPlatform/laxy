@@ -15,8 +15,11 @@ from drf_openapi.utils import view_config
 
 from laxy_backend.views import _get_or_create_drf_token
 from .serializers import LoginRequestSerializer
-from .models import User
 from .jwt_helpers import create_jwt_user_token, get_jwt_user_header_dict
+
+# from .models import User
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 
 class Login(APIView):

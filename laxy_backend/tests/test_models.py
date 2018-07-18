@@ -15,7 +15,6 @@ from django.test import TestCase
 from django.core.exceptions import ObjectDoesNotExist
 from django.test.client import Client
 from django.urls import reverse
-from django.contrib.auth.models import User
 from rest_framework.test import APIClient
 
 from laxy_backend import models
@@ -26,6 +25,9 @@ from ..jwt_helpers import (get_jwt_user_header_dict,
                            make_jwt_header_dict,
                            create_jwt_user_token)
 
+# from ..models import User
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 # from ..authorization import JWTAuthorizedClaimPermission
 

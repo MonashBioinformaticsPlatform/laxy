@@ -4,9 +4,12 @@ from datetime import datetime
 import uuid
 import jwt
 from rest_framework_jwt.settings import api_settings
-from django.contrib.auth.models import User
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+
+# from .models import User
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 logger = logging.getLogger(__name__)
 

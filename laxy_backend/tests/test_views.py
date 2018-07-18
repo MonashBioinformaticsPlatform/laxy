@@ -13,7 +13,6 @@ from django.test import TestCase
 from django.core.exceptions import ObjectDoesNotExist
 from django.test.client import Client
 from django.urls import reverse
-from django.contrib.auth.models import User
 from rest_framework.test import APIClient, RequestsClient
 
 from laxy_backend import util
@@ -23,6 +22,10 @@ from ..models import Job, File, FileSet, SampleSet, ComputeResource
 from ..jwt_helpers import (get_jwt_user_header_dict,
                            make_jwt_header_dict,
                            create_jwt_user_token)
+
+# from ..models import User
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 
 def _create_user_and_login(username='testuser',
