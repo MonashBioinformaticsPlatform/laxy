@@ -7,7 +7,7 @@ import random
 import time
 import json
 import base64
-from io import StringIO
+from io import BytesIO
 from copy import copy
 from contextlib import closing
 from django.conf import settings
@@ -45,7 +45,8 @@ def _init_fabric_env():
     # fabric path. Note this is for localhost, not the remote host.
     # env.shell_env['PATH'] = '$PATH:%s:%s ' % (env.shell_env.get('PATH', ''),
     #                                           os.environ.get('PATH', ''))
-    env.warn_only = getattr(settings, 'DEBUG', False)
+    # env.warn_only = getattr(settings, 'DEBUG', False)
+    env.warn_only = False
     env.use_ssh_config = False
     env.abort_on_prompts = True
     env.reject_unknown_hosts = False
@@ -86,9 +87,9 @@ def start_job(self, task_data=None, **kwargs):
     job_script_template_vars['JOB_AUTH_HEADER'] = job_auth_header
     job_script = render_to_string('job_scripts/run_job.sh',
                                   context=job_script_template_vars)
-    curl_headers = StringIO("%s\n" % job_auth_header)
-    job_script = StringIO(job_script)
-    config_json = StringIO(json.dumps(job.params))
+    curl_headers = BytesIO(b"%s\n" % job_auth_header.encode('utf-8'))
+    job_script = BytesIO(job_script.encode('utf-8'))
+    config_json = BytesIO(json.dumps(job.params).encode('utf-8'))
 
     remote_id = None
     message = "Failure, without exception."
@@ -100,9 +101,10 @@ def start_job(self, task_data=None, **kwargs):
                          # key_filename=expanduser("~/.ssh/id_rsa"),
                          ):
             working_dir = os.path.join(base_dir, job_id)
+            job_script_path = join(working_dir, 'run_job.sh')
             result = run(f'mkdir -p {working_dir} && chmod 700 {working_dir}')
             result = put(job_script,
-                         join(working_dir, 'run_job.sh'),
+                         job_script_path,
                          mode=0o700)
             result = put(curl_headers,
                          join(working_dir, '.private_request_headers'),
@@ -112,7 +114,7 @@ def start_job(self, task_data=None, **kwargs):
                          mode=0o600)
             with cd(working_dir):
                 with shell_env(**environment):
-                    result = run("nohup sh -l -c '"
+                    result = run("nohup bash -l -c '"
                                  "./run_job.sh & "
                                  "echo $! >job.pid"
                                  "' >run_job.out")
