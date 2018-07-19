@@ -14,7 +14,7 @@
                         platforms.
                         <br/><br/>
                         ENA also mirrors datasets from the
-                        <a href="https://www.ncbi.nlm.nih.gov/sra">Sequence Read Archive (SRA)</a>.
+                        <a href="https://www.ncbi.nlm.nih.gov/sra">NCBI Sequence Read Archive (SRA)</a>.
                         <br/><br/>
                         Search ENA by Project/Study (<code>SRP&hellip;</code>/<code>PRJ&hellip;</code>),
                         Experiment (<code>SRX&hellip;</code>/<code>ERX&hellip;</code>),
