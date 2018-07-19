@@ -29,17 +29,37 @@ readonly USE_DOWNLOAD_CACHE="yes"
 
 readonly SCHEDULER="slurm"
 # readonly SCHEDULER="local"
-MEM=64000
-CPUS=12
-if [[ "$REFERENCE_GENOME" == "Saccharomyces_cerevisiae/Ensembl/R64-1-1" ]]; then
-    MEM=16000 # yeast (uses ~ 8Gb)
-    CPUS=8
+
+readonly BDS_SINGLE_NODE="yes"
+
+##
+# These memory settings are important when running BigDataScript in single-node
+# 'system=local' mode. When running in multi-node 'system=generic' (or 'system=slurm')
+# the CPUS and MEM values should be small (eg 2 and 2000) since they reflect only the
+# resources required to run the BDS workflow manager, not the tasks it launches (BDS
+# will [hopefully!] ask for appropriate resources in the sbatch jobs it launches).
+
+if [[ ${BDS_SINGLE_NODE} == "yes" ]]; then
+    # system=local in bds.config - BDS will run each task as local process, not SLURM-aware
+
+    MEM=64000  # defaults for Human, Mouse
+    CPUS=12
+    if [[ "$REFERENCE_GENOME" == "Saccharomyces_cerevisiae/Ensembl/R64-1-1" ]]; then
+        MEM=16000 # yeast (uses ~ 8Gb)
+        CPUS=8
+    fi
+else
+    # system=generic or system=slurm in bds.config - BDS will run sbatch tasks
+
+    MEM=2000
+    CPUS=2
 fi
-readonly SBATCH_OPTIONS="--cpus-per-task=${CPUS} --mem=${MEM} -t 1-0:00 --ntasks-per-node=1 --ntasks=1 --job-name=laxy:${JOB_ID}"
+
+readonly SRUN_OPTIONS="--cpus-per-task=${CPUS} --mem=${MEM} -t 1-0:00 --ntasks-per-node=1 --ntasks=1 --job-name=laxy:${JOB_ID}"
 
 PREFIX_JOB_CMD=""
 if [[ "${SCHEDULER}" == "slurm" ]]; then
-    PREFIX_JOB_CMD="srun ${SBATCH_OPTIONS} "
+    PREFIX_JOB_CMD="srun ${SRUN_OPTIONS} "
 fi
 
 function send_event() {
