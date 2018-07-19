@@ -24,6 +24,9 @@ readonly JOB_PATH=${PWD}
 readonly CONDA_BASE="${JOB_PATH}/../miniconda3"
 readonly REFERENCE_BASE="${PWD}/../references/iGenomes"
 
+readonly DOWNLOAD_CACHE_PATH="${PWD}/../cache"
+readonly USE_DOWNLOAD_CACHE="yes"
+
 readonly SCHEDULER="slurm"
 # readonly SCHEDULER="local"
 MEM=64000
@@ -50,7 +53,7 @@ function send_event() {
     # NOTE: curl v7.55+ is required to use -H @filename
 
     VERBOSITY="--silent"
-    if [ ${DEBUG} == "yes" ]; then
+    if [ "${DEBUG}" == "yes" ]; then
         # NOTE: verbose mode should NOT be used in production since it prints
         # full headers to stdout/stderr, including Authorization tokens.
         VERBOSITY="-vvv"
@@ -67,7 +70,7 @@ function send_event() {
          --retry-max-time 600 \
          -d '{"event":"'"${event}"'","extra":'"${extra}"'}' \
          ${VERBOSITY} \
-         ""${JOB_EVENT_URL}"" || true
+         "${JOB_EVENT_URL}" || true
 }
 
 function install_miniconda() {
@@ -79,7 +82,10 @@ function install_miniconda() {
 }
 
 function init_conda_env() {
-    local env_name="${1}-${PIPELINE_VERSION}"
+    # By convention, we name our Conda environments after {pipeline}-{version}
+    # Each new pipeline version has it's own Conda env
+
+    local env_name="${1}-${2}"
 
     if [ ! -d "${CONDA_BASE}/envs/${env_name}" ]; then
 
@@ -103,7 +109,7 @@ function init_conda_env() {
 
         # Then install rnasik
         ${CONDA_BASE}/bin/conda install --yes -n "${env_name}" \
-                     rnasik=${PIPELINE_VERSION}
+                     rnasik=${2}
 
         # Environment takes a very long time to solve if qualimap is included initially
         ${CONDA_BASE}/bin/conda install --yes -n "${env_name}" qualimap
@@ -112,6 +118,7 @@ function init_conda_env() {
     # We shouldn't need to do this .. but it seems required for _some_ environments (ie M3)
     export JAVA_HOME="${CONDA_BASE}/envs/${env_name}/jre"
 
+    # shellcheck disable=SC1090
     source "${CONDA_BASE}/bin/activate" "${CONDA_BASE}/envs/${env_name}"
 
     set -o nounset
@@ -145,7 +152,7 @@ function find_filetype() {
     # eg, fastq,bam,bam.sorted
     local tags=$2
     # checksum,filepath,type_tags
-    find . -name "${pattern}" -type f -exec bash -c 'echo -e "md5:$(md5sum {} | sed -e "s/  */,/g"),\"'${tags}'\""' \;
+    find . -name "${pattern}" -type f -exec bash -c 'fn="$1"; echo -e "md5:$(md5sum "$fn" | sed -e "s/  */,/g"),\"'"${tags}"'\""' _ {} \;
 }
 
 function register_files() {
@@ -168,12 +175,12 @@ function register_files() {
      --retry 8 \
      --retry-max-time 600 \
      --data-binary @manifest.csv \
-     ""${JOB_FILE_REGISTRATION_URL}""
+     "${JOB_FILE_REGISTRATION_URL}"
 }
 
 function setup_bds_config() {
     BDS_CONFIG="${JOB_PATH}/bds.config"
-    cp $(which bds).config ${BDS_CONFIG}
+    cp "$(which bds).config ${BDS_CONFIG}"
 
     # TODO: This won't work yet since the default bds.config contains
     # ~/.bds/clusterGeneric/* paths to the SLURM wrapper scripts.
@@ -186,6 +193,26 @@ function setup_bds_config() {
         export RNASIK_BDS_CONFIG="${BDS_CONFIG}"
     fi
 }
+
+function get_input_data_urls() {
+    # Output is one URL one per line
+    local urls
+    urls=$(jq '.sample_set.samples[].files[][]' <pipeline_config.json | sed s'/"//g')
+    echo "${urls}"
+}
+
+#function filter_ena_urls() {
+#    local urls
+#    urls=$(get_input_data_urls)
+#    local ena_urls
+#    for u in ${urls}; do
+#        if [[ $u = *"ebi.ac.uk"* ]]; then
+#            ena_urls="${ena_urls}"'\n'"${u}"
+#        fi
+#    done
+#    echo "${ena_urls}"
+#}
+
 
 ####
 #### Pull in reference data from S3
@@ -205,7 +232,7 @@ mkdir -p output
 install_miniconda
 
 # We import the environment early to ensure we have a recent version of curl (>=7.55)
-init_conda_env "rnasik"
+init_conda_env "rnasik" "${PIPELINE_VERSION}"
 
 # get_reference_data_aws
 get_igenome_aws "${REFERENCE_GENOME}"
@@ -221,13 +248,44 @@ if [ "${JOB_INPUT_STAGED}" == "no" ]; then
 
     send_event "INPUT_DATA_DOWNLOAD_STARTED"
 
-    PARALLEL_DOWNLOADS=4
-    jq '.sample_set.samples[].files[][]' <pipeline_config.json | \
-      sed s'/"//g' | \
-      parallel --no-notice --line-buffer -j ${PARALLEL_DOWNLOADS} \
-      wget --continue --trust-server-names --retry-connrefused --read-timeout=60 \
-           --waitretry 60 --timeout=30 --tries 8 \
-           --output-file output/download.log --directory-prefix input {}
+    readonly PARALLEL_DOWNLOADS=4
+    # one URL per line
+    readonly urls=$(get_input_data_urls)
+
+    if [ "${USE_DOWNLOAD_CACHE}" == "yes" ]; then
+        # This simple download cache downloads all files into a cache directory
+        # at a path that matches the URL. We then symlink to those files.
+        # Most suitable to public database files (eg ENA/SRA).
+        # NOTE: The current implementation probably has bugs/corner cases for exotic URLs
+        # (eg creating paths based on the URL may be buggy - slash/ , colon: seem fine,
+        #  not sure if shell escaping is right for ?@# etc)
+        #
+        # TODO: Split the URL list into two lists - cache only the simple URLs
+        #   - one for URLs without special characters ?&#;:@
+        #   - one for 'simple' URLs (the rest)
+
+        # We can grep the download log for retrieved files like:
+        # $ grep -E " =>" ${JOB_PATH}/output/download.log  | cut -d "‘" -f 2 | sed s/’//
+
+        mkdir -p "${DOWNLOAD_CACHE_PATH}"
+        parallel --no-notice --line-buffer -j ${PARALLEL_DOWNLOADS} --halt now,fail=1 \
+          "wget -x -v --continue --trust-server-names --retry-connrefused --read-timeout=60 \
+               --waitretry 60 --timeout=30 --tries 8 \
+               --append-output output/download.log --directory-prefix ${DOWNLOAD_CACHE_PATH}/ {}" <<< """${urls}"""
+               # && ln -s ${DOWNLOAD_CACHE_PATH}/{} input/" <<< """${urls}"""
+
+        # Grab the the absolute paths to downloaded files from the download.log, symlink to {job_path}/input
+        # shellcheck disable=SC1112
+        readonly downloaded_files="$(grep -E '’ saved \[' "${JOB_PATH}"/output/download.log | sed 's/[‘’]//g' | cut -d ' ' -f 6)"
+        for f in ${downloaded_files}; do
+            ln -s "${f}" input/
+        done
+    else
+        parallel --no-notice --line-buffer -j ${PARALLEL_DOWNLOADS} --halt now,fail=1 \
+          "wget -v --continue --trust-server-names --retry-connrefused --read-timeout=60 \
+               --waitretry 60 --timeout=30 --tries 8 \
+               --append-output output/download.log --directory-prefix input/ {}" <<< """${urls}"""
+    fi
 
     send_event "INPUT_DATA_DOWNLOAD_FINISHED"
 
@@ -298,7 +356,7 @@ curl -X PATCH \
      --retry 8 \
      --retry-max-time 600 \
      -d '{"exit_code":'${EXIT_CODE}'}' \
-     ""${JOB_COMPLETE_CALLBACK_URL}""
+     "${JOB_COMPLETE_CALLBACK_URL}"
 
 # Extra security: Remove the access token now that we don't need it anymore
 if [ ${DEBUG} != "yes" ]; then
