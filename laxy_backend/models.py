@@ -594,8 +594,12 @@ def new_job_event_log(sender, instance, created,
 class File(Timestamped, UUIDModel):
     class Meta:
         indexes = [
-            models.Index(fields=['name', 'path']),
+            models.Index(fields=['path', 'name']),
+            models.Index(fields=['fileset', 'path', 'name']),
         ]
+
+        # TODO: Enforce unique path/name within a FileSet ?
+        # unique_together = ('fileset', 'path', 'name')
 
     """
     File model.
