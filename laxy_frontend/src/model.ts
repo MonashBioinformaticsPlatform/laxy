@@ -57,3 +57,15 @@ export class ComputeJob extends UUIDModel {
     public owner: number;
     public secret: string;
 }
+
+export class LaxyFile {
+    public id: string;
+    public name: string;
+    public path: string;
+    public location: string;
+    public owner: number | string;
+    public checksum: string | null;
+    public fileset: string | null;
+    public metadata: any;
+    public type_tags: string[];
+}

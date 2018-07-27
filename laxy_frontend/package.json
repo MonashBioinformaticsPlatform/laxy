@@ -5,11 +5,12 @@
   "main": "main.js",
   "scripts": {
     "build": "webpack",
+    "slowbuild": "NODE_ENV='production' webpack",
     "watch": "webpack -d --watch --progress",
     "dev": "webpack-dev-server -d --progress --watch --port 8002 --open --content-base ./ && python3 ../manage.py runserver 8001",
     "django": "python3 ../manage.py runserver 8001",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "webpack-dev-server -d --progress --watch --port 8002 --open --content-base ./",
+    "start": "webpack-dev-server -d --watch --port 8002 --open --content-base ./",
     "public_demo": "webpack-dev-server --port 8002 --host 0.0.0.0 --content-base ./"
   },
   "author": "",
@@ -25,7 +26,8 @@
   "devDependencies": {
     "@types/axios": "^0.14.0",
     "@types/js-cookie": "^2.1.0",
-    "@types/lodash": "^4.14.110",
+    "@types/lodash": "^4.14.113",
+    "@types/lodash-es": "^4.17.1",
     "@types/numeral": "0.0.22",
     "@types/pluralize": "0.0.28",
     "@types/vue-material": "file:local_node_modules/vue-material-types",
@@ -51,6 +53,7 @@
     "js-cookie": "^2.2.0",
     "lodash": "^4.17.10",
     "lodash-decorators": "^6.0.0",
+    "lodash-es": "^4.17.10",
     "npm": "^5.8.0",
     "numeral": "^2.0.6",
     "pluralize": "^7.0.0",

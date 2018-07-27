@@ -31,6 +31,7 @@ Vue.component('vue-markdown', VueMarkdown);
 
 import {FETCH_USER_PROFILE, SET_USER_PROFILE, Store as store} from './store';
 import {WebAPI} from './web-api';
+import {truncateString} from './util';
 
 import FrontPage from './components/FrontPage.vue';
 import FileBrowser from './components/FileBrowser.vue';
@@ -74,6 +75,8 @@ Vue.filter('deunderscore', function(value: string) {
     // capitalize first letter
     return value.charAt(0).toUpperCase() + value.slice(1);
 });
+
+Vue.filter('truncate', truncateString);
 
 const router = new VueRouter({
     routes: [

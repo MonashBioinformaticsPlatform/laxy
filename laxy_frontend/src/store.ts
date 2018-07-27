@@ -60,10 +60,11 @@ export const Store = new Vuex.Store({
                 return [];
             }
             const getFileset = getters.fileset;
-            const infiles = getFileset(job.input_fileset_id);
-            const outfiles = getFileset(job.output_fileset_id);
-            const filez = infiles && infiles.files || [];
-            filez.push(...(outfiles && outfiles.files || []));
+            const infileset = getFileset(job.input_fileset_id);
+            const outfileset = getFileset(job.output_fileset_id);
+            const filez = [];
+            filez.push(...(infileset && infileset.files || []));
+            filez.push(...(outfileset && outfileset.files || []));
             return filez;
         },
         // Call like: this.$store.getters.fileset('SomeBlafooLongId')

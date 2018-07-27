@@ -22,7 +22,7 @@
                                            class="md-icon-button"
                                            @click="getDefaultViewMethod(file).method(file.id)">
                                     <md-tooltip md-direction="top">
-                                            {{ getDefaultViewMethod(file).text }}
+                                        {{ getDefaultViewMethod(file).text }}
                                     </md-tooltip>
                                     <md-icon>{{ getDefaultViewMethod(file).icon }}</md-icon>
                                 </md-button>
@@ -40,7 +40,8 @@
                                     <md-menu-content>
                                         <i class="md-caption" style="padding-left: 16px">{{ file.id }}</i>
                                         <!--  -->
-                                        <md-menu-item v-for="view in getViewMethodsForTags(file.type_tags)" :key="view.text"
+                                        <md-menu-item v-for="view in getViewMethodsForTags(file.type_tags)"
+                                                      :key="view.text"
                                                       @click="view.method(file.id)">
                                             <md-icon>{{ view.icon }}</md-icon>
                                             <span>{{ view.text }}</span>
@@ -65,7 +66,11 @@
     import "vue-material/dist/vue-material.css";
 
     import * as _ from "lodash";
-    import { Memoize } from 'lodash-decorators';
+
+    import filter from "lodash-es/filter";
+    // import some from 'lodash-es/some';
+
+    import Memoize from "lodash-decorators/Memoize";
     import "es6-promise";
 
     import axios, {AxiosResponse} from "axios";
@@ -89,9 +94,19 @@
         namespace
     } from "vuex-class";
 
-    import {ComputeJob} from "../model";
+    import {ComputeJob, LaxyFile} from "../model";
     import {WebAPI} from "../web-api";
     import {FETCH_FILESET} from "../store";
+    import {strToRegex} from "../util";
+    import {
+        hasSharedTagOrEmpty,
+        hasIntersection,
+        fileById,
+        filterByTag,
+        filterByRegex,
+        viewFile,
+        downloadFile,
+    } from "../file-tree-util";
 
     import {DummyFileSet as _dummyFileSet} from "../test-data";
 
@@ -154,7 +169,7 @@
                 icon: "open_in_new",
                 tags: [],
                 method: (file_id: string) => {
-                    this.viewFile(file_id);
+                    viewFile(file_id, this.fileset, this.jobId);
                 }
             },
             {
@@ -162,28 +177,28 @@
                 icon: "cloud_download",
                 tags: [],
                 method: (file_id: string) => {
-                    this.downloadFile(file_id);
+                    downloadFile(file_id, this.fileset, this.jobId);
                 }
             },
             {
                 text: "View report",
                 icon: "remove_red_eye",
-                tags: ['html', 'report'],
+                tags: ["html", "report"],
                 method: (file_id: string) => {
-                    this.viewFile(file_id);
+                    viewFile(file_id, this.fileset, this.jobId);
                 }
             },
             {
                 text: "Open in Degust",
                 icon: "dashboard",
-                tags: ['counts', 'degust'],
+                tags: ["counts", "degust"],
                 method: async (file_id: string) => {
                     // This won't work clientside due to CSRF tokens and Cross-Origin rules
                     // (Degust could provide a proper API and get friendly with
                     //  it's CORS config / headers to fix this)
                     //
                     // const url = 'http://degust.erc.monash.edu/upload'
-                    // const file = this.fileById(file_id);
+                    // const file = this.fileById(this.fileset, file_id);
                     // const get_file_resp: AxiosResponse = await WebAPI.fetcher.get(
                     //     WebAPI.downloadFileByIdUrl(file_id));
                     // const file_content = get_file_resp.data;
@@ -211,85 +226,26 @@
 
         public refreshing: boolean = false;
 
-        // for lodash in templates
-        get _() {
-            return _;
-        }
-
         mounted() {
             // this.files = _dummyFileSet;
             // this.filesetId = _dummyFileSet.id;
             if (this.refreshOnLoad) this.refresh();
         }
 
-        strToRegex(patterns: string[]): RegExp[] {
-            if (!patterns) return [];
-            return _.map(patterns, (p) => {
-                return new RegExp(p);
-            });
-        }
-
-        hasIntersection(a: any[] | null, b: any[] | null): boolean {
-            if (a == null || b == null ||
-                a.length === 0 || b.length === 0) return false;
-
-            return _.some(a, i => b.includes(i));
-        }
-
-        hasSharedTagOrEmpty(viewMethodTags: any[], file_type_tags: any[]) {
-            return viewMethodTags.length == 0 ||
-                this.hasIntersection(viewMethodTags, file_type_tags);
-        }
-
         getViewMethodsForTags(tags: string[]) {
-            return _.filter(this.viewMethods,
-                vm => this.hasSharedTagOrEmpty(vm.tags, tags))
+            return filter(this.viewMethods,
+                vm => hasSharedTagOrEmpty(vm.tags, tags));
         }
 
         @Memoize((file: LaxyFile) => file.id)
         getDefaultViewMethod(file: LaxyFile) {
             return _(this.viewMethods)
-                .filter(vm => this.hasIntersection(vm.tags, file.type_tags))
+                .filter(vm => hasIntersection(vm.tags, file.type_tags))
                 .first();
         }
 
         get regexPatterns(): RegExp[] {
-            return this.strToRegex(this.regexFilters);
-        }
-
-        _filterByTag(files: LaxyFile[], tags: string[] | null): LaxyFile[] {
-            if (tags == null || tags.length === 0) {
-                return files;
-            }
-            const fileset = this.fileset;
-            let tag_filtered: LaxyFile[] = [];
-            for (let file of fileset.files) {
-                for (let tag of tags) {
-                    if (file.type_tags.includes(tag) &&
-                        !tag_filtered.includes(file)) {
-                        tag_filtered.push(file);
-                    }
-                }
-            }
-
-            return tag_filtered;
-        }
-
-        _filterByRegex(files: LaxyFile[], patterns: RegExp[] | null): LaxyFile[] {
-            if (patterns == null || patterns.length === 0) {
-                return files;
-            }
-            let regex_filtered: LaxyFile[] = [];
-            for (let file of files) {
-                for (let regex of patterns) {
-                    if (regex.test(file.name) &&
-                        !regex_filtered.includes(file)) {
-                        regex_filtered.push(file);
-                    }
-                }
-            }
-
-            return regex_filtered;
+            return strToRegex(this.regexFilters);
         }
 
         get files(): LaxyFile[] {
@@ -301,56 +257,17 @@
             }
 
             let filtered: LaxyFile[] = fileset.files;
-            filtered = this._filterByTag(filtered, this.tagFilters);
-            filtered = this._filterByRegex(filtered, this.regexPatterns);
+            filtered = filterByTag(filtered, this.tagFilters);
+            filtered = filterByRegex(filtered, this.regexPatterns);
 
-            // const filtered = _.filter(this.fileset.files, (f) => {
-            //     _.some(this.regexPatterns, (p) => {f.name.matches(p)});
+            // const filtered = filter(this.fileset.files, (f) => {
+            //     some(this.regexPatterns, (p) => {f.name.matches(p)});
             // });
             return filtered;
         }
 
         get titleText(): string {
             return this.title == null ? this.fileset.name : this.title;
-        }
-
-        fileById(file_id: string): LaxyFile | undefined {
-            const fileset = this.fileset;
-            if (fileset == null) {
-                return undefined;
-            }
-            return _.first(_.filter(fileset.files, (f) => {
-                return f.id === file_id;
-            }));
-        }
-
-        viewFile(file_id: string) {
-            const file = this.fileById(file_id);
-            if (file) {
-                if (this.jobId) {
-                    const filepath = `${file.path}/${file.name}`;
-                    window.open(WebAPI.viewJobFileByPathUrl(this.jobId, filepath));
-                } else {
-                    // window.open(WebAPI.viewFileByIdUrl(file.id, file.name), '_blank');
-                    window.open(WebAPI.viewFileByIdUrl(file.id, file.name));
-                }
-            } else {
-                console.error(`Invalid file_id: ${file_id}`);
-            }
-        }
-
-        downloadFile(file_id: string) {
-            const file = this.fileById(file_id);
-            if (file) {
-                if (this.jobId) {
-                    const filepath = `${file.path}/${file.name}`;
-                    window.open(WebAPI.downloadJobFileByPathUrl(this.jobId, filepath));
-                } else {
-                    window.open(WebAPI.downloadFileByIdUrl(file.id, file.name));
-                }
-            } else {
-                console.error(`Invalid file_id: ${file_id}`);
-            }
         }
 
         async refresh(force: boolean = false) {

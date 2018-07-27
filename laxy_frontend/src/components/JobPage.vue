@@ -96,7 +96,7 @@
                                    v-show="showTab === 'summary' || showTab == null" :md-column-medium="true"
                                    :md-row-large="true">
                             <file-list v-if="job != null && job.status !== 'running'"
-                                       ref="keyFiles"
+                                       ref="key-files"
                                        class="fill-width"
                                        title="Key result files"
                                        :fileset-id="job.output_fileset_id"
@@ -186,7 +186,7 @@
     } from "vuex-class";
 
     import {NotImplementedError} from "../exceptions";
-    import {ComputeJob} from "../model";
+    import {ComputeJob, LaxyFile} from "../model";
     import {WebAPI} from "../web-api";
     import {
         palette,
@@ -305,24 +305,30 @@
                 // this.job = response.data as ComputeJob;
                 await this.$store.dispatch(FETCH_JOB, this.jobId);
                 this.job = this.$store.state.currentViewedJob;
-                // if (this.job &&
-                //     this.job.input_fileset_id &&
-                //     this.job.output_fileset_id) {
-                //     await Promise.all([
-                //         this.$store.dispatch(FETCH_FILESET, this.job.input_fileset_id),
-                //         this.$store.dispatch(FETCH_FILESET, this.job.output_fileset_id)
-                //     ]);
-                // }
 
-                if (this.showTab == "summary") {
-                    (this.$refs.keyFiles as any).refresh();
+                // do web requests if filesets not yet populated
+                if (this.job &&
+                    this.job.input_fileset_id &&
+                    this.job.output_fileset_id &&
+                    !this.$store.state.filesets[this.job.output_fileset_id] &&
+                    !this.$store.state.filesets[this.job.input_fileset_id]) {
+                    await Promise.all([
+                        this.$store.dispatch(FETCH_FILESET, this.job.input_fileset_id),
+                        this.$store.dispatch(FETCH_FILESET, this.job.output_fileset_id)
+                    ]);
                 }
-                if (this.showTab == "output") {
-                    (this.$refs.output as any).refresh();
-                }
-                if (this.showTab == "input") {
-                    (this.$refs.input as any).refresh();
-                }
+
+                // These refresh the appropriate file list every time it's
+                // displayed
+                // if (this.showTab == "summary") {
+                //     (this.$refs['key-files'] as any).refresh();
+                // }
+                // if (this.showTab == "output") {
+                //     (this.$refs.output as any).refresh();
+                // }
+                // if (this.showTab == "input") {
+                //     (this.$refs.input as any).refresh();
+                // }
 
                 if (this.showTab == "eventlog") {
                     (this.$refs.eventlog as any).refresh();
