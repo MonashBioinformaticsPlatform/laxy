@@ -17,6 +17,15 @@ import VueRouter, {RouterOptions} from 'vue-router';
 const VueMaterial = require('vue-material');
 const VueMoment = require('vue-moment');  // for date formatting
 
+declare var process: {
+  env: {
+    NODE_ENV: string
+  }
+};
+
+// Vue.config.devtools = true; // process.env.NODE_ENV !== 'production'
+// Vue.config.performance = true;  // process.env.NODE_ENV !== 'production'
+
 Vue.use(Vuex);
 Vue.use(VueRouter);
 Vue.use(VueMaterial);
