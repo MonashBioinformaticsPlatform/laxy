@@ -1,8 +1,14 @@
-import * as _ from 'lodash';
+// import * as _ from 'lodash';
+import filter from 'lodash-es/filter';
+import pick from 'lodash-es/pick';
+import cloneDeep from 'lodash-es/cloneDeep';
+import update from 'lodash-es/update';
+import head from 'lodash-es/head';
+
 import Vuex from 'vuex';
 import Vue from 'Vue';
 import axios, {AxiosResponse} from 'axios';
-import {ComputeJob, Sample, SampleSet} from './model';
+import {ComputeJob, LaxyFile, Sample, SampleSet} from './model';
 import {WebAPI} from './web-api';
 
 export const SET_USER_PROFILE = 'set_user_profile';
@@ -55,7 +61,7 @@ export const Store = new Vuex.Store({
             return state.jobs;
         },
         currentJobFiles: (state, getters) => {
-            const job =  state.currentViewedJob;
+            const job = state.currentViewedJob;
             if (!job) {
                 return [];
             }
@@ -82,6 +88,27 @@ export const Store = new Vuex.Store({
         // currentOutputFileset: (state, getters) => {
         //     return state.filesets[(state.currentViewedJob as any).output_fileset_id];
         // },
+        fileById: state => {
+            return (file_id: string, fileset: LaxyFileSet | null): LaxyFile | undefined => {
+                // if the fileset isn't specified we can still retrieve the file object by searching
+                // all filesets in the store.
+                // TODO: make this more efficient (maybe keep an index of {file_id: file})
+                if (fileset == null && state.filesets) {
+                    for (const fs in state.filesets) {
+                        if (fs) {
+                            const file = head(filter(state.filesets[fs].files, (f) => f.id === file_id));
+                            if (file) return file;
+                        }
+                    }
+                }
+                if (fileset != null) {
+                    return head(filter(fileset.files, (f: LaxyFile) => {
+                        return f.id === file_id;
+                    }));
+                }
+                return undefined;
+            };
+        },
     },
     mutations: {
         [SET_USER_PROFILE](state, profile_info: {}) {
@@ -118,7 +145,7 @@ export const Store = new Vuex.Store({
         async [FETCH_USER_PROFILE]({commit, state}) {
             try {
                 const response = await WebAPI.getUserProfile();
-                const profile_info = _.pick(response.data,
+                const profile_info = pick(response.data,
                     ['full_name', 'username', 'email', 'profile_pic']);
                 commit(SET_USER_PROFILE, profile_info);
             } catch (error) {
@@ -127,7 +154,7 @@ export const Store = new Vuex.Store({
             }
         },
         async [SET_SAMPLES]({commit, state}, samples) {
-            const preCommit = _.cloneDeep(state.samples);
+            const preCommit = cloneDeep(state.samples);
             if (preCommit.id != null && samples.id == null) {
                 samples.id = preCommit.id;
             }
@@ -167,7 +194,7 @@ export const Store = new Vuex.Store({
                 };
                 // ISO date strings to Javascipt Date objects
                 for (const key of ['created_time', 'modified_time', 'completed_time']) {
-                    _.update(jobs, key, function(d_str: string) {
+                    update(jobs, key, function (d_str: string) {
                         return new Date(d_str);
                     });
                 }

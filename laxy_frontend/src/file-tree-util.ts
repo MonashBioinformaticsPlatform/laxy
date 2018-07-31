@@ -5,6 +5,8 @@ import filter from 'lodash-es/filter';
 import forEach from 'lodash-es/forEach';
 import find from 'lodash-es/find';
 
+import {Store as store} from './store';
+
 import {WebAPI} from './web-api';
 import {LaxyFile} from './model';
 
@@ -12,6 +14,7 @@ export interface TreeNode {
     id: string;
     name: string;
     file: LaxyFile | null;
+    parent: TreeNode | null;
     children: TreeNode[];
 }
 
@@ -25,15 +28,6 @@ export function hasIntersection(a: any[] | null, b: any[] | null): boolean {
 export function hasSharedTagOrEmpty(viewMethodTags: any[], file_type_tags: any[]) {
     return viewMethodTags.length === 0 ||
         hasIntersection(viewMethodTags, file_type_tags);
-}
-
-export function fileById(fileset: LaxyFileSet | null, file_id: string): LaxyFile | undefined {
-    if (fileset == null) {
-        return undefined;
-    }
-    return first(filter(fileset.files, (f) => {
-        return f.id === file_id;
-    }));
 }
 
 export function filterByTag(files: LaxyFile[], tags: string[] | null): LaxyFile[] {
@@ -70,8 +64,13 @@ export function filterByRegex(files: LaxyFile[], patterns: RegExp[] | null): Lax
     return regex_filtered;
 }
 
-export function viewFile(file_id: string, fileset: LaxyFileSet, job_id: string | null) {
-    const file = fileById(fileset, file_id);
+export function viewFile(file_id: string | LaxyFile, fileset: LaxyFileSet | null, job_id: string | null) {
+    let file: LaxyFile | undefined;
+    if (file_id instanceof LaxyFile) {
+        file = file_id;
+    } else {
+        file = store.getters.fileById(file_id, fileset);
+    }
     if (file) {
         if (job_id) {
             const filepath = `${file.path}/${file.name}`;
@@ -85,8 +84,13 @@ export function viewFile(file_id: string, fileset: LaxyFileSet, job_id: string |
     }
 }
 
-export function downloadFile(file_id: string, fileset: LaxyFileSet, job_id: string | null,) {
-    const file = fileById(fileset, file_id);
+export function downloadFile(file_id: string | LaxyFile, fileset: LaxyFileSet | null, job_id: string | null) {
+    let file: LaxyFile | undefined;
+    if (file_id instanceof LaxyFile) {
+        file = file_id;
+    } else {
+        file = store.getters.fileById(file_id, fileset);
+    }
     if (file) {
         if (job_id) {
             const filepath = `${file.path}/${file.name}`;
@@ -99,20 +103,28 @@ export function downloadFile(file_id: string, fileset: LaxyFileSet, job_id: stri
     }
 }
 
-export function fileListToTree(files: LaxyFile[]): TreeNode[] {
-    const tree: TreeNode[] = [];
+export function fileListToTree(files: LaxyFile[]): TreeNode {
+    const tree: TreeNode = {
+        id: '__root__',
+        name: '/',
+        file: null,
+        parent: null,
+        children: [],
+    } as TreeNode;
+
+    let id_counter = 0;  // alternative ID used when there is no File UUID
 
     for (const file of files) {
         const pathPartStrings = `${file.path}/${file.name}`.split('/');
         pathPartStrings.shift(); // Remove first blank element from the parts array.
         const pathParts: TreeNode[] = [];
-        let id_counter = 0;
         // Turn each/part/of/the/path into a TreeNode
         for (const partName of pathPartStrings) {
             pathParts.push({
                 id: id_counter.toString(),
                 name: partName,
                 file: null,
+                parent: null,
                 children: [] as TreeNode[]
             });
             id_counter++;
@@ -123,27 +135,28 @@ export function fileListToTree(files: LaxyFile[]): TreeNode[] {
         pathParts[pathParts.length - 1].file = file;
         pathParts[pathParts.length - 1].id = file.id;
 
-        let currentLevel = tree; // initialize currentLevel to the root of the tree
+        let currentLevel: TreeNode = tree; // initialize currentLevel to the root of the tree
 
         // walk up the path. for each subdirectory, determine if it is already
         // represented as a node in the tree else add it
         forEach(pathParts, (part => {
-            const existingPath: TreeNode = find(currentLevel, {name: part.name}) as any;
+            const existingPath: TreeNode = find(currentLevel.children, {name: part.name}) as any;
 
             if (existingPath) {
                 // The path to this item was already in the tree, so don't add it again.
                 // Set the current level to this path's children
-                currentLevel = existingPath.children;
+                currentLevel = existingPath;
             } else {
                 const newPart = {
                     id: part.id,
                     name: part.name,
                     file: part.file,
+                    parent: currentLevel,
                     children: [] as TreeNode[],
                 } as TreeNode;
 
-                currentLevel.push(newPart);
-                currentLevel = newPart.children;
+                currentLevel.children.push(newPart);
+                currentLevel = newPart;
             }
         }));
     }

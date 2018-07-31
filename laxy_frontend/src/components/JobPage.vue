@@ -95,6 +95,7 @@
                         <md-layout md-flex="40" md-flex-medium="100"
                                    v-show="showTab === 'summary' || showTab == null" :md-column-medium="true"
                                    :md-row-large="true">
+                            <!--
                             <file-list v-if="job != null && job.status !== 'running'"
                                        ref="key-files"
                                        class="fill-width"
@@ -105,32 +106,45 @@
                                        :job-id="jobId"
                                        @refresh-error="showErrorDialog">
                             </file-list>
+                            -->
+                            <nested-file-list id="key-files-card"
+                                              ref="key-files"
+                                              v-if="job && job.status !== 'running'"
+                                              title="Key result files"
+                                              :fileList="files"
+                                              :tag-filters="['bam', 'bai', 'counts', 'degust', 'report']"
+                                              :job-id="jobId"
+                                              :hide-search="false"
+                                              @refresh-error="showErrorDialog"></nested-file-list>
                         </md-layout>
                     </transition>
                     <transition name="fade">
                         <md-layout v-show="showTab === 'input'" md-column-medium>
                             <md-layout id="input-files-panel">
-                                <file-list id="input-files-card"
-                                           ref="input"
-                                           v-if="job != null && job.status !== 'running'"
-                                           title="Input files"
-                                           :fileset-id="job.input_fileset_id"
-                                           :job-id="jobId"
-                                           :hide-search="false"
-                                           @refresh-error="showErrorDialog"></file-list>
+                                <nested-file-list id="input-files-card"
+                                                  ref="input"
+                                                  v-if="job && job.status !== 'running'"
+                                                  title="Input files"
+                                                  root-path-name="input"
+                                                  :fileList="inputFiles"
+                                                  :job-id="jobId"
+                                                  :hide-search="false"
+                                                  @refresh-error="showErrorDialog"></nested-file-list>
                             </md-layout>
                         </md-layout>
                     </transition>
                     <transition name="fade">
                         <md-layout v-show="showTab === 'output'" md-column-medium>
                             <md-layout id="output-files-panel">
-                                <file-list ref="output"
-                                           id="output-files-card"
-                                           v-if="job != null && job.status !== 'running'"
-                                           title="Output files"
-                                           :fileset-id="job.output_fileset_id"
-                                           :hide-search="false"
-                                           @refresh-error="showErrorDialog"></file-list>
+                                <nested-file-list id="output-files-card"
+                                                  ref="output"
+                                                  v-if="job && job.status !== 'running'"
+                                                  title="Output files"
+                                                  root-path-name="output"
+                                                  :fileList="outputFiles"
+                                                  :job-id="jobId"
+                                                  :hide-search="false"
+                                                  @refresh-error="showErrorDialog"></nested-file-list>
                             </md-layout>
                         </md-layout>
                     </transition>
@@ -155,7 +169,6 @@
         </md-snackbar>
     </div>
 </template>
-
 
 <script lang="ts">
     import "vue-material/dist/vue-material.css";
@@ -200,9 +213,10 @@
     import {DummyJobList as _dummyJobList} from "../test-data";
     import JobStatusPip from "./JobStatusPip";
     import FileLinkPip from "./FileLinkPip";
+    import NestedFileList from "./NestedFileList";
 
     @Component({
-        components: {FileLinkPip, JobStatusPip},
+        components: {FileLinkPip, JobStatusPip, NestedFileList},
         props: {
             jobId: {type: String, default: ""},
             showTab: {type: String, default: "summary"}
@@ -237,6 +251,26 @@
             return this.$store.getters.currentJobFiles;
         }
 
+        get inputFiles(): LaxyFile[] | null {
+            if (this.job) {
+                const fsid = this.job.input_fileset_id;
+                if (this.$store.state.filesets[fsid]) {
+                    return this.$store.state.filesets[fsid].files;
+                }
+            }
+            return null;
+        }
+
+        get outputFiles(): LaxyFile[] | null {
+            if (this.job) {
+                const fsid = this.job.output_fileset_id;
+                if (this.$store.state.filesets[fsid]) {
+                    return this.$store.state.filesets[fsid].files;
+                }
+            }
+            return null;
+        }
+
         // @Getter("currentInputFileset")
         // inputFileset: LaxyFileSet;
         //
@@ -250,12 +284,14 @@
             // this.refresh(null);
         }
 
-        mounted() {
-            this.refresh(null);
+        async mounted() {
+            await this.refresh(null);
 
-            this._refreshPollerId = setInterval(() => {
-                this.refresh(null);
-            }, 10000);  // ms
+            if (this.job && this.job.status === "running") {
+                this._refreshPollerId = setInterval(() => {
+                    this.refresh(null);
+                }, 10000);  // ms
+            }
         }
 
         beforeDestroy() {

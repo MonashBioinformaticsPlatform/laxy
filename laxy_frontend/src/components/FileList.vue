@@ -65,10 +65,11 @@
 <script lang="ts">
     import "vue-material/dist/vue-material.css";
 
-    import * as _ from "lodash";
+    // import * as _ from "lodash";
 
     import filter from "lodash-es/filter";
-    // import some from 'lodash-es/some';
+    import map from 'lodash-es/map';
+    import head from 'lodash-es/head';
 
     import Memoize from "lodash-decorators/Memoize";
     import "es6-promise";
@@ -101,7 +102,6 @@
     import {
         hasSharedTagOrEmpty,
         hasIntersection,
-        fileById,
         filterByTag,
         filterByRegex,
         viewFile,
@@ -198,7 +198,7 @@
                     //  it's CORS config / headers to fix this)
                     //
                     // const url = 'http://degust.erc.monash.edu/upload'
-                    // const file = this.fileById(this.fileset, file_id);
+                    // const file = this.$store.getters.fileById(this.fileset, file_id);
                     // const get_file_resp: AxiosResponse = await WebAPI.fetcher.get(
                     //     WebAPI.downloadFileByIdUrl(file_id));
                     // const file_content = get_file_resp.data;
@@ -239,9 +239,8 @@
 
         @Memoize((file: LaxyFile) => file.id)
         getDefaultViewMethod(file: LaxyFile) {
-            return _(this.viewMethods)
-                .filter(vm => hasIntersection(vm.tags, file.type_tags))
-                .first();
+            return head(filter(this.viewMethods,
+                vm => hasIntersection(vm.tags, file.type_tags)));
         }
 
         get regexPatterns(): RegExp[] {
