@@ -1664,7 +1664,7 @@ class JobCreate(JSONView):
                                  'JOB_FILE_REGISTRATION_URL': job_file_bulk_url,
                                  'JOB_INPUT_STAGED': sh_bool(False),
                                  'REFERENCE_GENOME': reference_genome_id,
-                                 'PIPELINE_VERSION': '1.5.1+c53adf6',  # '1.5.1',
+                                 'PIPELINE_VERSION': '1.5.2'  # '1.5.1+c53adf6',  # '1.5.1',
                              })
 
             # TESTING: Start cluster, run job, (pre-existing data), stop cluster
