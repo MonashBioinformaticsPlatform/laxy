@@ -114,6 +114,7 @@
     import filter from "lodash-es/filter";
     import map from "lodash-es/map";
     import head from "lodash-es/head";
+    import sortBy from "lodash-es/sortBy";
 
     import Memoize from "lodash-decorators/Memoize";
     import "es6-promise";
@@ -191,19 +192,6 @@
         @Prop(String)
         public jobId: string | null;
 
-        // @Prop()
-        // fileset: LaxyFileSet;
-
-        // @State(state => state.filesets)
-        // filesets: {[key:string]: LaxyFileSet};
-
-        // fileset(filesetId: string | null = null): any {
-        //     if (filesetId == null) {
-        //         filesetId = this.filesetId;
-        //     }
-        //     return this.$store.getters.fileset(filesetId);
-        // }
-
         @Watch("fileTree")
         initCurrentLevel(new_val: TreeNode, old_value: TreeNode) {
             this.currentLevel = this.fileTree;
@@ -212,7 +200,11 @@
         public currentLevel: TreeNode | null = null;
 
         get currentLevelNodes(): TreeNode[] {
-            if (this.currentLevel) return this.currentLevel.children;
+            if (this.currentLevel) return sortBy(this.currentLevel.children,
+                [
+                    (n: TreeNode) => n.file != null,
+                    'name'
+                ]);
             return [];
         }
 
@@ -248,7 +240,8 @@
 
         get currentLevelFiles(): (LaxyFile | null)[] {
             if (this.currentLevel) {
-                return map(this.currentLevel.children, (node) => node.file);
+                return map(sortBy(this.currentLevel.children, ['name']),
+                    (node) => node.file);
             }
             return [];
         }
