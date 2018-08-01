@@ -238,9 +238,6 @@ function get_input_data_urls() {
 #### Pull in reference data from S3
 ####
 
-# TODO: Detect if we are on AWS and do this conditionally
-#       (maybe via ComputeResource metadata passed to task)
-
 mkdir -p "${TMP}"
 mkdir -p input
 mkdir -p output

@@ -202,13 +202,19 @@ def index_remote_files(self, task_data=None, **kwargs):
     compute_id = job.compute_resource.id
     message = "No message."
 
-    def create_update_file_objects(remote_path, fileset=None,
-                                   prefix_path='', location_base=''):
+    def create_update_file_objects(remote_path,
+                                   fileset=None,
+                                   prefix_path='',
+                                   location_base=''):
         """
         Returns a list of (unsaved) File objects from a recursive 'find'
         of a remote directory. If a file of the same path exists in the FileSet,
         update the file object location (if unset) rather than create a new one.
 
+        :param fileset:
+        :type fileset:
+        :param prefix_path:
+        :type prefix_path:
         :param remote_path: Path on the remote server.
         :type remote_path: str
         :param location_base: Prefix of location URL (eg sftp://127.0.0.1/XxX/)
