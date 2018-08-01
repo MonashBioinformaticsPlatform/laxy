@@ -154,21 +154,34 @@ class FileAdmin(Timestamped, VersionAdmin):
                            truncatechars(obj.name, self.truncate_to))
 
 
-class JobInputFilesInline(admin.StackedInline):
+class JobInputFilesInline(admin.TabularInline):
     model = Job
+    readonly_fields = ('id', 'status', 'owner', 'completed_time',)
+    fields = ('id', 'status', 'owner', 'completed_time',)
     can_delete = False
     verbose_name_plural = 'Associated Job (as input FileSet)'
     fk_name = 'input_files'
     extra = 0
 
 
-class JobOutputFilesInline(admin.StackedInline):
+class JobOutputFilesInline(admin.TabularInline):
     model = Job
+    readonly_fields = ('id', 'status', 'owner', 'completed_time',)
+    fields = ('id', 'status', 'owner', 'completed_time',)
     can_delete = False
     verbose_name_plural = 'Associated Job (as output FileSet)'
     fk_name = 'output_files'
     extra = 0
 
+class FilesInline(admin.TabularInline):
+    model = File
+    readonly_fields = ('id',)
+    fields = ('id', 'path', 'name',)
+    ordering = ('path', 'name',)
+    can_delete = False
+    verbose_name_plural = 'Files'
+    fk_name = 'fileset'
+    extra = 0
 
 class FileSetAdmin(Timestamped, VersionAdmin):
     list_display = ('uuid',
@@ -178,7 +191,7 @@ class FileSetAdmin(Timestamped, VersionAdmin):
                     'modified')
     ordering = ('-created_time', '-modified_time',)
     search_fields = ('id', 'name', 'path',)
-    inlines = (JobInputFilesInline, JobOutputFilesInline,)
+    inlines = (JobInputFilesInline, JobOutputFilesInline, FilesInline,)
 
 
 class SampleSetAdmin(Timestamped, VersionAdmin):
