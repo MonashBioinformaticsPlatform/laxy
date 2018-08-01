@@ -126,6 +126,8 @@ def start_job(self, task_data=None, **kwargs):
         succeeded = False
         if hasattr(e, 'message'):
             message = e.message
+        else:
+            message = repr(e)
 
     if not succeeded and job.compute_resource.disposable:
         job.compute_resource.dispose()
