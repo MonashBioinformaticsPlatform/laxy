@@ -82,7 +82,7 @@
                 <md-icon>content_copy</md-icon>
                 Run again
             </md-button>
-            <md-button v-if="job.status === 'running'"
+            <md-button v-if="showCancelButton && job.status === 'running'"
                        @click="askCancelJob(job.id)">
                 <md-icon>cancel</md-icon>
                 Cancel
@@ -124,14 +124,13 @@
     import {ComputeJob} from "../model";
     import {WebAPI} from "../web-api";
 
-    @Component({
-        props: {
-            job: {type: Object},
-        },
-        filters: {},
-    })
+    @Component({filters: {}})
     export default class JobStatusCard extends Vue {
+        @Prop({type: Object})
         public job: ComputeJob | null;
+
+        @Prop({default: true, type: Boolean})
+        showCancelButton: boolean;
 
         getStatusColor = getStatusColor;
         themeColors = themeColors;

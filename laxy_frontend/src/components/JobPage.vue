@@ -87,6 +87,7 @@
                                    v-show="showTab === 'summary' || showTab == null" :md-column-medium="true"
                                    :md-row-large="true">
                             <job-status-card :job="job"
+                                             :show-cancel-button="false"
                                              v-on:cancel-job-clicked="onAskCancelJob"
                                              v-on:clone-job-clicked="cloneJob"></job-status-card>
                         </md-layout>
@@ -107,21 +108,26 @@
                                        @refresh-error="showErrorDialog">
                             </file-list>
                             -->
-                            <nested-file-list id="key-files-card"
+                            <nested-file-list v-if="job && job.status !== 'running'"
+                                              id="key-files-card"
+                                              class="fill-width"
                                               ref="key-files"
-                                              v-if="job && job.status !== 'running'"
                                               title="Key result files"
                                               :fileList="files"
                                               :tag-filters="['bam', 'bai', 'counts', 'degust', 'report']"
                                               :job-id="jobId"
                                               :hide-search="false"
                                               @refresh-error="showErrorDialog"></nested-file-list>
+                            <event-log v-if="job && job.status === 'running'"
+                                       :job-id="jobId"
+                                       @refresh-error="showErrorDialog"></event-log>
                         </md-layout>
                     </transition>
                     <transition name="fade">
                         <md-layout v-show="showTab === 'input'" md-column-medium>
                             <md-layout id="input-files-panel">
                                 <nested-file-list id="input-files-card"
+                                                  class="fill-width"
                                                   ref="input"
                                                   v-if="job && job.status !== 'running'"
                                                   title="Input files"
@@ -137,6 +143,7 @@
                         <md-layout v-show="showTab === 'output'" md-column-medium>
                             <md-layout id="output-files-panel">
                                 <nested-file-list id="output-files-card"
+                                                  class="fill-width"
                                                   ref="output"
                                                   v-if="job && job.status !== 'running'"
                                                   title="Output files"
