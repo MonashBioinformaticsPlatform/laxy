@@ -400,15 +400,15 @@ class Job(Timestamped, UUIDModel):
     @transaction.atomic()
     def _init_filesets(self, save=True):
         if not self.input_files:
-            self.input_files = FileSet(name='input',
+            self.input_files = FileSet(name=f'Input files for job: {self.id}',
                                        path='input',
                                        owner=self.owner)
             if save:
                 self.input_files.save()
 
         if not self.output_files:
-            self.output_files = FileSet(name='input',
-                                        path='input',
+            self.output_files = FileSet(name=f'Output files for job: {self.id}',
+                                        path='output',
                                         owner=self.owner)
             if save:
                 self.output_files.save()

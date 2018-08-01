@@ -365,13 +365,15 @@ class JobSerializerRequest(JobSerializerBase):
         # it's an existing file and use that. If an input_fileset id is provided
         # we ignore anything in input_files and just use the specified FileSet.
         if not input_fileset_id:
-            ifileset = models.FileSet.objects.create(
-                name=f'Input files for job: {job.id}', owner=job.owner)
+            ifileset = job.input_files
+            if not ifileset:
+                ifileset = models.FileSet.objects.create(name='input',
+                                                         owner=job.owner)
+            ifileset.name = f'Input files for job: {job.id}'
             for f in input_files_data:
                 f_id = f.get('id', None)
                 if not f_id:
                     input_file = models.File.objects.create(**f)
-                    input_file.save()
                 else:
                     input_file = models.File.objects.get(id=f_id)
 
