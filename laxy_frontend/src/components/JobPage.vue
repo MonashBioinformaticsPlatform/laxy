@@ -96,7 +96,7 @@
                         <md-layout md-flex="40" md-flex-medium="100"
                                    v-show="showTab === 'summary' || showTab == null" :md-column-medium="true"
                                    :md-row-large="true">
-                            <!--
+
                             <file-list v-if="job != null && job.status !== 'running'"
                                        ref="key-files"
                                        class="fill-width"
@@ -107,7 +107,8 @@
                                        :job-id="jobId"
                                        @refresh-error="showErrorDialog">
                             </file-list>
-                            -->
+
+                            <!--
                             <nested-file-list v-if="job && job.status !== 'running'"
                                               id="key-files-card"
                                               class="fill-width"
@@ -118,6 +119,7 @@
                                               :job-id="jobId"
                                               :hide-search="false"
                                               @refresh-error="showErrorDialog"></nested-file-list>
+                            -->
                             <event-log v-if="job && job.status === 'running'"
                                        :job-id="jobId"
                                        @refresh-error="showErrorDialog"></event-log>
@@ -350,15 +352,14 @@
                 this.job = this.$store.state.currentViewedJob;
 
                 // do web requests if filesets not yet populated
-                if (this.job &&
-                    this.job.input_fileset_id &&
-                    this.job.output_fileset_id &&
-                    !this.$store.state.filesets[this.job.output_fileset_id] &&
-                    !this.$store.state.filesets[this.job.input_fileset_id]) {
-                    await Promise.all([
-                        this.$store.dispatch(FETCH_FILESET, this.job.input_fileset_id),
-                        this.$store.dispatch(FETCH_FILESET, this.job.output_fileset_id)
-                    ]);
+                if (this.job) {
+                    const fetches = [];
+                    for (let fsid of [this.job.input_fileset_id, this.job.output_fileset_id]) {
+                        if (fsid && !this.$store.state.filesets[fsid]) {
+                            fetches.push(this.$store.dispatch(FETCH_FILESET, fsid));
+                        }
+                    }
+                    await Promise.all(fetches);
                 }
 
                 // These refresh the appropriate file list every time it's

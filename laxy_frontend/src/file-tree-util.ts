@@ -4,6 +4,7 @@ import first from 'lodash-es/first';
 import filter from 'lodash-es/filter';
 import forEach from 'lodash-es/forEach';
 import find from 'lodash-es/find';
+import flatten from 'lodash-es/flatten';
 
 import {Store as store} from './store';
 
@@ -64,12 +65,27 @@ export function filterByRegex(files: LaxyFile[], patterns: RegExp[] | null): Lax
     return regex_filtered;
 }
 
+export function filterByFullPath(files: LaxyFile[], query: string | null): LaxyFile[] {
+    if (query == null || query.length === 0) {
+        return files;
+    }
+    const query_filtered: LaxyFile[] = [];
+    for (const file of files) {
+        const filepath = `${file.path}/${file.name}`;
+        if (filepath.includes(query) &&
+            !query_filtered.includes(file)) {
+            query_filtered.push(file);
+        }
+    }
+    return query_filtered;
+}
+
 export function viewFile(file_id: string | LaxyFile, fileset: LaxyFileSet | null, job_id: string | null) {
     let file: LaxyFile | undefined;
-    if (file_id instanceof LaxyFile) {
-        file = file_id;
-    } else {
+    if (file_id instanceof String) {
         file = store.getters.fileById(file_id, fileset);
+    } else {
+        file = file_id as LaxyFile;
     }
     if (file) {
         if (job_id) {
@@ -86,10 +102,10 @@ export function viewFile(file_id: string | LaxyFile, fileset: LaxyFileSet | null
 
 export function downloadFile(file_id: string | LaxyFile, fileset: LaxyFileSet | null, job_id: string | null) {
     let file: LaxyFile | undefined;
-    if (file_id instanceof LaxyFile) {
-        file = file_id;
-    } else {
+    if (file_id instanceof String) {
         file = store.getters.fileById(file_id, fileset);
+    } else {
+        file = file_id as LaxyFile;
     }
     if (file) {
         if (job_id) {
@@ -161,4 +177,13 @@ export function fileListToTree(files: LaxyFile[]): TreeNode {
         }));
     }
     return tree;
+}
+
+export function flattenTree(nodes: TreeNode[]): TreeNode[] {
+    if (!nodes || nodes.length === 0) return [];
+    return nodes.concat(
+        flattenTree(
+            flatten(nodes.map((n: TreeNode) => n.children))
+        )
+    );
 }

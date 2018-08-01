@@ -1,19 +1,20 @@
 <template>
     <div class="filelist">
         <md-layout>
-            <md-progress v-if="refreshing" md-indeterminate></md-progress>
+            <md-progress v-if="refreshing || searching" md-indeterminate></md-progress>
             <transition name="fade">
                 <md-layout v-if="!refreshing">
                     <md-toolbar class="md-transparent fill-width">
                         <h1 class="md-title">{{ titleText }}</h1>
-                        <md-button v-if="!hideSearch" class="md-icon-button push-right">
-                            <md-icon>search</md-icon>
-                        </md-button>
+                        <md-input-container v-if="!hideSearch" md-clearable>
+                            <md-input v-model="searchQuery" placeholder="Search"></md-input>
+                            <md-icon v-if="!searchQuery">search</md-icon>
+                        </md-input-container>
                     </md-toolbar>
                     <md-toolbar class="md-transparent fill-width">
-                        <div class="breadcrumbs">
+                        <div v-if="!searchQuery.trim()" class="breadcrumbs">
                             &nbsp;
-                        <span v-for="node in pathToRoot">
+                            <span v-for="node in pathToRoot">
                             <template v-if="node.id === '__root__'"><code>{{ rootPathName }} / </code></template>
                             <template v-else><code>{{ node.name }} / </code></template>
                         </span>
@@ -115,8 +116,12 @@
     import map from "lodash-es/map";
     import head from "lodash-es/head";
     import sortBy from "lodash-es/sortBy";
+    import flatten from "lodash-es/flatten";
+    import flatMapDeep from "lodash-es/flatMapDeep";
 
     import Memoize from "lodash-decorators/Memoize";
+    import Debounce from "lodash-decorators/Debounce";
+
     import "es6-promise";
 
     import axios, {AxiosResponse} from "axios";
@@ -149,9 +154,11 @@
         hasIntersection,
         filterByTag,
         filterByRegex,
+        filterByFullPath,
         viewFile,
         downloadFile,
         fileListToTree,
+        flattenTree,
         TreeNode,
     } from "../file-tree-util";
 
@@ -192,6 +199,9 @@
         @Prop(String)
         public jobId: string | null;
 
+        public searchQuery: string = "";
+        public searching: boolean = false;
+
         @Watch("fileTree")
         initCurrentLevel(new_val: TreeNode, old_value: TreeNode) {
             this.currentLevel = this.fileTree;
@@ -199,12 +209,44 @@
 
         public currentLevel: TreeNode | null = null;
 
+        @Debounce(1000)
+        get searchFilteredNodes(): TreeNode[] {
+            const query = this.searchQuery.trim();
+
+            const nodes = flattenTree(this.fileTree.children);
+
+            if (!query || query.length === 0) return nodes;
+
+            const hits = filter(nodes,
+                (node) => {
+                    if (node.file) {
+                        return `${node.file.name}/${node.file.name}`.includes(query);
+                        // TODO: Make globbing work, or look at vuex-search
+                        // return minimatch(`${node.file.name}/${node.file.name}`, query);
+                    } else {
+                        return node.name.includes(query);
+                        // TODO: Make globbing work, or look at vuex-search
+                        // return minimatch(node.name, query);
+                    }
+                });
+            return hits;
+        }
+
         get currentLevelNodes(): TreeNode[] {
-            if (this.currentLevel) return sortBy(this.currentLevel.children,
-                [
-                    (n: TreeNode) => n.file != null,
-                    'name'
-                ]);
+            if (this.currentLevel) {
+                let nodes = this.currentLevel.children;
+                const query = this.searchQuery.trim();
+                if (query.length >= 3) {
+                    this.searching = true;
+                    nodes = this.searchFilteredNodes;
+                    this.searching = false;
+                }
+                return sortBy(nodes,
+                    [
+                        (n: TreeNode) => n.file != null,
+                        "name"
+                    ]);
+            }
             return [];
         }
 
@@ -240,7 +282,7 @@
 
         get currentLevelFiles(): (LaxyFile | null)[] {
             if (this.currentLevel) {
-                return map(sortBy(this.currentLevel.children, ['name']),
+                return map(sortBy(this.currentLevel.children, ["name"]),
                     (node) => node.file);
             }
             return [];
@@ -250,10 +292,12 @@
             if (this.currentLevel && this.currentLevel.parent) {
                 this.currentLevel = this.currentLevel.parent;
             }
+            this.searchQuery = '';
             return this.currentLevel;
         }
 
         enterDirectory(node: TreeNode) {
+            this.searchQuery = '';
             this.currentLevel = node;
         }
 
@@ -337,18 +381,10 @@
                 vm => hasIntersection(vm.tags, file.type_tags)));
         }
 
-        get regexPatterns(): RegExp[] {
-            return strToRegex(this.regexFilters);
-        }
-
         get files(): LaxyFile[] {
             let filtered: LaxyFile[] = this.fileList;
             filtered = filterByTag(filtered, this.tagFilters);
-            filtered = filterByRegex(filtered, this.regexPatterns);
-
-            // const filtered = filter(this.fileset.files, (f) => {
-            //     some(this.regexPatterns, (p) => {f.name.matches(p)});
-            // });
+            filtered = filterByRegex(filtered, strToRegex(this.regexFilters));
             return filtered;
         }
 

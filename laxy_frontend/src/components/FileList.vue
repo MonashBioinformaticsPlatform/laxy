@@ -1,13 +1,14 @@
 <template>
     <div class="filelist">
         <md-layout>
-            <md-progress v-if="refreshing" md-indeterminate></md-progress>
+            <md-progress v-if="refreshing || searching" md-indeterminate></md-progress>
             <md-layout v-if="!refreshing">
                 <md-toolbar class="md-transparent fill-width">
                     <h1 class="md-title">{{ titleText }}</h1>
-                    <md-button v-if="!hideSearch" class="md-icon-button push-right">
-                        <md-icon>search</md-icon>
-                    </md-button>
+                    <md-input-container v-if="!hideSearch" md-clearable>
+                        <md-input v-model="searchQuery" placeholder="Search"></md-input>
+                        <md-icon v-if="!searchQuery">search</md-icon>
+                    </md-input-container>
                 </md-toolbar>
                 <md-table>
                     <md-table-body>
@@ -68,8 +69,8 @@
     // import * as _ from "lodash";
 
     import filter from "lodash-es/filter";
-    import map from 'lodash-es/map';
-    import head from 'lodash-es/head';
+    import map from "lodash-es/map";
+    import head from "lodash-es/head";
 
     import Memoize from "lodash-decorators/Memoize";
     import "es6-promise";
@@ -104,6 +105,7 @@
         hasIntersection,
         filterByTag,
         filterByRegex,
+        filterByFullPath,
         viewFile,
         downloadFile,
     } from "../file-tree-util";
@@ -157,6 +159,9 @@
         //     }
         //     return this.$store.getters.fileset(filesetId);
         // }
+
+        public searchQuery: string = '';
+        public searching: boolean = false;
 
         get fileset(): any {
             // this appears reactive. reading directl
@@ -243,10 +248,6 @@
                 vm => hasIntersection(vm.tags, file.type_tags)));
         }
 
-        get regexPatterns(): RegExp[] {
-            return strToRegex(this.regexFilters);
-        }
-
         get files(): LaxyFile[] {
             const fileset = this.fileset;
             if (fileset == null ||
@@ -257,10 +258,13 @@
 
             let filtered: LaxyFile[] = fileset.files;
             filtered = filterByTag(filtered, this.tagFilters);
-            filtered = filterByRegex(filtered, this.regexPatterns);
-
+            filtered = filterByRegex(filtered, strToRegex(this.regexFilters));
+            const query = this.searchQuery.trim();
+            if (query.length >= 3) {
+                filtered = filterByFullPath(filtered, query);
+            }
             // const filtered = filter(this.fileset.files, (f) => {
-            //     some(this.regexPatterns, (p) => {f.name.matches(p)});
+            //     some(strToRegex(this.regexFilters), (p) => {f.name.matches(p)});
             // });
             return filtered;
         }
