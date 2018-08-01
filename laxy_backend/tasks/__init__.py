@@ -166,7 +166,8 @@ def remote_list_files(path='.'):
     :return: A list of relative paths.
     :rtype: List[str]
     """
-    lslines = run(f"find {path} -mindepth 1 -type f -printf '%P\n'")
+    # -L ensures symlinks are followed and output as filenames too
+    lslines = run(f"find -L {path} -mindepth 1 -type f -printf '%P\n'")
     if not lslines.succeeded:
         raise Exception("Failed to list remote files: %s" % lslines)
     filepaths = lslines.splitlines()
