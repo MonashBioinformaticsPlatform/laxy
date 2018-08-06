@@ -369,6 +369,7 @@
             // this.fileList = _dummyFileSet.files;
             // this.filesetId = _dummyFileSet.id;
             //this.currentLevel = this.fileTree[4];
+            this.currentLevel = this.fileTree;
         }
 
         getViewMethodsForTags(tags: string[]) {

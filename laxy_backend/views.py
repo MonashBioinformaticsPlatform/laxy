@@ -72,13 +72,15 @@ from .serializers import (PatchSerializerResponse,
                           JobFileSerializerCreateRequest,
                           InputOutputFilesResponse,
                           RedirectResponseSerializer)
-from .util import sh_bool, laxy_sftp_url
+from .util import sh_bool, laxy_sftp_url, generate_uuid
+from .storage import http_remote_index
 from .view_mixins import (JSONView, GetMixin, PatchMixin,
                           DeleteMixin, PostMixin, CSVTextParser,
                           PutMixin, RowsCSVTextParser)
 
 # from .models import User
 from django.contrib.auth import get_user_model
+
 User = get_user_model()
 
 logger = logging.getLogger(__name__)
@@ -186,6 +188,15 @@ class StreamingFileDownloadRenderer(BaseRenderer):
         iterable = FileWrapper(filelike, blksize=blksize)
         for chunk in iterable:
             yield chunk
+
+
+class RemoteFilesQueryParams(QueryParamFilterBackend):
+    def __init__(self):
+        super().__init__([
+            dict(name='url',
+                 example='https://bioinformatics.erc.monash.edu/home/andrewperry/test/sample_data/',
+                 description='A URL containing links to input data files'),
+        ])
 
 
 class ENAQueryParams(QueryParamFilterBackend):
@@ -2075,6 +2086,58 @@ class SendFileToDegust(JSONView):
         else:
             return HttpResponse(status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                                 reason="Error contacting Degust.")
+
+
+class DiscoverLinksView(JSONView):
+    renderer_classes = (JSONRenderer,)
+    serializer_class = SchemalessJsonResponseSerializer
+    filter_backends = (RemoteFilesQueryParams,)
+    api_docs_visible_to = 'public'
+
+    @view_config(response_serializer=SchemalessJsonResponseSerializer)
+    def get(self, request, version=None):
+        url = request.query_params.get('url', None)
+        basepath = urlparse(url).path
+        if url is not None:
+            file_links, dir_links = http_remote_index.grab_links(url)
+
+            files = []
+            for f in file_links:
+                fpath = Path(urlparse(f).path)
+                try:
+                    relpath = str(fpath.parent.relative_to(basepath))
+                except ValueError:
+                    relpath = None
+                if relpath == '.':
+                    relpath = ''
+
+                ff = FileSerializer(dict(
+                    id='__%s' % generate_uuid(),
+                    owner=request.user,
+                    name=fpath.name,
+                    path=relpath,
+                    location=f,
+                    fileset=None,
+                    checksum=None,
+                    metadata={}))
+                files.append(ff.data)
+
+            dirs = []
+            for d in dir_links:
+                relpath = None
+                if url in d:
+                    relpath = str(Path(urlparse(d).path).relative_to(basepath))
+                if relpath == '.':
+                    relpath = ''
+                dirs.append(dict(id='__%s' % generate_uuid(),
+                                 name=Path(urlparse(d).path).name,
+                                 path=relpath,
+                                 location=d))
+
+            return Response({'files': files, 'directories': dirs},
+                            status=status.HTTP_200_OK)
+
+        return Response({}, status=status.HTTP_400_BAD_REQUEST)
 
 
 def _get_or_create_drf_token(user):

@@ -46,6 +46,7 @@ import FrontPage from './components/FrontPage.vue';
 import RNASeqSetup from './components/RNASeqSetup.vue';
 import InputDataForm from './components/InputFilesForm.vue';
 import ENAFileSelect from './components/ENAFileSelect.vue';
+import RemoteFilesSelect from './components/RemoteFilesSelect.vue';
 import SampleCart from './components/SampleCart.vue';
 import SampleTable from './components/SampleTable.vue';
 import PipelineParams from './components/PipelineParams.vue';
@@ -111,6 +112,12 @@ const router = new VueRouter({
             path: '/enaselect',
             name: 'enaselect',
             component: ENAFileSelect,
+            props: true,
+        },
+        {
+            path: '/remoteselect',
+            name: 'remoteselect',
+            component: RemoteFilesSelect,
             props: true,
         },
         {
