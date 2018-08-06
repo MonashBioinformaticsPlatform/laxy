@@ -50,7 +50,6 @@ if [[ ${BDS_SINGLE_NODE} == "yes" ]]; then
     fi
 else
     # system=generic or system=slurm in bds.config - BDS will run sbatch tasks
-
     MEM=2000
     CPUS=2
 fi

@@ -1,63 +1,61 @@
 <template>
     <div class="filelist">
-        <md-layout>
-            <md-progress v-if="refreshing || searching" md-indeterminate></md-progress>
-            <md-layout v-if="!refreshing">
-                <md-toolbar class="md-transparent fill-width">
-                    <h1 class="md-title">{{ titleText }}</h1>
-                    <md-input-container v-if="!hideSearch" md-clearable>
-                        <md-input v-model="searchQuery" placeholder="Search"></md-input>
-                        <md-icon v-if="!searchQuery">search</md-icon>
-                    </md-input-container>
-                </md-toolbar>
-                <md-table>
-                    <md-table-body>
-                        <md-table-row v-for="file in files" :key="file.id">
-                            <md-table-cell>
-                                <div class="truncate-text"><i class="md-caption">{{ file.path }}</i></div>
-                                <div class="truncate-text">{{ file.name }}</div>
-                            </md-table-cell>
-                            <md-table-cell md-numeric>
-                                <!--<div class="push-right">-->
-                                <md-button v-if="getDefaultViewMethod(file)"
-                                           class="md-icon-button"
-                                           @click="getDefaultViewMethod(file).method(file.id)">
-                                    <md-tooltip md-direction="top">
-                                        {{ getDefaultViewMethod(file).text }}
-                                    </md-tooltip>
-                                    <md-icon>{{ getDefaultViewMethod(file).icon }}</md-icon>
+        <md-progress v-if="refreshing || searching" md-indeterminate></md-progress>
+        <md-layout v-if="!refreshing">
+            <md-toolbar class="md-transparent fill-width">
+                <h1 class="md-title">{{ titleText }}</h1>
+                <md-input-container v-if="!hideSearch" md-clearable>
+                    <md-input v-model="searchQuery" placeholder="Search"></md-input>
+                    <md-icon v-if="!searchQuery">search</md-icon>
+                </md-input-container>
+            </md-toolbar>
+            <md-table>
+                <md-table-body>
+                    <md-table-row v-for="file in files" :key="file.id">
+                        <md-table-cell>
+                            <div class="no-line-break"><i class="md-caption">{{ file.path | truncate }}</i></div>
+                            <div class="no-line-break">{{ file.name | truncate }}</div>
+                        </md-table-cell>
+                        <md-table-cell md-numeric>
+                            <!--<div class="push-right">-->
+                            <md-button v-if="getDefaultViewMethod(file)"
+                                       class="md-icon-button push-right"
+                                       @click="getDefaultViewMethod(file).method(file)">
+                                <md-tooltip md-direction="top">
+                                    {{ getDefaultViewMethod(file).text }}
+                                </md-tooltip>
+                                <md-icon>{{ getDefaultViewMethod(file).icon }}</md-icon>
+                            </md-button>
+                            <md-button v-else
+                                       :disabled="true"
+                                       class="md-icon-button">
+                                <!-- empty placeholder button to preserve layout -->
+                                <md-icon></md-icon>
+                            </md-button>
+                            <md-menu md-size="4">
+                                <md-button class="md-icon-button push-right" md-menu-trigger>
+                                    <md-icon>arrow_drop_down</md-icon>
                                 </md-button>
-                                <md-button v-else
-                                           :disabled="true"
-                                           class="md-icon-button">
-                                    <!-- empty placeholder button to preserve layout -->
-                                    <md-icon></md-icon>
-                                </md-button>
-                                <md-menu md-size="4">
-                                    <md-button class="md-icon-button push-right" md-menu-trigger>
-                                        <md-icon>arrow_drop_down</md-icon>
-                                    </md-button>
 
-                                    <md-menu-content>
-                                        <i class="md-caption" style="padding-left: 16px">{{ file.id }}</i>
-                                        <!--  -->
-                                        <md-menu-item v-for="view in getViewMethodsForTags(file.type_tags)"
-                                                      :key="view.text"
-                                                      @click="view.method(file.id)">
-                                            <md-icon>{{ view.icon }}</md-icon>
-                                            <span>{{ view.text }}</span>
-                                        </md-menu-item>
-                                    </md-menu-content>
-                                </md-menu>
-                                <!--</div>-->
-                            </md-table-cell>
-                        </md-table-row>
-                        <md-table-row v-if="files.length === 0">
-                            <md-table-cell>No files</md-table-cell>
-                        </md-table-row>
-                    </md-table-body>
-                </md-table>
-            </md-layout>
+                                <md-menu-content>
+                                    <i class="md-caption" style="padding-left: 16px">{{ file.id }}</i>
+                                    <!--  -->
+                                    <md-menu-item v-for="view in getViewMethodsForTags(file.type_tags)"
+                                                  :key="view.text"
+                                                  @click="view.method(file)">
+                                        <md-icon>{{ view.icon }}</md-icon>
+                                        <span>{{ view.text }}</span>
+                                    </md-menu-item>
+                                </md-menu-content>
+                            </md-menu>
+                            <!--</div>-->
+                        </md-table-cell>
+                    </md-table-row>
+                    <md-table-row v-if="files.length === 0">
+                        <md-table-cell>No files</md-table-cell>
+                    </md-table-row>
+                </md-table-body>
+            </md-table>
         </md-layout>
     </div>
 </template>
@@ -106,6 +104,7 @@
         filterByTag,
         filterByRegex,
         filterByFullPath,
+        filterByFilename,
         viewFile,
         downloadFile,
     } from "../file-tree-util";
@@ -140,6 +139,9 @@
 
         @Prop({default: true})
         public hideSearch: boolean;
+
+        @Prop({default: 3, type: Number})
+        public minQueryLength: number;
 
         @Prop(String)
         public jobId: string | null;
@@ -260,8 +262,8 @@
             filtered = filterByTag(filtered, this.tagFilters);
             filtered = filterByRegex(filtered, strToRegex(this.regexFilters));
             const query = this.searchQuery.trim();
-            if (query.length >= 3) {
-                filtered = filterByFullPath(filtered, query);
+            if (query.length >= this.minQueryLength) {
+                filtered = filterByFilename(filtered, query);
             }
             // const filtered = filter(this.fileset.files, (f) => {
             //     some(strToRegex(this.regexFilters), (p) => {f.name.matches(p)});
@@ -301,10 +303,20 @@
     /*width: 100%;*/
     /*}*/
 
+    .fill-width {
+        width: 100%;
+    }
+
     .truncate-text {
-        width: 600px;
+        width: 100%;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+    }
+
+    .no-line-break {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 </style>

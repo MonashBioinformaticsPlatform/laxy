@@ -65,19 +65,29 @@ export function filterByRegex(files: LaxyFile[], patterns: RegExp[] | null): Lax
     return regex_filtered;
 }
 
-export function filterByFullPath(files: LaxyFile[], query: string | null): LaxyFile[] {
+export function filterBy(files: LaxyFile[],
+                         query: string | null,
+                         map_fn: Function): LaxyFile[] {
     if (query == null || query.length === 0) {
         return files;
     }
     const query_filtered: LaxyFile[] = [];
     for (const file of files) {
-        const filepath = `${file.path}/${file.name}`;
-        if (filepath.includes(query) &&
+        const subject = map_fn(file);
+        if (subject.includes(query) &&
             !query_filtered.includes(file)) {
             query_filtered.push(file);
         }
     }
     return query_filtered;
+}
+
+export function filterByFullPath(files: LaxyFile[], query: string | null): LaxyFile[] {
+    return filterBy(files, query, (f: LaxyFile) => `${f.path}/${f.name}`);
+}
+
+export function filterByFilename(files: LaxyFile[], query: string | null): LaxyFile[] {
+    return filterBy(files, query, (f: LaxyFile) => f.name);
 }
 
 export function viewFile(file_id: string | LaxyFile, fileset: LaxyFileSet | null, job_id: string | null) {

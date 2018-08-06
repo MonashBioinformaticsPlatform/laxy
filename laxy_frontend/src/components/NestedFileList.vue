@@ -1,109 +1,107 @@
 <template>
     <div class="filelist">
-        <md-layout>
-            <md-progress v-if="refreshing || searching" md-indeterminate></md-progress>
-            <transition name="fade">
-                <md-layout v-if="!refreshing">
-                    <md-toolbar class="md-transparent fill-width">
-                        <h1 class="md-title">{{ titleText }}</h1>
-                        <md-input-container v-if="!hideSearch" md-clearable>
-                            <md-input v-model="searchQuery" placeholder="Search"></md-input>
-                            <md-icon v-if="!searchQuery">search</md-icon>
-                        </md-input-container>
-                    </md-toolbar>
-                    <md-toolbar class="md-transparent fill-width">
-                        <div v-if="!searchQuery.trim()" class="breadcrumbs">
-                            &nbsp;
-                            <span v-for="node in pathToRoot">
-                            <template v-if="node.id === '__root__'"><code>{{ rootPathName }} / </code></template>
-                            <template v-else><code>{{ node.name }} / </code></template>
-                        </span>
-                            <br/>
-                        </div>
-                    </md-toolbar>
-                    <md-table>
-                        <md-table-body v-if="currentLevel">
-                            <md-table-row v-if="currentLevel.parent" @click.native="upDirectory">
+        <md-progress v-if="refreshing || searching" md-indeterminate></md-progress>
+        <transition name="fade">
+            <md-layout v-if="!refreshing">
+                <md-toolbar class="md-transparent fill-width">
+                    <h1 class="md-title">{{ titleText }}</h1>
+                    <md-input-container v-if="!hideSearch" md-clearable>
+                        <md-input v-model="searchQuery" placeholder="Search"></md-input>
+                        <md-icon v-if="!searchQuery">search</md-icon>
+                    </md-input-container>
+                </md-toolbar>
+                <md-toolbar class="md-transparent fill-width">
+                    <div v-if="!searchQuery.trim()" class="breadcrumbs">
+                        &nbsp;
+                        <span v-for="node in pathToRoot">
+                        <template v-if="node.id === '__root__'"><code>{{ rootPathName }} / </code></template>
+                        <template v-else><code>{{ node.name }} / </code></template>
+                    </span>
+                        <br/>
+                    </div>
+                </md-toolbar>
+                <md-table>
+                    <md-table-body v-if="currentLevel">
+                        <md-table-row v-if="currentLevel.parent" @click.native="upDirectory">
+                            <md-table-cell>
+                                <div class="push-left">
+                                    <md-icon>folder_open</md-icon>&nbsp;..
+                                </div>
+                            </md-table-cell>
+                            <md-table-cell md-numeric>
+                                <md-button class="md-icon-button" :disabled="true">
+                                    <!-- empty placeholder button to preserve layout -->
+                                    <md-icon></md-icon>
+                                </md-button>
+                                <md-button class="md-icon-button push-right" :disabled="true">
+                                    <md-icon>subdirectory_arrow_left</md-icon>
+                                </md-button>
+                            </md-table-cell>
+                        </md-table-row>
+                        <md-table-row v-for="node in currentLevelNodes" :key="node.id">
+                            <template v-if="node.file">
                                 <md-table-cell>
-                                    <div class="push-left">
-                                        <md-icon>folder_open</md-icon>&nbsp;..
-                                    </div>
+                                    <div class="truncate-text">{{ node.file.name }}</div>
                                 </md-table-cell>
                                 <md-table-cell md-numeric>
-                                    <md-button class="md-icon-button" :disabled="true">
+                                    <!--<div class="push-right">-->
+                                    <md-button v-if="getDefaultViewMethod(node.file)"
+                                               class="md-icon-button push-right"
+                                               @click="getDefaultViewMethod(node.file).method(node.file)">
+                                        <md-tooltip md-direction="top">
+                                            {{ getDefaultViewMethod(node.file).text }}
+                                        </md-tooltip>
+                                        <md-icon>{{ getDefaultViewMethod(node.file).icon }}</md-icon>
+                                    </md-button>
+                                    <md-button v-else
+                                               :disabled="true"
+                                               class="md-icon-button">
                                         <!-- empty placeholder button to preserve layout -->
                                         <md-icon></md-icon>
                                     </md-button>
+                                    <md-menu md-size="4">
+                                        <md-button class="md-icon-button push-right" md-menu-trigger>
+                                            <md-icon>arrow_drop_down</md-icon>
+                                        </md-button>
+
+                                        <md-menu-content>
+                                            <i class="md-caption" style="padding-left: 16px">{{ node.file.id }}</i>
+                                            <!--  -->
+                                            <md-menu-item
+                                                    v-for="view in getViewMethodsForTags(node.file.type_tags)"
+                                                    :key="view.text"
+                                                    @click="view.method(node.file)">
+                                                <md-icon>{{ view.icon }}</md-icon>
+                                                <span>{{ view.text }}</span>
+                                            </md-menu-item>
+                                        </md-menu-content>
+                                    </md-menu>
+                                    <!--</div>-->
+                                </md-table-cell>
+                            </template>
+                            <template v-else>
+                                <!-- it's a directory, not a file -->
+                                <md-table-cell @click.native="enterDirectory(node)">
+                                    <div class="truncate-text">
+                                        <md-icon>folder</md-icon>&nbsp;{{ node.name }}
+                                    </div>
+                                </md-table-cell>
+                                <md-table-cell md-numeric @click.native="enterDirectory(node)">
                                     <md-button class="md-icon-button push-right" :disabled="true">
-                                        <md-icon>subdirectory_arrow_left</md-icon>
+                                        <!-- <md-icon>subdirectory_arrow_right</md-icon> -->
+                                        <!-- empty placeholder button to preserve layout -->
+                                        <md-icon></md-icon>
                                     </md-button>
                                 </md-table-cell>
-                            </md-table-row>
-                            <md-table-row v-for="node in currentLevelNodes" :key="node.id">
-                                <template v-if="node.file">
-                                    <md-table-cell>
-                                        <div class="truncate-text">{{ node.file.name }}</div>
-                                    </md-table-cell>
-                                    <md-table-cell md-numeric>
-                                        <!--<div class="push-right">-->
-                                        <md-button v-if="getDefaultViewMethod(node.file)"
-                                                   class="md-icon-button"
-                                                   @click="getDefaultViewMethod(node.file).method(node.file)">
-                                            <md-tooltip md-direction="top">
-                                                {{ getDefaultViewMethod(node.file).text }}
-                                            </md-tooltip>
-                                            <md-icon>{{ getDefaultViewMethod(node.file).icon }}</md-icon>
-                                        </md-button>
-                                        <md-button v-else
-                                                   :disabled="true"
-                                                   class="md-icon-button">
-                                            <!-- empty placeholder button to preserve layout -->
-                                            <md-icon></md-icon>
-                                        </md-button>
-                                        <md-menu md-size="4">
-                                            <md-button class="md-icon-button push-right" md-menu-trigger>
-                                                <md-icon>arrow_drop_down</md-icon>
-                                            </md-button>
-
-                                            <md-menu-content>
-                                                <i class="md-caption" style="padding-left: 16px">{{ node.file.id }}</i>
-                                                <!--  -->
-                                                <md-menu-item
-                                                        v-for="view in getViewMethodsForTags(node.file.type_tags)"
-                                                        :key="view.text"
-                                                        @click="view.method(node.file.id)">
-                                                    <md-icon>{{ view.icon }}</md-icon>
-                                                    <span>{{ view.text }}</span>
-                                                </md-menu-item>
-                                            </md-menu-content>
-                                        </md-menu>
-                                        <!--</div>-->
-                                    </md-table-cell>
-                                </template>
-                                <template v-else>
-                                    <!-- it's a directory, not a file -->
-                                    <md-table-cell @click.native="enterDirectory(node)">
-                                        <div class="truncate-text">
-                                            <md-icon>folder</md-icon>&nbsp;{{ node.name }}
-                                        </div>
-                                    </md-table-cell>
-                                    <md-table-cell md-numeric @click.native="enterDirectory(node)">
-                                        <md-button class="md-icon-button push-right" :disabled="true">
-                                            <!-- <md-icon>subdirectory_arrow_right</md-icon> -->
-                                            <!-- empty placeholder button to preserve layout -->
-                                            <md-icon></md-icon>
-                                        </md-button>
-                                    </md-table-cell>
-                                </template>
-                            </md-table-row>
-                            <md-table-row v-if="currentLevel.children === 0">
-                                <md-table-cell>No files</md-table-cell>
-                            </md-table-row>
-                        </md-table-body>
-                    </md-table>
-                </md-layout>
-            </transition>
-        </md-layout>
+                            </template>
+                        </md-table-row>
+                        <md-table-row v-if="currentLevel.children === 0">
+                            <md-table-cell>No files</md-table-cell>
+                        </md-table-row>
+                    </md-table-body>
+                </md-table>
+            </md-layout>
+        </transition>
     </div>
 </template>
 
@@ -196,6 +194,9 @@
         @Prop({default: true})
         public hideSearch: boolean;
 
+        @Prop({default: 3, type: Number})
+        public minQueryLength: number;
+
         @Prop(String)
         public jobId: string | null;
 
@@ -236,7 +237,7 @@
             if (this.currentLevel) {
                 let nodes = this.currentLevel.children;
                 const query = this.searchQuery.trim();
-                if (query.length >= 3) {
+                if (query.length >= this.minQueryLength) {
                     this.searching = true;
                     nodes = this.searchFilteredNodes;
                     this.searching = false;

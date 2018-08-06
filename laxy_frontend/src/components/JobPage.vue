@@ -93,20 +93,35 @@
                         </md-layout>
                     </transition>
                     <transition name="fade">
-                        <md-layout md-flex="40" md-flex-medium="100"
-                                   v-show="showTab === 'summary' || showTab == null" :md-column-medium="true"
-                                   :md-row-large="true">
-
-                            <file-list v-if="job != null && job.status !== 'running'"
-                                       ref="key-files"
-                                       class="fill-width"
-                                       title="Key result files"
-                                       :fileset-id="job.output_fileset_id"
-                                       :tag-filters="['bam', 'bai', 'counts', 'degust', 'report']"
-                                       :hide-search="false"
-                                       :job-id="jobId"
-                                       @refresh-error="showErrorDialog">
-                            </file-list>
+                        <md-layout md-flex-medium="100"
+                                   v-show="showTab === 'summary' || showTab == null" md-column>
+                                <file-list v-if="job != null && job.status !== 'running'"
+                                           ref="report-files"
+                                           title="Reports"
+                                           :fileset-id="job.output_fileset_id"
+                                           :tag-filters="['report', 'html']"
+                                           :hide-search="true"
+                                           :job-id="jobId"
+                                           @refresh-error="showErrorDialog">
+                                </file-list>
+                                <file-list v-if="job != null && job.status !== 'running'"
+                                           ref="count-files"
+                                           title="Count files"
+                                           :fileset-id="job.output_fileset_id"
+                                           :tag-filters="['degust', 'counts']"
+                                           :hide-search="true"
+                                           :job-id="jobId"
+                                           @refresh-error="showErrorDialog">
+                                </file-list>
+                                <file-list v-if="job != null && job.status !== 'running'"
+                                           ref="alignment-files"
+                                           title="Alignment files"
+                                           :fileset-id="job.output_fileset_id"
+                                           :tag-filters="['bam', 'bai']"
+                                           :hide-search="false"
+                                           :job-id="jobId"
+                                           @refresh-error="showErrorDialog">
+                                </file-list>
 
                             <!--
                             <nested-file-list v-if="job && job.status !== 'running'"

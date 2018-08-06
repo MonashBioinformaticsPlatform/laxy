@@ -173,6 +173,7 @@ class JobOutputFilesInline(admin.TabularInline):
     fk_name = 'output_files'
     extra = 0
 
+
 class FilesInline(admin.TabularInline):
     model = File
     readonly_fields = ('id',)
@@ -182,6 +183,7 @@ class FilesInline(admin.TabularInline):
     verbose_name_plural = 'Files'
     fk_name = 'fileset'
     extra = 0
+
 
 class FileSetAdmin(Timestamped, VersionAdmin):
     list_display = ('uuid',
