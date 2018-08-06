@@ -43,7 +43,6 @@ import {WebAPI} from './web-api';
 import {truncateString} from './util';
 
 import FrontPage from './components/FrontPage.vue';
-import FileBrowser from './components/FileBrowser.vue';
 import RNASeqSetup from './components/RNASeqSetup.vue';
 import InputDataForm from './components/InputFilesForm.vue';
 import ENAFileSelect from './components/ENAFileSelect.vue';
@@ -100,12 +99,6 @@ const router = new VueRouter({
             path: '/ENAflow',
             name: 'ENAflow',
             component: ENAFlow,
-            props: true,
-        },
-        {
-            path: '/files',
-            name: 'files',
-            component: FileBrowser,
             props: true,
         },
         {
