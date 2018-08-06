@@ -46,7 +46,7 @@
                                 <md-table-cell md-numeric>
                                     <!--<div class="push-right">-->
                                     <md-button v-if="getDefaultViewMethod(node.file)"
-                                               class="md-icon-button push-right"
+                                               class="md-icon-button"
                                                @click="getDefaultViewMethod(node.file).method(node.file)">
                                         <md-tooltip md-direction="top">
                                             {{ getDefaultViewMethod(node.file).text }}
@@ -70,7 +70,7 @@
                                             <md-menu-item
                                                     v-for="view in getViewMethodsForTags(node.file.type_tags)"
                                                     :key="view.text"
-                                                    @click="view.method(node.file)">
+                                                    @click="view.method(node.file.id)">
                                                 <md-icon>{{ view.icon }}</md-icon>
                                                 <span>{{ view.text }}</span>
                                             </md-menu-item>
