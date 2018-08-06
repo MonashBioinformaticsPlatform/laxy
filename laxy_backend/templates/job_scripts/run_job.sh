@@ -21,11 +21,14 @@ readonly JOB_INPUT_STAGED="{{ JOB_INPUT_STAGED }}"
 readonly REFERENCE_GENOME="{{ REFERENCE_GENOME }}"
 readonly PIPELINE_VERSION="{{ PIPELINE_VERSION }}"
 readonly JOB_PATH=${PWD}
+readonly PIPELINE_CONFIG="${JOB_PATH}/input/pipeline_config.json"
 readonly CONDA_BASE="${JOB_PATH}/../miniconda3"
 readonly REFERENCE_BASE="${PWD}/../references/iGenomes"
 
 readonly DOWNLOAD_CACHE_PATH="${PWD}/../cache"
-readonly USE_DOWNLOAD_CACHE="yes"
+# TODO: Download cache currently broken - do not use
+readonly USE_DOWNLOAD_CACHE="no"
+readonly UNTAR_INPUT_FILES="yes"
 
 readonly SCHEDULER="slurm"
 # readonly SCHEDULER="local"
@@ -42,7 +45,8 @@ readonly BDS_SINGLE_NODE="yes"
 if [[ ${BDS_SINGLE_NODE} == "yes" ]]; then
     # system=local in bds.config - BDS will run each task as local process, not SLURM-aware
 
-    MEM=64000  # defaults for Human, Mouse
+    # MEM=64000  # defaults for Human, Mouse
+    MEM=40000  # defaults for Human, Mouse
     CPUS=12
     if [[ "$REFERENCE_GENOME" == "Saccharomyces_cerevisiae/Ensembl/R64-1-1" ]]; then
         MEM=16000 # yeast (uses ~ 8Gb)
@@ -125,6 +129,7 @@ function init_conda_env() {
 
         # Install an up-to-date curl and GNU parallel
         ${CONDA_BASE}/bin/conda install --yes -n "${env_name}" curl parallel jq awscli
+        ${CONDA_BASE}/bin/pip install oneliner
 
         # Then install rnasik
         ${CONDA_BASE}/bin/conda install --yes -n "${env_name}" \
@@ -198,8 +203,8 @@ function register_files() {
 }
 
 function setup_bds_config() {
-    BDS_CONFIG="${JOB_PATH}/bds.config"
-    cp "$(which bds).config ${BDS_CONFIG}"
+    BDS_CONFIG="${JOB_PATH}/input/bds.config"
+    cp "$(which bds).config" "${BDS_CONFIG}"
 
     # TODO: This won't work yet since the default bds.config contains
     # ~/.bds/clusterGeneric/* paths to the SLURM wrapper scripts.
@@ -216,7 +221,7 @@ function setup_bds_config() {
 function get_input_data_urls() {
     # Output is one URL one per line
     local urls
-    urls=$(jq '.sample_set.samples[].files[][]' <pipeline_config.json | sed s'/"//g')
+    urls=$(jq '.sample_set.samples[].files[][]' <${PIPELINE_CONFIG} | sed s'/"//g')
     echo "${urls}"
 }
 
@@ -288,13 +293,18 @@ if [ "${JOB_INPUT_STAGED}" == "no" ]; then
           "wget -x -v --continue --trust-server-names --retry-connrefused --read-timeout=60 \
                --waitretry 60 --timeout=30 --tries 8 \
                --append-output output/download.log --directory-prefix ${DOWNLOAD_CACHE_PATH}/ {}" <<< """${urls}"""
-               # && ln -s ${DOWNLOAD_CACHE_PATH}/{} input/" <<< """${urls}"""
+               # && ln -sf ${DOWNLOAD_CACHE_PATH}/{} input/" <<< """${urls}"""
+
+        # TODO: THIS FAILS WHEN THE FILE AS ALREADY BEEN CACHED !
+        #       download.log doesn't contain the filename when the file already exists.
+        #       We probably need to move to a dedicated downloader + caching script
+        #       at this point ...
 
         # Grab the the absolute paths to downloaded files from the download.log, symlink to {job_path}/input
         # shellcheck disable=SC1112
         readonly downloaded_files="$(grep -E '’ saved \[' "${JOB_PATH}"/output/download.log | sed 's/[‘’]//g' | cut -d ' ' -f 6)"
         for f in ${downloaded_files}; do
-            ln -s "${f}" input/
+            ln -sf "${f}" input/
         done
     else
         parallel --no-notice --line-buffer -j ${PARALLEL_DOWNLOADS} --halt now,fail=1 \
@@ -302,6 +312,28 @@ if [ "${JOB_INPUT_STAGED}" == "no" ]; then
                --waitretry 60 --timeout=30 --tries 8 \
                --append-output output/download.log --directory-prefix input/ {}" <<< """${urls}"""
     fi
+
+    # If we have a URL in the form https://example.com/data.tar#reads.fastq.gz,
+    # splits the tar URL into filename and hash parts, extracts #file from .tar file
+    # eg https://example.com/data.tar#reads.fastq.gz --> tar -xf data.tar reads.fastq.gz
+    # Requires: pip install oneliner
+    cd input
+    echo "${urls}" | \
+      python -m oneliner -m subprocess,urllib.parse.[urlparse],pathlib.[Path] \
+              -nle "subprocess.run(['tar','-xvf', str(Path(urlparse(_.rsplit('#', 1)[0]).path).name), _.rsplit('#', 1)[1]]) if Path(urlparse(_.rsplit('#', 1)[0]).path).name.endswith('.tar') and '#' in _ else None"
+
+    # Remove the associated tar file after extraction
+    echo "${urls}" | \
+      python -m oneliner -m subprocess,urllib.parse.[urlparse],pathlib.[Path] \
+              -nle "subprocess.run(['rm', '-f', str(Path(urlparse(_.rsplit('#', 1)[0]).path).name)]) if Path(urlparse(_.rsplit('#', 1)[0]).path).name.endswith('.tar') and '#' in _ else None"
+
+    if [ "${UNTAR_INPUT_FILES}" == "yes" ]; then
+        # Just untar any remaining tars (eg, for the case where we are given a single TAR file)
+        # find . -name "*.tar" -exec ar xvf {} \;
+        find . -type f -exec sh -c 'case "$(file -b --mime-type "$0")" in *"application/x-tar"*) true;; *) false;; esac' {} \; -exec tar xvf {} \;
+    fi
+
+    cd ..
 
     send_event "INPUT_DATA_DOWNLOAD_FINISHED"
 
@@ -324,17 +356,43 @@ send_event "JOB_PIPELINE_STARTING"
 # request with curl upon failure
 set +o errexit
 
-${PREFIX_JOB_CMD} \
-   RNAsik -align star \
-       -fastaRef ${GENOME_FASTA} \
-       -fqDir ../input \
-       -counts \
-       -gtfFile ${GENOME_GTF} \
-       -all \
-       -paired \
-       -extn ".fastq.gz" \
-       -pairIds "_1,_2" \
-       >>job.out 2>>job.err
+# quick and dirty detection of paired-end or not
+PAIRIDS=""
+EXTN=".fastq.gz"
+if stat -t input/*_R2_001.fastq.gz >/dev/null 2>&1; then
+  EXTN="_001.fastq.gz"
+  PAIRIDS="_R1,_R2"
+elif stat -t input/*_R2.fastq.gz >/dev/null 2>&1; then
+  EXTN=".fastq.gz"
+  PAIRIDS="_R1,_R2"
+elif stat -t input/*_2.fastq.gz >/dev/null 2>&1; then
+  EXTN=".fastq.gz"
+  PAIRIDS="_1,_2"
+fi
+
+if [[ ! -z "PAIRIDS" ]]; then
+    ${PREFIX_JOB_CMD} \
+       RNAsik -align star \
+           -fastaRef ${GENOME_FASTA} \
+           -fqDir ../input \
+           -counts \
+           -gtfFile ${GENOME_GTF} \
+           -all \
+           -extn ${EXTN} \
+           >>job.out 2>>job.err
+else
+    ${PREFIX_JOB_CMD} \
+       RNAsik -align star \
+           -fastaRef ${GENOME_FASTA} \
+           -fqDir ../input \
+           -counts \
+           -gtfFile ${GENOME_GTF} \
+           -all \
+           -paired \
+           -extn ${EXTN} \
+           -pairIds ${PAIRIDS} \
+           >>job.out 2>>job.err
+fi
 
 # Capture the exit code of the important process, to be returned
 # in the curl request below

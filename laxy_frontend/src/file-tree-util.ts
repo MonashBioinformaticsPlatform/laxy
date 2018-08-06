@@ -11,12 +11,34 @@ import {Store as store} from './store';
 import {WebAPI} from './web-api';
 import {LaxyFile} from './model';
 
-export interface TreeNode {
+export interface TreeNode<T> {
     id: string;
     name: string;
-    file: LaxyFile | null;
-    parent: TreeNode | null;
-    children: TreeNode[];
+    obj: T | null;
+    meta: any;  // optional extra data like icon names, onclick callbacks
+    parent: TreeNode<T> | null;
+    children: Array<TreeNode<T>>;
+}
+
+export interface FileListItem {
+    name: string;
+    type: 'file' | 'directory';
+    tags: string[];
+    location: string;
+}
+
+export const EMPTY_TREE_ROOT: TreeNode<any> = {
+    id: '__root__',
+    name: '/',
+    obj: null,
+    meta: {},
+    parent: null,
+    children: [],
+} as TreeNode<any>;
+
+export function is_archive_url(url: string): boolean {
+    const tar_suffixes = ['.tar', '.tar.gz', '.tar.bz2'];
+    return some(tar_suffixes, (v) => url.endsWith(v));
 }
 
 export function hasIntersection(a: any[] | null, b: any[] | null): boolean {
@@ -129,44 +151,99 @@ export function downloadFile(file_id: string | LaxyFile, fileset: LaxyFileSet | 
     }
 }
 
-export function fileListToTree(files: LaxyFile[]): TreeNode {
-    const tree: TreeNode = {
+/* Turn a XXXBLAFOO_R1.fastq.gz filename into XXXBLAFOO_R1 */
+export function truncateFastqFilename(filename: string): string {
+    let fn = filename.replace('_001.fastq.gz', ''); // default Illumina
+    fn = fn.replace('.fastq.gz', '');  // ENA/SRA
+    return fn;
+}
+
+/* Given a typical FASTQ filename, XXXBLAFOO_R1.fastq.gz, return something like
+   the 'sample name' XXXBLAFOO.
+ */
+export function simplifyFastqName(filename: string): string {
+    let fn = truncateFastqFilename(filename);
+    fn = fn.replace(/_1$|_2$|_R1$|_R2$/, '');
+    return fn;
+}
+
+/*
+ Given a file and a list of
+ */
+export function findPair(file: any, files: any[], getName: Function | null = null): any | null {
+    if (getName == null) {
+        getName = (f: LaxyFile) => f.name;
+    }
+    const fn = truncateFastqFilename(getName(file));
+    for (const f of files) {
+        const other = truncateFastqFilename(getName(f));
+        if (fn.slice(0, -1) === other.slice(0, -1) &&
+            (parseInt(fn.slice(-1), 10) + parseInt(other.slice(-1), 10)) === 3) {
+            return f;
+        }
+    }
+    return null;
+}
+
+export function fileListToTree(files: LaxyFile[]): TreeNode<LaxyFile> {
+    return objListToTree<LaxyFile>(files,
+        (f: LaxyFile) => {
+            const parts = `${f.path}/${f.name}`.split('/');
+            parts.shift();
+            return parts;
+        },
+        (f: LaxyFile) => {
+            return f.id;
+        });
+}
+
+export function objListToTree<T>(objs: T[],
+                                 getPathParts: Function,
+                                 getId: Function): TreeNode<T> {
+    const tree: TreeNode<T> = {
         id: '__root__',
         name: '/',
-        file: null,
+        obj: null,
+        meta: {},
         parent: null,
         children: [],
-    } as TreeNode;
+    } as TreeNode<T>;
 
     let id_counter = 0;  // alternative ID used when there is no File UUID
 
-    for (const file of files) {
-        const pathPartStrings = `${file.path}/${file.name}`.split('/');
-        pathPartStrings.shift(); // Remove first blank element from the parts array.
-        const pathParts: TreeNode[] = [];
+    for (const obj of objs) {
+        // const pathPartStrings = `${file.path}/${file.name}`.split('/');
+        const pathPartStrings: string[] = getPathParts(obj);
+        // pathPartStrings.shift(); // Remove first blank element from the parts array.
+        const pathParts: Array<TreeNode<T>> = [];
         // Turn each/part/of/the/path into a TreeNode
         for (const partName of pathPartStrings) {
             pathParts.push({
                 id: id_counter.toString(),
                 name: partName,
-                file: null,
+                obj: null,
+                meta: {},
                 parent: null,
-                children: [] as TreeNode[]
+                children: [] as Array<TreeNode<T>>
             });
             id_counter++;
         }
 
-        // The last element in full path is the file (no such thing as empty
-        // directories)
-        pathParts[pathParts.length - 1].file = file;
-        pathParts[pathParts.length - 1].id = file.id;
+        // The last element in full path is the file (no such thing as empty directories)
+        const lastpart = pathParts[pathParts.length - 1];
+        lastpart.obj = obj;
+        lastpart.id = getId(obj);
+        lastpart.meta.type = 'file';
+        for (let i = 0; i < pathParts.length - 1; i++) {
+            pathParts[i].meta.type = 'directory';
+        }
 
-        let currentLevel: TreeNode = tree; // initialize currentLevel to the root of the tree
+        let currentLevel: TreeNode<T> = tree;  // initialize currentLevel to the root of the tree
 
         // walk up the path. for each subdirectory, determine if it is already
         // represented as a node in the tree else add it
         forEach(pathParts, (part => {
-            const existingPath: TreeNode = find(currentLevel.children, {name: part.name}) as any;
+            const existingPath: TreeNode<T> = find(currentLevel.children, {name: part.name}) as any;
 
             if (existingPath) {
                 // The path to this item was already in the tree, so don't add it again.
@@ -176,10 +253,11 @@ export function fileListToTree(files: LaxyFile[]): TreeNode {
                 const newPart = {
                     id: part.id,
                     name: part.name,
-                    file: part.file,
+                    obj: part.obj,
+                    meta: part.meta,
                     parent: currentLevel,
-                    children: [] as TreeNode[],
-                } as TreeNode;
+                    children: [] as Array<TreeNode<T>>,
+                } as TreeNode<T>;
 
                 currentLevel.children.push(newPart);
                 currentLevel = newPart;
@@ -189,11 +267,11 @@ export function fileListToTree(files: LaxyFile[]): TreeNode {
     return tree;
 }
 
-export function flattenTree(nodes: TreeNode[]): TreeNode[] {
+export function flattenTree<T>(nodes: Array<TreeNode<T>>): Array<TreeNode<T>> {
     if (!nodes || nodes.length === 0) return [];
     return nodes.concat(
         flattenTree(
-            flatten(nodes.map((n: TreeNode) => n.children))
+            flatten(nodes.map((n: TreeNode<T>) => n.children))
         )
     );
 }

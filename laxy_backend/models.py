@@ -824,7 +824,7 @@ class File(Timestamped, UUIDModel):
                 stream=True,
                 headers={},
                 auth=None)
-            filelike = getattr(response, 'raw', response)
+            filelike = response.raw
             filelike.decode_content = True
             return filelike
 

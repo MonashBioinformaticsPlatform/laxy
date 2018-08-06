@@ -2,10 +2,12 @@ import asyncio
 from collections import OrderedDict
 import coreapi
 import coreschema
+from fnmatch import fnmatch
 import json_merge_patch
 import jsonpatch
 import logging
 import os
+import pydash
 import requests
 import rest_framework_jwt
 from celery import chain
@@ -18,9 +20,13 @@ from django.http import HttpResponse, StreamingHttpResponse
 from django.urls import reverse
 from django.utils.encoding import force_text
 from django_filters.rest_framework import DjangoFilterBackend
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
+from fs.errors import DirectoryExpected
 from io import BytesIO
 from pathlib import Path
 import paramiko
+from requests import HTTPError
 from robobrowser import RoboBrowser
 from rest_framework import generics
 from rest_framework import status
@@ -42,6 +48,8 @@ from urllib.parse import urlparse
 from wsgiref.util import FileWrapper
 
 from drf_openapi.utils import view_config
+
+from laxy_backend.storage.http_remote_index import is_archive_link
 from . import bcbio
 from . import ena
 from . import tasks
@@ -71,14 +79,16 @@ from .serializers import (PatchSerializerResponse,
                           EventLogSerializer, JobEventLogSerializer,
                           JobFileSerializerCreateRequest,
                           InputOutputFilesResponse,
-                          RedirectResponseSerializer)
-from .util import sh_bool, laxy_sftp_url
+                          RedirectResponseSerializer, FileListing)
+from .util import sh_bool, laxy_sftp_url, generate_uuid, multikeysort
+from .storage import http_remote_index
 from .view_mixins import (JSONView, GetMixin, PatchMixin,
                           DeleteMixin, PostMixin, CSVTextParser,
                           PutMixin, RowsCSVTextParser)
 
 # from .models import User
 from django.contrib.auth import get_user_model
+
 User = get_user_model()
 
 logger = logging.getLogger(__name__)
@@ -181,11 +191,22 @@ class StreamingFileDownloadRenderer(BaseRenderer):
     charset = None
     render_style = 'binary'
 
-    def render(self, filelike, media_type=None, renderer_context=None,
+    def render(self, filelike,
+               media_type=None,
+               renderer_context=None,
                blksize=8192):
         iterable = FileWrapper(filelike, blksize=blksize)
         for chunk in iterable:
             yield chunk
+
+
+class RemoteFilesQueryParams(QueryParamFilterBackend):
+    def __init__(self):
+        super().__init__([
+            dict(name='url',
+                 example='https://bioinformatics.erc.monash.edu/home/andrewperry/test/sample_data/',
+                 description='A URL containing links to input data files'),
+        ])
 
 
 class ENAQueryParams(QueryParamFilterBackend):
@@ -727,15 +748,18 @@ class JobFileView(StreamFileMixin,
         :rtype:
         -->
         """
+
         job = self.get_obj(job_id)
         if job is None:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': f'Unknown job ID: {job_id}'},
+                            status=status.HTTP_404_NOT_FOUND)
 
         fname = Path(file_path).name
         fpath = Path(file_path).parent
         file_obj = job.get_files().filter(name=fname, path=fpath).first()
         if file_obj is None:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': f'Cannot find file in job {job_id} by path/filename'},
+                            status=status.HTTP_404_NOT_FOUND)
 
         # serializer = self.Meta.serializer(file_obj)
         # return Response(serializer.data, status=status.HTTP_200_OK)
@@ -746,8 +770,10 @@ class JobFileView(StreamFileMixin,
         else:
             # File view/download is the default when no Content-Type is specified
             if 'download' in request.query_params:
+                logger.debug(f"Attempting download of {file_obj.id}")
                 return super().download(file_obj, filename=fname)
             else:
+                logger.debug(f"Attempting view in browser of {file_obj.id}")
                 return super().view(file_obj, filename=fname)
 
         # return super(FileView, self).get(request, file_obj.id)
@@ -1348,7 +1374,7 @@ class PipelineRunView(GetMixin,
     @view_config(response_serializer=PipelineRunSerializer)
     def get(self, request: Request, uuid, version=None):
         """
-        Returns info about a FileSet, specified by UUID.
+        Returns info about a PipelineRun, specified by UUID.
 
         <!--
         :param request: The request object.
@@ -2075,6 +2101,140 @@ class SendFileToDegust(JSONView):
         else:
             return HttpResponse(status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                                 reason="Error contacting Degust.")
+
+
+class RemoteBrowseView(JSONView):
+    renderer_classes = (JSONRenderer,)
+    serializer_class = FileListing
+    filter_backends = (RemoteFilesQueryParams,)
+    api_docs_visible_to = 'public'
+
+    @view_config(response_serializer=FileListing)
+    @method_decorator(cache_page(10 * 60))
+    def get(self, request, version=None):
+        """
+        Returns a single level of a file/directory tree.
+        Takes query parameters:
+        * `url` - the URL (http[s]:// or ftp://) to retrieve.
+        * `fileglob` - a glob pattern to filter returned files by (eg `*.csv`). Doesn't filter directories.
+        eg
+
+        **Request:**
+
+        `GET http://laxy.io/api/v1/remote-browse/?url=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR343/001/SRR3438011/&fileglob=*.gz`
+
+        **Response:**
+        ```json
+        {
+          "listing":[
+                {
+                  "type":"file",
+                  "name":"SRR3438011_1.fastq.gz",
+                  "location":"ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR343/001/SRR3438011/SRR3438011_1.fastq.gz",
+                  "tags": []
+                },
+                {
+                  "type":"directory",
+                  "name":"FastQC_reports",
+                  "location":"ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR343/001/SRR3438011/FastQC_reports/",
+                  "tags": []
+                },
+                {
+                  "type":"file",
+                  "name":"data.tar",
+                  "location":"ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR343/001/SRR3438011/data.tar.gz",
+                  "tags": ['archive']
+                }
+            ]
+        }
+        ```
+
+        <!--
+        :param request:
+        :type request:
+        :param version:
+        :type version:
+        :return:
+        :rtype:
+        -->
+        """
+        url = request.query_params.get('url', None)
+        fileglob = request.query_params.get('fileglob', '*')
+
+        if url is None:
+            return HttpResponse(status=status.HTTP_400_BAD_REQUEST,
+                                reason="url query parameter is required.")
+
+        # def _looks_like_archive(fn):
+        #     archive_extensions = ['.tar']
+        #     return any([fn.endswith(ext) for ext in archive_extensions])
+
+        listing = []
+        scheme = urlparse(url).scheme
+        if is_archive_link(url):
+            try:
+                archive_files = http_remote_index.get_tar_file_manifest(url)
+                for f in archive_files:
+                    filepath = f['filepath']
+                    listing.append(dict(name=filepath,
+                                        location=f'{url}#{filepath}',
+                                        type='file',
+                                        tags=['inside_archive']))
+            except BaseException as ex:
+                logger.debug(f'Unable to find archive manifest for {url}')
+                logger.exception(ex)
+                fn = Path(urlparse(url).path).name
+                listing = [dict(name=fn,
+                                location=f'{url}',
+                                type='file',
+                                tags=['archive'])]
+
+        elif scheme == 'ftp':
+            from fs import open_fs
+            try:
+                ftp_fs = open_fs(url)
+
+                for step in ftp_fs.walk(filter=[fileglob], search='breadth', max_depth=1):
+                    listing.extend([dict(type='directory',
+                                         name=i.name,
+                                         location=f'{url.rstrip("/")}/{i.name}',
+                                         tags=[])
+                                    for i in step.dirs])
+                    listing.extend([dict(type='file',
+                                         name=i.name,
+                                         location=f'{url.rstrip("/")}/{i.name}',
+                                         tags=['archive'] if is_archive_link(i.name) else [])
+                                    for i in step.files])
+            except DirectoryExpected as ex:
+                fn = Path(urlparse(url).path).name
+                listing = [dict(name=fn,
+                                location=f'{url}',
+                                type='file',
+                                tags=['archive'] if is_archive_link(fn) else [])]
+
+        elif scheme == 'http' or scheme == 'https':
+            file_links, dir_links = http_remote_index.grab_links_from_html_page(url)
+
+            for i in file_links:
+                name = Path(urlparse(i).path).name
+                if not fnmatch(name, fileglob):
+                    continue
+                listing.append(dict(type='file',
+                                    name=name,
+                                    location=i,
+                                    tags=['archive'] if is_archive_link(name) else []))
+            for i in dir_links:
+                name = Path(urlparse(i).path).name
+                listing.append(dict(type='directory',
+                                    name=name,
+                                    location=f'{i.rstrip("/")}/',
+                                    tags=[]))
+
+        # listing = pydash.sort_by(listing, ['type', 'name'])
+        listing = multikeysort(listing, ['type', 'name'])
+        item_list = FileListing({'listing': listing})
+        return Response(item_list.data,
+                        status=status.HTTP_200_OK)
 
 
 def _get_or_create_drf_token(user):

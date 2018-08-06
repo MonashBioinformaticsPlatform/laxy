@@ -31,12 +31,9 @@ Vue.use(VueRouter);
 Vue.use(VueMaterial);
 Vue.use(VueMoment);
 
-// sadly not working :/
-/*
-const VueMarkdown = require('vue-markdown');
-Vue.use(VueMarkdown);
-Vue.component('vue-markdown', VueMarkdown);
-*/
+// Import per component, not globally
+// import VueMarkdown from 'vue-markdown';
+// Vue.component('vue-markdown', VueMarkdown);
 
 import {FETCH_USER_PROFILE, SET_USER_PROFILE, Store as store} from './store';
 import {WebAPI} from './web-api';
@@ -46,6 +43,7 @@ import FrontPage from './components/FrontPage.vue';
 import RNASeqSetup from './components/RNASeqSetup.vue';
 import InputDataForm from './components/InputFilesForm.vue';
 import ENAFileSelect from './components/ENAFileSelect.vue';
+import RemoteFilesSelect from './components/RemoteFilesSelect.vue';
 import SampleCart from './components/SampleCart.vue';
 import SampleTable from './components/SampleTable.vue';
 import PipelineParams from './components/PipelineParams.vue';
@@ -112,6 +110,12 @@ const router = new VueRouter({
             name: 'enaselect',
             component: ENAFileSelect,
             props: true,
+        },
+        {
+            path: '/remoteselect',
+            name: 'remoteselect',
+            component: RemoteFilesSelect,
+            props: { showButtons: true },
         },
         {
             path: '/cart',

@@ -24,6 +24,9 @@ class JSONView(APIView):
     parser_classes = (JSONParser,)
     api_docs_visible_to = 'public'
 
+    class Meta:
+        model = None
+
     # def get(self, request):
     #     generator = SchemaGenerator()
     #     schema = generator.get_schema(request=request)

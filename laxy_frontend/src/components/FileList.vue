@@ -19,7 +19,7 @@
                         <md-table-cell md-numeric>
                             <!--<div class="push-right">-->
                             <md-button v-if="getDefaultViewMethod(file)"
-                                       class="md-icon-button push-right"
+                                       class="md-icon-button"
                                        @click="getDefaultViewMethod(file).method(file)">
                                 <md-tooltip md-direction="top">
                                     {{ getDefaultViewMethod(file).text }}
@@ -302,21 +302,4 @@
     /*.md-table-card {*/
     /*width: 100%;*/
     /*}*/
-
-    .fill-width {
-        width: 100%;
-    }
-
-    .truncate-text {
-        width: 100%;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .no-line-break {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
 </style>

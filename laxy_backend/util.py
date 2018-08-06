@@ -8,6 +8,10 @@ from basehash import base62
 import requests
 import cgi
 import os
+from operator import itemgetter
+from functools import cmp_to_key
+from typing import Mapping, Sequence
+
 from urllib.parse import urlparse
 
 from django.urls import reverse
@@ -130,6 +134,38 @@ def reverse_querystring(view, urlconf=None, args=None, kwargs=None,
 
 def unique(l):
     return list(set(l))
+
+
+def multikeysort(items: Sequence[Mapping], columns: Sequence[str], reverse=False) -> Sequence[Mapping]:
+    """
+    Alternative is to just use pydash.sort_by instead ...
+
+    :param items:
+    :type items:
+    :param columns:
+    :type columns:
+    :param reverse:
+    :type reverse:
+    :return:
+    :rtype:
+    """
+    i = itemgetter
+    comparers = [
+        ((i(col[1:].strip()), -1) if col.startswith('-') else (i(col.strip()), 1))
+        for col in columns
+    ]
+
+    def cmp(a, b):
+        return (a > b) - (a < b)
+
+    def comparer(left, right):
+        comparer_iter = (
+            cmp(fn(left), fn(right)) * mult
+            for fn, mult in comparers
+        )
+        return next((result for result in comparer_iter if result), 0)
+
+    return sorted(items, key=cmp_to_key(comparer), reverse=reverse)
 
 
 def laxy_sftp_url(job, path: str = None) -> str:

@@ -6,27 +6,41 @@
                 <md-toolbar class="md-transparent fill-width">
                     <h1 class="md-title">{{ titleText }}</h1>
                     <md-input-container v-if="!hideSearch" md-clearable>
-                        <md-input v-model="searchQuery" placeholder="Search"></md-input>
+                        <md-input v-model="searchQuery" :placeholder="searchBoxPlaceholder"></md-input>
                         <md-icon v-if="!searchQuery">search</md-icon>
                     </md-input-container>
                 </md-toolbar>
                 <md-toolbar class="md-transparent fill-width">
-                    <div v-if="!searchQuery.trim()" class="breadcrumbs">
-                        &nbsp;
-                        <span v-for="node in pathToRoot">
-                        <template v-if="node.id === '__root__'"><code>{{ rootPathName }} / </code></template>
-                        <template v-else><code>{{ node.name }} / </code></template>
-                    </span>
-                        <br/>
-                    </div>
+                    <slot name="breadcrumbs">
+                        <div v-if="!searchQuery.trim()" class="breadcrumbs">
+                            &nbsp;
+                            <span v-for="node in pathToRoot">
+                                <template v-if="node.id === '__root__'"><code>{{ rootPathName }} / </code></template>
+                                <template v-else><code>{{ node.name }} / </code></template>
+                            </span>
+                            <br/>
+                        </div>
+                    </slot>
                 </md-toolbar>
-                <md-table>
+                <md-table ref="file-table" @select="onSelect">
+                    <md-table-header>
+                        <md-table-row>
+                            <md-table-head>File</md-table-head>
+                            <md-table-head v-if="!hideActions" style="text-align: right;">
+                                Action
+                            </md-table-head>
+                        </md-table-row>
+                    </md-table-header>
                     <md-table-body v-if="currentLevel">
-                        <md-table-row v-if="currentLevel.parent" @click.native="upDirectory">
-                            <md-table-cell>
+                        <md-table-row v-if="currentLevel.parent"
+                                      @click.native="upDirectory">
+                            <md-table-cell class="md-table-selection">
                                 <div class="push-left">
-                                    <md-icon>folder_open</md-icon>&nbsp;..
+                                    <md-icon>folder_open</md-icon>
                                 </div>
+                            </md-table-cell>
+                            <md-table-cell>
+                                <div class="no-line-break">..</div>
                             </md-table-cell>
                             <md-table-cell md-numeric>
                                 <md-button class="md-icon-button" :disabled="true">
@@ -38,20 +52,56 @@
                                 </md-button>
                             </md-table-cell>
                         </md-table-row>
-                        <md-table-row v-for="node in currentLevelNodes" :key="node.id">
-                            <template v-if="node.file">
-                                <md-table-cell>
-                                    <div class="truncate-text">{{ node.file.name }}</div>
+                        <md-table-row v-if="showBackArrow"
+                                      @click.native="$emit('back-button-clicked')">
+                            <md-table-cell class="md-table-selection">
+                                <div class="push-left">
+                                    <md-icon>arrow_back</md-icon>
+                                </div>
+                            </md-table-cell>
+                            <md-table-cell>
+                                <div class="no-line-break"></div>
+                            </md-table-cell>
+                            <md-table-cell md-numeric>
+                                <md-button class="md-icon-button" :disabled="true">
+                                    <!-- empty placeholder button to preserve layout -->
+                                    <md-icon></md-icon>
+                                </md-button>
+                                <md-button class="md-icon-button push-right" :disabled="true">
+                                    <md-icon></md-icon>
+                                </md-button>
+                            </md-table-cell>
+                        </md-table-row>
+                        <md-table-row v-for="node in currentLevelNodes" :md-item="node.obj" :key="node.id"
+                                      :md-selection="node.obj && selectableTypes.includes(node.meta.type) && !isInCart(node.obj)"
+                                      @selected="onSelectedRow(node.obj)"
+                                      @deselected="onDeselectedRow(node.obj)">
+                            <template v-if="node.meta.type === 'file'">
+                                <!-- when in cart, insert a disabled checkbox
+                                     (since :md-selection="false"  _removes_ the checkbox) -->
+                                <md-table-cell v-if="isInCart(node.obj)"
+                                               class="md-table-selection">
+                                    <md-checkbox disabled></md-checkbox>
                                 </md-table-cell>
-                                <md-table-cell md-numeric>
-                                    <!--<div class="push-right">-->
-                                    <md-button v-if="getDefaultViewMethod(node.file)"
+
+                                <md-table-cell @click.native="getProp(node.meta, 'onclick', (n) => {})(node)">
+                                    <div class="no-line-break">
+                                        <md-icon v-if="node.meta.tags && node.meta.tags.includes('archive')">
+                                            folder_special
+                                        </md-icon>
+                                        {{ node.obj.name | truncate }}
+                                    </div>
+                                </md-table-cell>
+                                <md-table-cell v-if="!hideActions"
+                                               @click.native="getProp(node.meta, 'onclick', (n) => {})(node)"
+                                               md-numeric>
+                                    <md-button v-if="getDefaultViewMethod(node.obj)"
                                                class="md-icon-button push-right"
-                                               @click="getDefaultViewMethod(node.file).method(node.file)">
+                                               @click="getDefaultViewMethod(node.obj).method(node.obj)">
                                         <md-tooltip md-direction="top">
-                                            {{ getDefaultViewMethod(node.file).text }}
+                                            {{ getDefaultViewMethod(node.obj).text }}
                                         </md-tooltip>
-                                        <md-icon>{{ getDefaultViewMethod(node.file).icon }}</md-icon>
+                                        <md-icon>{{ getDefaultViewMethod(node.obj).icon }}</md-icon>
                                     </md-button>
                                     <md-button v-else
                                                :disabled="true"
@@ -65,28 +115,32 @@
                                         </md-button>
 
                                         <md-menu-content>
-                                            <i class="md-caption" style="padding-left: 16px">{{ node.file.id }}</i>
+                                            <i class="md-caption" style="padding-left: 16px">{{ node.obj.id }}</i>
                                             <!--  -->
                                             <md-menu-item
-                                                    v-for="view in getViewMethodsForTags(node.file.type_tags)"
+                                                    v-for="view in getViewMethodsForTags(node.obj.type_tags)"
                                                     :key="view.text"
-                                                    @click="view.method(node.file)">
+                                                    @click="view.method(node.obj)">
                                                 <md-icon>{{ view.icon }}</md-icon>
                                                 <span>{{ view.text }}</span>
                                             </md-menu-item>
                                         </md-menu-content>
                                     </md-menu>
-                                    <!--</div>-->
                                 </md-table-cell>
                             </template>
-                            <template v-else>
+                            <template v-else-if="node.meta.type === 'directory'">
                                 <!-- it's a directory, not a file -->
-                                <md-table-cell @click.native="enterDirectory(node)">
-                                    <div class="truncate-text">
-                                        <md-icon>folder</md-icon>&nbsp;{{ node.name }}
+                                <md-table-cell class="md-table-selection"
+                                               @click.native="getProp(node.meta, 'onclick', enterDirectory)(node)">
+                                    <md-icon>folder</md-icon>
+                                </md-table-cell>
+                                <md-table-cell @click.native="getProp(node.meta, 'onclick', enterDirectory)(node)">
+                                    <div class="no-line-break">
+                                        {{ node.name | truncate }}
                                     </div>
                                 </md-table-cell>
-                                <md-table-cell md-numeric @click.native="enterDirectory(node)">
+                                <md-table-cell md-numeric
+                                               @click.native="getProp(node.meta, 'onclick', enterDirectory)(node)">
                                     <md-button class="md-icon-button push-right" :disabled="true">
                                         <!-- <md-icon>subdirectory_arrow_right</md-icon> -->
                                         <!-- empty placeholder button to preserve layout -->
@@ -112,6 +166,7 @@
 
     import filter from "lodash-es/filter";
     import map from "lodash-es/map";
+    import lodashGet from "lodash-es/get";
     import head from "lodash-es/head";
     import sortBy from "lodash-es/sortBy";
     import flatten from "lodash-es/flatten";
@@ -158,6 +213,7 @@
         fileListToTree,
         flattenTree,
         TreeNode,
+        findPair,
     } from "../file-tree-util";
 
     import {DummyFileSet as _dummyFileSet} from "../test-data";
@@ -169,7 +225,7 @@
         _DEBUG: boolean = false;
 
         @Prop()
-        public fileList: LaxyFile[];
+        public fileTree: TreeNode<LaxyFile>; // TreeNode<any>; ?
 
         @Prop({type: String, default: ""})
         public rootPathName: string;
@@ -191,8 +247,20 @@
         })
         public tagFilters: string[];
 
+        @Prop({default: () => ['file'], type: Array})
+        public selectableTypes: string[];
+
         @Prop({default: true})
         public hideSearch: boolean;
+
+        @Prop({default: false})
+        public hideActions: boolean;
+
+        @Prop({default: false})
+        public showBackArrow: boolean;
+
+        @Prop({default: true})
+        public autoSelectPair: boolean;
 
         @Prop({default: 3, type: Number})
         public minQueryLength: number;
@@ -200,30 +268,40 @@
         @Prop(String)
         public jobId: string | null;
 
+        @Prop({default: 'Search', type: String})
+        public searchBoxPlaceholder: string;
+
         public searchQuery: string = "";
         public searching: boolean = false;
 
+        // for templates
+        getProp = lodashGet;
+
+        get selectedFiles(): LaxyFile[] {
+            return (this.$refs["file-table"] as MdTable).selectedRows as LaxyFile[];
+        }
+
         @Watch("fileTree")
-        initCurrentLevel(new_val: TreeNode, old_value: TreeNode) {
+        initCurrentLevel(new_val: TreeNode<LaxyFile>, old_value: TreeNode<LaxyFile>) {
             this.currentLevel = this.fileTree;
         }
 
-        public currentLevel: TreeNode | null = null;
+        public currentLevel: TreeNode<LaxyFile> | null = null;
 
         @Debounce(1000)
-        get searchFilteredNodes(): TreeNode[] {
+        get searchFilteredNodes(): Array<TreeNode<LaxyFile>> {
             const query = this.searchQuery.trim();
 
             const nodes = flattenTree(this.fileTree.children);
 
             if (!query || query.length === 0) return nodes;
 
-            const hits = filter(nodes,
-                (node) => {
-                    if (node.file) {
-                        return `${node.file.name}/${node.file.name}`.includes(query);
+            const hits: Array<TreeNode<LaxyFile>> = filter(nodes,
+                (node: TreeNode<LaxyFile>) => {
+                    if (node.obj) {
+                        return `${node.obj.name}/${node.obj.name}`.includes(query);
                         // TODO: Make globbing work, or look at vuex-search
-                        // return minimatch(`${node.file.name}/${node.file.name}`, query);
+                        // return minimatch(`${node.obj.name}/${node.obj.name}`, query);
                     } else {
                         return node.name.includes(query);
                         // TODO: Make globbing work, or look at vuex-search
@@ -233,7 +311,7 @@
             return hits;
         }
 
-        get currentLevelNodes(): TreeNode[] {
+        get currentLevelNodes(): Array<TreeNode<LaxyFile>> {
             if (this.currentLevel) {
                 let nodes = this.currentLevel.children;
                 const query = this.searchQuery.trim();
@@ -244,17 +322,18 @@
                 }
                 return sortBy(nodes,
                     [
-                        (n: TreeNode) => n.file != null,
+                        (n: TreeNode<LaxyFile>) => n.obj != null,
+                        "meta.type",
                         "name"
                     ]);
             }
             return [];
         }
 
-        get pathToRoot(): TreeNode[] {
+        get pathToRoot(): TreeNode<LaxyFile>[] {
             if (this.currentLevel) {
                 let parent = this.currentLevel.parent;
-                let nodes: TreeNode[] = [this.currentLevel];
+                let nodes: TreeNode<LaxyFile>[] = [this.currentLevel];
                 while (parent != null) {
                     if (parent.name) nodes.push(parent);
                     parent = parent.parent;
@@ -265,41 +344,80 @@
             return [];
         }
 
-        private _emptyTreeRoot: TreeNode = {
-            id: "__root__",
-            name: "/",
-            file: null,
-            parent: null,
-            children: [],
-        } as TreeNode;
-
-        get fileTree(): TreeNode {
+        /*
+        get fileTree(): TreeNode<LaxyFile> {
             if (this.files) {
                 return fileListToTree(this.files);
             } else {
                 return this._emptyTreeRoot;
             }
         }
+        */
 
         get currentLevelFiles(): (LaxyFile | null)[] {
             if (this.currentLevel) {
                 return map(sortBy(this.currentLevel.children, ["name"]),
-                    (node) => node.file);
+                    (node) => node.obj);
             }
             return [];
         }
 
-        upDirectory(): TreeNode | null {
+        upDirectory(): TreeNode<LaxyFile> | null {
             if (this.currentLevel && this.currentLevel.parent) {
                 this.currentLevel = this.currentLevel.parent;
             }
-            this.searchQuery = '';
+            this.searchQuery = "";
             return this.currentLevel;
         }
 
-        enterDirectory(node: TreeNode) {
-            this.searchQuery = '';
+        enterDirectory(node: TreeNode<LaxyFile>) {
+            this.searchQuery = "";
             this.currentLevel = node;
+        }
+
+        onSelect(rows: any) {
+            this.$emit("select", rows);
+            // console.log(rows);
+        }
+
+        // checks / unchecks the mdTableRow checkbox, based on finding the
+        // rows associated (file) object
+        _setRowCheckboxState(file: LaxyFile, state: boolean): void {
+            const table = this.$refs["file-table"] as MdTable;
+            // skip header row(s)
+            const rows = filter(table.$children, (r) => !r.headRow);
+            const row = rows[table.data.indexOf(file)];
+            table.setRowSelection(state, file);
+            row.checkbox = state;
+        }
+
+        onSelectedRow(file: LaxyFile) {
+            if (this.autoSelectPair && this.files && file) {
+                const pair = findPair(file, this.files);
+                if (pair != null) {
+                    this._setRowCheckboxState(pair, true);
+                }
+                // console.log([file, pair]);
+            }
+            this.$emit("selected", file);
+        }
+
+        onDeselectedRow(file: LaxyFile) {
+            if (this.autoSelectPair && this.files && file) {
+                const pair = findPair(file, this.files);
+                if (pair != null) {
+                    this._setRowCheckboxState(pair, false);
+                }
+                // console.log([file, pair]);
+            }
+            this.$emit("deselected", file);
+        }
+
+        public isInCart(file: LaxyFile) {
+            for (let sample of this.$store.state.samples.items) {
+                if (sample.files.includes(file)) return true;
+            }
+            return false;
         }
 
         private viewMethods: ViewMethod[] = [
@@ -369,6 +487,7 @@
             // this.fileList = _dummyFileSet.files;
             // this.filesetId = _dummyFileSet.id;
             //this.currentLevel = this.fileTree[4];
+            this.currentLevel = this.fileTree;
         }
 
         getViewMethodsForTags(tags: string[]) {
@@ -383,7 +502,8 @@
         }
 
         get files(): LaxyFile[] {
-            let filtered: LaxyFile[] = this.fileList;
+            const nodelist = flattenTree(this.fileTree.children);
+            let filtered: LaxyFile[] = map(nodelist, (n) => n.obj as LaxyFile);
             filtered = filterByTag(filtered, this.tagFilters);
             filtered = filterByRegex(filtered, strToRegex(this.regexFilters));
             return filtered;
@@ -400,11 +520,4 @@
     /*.md-table-card {*/
     /*width: 100%;*/
     /*}*/
-
-    .truncate-text {
-        width: 600px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
 </style>

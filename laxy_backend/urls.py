@@ -27,7 +27,7 @@ from laxy_backend.views import (JobView, JobCreate,
                                 ENAQueryView, ENAFastqUrlQueryView, JobListView,
                                 EventLogCreate, EventLogListView, JobEventLogCreate,
                                 JobFileView, JobFileBulkRegistration, trigger_file_registration,
-                                SendFileToDegust)
+                                SendFileToDegust, RemoteBrowseView)
 
 from laxy_backend.view_auth import Login, Logout, view_user_profile
 
@@ -130,10 +130,9 @@ api_urls = [
             PipelineRunCreate.as_view(),
             name='create_pipelinerun'),
 
-    re_path(
-        r'compute-resource/(?P<uuid>[a-zA-Z0-9\-_]+)/$',
-        ComputeResourceView.as_view(),
-        name='compute_resource'),
+    re_path(r'compute-resource/(?P<uuid>[a-zA-Z0-9\-_]+)/$',
+            ComputeResourceView.as_view(),
+            name='compute_resource'),
     re_path(r'compute-resource/$',
             ComputeResourceCreate.as_view(),
             name='compute_resource'),
@@ -151,6 +150,10 @@ api_urls = [
     re_path(r'eventlog/$',
             EventLogCreate.as_view(),
             name='create_eventlog'),
+
+    re_path(r'remote-browse/$',
+            RemoteBrowseView.as_view(),
+            name='remote-browse'),
 
     re_path(r'_action/send_to/degust/(?P<file_id>[a-zA-Z0-9\-_]+)/$',
             SendFileToDegust.as_view(),

@@ -30,6 +30,7 @@
     "@types/lodash-es": "^4.17.1",
     "@types/numeral": "0.0.22",
     "@types/pluralize": "0.0.28",
+    "@types/vue-markdown": "^2.2.0",
     "@types/vue-material": "file:local_node_modules/vue-material-types",
     "babel-core": "^6.26.3",
     "css-loader": "^0.28.11",
