@@ -14,7 +14,7 @@ import {LaxyFile} from './model';
 export interface TreeNode {
     id: string;
     name: string;
-    file: LaxyFile | null;
+    obj: LaxyFile | null;
     parent: TreeNode | null;
     children: TreeNode[];
 }
@@ -130,26 +130,41 @@ export function downloadFile(file_id: string | LaxyFile, fileset: LaxyFileSet | 
 }
 
 export function fileListToTree(files: LaxyFile[]): TreeNode {
+    return objListToTree(files,
+        (f: LaxyFile) => {
+            const parts = `${f.path}/${f.name}`.split('/');
+            parts.shift();
+            return parts;
+        },
+        (f: LaxyFile) => {
+            return f.id;
+        });
+}
+
+export function objListToTree(objs: any,
+                              getPathPaths: Function,
+                              getId: Function): TreeNode {
     const tree: TreeNode = {
         id: '__root__',
         name: '/',
-        file: null,
+        obj: null,
         parent: null,
         children: [],
     } as TreeNode;
 
     let id_counter = 0;  // alternative ID used when there is no File UUID
 
-    for (const file of files) {
-        const pathPartStrings = `${file.path}/${file.name}`.split('/');
-        pathPartStrings.shift(); // Remove first blank element from the parts array.
+    for (const obj of objs) {
+        // const pathPartStrings = `${file.path}/${file.name}`.split('/');
+        const pathPartStrings: string[] = getPathPaths(obj);
+        // pathPartStrings.shift(); // Remove first blank element from the parts array.
         const pathParts: TreeNode[] = [];
         // Turn each/part/of/the/path into a TreeNode
         for (const partName of pathPartStrings) {
             pathParts.push({
                 id: id_counter.toString(),
                 name: partName,
-                file: null,
+                obj: null,
                 parent: null,
                 children: [] as TreeNode[]
             });
@@ -158,8 +173,8 @@ export function fileListToTree(files: LaxyFile[]): TreeNode {
 
         // The last element in full path is the file (no such thing as empty
         // directories)
-        pathParts[pathParts.length - 1].file = file;
-        pathParts[pathParts.length - 1].id = file.id;
+        pathParts[pathParts.length - 1].obj = obj;
+        pathParts[pathParts.length - 1].id = getId(obj);
 
         let currentLevel: TreeNode = tree; // initialize currentLevel to the root of the tree
 
@@ -176,7 +191,7 @@ export function fileListToTree(files: LaxyFile[]): TreeNode {
                 const newPart = {
                     id: part.id,
                     name: part.name,
-                    file: part.file,
+                    obj: part.obj,
                     parent: currentLevel,
                     children: [] as TreeNode[],
                 } as TreeNode;

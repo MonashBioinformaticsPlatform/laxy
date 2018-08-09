@@ -39,19 +39,19 @@
                             </md-table-cell>
                         </md-table-row>
                         <md-table-row v-for="node in currentLevelNodes" :key="node.id">
-                            <template v-if="node.file">
+                            <template v-if="node.obj">
                                 <md-table-cell>
-                                    <div class="truncate-text">{{ node.file.name }}</div>
+                                    <div class="truncate-text">{{ node.obj.name }}</div>
                                 </md-table-cell>
                                 <md-table-cell md-numeric>
                                     <!--<div class="push-right">-->
-                                    <md-button v-if="getDefaultViewMethod(node.file)"
+                                    <md-button v-if="getDefaultViewMethod(node.obj)"
                                                class="md-icon-button"
-                                               @click="getDefaultViewMethod(node.file).method(node.file)">
+                                               @click="getDefaultViewMethod(node.obj).method(node.obj)">
                                         <md-tooltip md-direction="top">
-                                            {{ getDefaultViewMethod(node.file).text }}
+                                            {{ getDefaultViewMethod(node.obj).text }}
                                         </md-tooltip>
-                                        <md-icon>{{ getDefaultViewMethod(node.file).icon }}</md-icon>
+                                        <md-icon>{{ getDefaultViewMethod(node.obj).icon }}</md-icon>
                                     </md-button>
                                     <md-button v-else
                                                :disabled="true"
@@ -65,12 +65,12 @@
                                         </md-button>
 
                                         <md-menu-content>
-                                            <i class="md-caption" style="padding-left: 16px">{{ node.file.id }}</i>
+                                            <i class="md-caption" style="padding-left: 16px">{{ node.obj.id }}</i>
                                             <!--  -->
                                             <md-menu-item
-                                                    v-for="view in getViewMethodsForTags(node.file.type_tags)"
+                                                    v-for="view in getViewMethodsForTags(node.obj.type_tags)"
                                                     :key="view.text"
-                                                    @click="view.method(node.file.id)">
+                                                    @click="view.method(node.obj.id)">
                                                 <md-icon>{{ view.icon }}</md-icon>
                                                 <span>{{ view.text }}</span>
                                             </md-menu-item>
@@ -220,10 +220,10 @@
 
             const hits = filter(nodes,
                 (node) => {
-                    if (node.file) {
-                        return `${node.file.name}/${node.file.name}`.includes(query);
+                    if (node.obj) {
+                        return `${node.obj.name}/${node.obj.name}`.includes(query);
                         // TODO: Make globbing work, or look at vuex-search
-                        // return minimatch(`${node.file.name}/${node.file.name}`, query);
+                        // return minimatch(`${node.obj.name}/${node.obj.name}`, query);
                     } else {
                         return node.name.includes(query);
                         // TODO: Make globbing work, or look at vuex-search
@@ -244,7 +244,7 @@
                 }
                 return sortBy(nodes,
                     [
-                        (n: TreeNode) => n.file != null,
+                        (n: TreeNode) => n.obj != null,
                         "name"
                     ]);
             }
@@ -268,7 +268,7 @@
         private _emptyTreeRoot: TreeNode = {
             id: "__root__",
             name: "/",
-            file: null,
+            obj: null,
             parent: null,
             children: [],
         } as TreeNode;
@@ -284,7 +284,7 @@
         get currentLevelFiles(): (LaxyFile | null)[] {
             if (this.currentLevel) {
                 return map(sortBy(this.currentLevel.children, ["name"]),
-                    (node) => node.file);
+                    (node) => node.obj);
             }
             return [];
         }
