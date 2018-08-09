@@ -118,7 +118,7 @@ const router = new VueRouter({
             path: '/remoteselect',
             name: 'remoteselect',
             component: RemoteFilesSelect,
-            props: true,
+            props: { showButtons: true },
         },
         {
             path: '/cart',

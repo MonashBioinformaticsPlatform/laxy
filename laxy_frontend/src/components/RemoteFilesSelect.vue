@@ -50,6 +50,7 @@
                             root-path-name=""
                             :fileList="files"
                             :hide-search="false"
+                            @select="onSelect"
                             @refresh-error="showErrorDialog">
                     </nested-file-list>
                 </md-layout>
@@ -57,7 +58,7 @@
         </md-layout>
         <md-layout v-if="showButtons" md-gutter>
             <md-button @click="addToCart"
-                       :disabled="submitting || samples.length === 0"
+                       :disabled="submitting || selectedFiles.length === 0"
                        class="md-raised">Add to cart
             </md-button>
         </md-layout>
@@ -112,9 +113,10 @@
     export default class RemoteFileSelect extends Vue {
         public showButtons: boolean | undefined;
 
-        public url: string = "";
+        public url: string = "https://bioinformatics.erc.monash.edu/home/andrewperry/test/sample_data/";
         public files: Array<LaxyFile> = [];
-        public selectedFiles: Array<LaxyFile> = [];
+
+        public selectedFiles: LaxyFile[] = [];
 
         public snackbar_message: string = "Everything is fine. ☃";
         public snackbar_duration: number = 2000;
@@ -136,8 +138,12 @@
         }
 
         onSelect(rows: any) {
-            this.selectedFiles = rows as Array<LaxyFile>;
-            // console.log(this.selectedSamples);
+            // console.log(rows);
+            // const fileList = this.$refs['remote-files-list'] as NestedFileList;
+            // if (fileList) {
+            //     this.selectedFiles = fileList.selectedFiles;
+            // }
+            this.selectedFiles = rows;
         }
 
         remove(rows: LaxyFile[]) {
@@ -148,13 +154,6 @@
         }
 
         addToCart() {
-            // TODO: this.selectedSamples needs to be transformed from an array
-            // of ENASample[] to an array of Sample[], mapping 'fastq_ftp' to 'files',
-            // 'sample_accession' to 'name'.
-            // Might be also a good time to refactor 'condition' to 'metadata'
-            // and shove some of the ENA metadata in there (eg the
-            // run/experiment/study/sample_accession)
-
             console.log(this.selectedFiles);
             const cart_samples: Sample[] = [];
             for (let f of this.selectedFiles) {
@@ -168,8 +167,8 @@
             let count = this.selectedFiles.length;
             this.flashSnackBarMessage(`Added ${count} ${pluralize("sample", count)} to cart.`);
 
-            this.remove(this.selectedFiles);
-            this.selectedFiles = [];
+            //this.remove(this.selectedFiles);
+            //this.selectedFiles = [];
         }
 
         // rowHover(row: any) {
@@ -179,19 +178,11 @@
 
         async listLinks(url: string) {
             this.files = [];
-            this.selectedFiles = [];
-
             try {
                 this.submitting = true;
                 const response = await WebAPI.remoteFilesList(url);
                 this.submitting = false;
-                // if (response.data.status === "error") {
-                //     this.error_alert_message = `${response.status} ${response.statusText}`;
-                //     this.openDialog("error_dialog");
-                // } else {
                 this.populateSelectionList(response.data);
-                //}
-                // console.log(response);
             } catch (error) {
                 console.log(error);
                 this.error_alert_message = error.toString();
@@ -201,8 +192,8 @@
         }
 
         populateSelectionList(data: any) {
-            // console.log(data);
             this.files = [];
+            // TODO: We don't yet handle 'directories'
             // for (let d of data['directories']) {
             //     this.files.push(d as LaxyFile);
             // }

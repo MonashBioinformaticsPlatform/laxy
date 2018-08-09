@@ -34,6 +34,8 @@ def grab_links(url: str,
         ignore = re.compile(ignore)
 
     try:
+        req = requests.get(url)
+        req.raise_for_status()
         text = requests.get(url).text
     except BaseException as e:
         raise e

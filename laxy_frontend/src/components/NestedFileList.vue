@@ -20,7 +20,13 @@
                         <br/>
                     </div>
                 </md-toolbar>
-                <md-table>
+                <md-table ref="file-table" @select="onSelect">
+                    <md-table-header>
+                        <md-table-row>
+                            <md-table-head>File</md-table-head>
+                            <md-table-head style="text-align: right;">Action</md-table-head>
+                        </md-table-row>
+                    </md-table-header>
                     <md-table-body v-if="currentLevel">
                         <md-table-row v-if="currentLevel.parent" @click.native="upDirectory">
                             <md-table-cell>
@@ -38,15 +44,20 @@
                                 </md-button>
                             </md-table-cell>
                         </md-table-row>
-                        <md-table-row v-for="node in currentLevelNodes" :key="node.id">
+                        <md-table-row v-for="node in currentLevelNodes" :md-item="node.obj" :key="node.id"
+                                      :md-selection="node.obj && !isInCart(node.obj)">
                             <template v-if="node.obj">
+                                <md-table-cell v-if="isInCart(node.obj)"
+                                               class="md-table-selection">
+                                    <md-checkbox disabled></md-checkbox>
+                                </md-table-cell>
                                 <md-table-cell>
-                                    <div class="truncate-text">{{ node.obj.name }}</div>
+                                    <div class="no-line-break">{{ node.obj.name | truncate }}</div>
                                 </md-table-cell>
                                 <md-table-cell md-numeric>
                                     <!--<div class="push-right">-->
                                     <md-button v-if="getDefaultViewMethod(node.obj)"
-                                               class="md-icon-button"
+                                               class="md-icon-button push-right"
                                                @click="getDefaultViewMethod(node.obj).method(node.obj)">
                                         <md-tooltip md-direction="top">
                                             {{ getDefaultViewMethod(node.obj).text }}
@@ -82,8 +93,8 @@
                             <template v-else>
                                 <!-- it's a directory, not a file -->
                                 <md-table-cell @click.native="enterDirectory(node)">
-                                    <div class="truncate-text">
-                                        <md-icon>folder</md-icon>&nbsp;{{ node.name }}
+                                    <div class="no-line-break">
+                                        <md-icon>folder</md-icon>&nbsp;{{ node.name | truncate }}
                                     </div>
                                 </md-table-cell>
                                 <md-table-cell md-numeric @click.native="enterDirectory(node)">
@@ -203,6 +214,10 @@
         public searchQuery: string = "";
         public searching: boolean = false;
 
+        get selectedFiles(): LaxyFile[] {
+            return (this.$refs["file-table"] as MdTable).selectedRows as LaxyFile[];
+        }
+
         @Watch("fileTree")
         initCurrentLevel(new_val: TreeNode, old_value: TreeNode) {
             this.currentLevel = this.fileTree;
@@ -293,13 +308,25 @@
             if (this.currentLevel && this.currentLevel.parent) {
                 this.currentLevel = this.currentLevel.parent;
             }
-            this.searchQuery = '';
+            this.searchQuery = "";
             return this.currentLevel;
         }
 
         enterDirectory(node: TreeNode) {
-            this.searchQuery = '';
+            this.searchQuery = "";
             this.currentLevel = node;
+        }
+
+        onSelect(rows: any) {
+            this.$emit('select', rows);
+            // console.log(rows);
+        }
+
+        public isInCart(file: LaxyFile) {
+            for (let sample of this.$store.state.samples.items) {
+                if (sample.files.includes(file)) return true;
+            }
+            return false;
         }
 
         private viewMethods: ViewMethod[] = [
@@ -401,11 +428,4 @@
     /*.md-table-card {*/
     /*width: 100%;*/
     /*}*/
-
-    .truncate-text {
-        width: 600px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
 </style>

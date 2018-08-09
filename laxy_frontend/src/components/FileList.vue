@@ -302,21 +302,4 @@
     /*.md-table-card {*/
     /*width: 100%;*/
     /*}*/
-
-    .fill-width {
-        width: 100%;
-    }
-
-    .truncate-text {
-        width: 100%;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .no-line-break {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
 </style>

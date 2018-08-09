@@ -21,11 +21,6 @@ declare interface ReferenceGenome {
     organism: string;
 }
 
-declare interface MdDialog extends Element {
-    open: Function;
-    close: Function;
-}
-
 declare interface ILaxyFile {
     id: string;
     name: string;
