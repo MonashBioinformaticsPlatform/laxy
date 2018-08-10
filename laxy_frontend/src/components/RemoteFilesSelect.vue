@@ -50,6 +50,7 @@
                             root-path-name=""
                             :fileList="files"
                             :hide-search="false"
+                            :hide-actions="true"
                             :auto-select-pair="true"
                             @select="onSelect"
                             @refresh-error="showErrorDialog">

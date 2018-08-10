@@ -24,7 +24,9 @@
                     <md-table-header>
                         <md-table-row>
                             <md-table-head>File</md-table-head>
-                            <md-table-head style="text-align: right;">Action</md-table-head>
+                            <md-table-head v-if="!hideActions" style="text-align: right;">
+                                Action
+                            </md-table-head>
                         </md-table-row>
                     </md-table-header>
                     <md-table-body v-if="currentLevel">
@@ -59,40 +61,38 @@
                                 <md-table-cell>
                                     <div class="no-line-break">{{ node.obj.name | truncate }}</div>
                                 </md-table-cell>
-                                <md-table-cell md-numeric>
-                                    <!--<div class="push-right">-->
-                                    <md-button v-if="getDefaultViewMethod(node.obj)"
-                                               class="md-icon-button push-right"
-                                               @click="getDefaultViewMethod(node.obj).method(node.obj)">
-                                        <md-tooltip md-direction="top">
-                                            {{ getDefaultViewMethod(node.obj).text }}
-                                        </md-tooltip>
-                                        <md-icon>{{ getDefaultViewMethod(node.obj).icon }}</md-icon>
-                                    </md-button>
-                                    <md-button v-else
-                                               :disabled="true"
-                                               class="md-icon-button">
-                                        <!-- empty placeholder button to preserve layout -->
-                                        <md-icon></md-icon>
-                                    </md-button>
-                                    <md-menu md-size="4">
-                                        <md-button class="md-icon-button push-right" md-menu-trigger>
-                                            <md-icon>arrow_drop_down</md-icon>
+                                <md-table-cell v-if="!hideActions" md-numeric>
+                                        <md-button v-if="getDefaultViewMethod(node.obj)"
+                                                   class="md-icon-button push-right"
+                                                   @click="getDefaultViewMethod(node.obj).method(node.obj)">
+                                            <md-tooltip md-direction="top">
+                                                {{ getDefaultViewMethod(node.obj).text }}
+                                            </md-tooltip>
+                                            <md-icon>{{ getDefaultViewMethod(node.obj).icon }}</md-icon>
                                         </md-button>
+                                        <md-button v-else
+                                                   :disabled="true"
+                                                   class="md-icon-button">
+                                            <!-- empty placeholder button to preserve layout -->
+                                            <md-icon></md-icon>
+                                        </md-button>
+                                        <md-menu md-size="4">
+                                            <md-button class="md-icon-button push-right" md-menu-trigger>
+                                                <md-icon>arrow_drop_down</md-icon>
+                                            </md-button>
 
-                                        <md-menu-content>
-                                            <i class="md-caption" style="padding-left: 16px">{{ node.obj.id }}</i>
-                                            <!--  -->
-                                            <md-menu-item
-                                                    v-for="view in getViewMethodsForTags(node.obj.type_tags)"
-                                                    :key="view.text"
-                                                    @click="view.method(node.obj.id)">
-                                                <md-icon>{{ view.icon }}</md-icon>
-                                                <span>{{ view.text }}</span>
-                                            </md-menu-item>
-                                        </md-menu-content>
-                                    </md-menu>
-                                    <!--</div>-->
+                                            <md-menu-content>
+                                                <i class="md-caption" style="padding-left: 16px">{{ node.obj.id }}</i>
+                                                <!--  -->
+                                                <md-menu-item
+                                                        v-for="view in getViewMethodsForTags(node.obj.type_tags)"
+                                                        :key="view.text"
+                                                        @click="view.method(node.obj.id)">
+                                                    <md-icon>{{ view.icon }}</md-icon>
+                                                    <span>{{ view.text }}</span>
+                                                </md-menu-item>
+                                            </md-menu-content>
+                                        </md-menu>
                                 </md-table-cell>
                             </template>
                             <template v-else>
@@ -210,6 +210,9 @@
 
         @Prop({default: true})
         public hideSearch: boolean;
+
+        @Prop({default: false})
+        public hideActions: boolean;
 
         @Prop({default: true})
         public autoSelectPair: boolean;
