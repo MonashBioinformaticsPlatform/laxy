@@ -28,10 +28,9 @@
                           {{ deep_path(sample, field) | numeral_format('0 a') }}
                     </span>
                     <span v-else-if="field === 'R1' || field === 'R2'">
-                        <span v-for="file in sample.files">
-                            <span>{{ file_basename(_.get(file, field, '')) }}
+                        <span v-for="file in _.filter(sample.files, (f) => _.get(f, field, false))">
+                            {{ file_basename(_.get(file, field, '')) }}
                                 <md-tooltip>{{ file[field] }}</md-tooltip>
-                            </span><br/>
                         </span>
                     </span>
                     <span v-else>
