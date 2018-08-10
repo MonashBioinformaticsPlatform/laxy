@@ -1,4 +1,5 @@
 // instead / supplement to @types/vue-material
+// import {Vue} from 'vue/types/vue';
 
 declare interface MdDialog extends Element {
     open: Function;
@@ -6,6 +7,9 @@ declare interface MdDialog extends Element {
 }
 
 declare interface MdTable extends Element {
+    // vue
+    readonly $children: any[];
+    readonly data: any;
     // data
     selectedRows: any[];
     hasRowSelection: boolean;
@@ -22,4 +26,7 @@ declare interface MdTable extends Element {
     mdSort: string;
     mdSortType: string;
     mdTheme: string;
+
+    // methods
+    setRowSelection(selected: boolean, row: any): void;
 }

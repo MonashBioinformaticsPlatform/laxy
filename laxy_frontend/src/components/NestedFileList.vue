@@ -45,12 +45,17 @@
                             </md-table-cell>
                         </md-table-row>
                         <md-table-row v-for="node in currentLevelNodes" :md-item="node.obj" :key="node.id"
-                                      :md-selection="node.obj && !isInCart(node.obj)">
+                                      :md-selection="node.obj && !isInCart(node.obj)"
+                                      @selected="onSelectedRow(node.obj)"
+                                      @deselected="onDeselectedRow(node.obj)">
                             <template v-if="node.obj">
+                                <!-- when in cart, insert a disabled checkbox
+                                     (since :md-selection="false"  _removes_ the checkbox) -->
                                 <md-table-cell v-if="isInCart(node.obj)"
                                                class="md-table-selection">
                                     <md-checkbox disabled></md-checkbox>
                                 </md-table-cell>
+
                                 <md-table-cell>
                                     <div class="no-line-break">{{ node.obj.name | truncate }}</div>
                                 </md-table-cell>
@@ -169,6 +174,7 @@
         fileListToTree,
         flattenTree,
         TreeNode,
+        findPair,
     } from "../file-tree-util";
 
     import {DummyFileSet as _dummyFileSet} from "../test-data";
@@ -204,6 +210,9 @@
 
         @Prop({default: true})
         public hideSearch: boolean;
+
+        @Prop({default: true})
+        public autoSelectPair: boolean;
 
         @Prop({default: 3, type: Number})
         public minQueryLength: number;
@@ -318,8 +327,37 @@
         }
 
         onSelect(rows: any) {
-            this.$emit('select', rows);
+            this.$emit("select", rows);
             // console.log(rows);
+        }
+
+        // checks / unchecks the mdTableRow checkbox, based on finding the
+        // rows associated (file) object
+        _setRowCheckboxState(file: LaxyFile, state: boolean): void {
+            const table = this.$refs["file-table"] as MdTable;
+            // skip header row(s)
+            const rows = filter(table.$children, (r) => !r.headRow);
+            const row = rows[table.data.indexOf(file)];
+            table.setRowSelection(state, file);
+            row.checkbox = state;
+        }
+
+        onSelectedRow(file: LaxyFile) {
+            if (this.autoSelectPair && this.files && file) {
+                const pair = findPair(file, this.files);
+                this._setRowCheckboxState(pair, true);
+                // console.log([file, pair]);
+            }
+            this.$emit("selected", file);
+        }
+
+        onDeselectedRow(file: LaxyFile) {
+            if (this.autoSelectPair && this.files && file) {
+                const pair = findPair(file, this.files);
+                this._setRowCheckboxState(pair, false);
+                // console.log([file, pair]);
+            }
+            this.$emit("deselected", file);
         }
 
         public isInCart(file: LaxyFile) {

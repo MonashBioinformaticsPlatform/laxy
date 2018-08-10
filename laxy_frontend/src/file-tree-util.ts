@@ -129,6 +129,40 @@ export function downloadFile(file_id: string | LaxyFile, fileset: LaxyFileSet | 
     }
 }
 
+/* Turn a XXXBLAFOO_R1.fastq.gz filename into XXXBLAFOO_R1 */
+export function truncateFastqFilename(filename: string): string {
+    let fn = filename.replace('_001.fastq.gz', ''); // default Illumina
+    fn = fn.replace('.fastq.gz', '');  // ENA/SRA
+    return fn;
+}
+
+/* Given a typical FASTQ filename, XXXBLAFOO_R1.fastq.gz, return something like
+   the 'sample name' XXXBLAFOO.
+ */
+export function simplifyFastqName(filename: string): string {
+    let fn = truncateFastqFilename(filename);
+    fn = fn.replace(/_1$|_2$|_R1$|_R2$/, '');
+    return fn;
+}
+
+/*
+ Given a file and a list of
+ */
+export function findPair(file: any, files: any[], getName: Function | null = null): any | null {
+    if (getName == null) {
+        getName = (f: LaxyFile) => f.name;
+    }
+    const fn = truncateFastqFilename(getName(file));
+    for (const f of files) {
+        const other = truncateFastqFilename(getName(f));
+        if (fn.slice(0, -1) === other.slice(0, -1) &&
+            (parseInt(fn.slice(-1), 10) + parseInt(other.slice(-1), 10)) === 3) {
+            return f;
+        }
+    }
+    return null;
+}
+
 export function fileListToTree(files: LaxyFile[]): TreeNode {
     return objListToTree(files,
         (f: LaxyFile) => {

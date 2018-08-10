@@ -50,6 +50,7 @@
                             root-path-name=""
                             :fileList="files"
                             :hide-search="false"
+                            :auto-select-pair="true"
                             @select="onSelect"
                             @refresh-error="showErrorDialog">
                     </nested-file-list>
@@ -100,6 +101,7 @@
     import {WebAPI} from "../web-api";
 
     import {ENADummySampleList as _dummysampleList} from "../test-data";
+    import {findPair, simplifyFastqName} from "../file-tree-util";
 
     interface DbAccession {
         accession: string;
@@ -156,12 +158,26 @@
         addToCart() {
             console.log(this.selectedFiles);
             const cart_samples: Sample[] = [];
+            const added_files: LaxyFile[] = [];
             for (let f of this.selectedFiles) {
+                if (added_files.includes(f)) continue;
+                const pair = findPair(f, this.selectedFiles);
+
+                let sname = f.name;
+                if (pair != null) {
+                    sname =  simplifyFastqName(f.name);
+                }
+                let sfiles: any = [f];
+                if (pair != null) {
+                    sfiles = [{R1: f.location}, {R2: pair.location}];
+                }
                 cart_samples.push({
-                    name: f.name,
-                    files: [f],
+                    name: sname,
+                    files: sfiles,
                     metadata: {condition: ""},
                 } as Sample);
+                added_files.push(f);
+                if (pair != null) added_files.push(pair);
             }
             this.$store.commit(ADD_SAMPLES, cart_samples);
             let count = this.selectedFiles.length;
