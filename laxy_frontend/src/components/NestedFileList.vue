@@ -31,10 +31,13 @@
                     </md-table-header>
                     <md-table-body v-if="currentLevel">
                         <md-table-row v-if="currentLevel.parent" @click.native="upDirectory">
-                            <md-table-cell>
+                            <md-table-cell class="md-table-selection">
                                 <div class="push-left">
-                                    <md-icon>folder_open</md-icon>&nbsp;..
+                                    <md-icon>folder_open</md-icon>
                                 </div>
+                            </md-table-cell>
+                            <md-table-cell>
+                                <div class="no-line-break">..</div>
                             </md-table-cell>
                             <md-table-cell md-numeric>
                                 <md-button class="md-icon-button" :disabled="true">
@@ -62,44 +65,48 @@
                                     <div class="no-line-break">{{ node.obj.name | truncate }}</div>
                                 </md-table-cell>
                                 <md-table-cell v-if="!hideActions" md-numeric>
-                                        <md-button v-if="getDefaultViewMethod(node.obj)"
-                                                   class="md-icon-button push-right"
-                                                   @click="getDefaultViewMethod(node.obj).method(node.obj)">
-                                            <md-tooltip md-direction="top">
-                                                {{ getDefaultViewMethod(node.obj).text }}
-                                            </md-tooltip>
-                                            <md-icon>{{ getDefaultViewMethod(node.obj).icon }}</md-icon>
+                                    <md-button v-if="getDefaultViewMethod(node.obj)"
+                                               class="md-icon-button push-right"
+                                               @click="getDefaultViewMethod(node.obj).method(node.obj)">
+                                        <md-tooltip md-direction="top">
+                                            {{ getDefaultViewMethod(node.obj).text }}
+                                        </md-tooltip>
+                                        <md-icon>{{ getDefaultViewMethod(node.obj).icon }}</md-icon>
+                                    </md-button>
+                                    <md-button v-else
+                                               :disabled="true"
+                                               class="md-icon-button">
+                                        <!-- empty placeholder button to preserve layout -->
+                                        <md-icon></md-icon>
+                                    </md-button>
+                                    <md-menu md-size="4">
+                                        <md-button class="md-icon-button push-right" md-menu-trigger>
+                                            <md-icon>arrow_drop_down</md-icon>
                                         </md-button>
-                                        <md-button v-else
-                                                   :disabled="true"
-                                                   class="md-icon-button">
-                                            <!-- empty placeholder button to preserve layout -->
-                                            <md-icon></md-icon>
-                                        </md-button>
-                                        <md-menu md-size="4">
-                                            <md-button class="md-icon-button push-right" md-menu-trigger>
-                                                <md-icon>arrow_drop_down</md-icon>
-                                            </md-button>
 
-                                            <md-menu-content>
-                                                <i class="md-caption" style="padding-left: 16px">{{ node.obj.id }}</i>
-                                                <!--  -->
-                                                <md-menu-item
-                                                        v-for="view in getViewMethodsForTags(node.obj.type_tags)"
-                                                        :key="view.text"
-                                                        @click="view.method(node.obj.id)">
-                                                    <md-icon>{{ view.icon }}</md-icon>
-                                                    <span>{{ view.text }}</span>
-                                                </md-menu-item>
-                                            </md-menu-content>
-                                        </md-menu>
+                                        <md-menu-content>
+                                            <i class="md-caption" style="padding-left: 16px">{{ node.obj.id }}</i>
+                                            <!--  -->
+                                            <md-menu-item
+                                                    v-for="view in getViewMethodsForTags(node.obj.type_tags)"
+                                                    :key="view.text"
+                                                    @click="view.method(node.obj.id)">
+                                                <md-icon>{{ view.icon }}</md-icon>
+                                                <span>{{ view.text }}</span>
+                                            </md-menu-item>
+                                        </md-menu-content>
+                                    </md-menu>
                                 </md-table-cell>
                             </template>
                             <template v-else>
                                 <!-- it's a directory, not a file -->
+                                <md-table-cell class="md-table-selection"
+                                               @click.native="enterDirectory(node)">
+                                    <md-icon>folder</md-icon>
+                                </md-table-cell>
                                 <md-table-cell @click.native="enterDirectory(node)">
                                     <div class="no-line-break">
-                                        <md-icon>folder</md-icon>&nbsp;{{ node.name | truncate }}
+                                      {{ node.name | truncate }}
                                     </div>
                                 </md-table-cell>
                                 <md-table-cell md-numeric @click.native="enterDirectory(node)">
@@ -348,7 +355,9 @@
         onSelectedRow(file: LaxyFile) {
             if (this.autoSelectPair && this.files && file) {
                 const pair = findPair(file, this.files);
-                this._setRowCheckboxState(pair, true);
+                if (pair != null) {
+                    this._setRowCheckboxState(pair, true);
+                }
                 // console.log([file, pair]);
             }
             this.$emit("selected", file);
@@ -357,7 +366,9 @@
         onDeselectedRow(file: LaxyFile) {
             if (this.autoSelectPair && this.files && file) {
                 const pair = findPair(file, this.files);
-                this._setRowCheckboxState(pair, false);
+                if (pair != null) {
+                    this._setRowCheckboxState(pair, false);
+                }
                 // console.log([file, pair]);
             }
             this.$emit("deselected", file);
