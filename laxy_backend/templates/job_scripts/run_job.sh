@@ -199,7 +199,7 @@ function register_files() {
 
 function setup_bds_config() {
     BDS_CONFIG="${JOB_PATH}/bds.config"
-    cp "$(which bds).config ${BDS_CONFIG}"
+    cp "$(which bds).config" "${BDS_CONFIG}"
 
     # TODO: This won't work yet since the default bds.config contains
     # ~/.bds/clusterGeneric/* paths to the SLURM wrapper scripts.
