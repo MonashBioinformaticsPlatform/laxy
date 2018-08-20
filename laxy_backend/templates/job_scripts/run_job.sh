@@ -161,7 +161,7 @@ function get_igenome_aws() {
      aws s3 --no-sign-request --region eu-west-1 sync \
          s3://ngi-igenomes/igenomes/${REF_ID}/Annotation/Genes/ ${REFERENCE_BASE}/${REF_ID}/Annotation/Genes/ --exclude "*" --include "genes.gtf"
     aws s3 --no-sign-request --region eu-west-1 sync \
-        s3://ngi-igenomes/igenomes/${REF_ID}/Sequence/WholeGenomeFasta/${REFERENCE_BASE}/${REF_ID}/Sequence/WholeGenomeFasta/
+        s3://ngi-igenomes/igenomes/${REF_ID}/Sequence/WholeGenomeFasta/ ${REFERENCE_BASE}/${REF_ID}/Sequence/WholeGenomeFasta/
 
 }
 
