@@ -168,7 +168,7 @@
                 if (pair != null) {
                     sname =  simplifyFastqName(f.name);
                 }
-                let sfiles: any = [f];
+                let sfiles: any = [{R1: f.location}];
                 if (pair != null) {
                     sfiles = [{R1: f.location}, {R2: pair.location}];
                 }
@@ -217,6 +217,7 @@
             for (let f of data['files']) {
                 this.files.push(f as LaxyFile);
             }
+            console.log(data['archives']);
         }
 
         showErrorDialog(message: string) {
