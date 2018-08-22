@@ -19,6 +19,7 @@ rows
 enasearch
 attrdict
 robobrowser
+python-magic
 
 # Base Django packages
 django

@@ -21,6 +21,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from io import BytesIO
 from pathlib import Path
 import paramiko
+from requests import HTTPError
 from robobrowser import RoboBrowser
 from rest_framework import generics
 from rest_framework import status
@@ -42,6 +43,8 @@ from urllib.parse import urlparse
 from wsgiref.util import FileWrapper
 
 from drf_openapi.utils import view_config
+
+from laxy_backend.storage.http_remote_index import is_archive_link
 from . import bcbio
 from . import ena
 from . import tasks
@@ -2099,27 +2102,74 @@ class DiscoverLinksView(JSONView):
         url = request.query_params.get('url', None)
         basepath = urlparse(url).path
         if url is not None:
-            file_links, dir_links = http_remote_index.grab_links(url)
+            file_links, dir_links, archive_files = [], [], []
 
-            files = []
-            for f in file_links:
-                fpath = Path(urlparse(f).path)
+            if is_archive_link(url):
+                try:
+                    # archive_files = http_remote_index.grab_archive_contents(url)
+                    archive_files = http_remote_index.get_tar_file_manifest(url)
+                except HTTPError as ex:
+                    # This gets thrown if the associated tar manifest-md5 file
+                    # doesn't exist. We just return the TAR file URL itself,
+                    # rather than a list of it's contents
+                    file_links = [url]
+
+                    """
+                    if ex.response.status_code == status.HTTP_404_NOT_FOUND:
+                        # This gets thrown if the associated tar manifest file
+                        # doesn't exist
+                        return Response({'status': ex.response.status_code,
+                                         'message': str(ex)},
+                                        status=status.HTTP_404_NOT_FOUND)
+                    else:
+                        return Response({}, status=ex.response.status_code)
+                    """
+            else:
+                file_links, dir_links = http_remote_index.grab_links_from_page(url)
+
+            def _get_relative(f_url):
+                fpath = Path(urlparse(f_url).path)
                 try:
                     relpath = str(fpath.parent.relative_to(basepath))
                 except ValueError:
                     relpath = None
                 if relpath == '.':
                     relpath = ''
+                return relpath
+
+            def _file_url_to_file_obj(f_url):
+                fpath = Path(urlparse(f_url).path)
+                relpath = _get_relative(f_url)
 
                 ff = FileSerializer(dict(
                     id='__%s' % generate_uuid(),
                     owner=request.user,
                     name=fpath.name,
                     path=relpath,
-                    location=f,
+                    location=f_url,
                     fileset=None,
                     checksum=None,
                     metadata={}))
+                return ff
+
+            files = []
+            afile_objs = []
+            for afile in archive_files:
+                fp = afile['filepath']
+                ff = FileSerializer(dict(
+                    id='__%s' % generate_uuid(),
+                    owner=request.user,
+                    name=str(Path(fp).name),
+                    path=str(Path(fp).parent),
+                    location=f'{url}#{fp}',
+                    fileset=None,
+                    checksum=afile['checksum'],
+                    metadata={},
+                    type_tags=['in_archive']))
+                files.append(ff.data)
+
+            for f in file_links:
+                ff = _file_url_to_file_obj(f)
                 files.append(ff.data)
 
             dirs = []
@@ -2134,7 +2184,8 @@ class DiscoverLinksView(JSONView):
                                  path=relpath,
                                  location=d))
 
-            return Response({'files': files, 'directories': dirs},
+            return Response({'files': files,
+                             'directories': dirs},
                             status=status.HTTP_200_OK)
 
         return Response({}, status=status.HTTP_400_BAD_REQUEST)
