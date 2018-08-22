@@ -101,23 +101,26 @@ def start_job(self, task_data=None, **kwargs):
                          # key_filename=expanduser("~/.ssh/id_rsa"),
                          ):
             working_dir = os.path.join(base_dir, job_id)
-            job_script_path = join(working_dir, 'run_job.sh')
-            result = run(f'mkdir -p {working_dir} && chmod 700 {working_dir}')
+            input_dir = join(working_dir, 'input')
+            output_dir = join(working_dir, 'output')
+            job_script_path = join(input_dir, 'run_job.sh')
+            for d in [working_dir, input_dir, output_dir]:
+                result = run(f'mkdir -p {d} && chmod 700 {d}')
             result = put(job_script,
                          job_script_path,
                          mode=0o700)
             result = put(curl_headers,
                          join(working_dir, '.private_request_headers'),
-                         mode=0o700)
+                         mode=0o600)
             result = put(config_json,
-                         join(working_dir, 'pipeline_config.json'),
+                         join(input_dir, 'pipeline_config.json'),
                          mode=0o600)
             with cd(working_dir):
                 with shell_env(**environment):
-                    result = run("nohup bash -l -c '"
-                                 "./run_job.sh & "
-                                 "echo $! >job.pid"
-                                 "' >run_job.out")
+                    result = run(f"nohup bash -l -c '"
+                                 f"{job_script_path} & "
+                                 f"echo $! >job.pid"
+                                 f"' >output/run_job.out")
                 with shell_env(**environment):
                     remote_id = run(str("cat job.pid"))
 
