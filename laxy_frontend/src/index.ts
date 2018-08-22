@@ -31,12 +31,9 @@ Vue.use(VueRouter);
 Vue.use(VueMaterial);
 Vue.use(VueMoment);
 
-// sadly not working :/
-/*
-const VueMarkdown = require('vue-markdown');
-Vue.use(VueMarkdown);
-Vue.component('vue-markdown', VueMarkdown);
-*/
+// Import per component, not globally
+// import VueMarkdown from 'vue-markdown';
+// Vue.component('vue-markdown', VueMarkdown);
 
 import {FETCH_USER_PROFILE, SET_USER_PROFILE, Store as store} from './store';
 import {WebAPI} from './web-api';

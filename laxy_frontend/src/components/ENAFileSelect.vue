@@ -7,20 +7,16 @@
         <md-layout md-column>
             <md-layout>
                 <md-whiteframe md-elevation="5" style="padding: 16px; min-height: 100%; width: 100%;">
-                    <div>The <a href="http://www.ebi.ac.uk/ena">European
-                        Nucleotide Archive (ENA)</a>
-                        at
-                        EMBL-EBI provides publicly available datasets from high-throughput sequencing
-                        platforms.
-                        <br/><br/>
-                        ENA also mirrors datasets from the
-                        <a href="https://www.ncbi.nlm.nih.gov/sra">NCBI Sequence Read Archive (SRA)</a>.
-                        <br/><br/>
-                        Search ENA by Project/Study (<code>SRP&hellip;</code>/<code>PRJ&hellip;</code>),
-                        Experiment (<code>SRX&hellip;</code>/<code>ERX&hellip;</code>),
-                        Run (<code>SRR&hellip;</code>/<code>ERR&hellip;</code>) or
-                        Sample (<code>SAM&hellip;</code>/<code>ERS&hellip;</code>) accessions.
-                    </div>
+                    <vue-markdown>
+                        <!-- @formatter:off -->
+The [European Nucleotide Archive (ENA)](http://www.ebi.ac.uk/ena) at EMBL-EBI provides publicly available datasets from high-throughput sequencing platforms.
+
+ENA also mirrors datasets from the [NCBI Sequence Read Archive (SRA)](https://www.ncbi.nlm.nih.gov/sra).
+
+Search ENA by Project/Study (`SRP&hellip;`/`PRJ&hellip;`), Experiment (`SRX&hellip;`/`ERX&hellip;`), Run (`SRR&hellip;`/`ERR&hellip;`) or
+Sample (`SAM&hellip;`/`ERS&hellip;`) accessions.
+<!-- @formatter:on -->
+                    </vue-markdown>
                 </md-whiteframe>
             </md-layout>
             <md-layout md-column>
@@ -153,6 +149,8 @@
         Watch
     } from "vue-property-decorator";
 
+    import VueMarkdown from 'vue-markdown';
+
     import {Sample} from "../model";
     import {ADD_SAMPLES} from "../store";
     import {WebAPI} from "../web-api";
@@ -164,6 +162,7 @@
     }
 
     @Component({
+        components: {VueMarkdown},
         props: {showButtons: Boolean},
         filters: {}
     })
