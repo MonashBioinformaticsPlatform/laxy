@@ -109,5 +109,6 @@ def get_jwt_user_header_str(username) -> str:
     :return:
     :rtype:
     """
-    logger.info("Auth header: ", get_jwt_user_header_dict(username).items())
-    return ': '.join(*get_jwt_user_header_dict(username).items())
+    header = ': '.join(*get_jwt_user_header_dict(username).items())
+    logger.info("Auth header: %s", header)
+    return header
