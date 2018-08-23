@@ -129,7 +129,7 @@
                                               class="fill-width"
                                               ref="key-files"
                                               title="Key result files"
-                                              :fileList="files"
+                                              :fileTree="fileTree"
                                               :tag-filters="['bam', 'bai', 'counts', 'degust', 'report']"
                                               :job-id="jobId"
                                               :hide-search="false"
@@ -149,7 +149,7 @@
                                                   v-if="job && job.status !== 'running'"
                                                   title="Input files"
                                                   root-path-name="input"
-                                                  :fileList="inputFiles"
+                                                  :fileTree="inputFilesetTree"
                                                   :job-id="jobId"
                                                   :hide-search="false"
                                                   @refresh-error="showErrorDialog"></nested-file-list>
@@ -165,7 +165,7 @@
                                                   v-if="job && job.status !== 'running'"
                                                   title="Output files"
                                                   root-path-name="output"
-                                                  :fileList="outputFiles"
+                                                  :fileTree="outputFilesetTree"
                                                   :job-id="jobId"
                                                   :hide-search="false"
                                                   @refresh-error="showErrorDialog"></nested-file-list>
@@ -238,6 +238,7 @@
     import JobStatusPip from "./JobStatusPip";
     import FileLinkPip from "./FileLinkPip";
     import NestedFileList from "./NestedFileList";
+    import {EMPTY_TREE_ROOT, fileListToTree, TreeNode} from "../file-tree-util";
 
     @Component({
         components: {FileLinkPip, JobStatusPip, NestedFileList},
@@ -275,6 +276,11 @@
             return this.$store.getters.currentJobFiles;
         }
 
+        get fileTree(): TreeNode<LaxyFile> {
+            if (!this.files) return EMPTY_TREE_ROOT;
+            return fileListToTree(this.files || []);
+        }
+
         get inputFiles(): LaxyFile[] | null {
             if (this.job) {
                 const fsid = this.job.input_fileset_id;
@@ -285,6 +291,11 @@
             return null;
         }
 
+        get inputFilesetTree(): TreeNode<LaxyFile> {
+            if (!this.inputFiles) return EMPTY_TREE_ROOT;
+            return fileListToTree(this.inputFiles || []);
+        }
+
         get outputFiles(): LaxyFile[] | null {
             if (this.job) {
                 const fsid = this.job.output_fileset_id;
@@ -293,6 +304,11 @@
                 }
             }
             return null;
+        }
+
+        get outputFilesetTree(): TreeNode<LaxyFile> {
+            if (!this.outputFiles) return EMPTY_TREE_ROOT;
+            return fileListToTree(this.outputFiles || []);
         }
 
         // @Getter("currentInputFileset")

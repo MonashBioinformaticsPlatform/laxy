@@ -22,7 +22,7 @@ will list the files *inside* the TAR file, if there is a corresponding
 
 If there is no corresponding `.manifest-md5` file, the TAR file can be added directly -
 it will be untarred by the pipeline and the entire contents used as input.
-                        
+
 <!-- @formatter:on -->
                     </vue-markdown>
                 </md-whiteframe>
@@ -65,7 +65,7 @@ it will be untarred by the pipeline and the entire contents used as input.
                             ref="remote-files-list"
                             title="Links"
                             root-path-name=""
-                            :fileList="files"
+                            :fileTree="fileTree"
                             :hide-search="false"
                             :hide-actions="true"
                             :auto-select-pair="true"
@@ -121,7 +121,7 @@ it will be untarred by the pipeline and the entire contents used as input.
     import {WebAPI} from "../web-api";
 
     import {ENADummySampleList as _dummysampleList} from "../test-data";
-    import {findPair, simplifyFastqName} from "../file-tree-util";
+    import {EMPTY_TREE_ROOT, fileListToTree, findPair, simplifyFastqName, TreeNode} from "../file-tree-util";
 
     interface DbAccession {
         accession: string;
@@ -153,6 +153,14 @@ it will be untarred by the pipeline and the entire contents used as input.
 
         created() {
 
+        }
+
+        get fileTree(): TreeNode<LaxyFile> {
+            if (this.files) {
+                return fileListToTree(this.files);
+            } else {
+                return EMPTY_TREE_ROOT;
+            }
         }
 
         get hasResults() {

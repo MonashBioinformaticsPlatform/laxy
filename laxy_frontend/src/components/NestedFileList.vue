@@ -30,7 +30,8 @@
                         </md-table-row>
                     </md-table-header>
                     <md-table-body v-if="currentLevel">
-                        <md-table-row v-if="currentLevel.parent" @click.native="upDirectory">
+                        <md-table-row v-if="currentLevel.parent"
+                                      @click.native="upDirectory">
                             <md-table-cell class="md-table-selection">
                                 <div class="push-left">
                                     <md-icon>folder_open</md-icon>
@@ -101,15 +102,15 @@
                             <template v-else>
                                 <!-- it's a directory, not a file -->
                                 <md-table-cell class="md-table-selection"
-                                               @click.native="enterDirectory(node)">
+                                               @click.native="getProp(node, 'meta.onclick', enterDirectory)(node)">
                                     <md-icon>folder</md-icon>
                                 </md-table-cell>
-                                <md-table-cell @click.native="enterDirectory(node)">
+                                <md-table-cell @click.native="getProp(node, 'meta.onclick', enterDirectory)(node)">
                                     <div class="no-line-break">
                                       {{ node.name | truncate }}
                                     </div>
                                 </md-table-cell>
-                                <md-table-cell md-numeric @click.native="enterDirectory(node)">
+                                <md-table-cell md-numeric @click.native="getProp(node, 'meta.onclick', enterDirectory)(node)">
                                     <md-button class="md-icon-button push-right" :disabled="true">
                                         <!-- <md-icon>subdirectory_arrow_right</md-icon> -->
                                         <!-- empty placeholder button to preserve layout -->
@@ -135,6 +136,7 @@
 
     import filter from "lodash-es/filter";
     import map from "lodash-es/map";
+    import lodashGet from "lodash-es/get";
     import head from "lodash-es/head";
     import sortBy from "lodash-es/sortBy";
     import flatten from "lodash-es/flatten";
@@ -193,7 +195,7 @@
         _DEBUG: boolean = false;
 
         @Prop()
-        public fileList: LaxyFile[];
+        public fileTree: TreeNode<LaxyFile>; // TreeNode<any>; ?
 
         @Prop({type: String, default: ""})
         public rootPathName: string;
@@ -233,27 +235,30 @@
         public searchQuery: string = "";
         public searching: boolean = false;
 
+        // for templates
+        getProp = lodashGet;
+
         get selectedFiles(): LaxyFile[] {
             return (this.$refs["file-table"] as MdTable).selectedRows as LaxyFile[];
         }
 
         @Watch("fileTree")
-        initCurrentLevel(new_val: TreeNode, old_value: TreeNode) {
+        initCurrentLevel(new_val: TreeNode<LaxyFile>, old_value: TreeNode<LaxyFile>) {
             this.currentLevel = this.fileTree;
         }
 
-        public currentLevel: TreeNode | null = null;
+        public currentLevel: TreeNode<LaxyFile> | null = null;
 
         @Debounce(1000)
-        get searchFilteredNodes(): TreeNode[] {
+        get searchFilteredNodes(): Array<TreeNode<LaxyFile>> {
             const query = this.searchQuery.trim();
 
             const nodes = flattenTree(this.fileTree.children);
 
             if (!query || query.length === 0) return nodes;
 
-            const hits = filter(nodes,
-                (node) => {
+            const hits: Array<TreeNode<LaxyFile>> = filter(nodes,
+                (node: TreeNode<LaxyFile>) => {
                     if (node.obj) {
                         return `${node.obj.name}/${node.obj.name}`.includes(query);
                         // TODO: Make globbing work, or look at vuex-search
@@ -267,7 +272,7 @@
             return hits;
         }
 
-        get currentLevelNodes(): TreeNode[] {
+        get currentLevelNodes(): Array<TreeNode<LaxyFile>> {
             if (this.currentLevel) {
                 let nodes = this.currentLevel.children;
                 const query = this.searchQuery.trim();
@@ -278,17 +283,17 @@
                 }
                 return sortBy(nodes,
                     [
-                        (n: TreeNode) => n.obj != null,
+                        (n: TreeNode<LaxyFile>) => n.obj != null,
                         "name"
                     ]);
             }
             return [];
         }
 
-        get pathToRoot(): TreeNode[] {
+        get pathToRoot(): TreeNode<LaxyFile>[] {
             if (this.currentLevel) {
                 let parent = this.currentLevel.parent;
-                let nodes: TreeNode[] = [this.currentLevel];
+                let nodes: TreeNode<LaxyFile>[] = [this.currentLevel];
                 while (parent != null) {
                     if (parent.name) nodes.push(parent);
                     parent = parent.parent;
@@ -299,21 +304,15 @@
             return [];
         }
 
-        private _emptyTreeRoot: TreeNode = {
-            id: "__root__",
-            name: "/",
-            obj: null,
-            parent: null,
-            children: [],
-        } as TreeNode;
-
-        get fileTree(): TreeNode {
+        /*
+        get fileTree(): TreeNode<LaxyFile> {
             if (this.files) {
                 return fileListToTree(this.files);
             } else {
                 return this._emptyTreeRoot;
             }
         }
+        */
 
         get currentLevelFiles(): (LaxyFile | null)[] {
             if (this.currentLevel) {
@@ -323,7 +322,7 @@
             return [];
         }
 
-        upDirectory(): TreeNode | null {
+        upDirectory(): TreeNode<LaxyFile> | null {
             if (this.currentLevel && this.currentLevel.parent) {
                 this.currentLevel = this.currentLevel.parent;
             }
@@ -331,7 +330,7 @@
             return this.currentLevel;
         }
 
-        enterDirectory(node: TreeNode) {
+        enterDirectory(node: TreeNode<LaxyFile>) {
             this.searchQuery = "";
             this.currentLevel = node;
         }
@@ -463,7 +462,8 @@
         }
 
         get files(): LaxyFile[] {
-            let filtered: LaxyFile[] = this.fileList;
+            const nodelist = flattenTree(this.fileTree.children);
+            let filtered: LaxyFile[] = map(nodelist, (n) => n.obj as LaxyFile);
             filtered = filterByTag(filtered, this.tagFilters);
             filtered = filterByRegex(filtered, strToRegex(this.regexFilters));
             return filtered;

@@ -11,13 +11,23 @@ import {Store as store} from './store';
 import {WebAPI} from './web-api';
 import {LaxyFile} from './model';
 
-export interface TreeNode {
+export interface TreeNode<T> {
     id: string;
     name: string;
-    obj: LaxyFile | null;
-    parent: TreeNode | null;
-    children: TreeNode[];
+    obj: T | null;
+    meta?: any | null;  // optional extra data like icon names, onclick callbacks
+    parent: TreeNode<T> | null;
+    children: Array<TreeNode<T>>;
 }
+
+export const EMPTY_TREE_ROOT: TreeNode<LaxyFile> = {
+    id: '__root__',
+    name: '/',
+    obj: null,
+    meta: null,
+    parent: null,
+    children: [],
+} as TreeNode<LaxyFile>;
 
 export function hasIntersection(a: any[] | null, b: any[] | null): boolean {
     if (a == null || b == null ||
@@ -163,8 +173,8 @@ export function findPair(file: any, files: any[], getName: Function | null = nul
     return null;
 }
 
-export function fileListToTree(files: LaxyFile[]): TreeNode {
-    return objListToTree(files,
+export function fileListToTree(files: LaxyFile[]): TreeNode<LaxyFile> {
+    return objListToTree<LaxyFile>(files,
         (f: LaxyFile) => {
             const parts = `${f.path}/${f.name}`.split('/');
             parts.shift();
@@ -175,16 +185,16 @@ export function fileListToTree(files: LaxyFile[]): TreeNode {
         });
 }
 
-export function objListToTree(objs: any,
-                              getPathPaths: Function,
-                              getId: Function): TreeNode {
-    const tree: TreeNode = {
+export function objListToTree<T>(objs: T[],
+                                 getPathPaths: Function,
+                                 getId: Function): TreeNode<T> {
+    const tree: TreeNode<T> = {
         id: '__root__',
         name: '/',
         obj: null,
         parent: null,
         children: [],
-    } as TreeNode;
+    } as TreeNode<T>;
 
     let id_counter = 0;  // alternative ID used when there is no File UUID
 
@@ -192,7 +202,7 @@ export function objListToTree(objs: any,
         // const pathPartStrings = `${file.path}/${file.name}`.split('/');
         const pathPartStrings: string[] = getPathPaths(obj);
         // pathPartStrings.shift(); // Remove first blank element from the parts array.
-        const pathParts: TreeNode[] = [];
+        const pathParts: Array<TreeNode<T>> = [];
         // Turn each/part/of/the/path into a TreeNode
         for (const partName of pathPartStrings) {
             pathParts.push({
@@ -200,7 +210,7 @@ export function objListToTree(objs: any,
                 name: partName,
                 obj: null,
                 parent: null,
-                children: [] as TreeNode[]
+                children: [] as Array<TreeNode<T>>
             });
             id_counter++;
         }
@@ -210,12 +220,12 @@ export function objListToTree(objs: any,
         pathParts[pathParts.length - 1].obj = obj;
         pathParts[pathParts.length - 1].id = getId(obj);
 
-        let currentLevel: TreeNode = tree; // initialize currentLevel to the root of the tree
+        let currentLevel: TreeNode<T> = tree; // initialize currentLevel to the root of the tree
 
         // walk up the path. for each subdirectory, determine if it is already
         // represented as a node in the tree else add it
         forEach(pathParts, (part => {
-            const existingPath: TreeNode = find(currentLevel.children, {name: part.name}) as any;
+            const existingPath: TreeNode<T> = find(currentLevel.children, {name: part.name}) as any;
 
             if (existingPath) {
                 // The path to this item was already in the tree, so don't add it again.
@@ -227,8 +237,8 @@ export function objListToTree(objs: any,
                     name: part.name,
                     obj: part.obj,
                     parent: currentLevel,
-                    children: [] as TreeNode[],
-                } as TreeNode;
+                    children: [] as Array<TreeNode<T>>,
+                } as TreeNode<T>;
 
                 currentLevel.children.push(newPart);
                 currentLevel = newPart;
@@ -238,11 +248,11 @@ export function objListToTree(objs: any,
     return tree;
 }
 
-export function flattenTree(nodes: TreeNode[]): TreeNode[] {
+export function flattenTree(nodes: Array<TreeNode<LaxyFile>>): Array<TreeNode<LaxyFile>> {
     if (!nodes || nodes.length === 0) return [];
     return nodes.concat(
         flattenTree(
-            flatten(nodes.map((n: TreeNode) => n.children))
+            flatten(nodes.map((n: TreeNode<LaxyFile>) => n.children))
         )
     );
 }
