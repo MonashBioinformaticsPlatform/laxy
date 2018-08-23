@@ -91,7 +91,7 @@
                                             <md-menu-item
                                                     v-for="view in getViewMethodsForTags(node.obj.type_tags)"
                                                     :key="view.text"
-                                                    @click="view.method(node.obj.id)">
+                                                    @click="view.method(node.obj)">
                                                 <md-icon>{{ view.icon }}</md-icon>
                                                 <span>{{ view.text }}</span>
                                             </md-menu-item>

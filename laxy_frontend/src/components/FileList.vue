@@ -42,7 +42,7 @@
                                     <!--  -->
                                     <md-menu-item v-for="view in getViewMethodsForTags(file.type_tags)"
                                                   :key="view.text"
-                                                  @click="view.method(file.id)">
+                                                  @click="view.method(file)">
                                         <md-icon>{{ view.icon }}</md-icon>
                                         <span>{{ view.text }}</span>
                                     </md-menu-item>
