@@ -186,7 +186,9 @@ class StreamingFileDownloadRenderer(BaseRenderer):
     charset = None
     render_style = 'binary'
 
-    def render(self, filelike, media_type=None, renderer_context=None,
+    def render(self, filelike,
+               media_type=None,
+               renderer_context=None,
                blksize=8192):
         iterable = FileWrapper(filelike, blksize=blksize)
         for chunk in iterable:
@@ -741,15 +743,18 @@ class JobFileView(StreamFileMixin,
         :rtype:
         -->
         """
+
         job = self.get_obj(job_id)
         if job is None:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': f'Unknown job ID: {job_id}'},
+                            status=status.HTTP_404_NOT_FOUND)
 
         fname = Path(file_path).name
         fpath = Path(file_path).parent
         file_obj = job.get_files().filter(name=fname, path=fpath).first()
         if file_obj is None:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': f'Cannot find file in job {job_id} by path/filename'},
+                            status=status.HTTP_404_NOT_FOUND)
 
         # serializer = self.Meta.serializer(file_obj)
         # return Response(serializer.data, status=status.HTTP_200_OK)
@@ -760,8 +765,10 @@ class JobFileView(StreamFileMixin,
         else:
             # File view/download is the default when no Content-Type is specified
             if 'download' in request.query_params:
+                logger.debug(f"Attempting download of {file_obj.id}")
                 return super().download(file_obj, filename=fname)
             else:
+                logger.debug(f"Attempting view in browser of {file_obj.id}")
                 return super().view(file_obj, filename=fname)
 
         # return super(FileView, self).get(request, file_obj.id)
@@ -1362,7 +1369,7 @@ class PipelineRunView(GetMixin,
     @view_config(response_serializer=PipelineRunSerializer)
     def get(self, request: Request, uuid, version=None):
         """
-        Returns info about a FileSet, specified by UUID.
+        Returns info about a PipelineRun, specified by UUID.
 
         <!--
         :param request: The request object.
