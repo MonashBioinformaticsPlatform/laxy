@@ -1,4 +1,5 @@
 # Use with: https://davidje13.github.io/SequenceDiagram/
+# (and checkout https://mermaidjs.github.io/ - might be a better option)
 
 theme monospace
 title new job flow
