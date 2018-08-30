@@ -15,19 +15,31 @@ export interface TreeNode<T> {
     id: string;
     name: string;
     obj: T | null;
-    meta?: any | null;  // optional extra data like icon names, onclick callbacks
+    meta: any;  // optional extra data like icon names, onclick callbacks
     parent: TreeNode<T> | null;
     children: Array<TreeNode<T>>;
 }
 
-export const EMPTY_TREE_ROOT: TreeNode<LaxyFile> = {
+export interface FileListItem {
+    name: string;
+    type: 'file' | 'directory';
+    tags: string[];
+    location: string;
+}
+
+export const EMPTY_TREE_ROOT: TreeNode<any> = {
     id: '__root__',
     name: '/',
     obj: null,
-    meta: null,
+    meta: {},
     parent: null,
     children: [],
-} as TreeNode<LaxyFile>;
+} as TreeNode<any>;
+
+export function is_archive_url(url: string): boolean {
+    const tar_suffixes = ['.tar', '.tar.gz', '.tar.bz2'];
+    return some(tar_suffixes, (v) => url.endsWith(v));
+}
 
 export function hasIntersection(a: any[] | null, b: any[] | null): boolean {
     if (a == null || b == null ||
@@ -186,12 +198,13 @@ export function fileListToTree(files: LaxyFile[]): TreeNode<LaxyFile> {
 }
 
 export function objListToTree<T>(objs: T[],
-                                 getPathPaths: Function,
+                                 getPathParts: Function,
                                  getId: Function): TreeNode<T> {
     const tree: TreeNode<T> = {
         id: '__root__',
         name: '/',
         obj: null,
+        meta: {},
         parent: null,
         children: [],
     } as TreeNode<T>;
@@ -200,7 +213,7 @@ export function objListToTree<T>(objs: T[],
 
     for (const obj of objs) {
         // const pathPartStrings = `${file.path}/${file.name}`.split('/');
-        const pathPartStrings: string[] = getPathPaths(obj);
+        const pathPartStrings: string[] = getPathParts(obj);
         // pathPartStrings.shift(); // Remove first blank element from the parts array.
         const pathParts: Array<TreeNode<T>> = [];
         // Turn each/part/of/the/path into a TreeNode
@@ -209,18 +222,23 @@ export function objListToTree<T>(objs: T[],
                 id: id_counter.toString(),
                 name: partName,
                 obj: null,
+                meta: {},
                 parent: null,
                 children: [] as Array<TreeNode<T>>
             });
             id_counter++;
         }
 
-        // The last element in full path is the file (no such thing as empty
-        // directories)
-        pathParts[pathParts.length - 1].obj = obj;
-        pathParts[pathParts.length - 1].id = getId(obj);
+        // The last element in full path is the file (no such thing as empty directories)
+        const lastpart = pathParts[pathParts.length - 1];
+        lastpart.obj = obj;
+        lastpart.id = getId(obj);
+        lastpart.meta.type = 'file';
+        for (let i = 0; i < pathParts.length - 1; i++) {
+            pathParts[i].meta.type = 'directory';
+        }
 
-        let currentLevel: TreeNode<T> = tree; // initialize currentLevel to the root of the tree
+        let currentLevel: TreeNode<T> = tree;  // initialize currentLevel to the root of the tree
 
         // walk up the path. for each subdirectory, determine if it is already
         // represented as a node in the tree else add it
@@ -236,6 +254,7 @@ export function objListToTree<T>(objs: T[],
                     id: part.id,
                     name: part.name,
                     obj: part.obj,
+                    meta: part.meta,
                     parent: currentLevel,
                     children: [] as Array<TreeNode<T>>,
                 } as TreeNode<T>;
@@ -248,11 +267,11 @@ export function objListToTree<T>(objs: T[],
     return tree;
 }
 
-export function flattenTree(nodes: Array<TreeNode<LaxyFile>>): Array<TreeNode<LaxyFile>> {
+export function flattenTree<T>(nodes: Array<TreeNode<T>>): Array<TreeNode<T>> {
     if (!nodes || nodes.length === 0) return [];
     return nodes.concat(
         flattenTree(
-            flatten(nodes.map((n: TreeNode<LaxyFile>) => n.children))
+            flatten(nodes.map((n: TreeNode<T>) => n.children))
         )
     );
 }

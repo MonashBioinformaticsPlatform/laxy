@@ -508,6 +508,17 @@ class JobEventLogSerializer(EventLogSerializer):
         error_status_codes = status_codes()
 
 
+class FileListingItem(serializers.Serializer):
+    name = serializers.CharField(required=True)
+    location = serializers.URLField(required=True)
+    type = serializers.CharField(required=True)
+    tags = serializers.ListField(default=[])
+
+
+class FileListing(serializers.Serializer):
+    listing = FileListingItem(many=True)
+
+
 class LoginRequestSerializer(serializers.Serializer):
     username = serializers.CharField(required=True)
     password = serializers.CharField(required=True)

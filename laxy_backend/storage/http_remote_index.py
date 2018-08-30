@@ -1,6 +1,7 @@
 import logging
 from typing import List, Tuple, Pattern, Union, Dict
 from collections import defaultdict
+import urllib
 from urllib.parse import urljoin, urlparse
 import re
 import os
@@ -8,21 +9,27 @@ import requests
 from requests import HTTPError, Response
 from bs4 import BeautifulSoup
 import magic  # python-magic
+from cache_memoize import cache_memoize
 
 from laxy_backend.tasks.download import request_with_retries
 
 logger = logging.getLogger(__name__)
 
 
-def is_archive_link(url: str, content_head: bytes = None) -> bool:
+# @cache_memoize(timeout=1*60*60)
+def is_archive_link(url: str, content_head: bytes = None, use_network=False) -> bool:
     """
     Attempts to determine if a given URL is a TAR file based on file extensions
-    or the first 512 bytes of content.
+    or the first 512 bytes of content. Also works on simple file paths.
 
     :param url: The URL of interest
     :type url: str
     :param content_head: Optional head content (not HTTP HEAD, actual body content)
     :type content_head: bytes
+    :param use_network: If we can't guess from the filename or content head,
+                        attempt to retrieve the first 512 bytes of the file and use
+                        file magic to detect it's type.
+    :type use_network:  bool
     :return: True if URL is detected as a TAR file
     :rtype: bool
     """
@@ -39,29 +46,55 @@ def is_archive_link(url: str, content_head: bytes = None) -> bool:
     if any([urlparse(url).path.endswith(suffix) for suffix in tar_suffixes]):
         return True
 
-    if content_head is None:
-        resp = get_url_streaming(url)
-        resp.raise_for_status()
-        content_head = resp.raw.read(512)
+    if use_network and content_head is None:
+        content_head = get_url_filelike(url).read(512)
         return _smells_like_tar(content_head)
 
     return False
 
 
-def get_url_streaming(url, headers=None, auth=None):
-    headers = headers or {}
-    response = request_with_retries(
-        'GET', url,
-        stream=True,
-        headers=headers,
-        auth=auth)
-    response.raw.decode_content = True
-    return response
+def get_url_streaming(url: str, headers=None, auth=None) -> Union[requests.Response, urllib.response.addinfourl]:
+    scheme = urlparse(url).scheme
+    if scheme == 'http' or scheme == 'https':
+        headers = headers or {}
+        response = request_with_retries(
+            'GET', url,
+            stream=True,
+            headers=headers,
+            auth=auth)
+        response.raise_for_status()
+        response.raw.decode_content = True
+        return response
+    elif scheme == 'ftp':
+        if auth and '@' not in urlparse(url).netloc:
+            user, pw = auth['username'], auth['password']
+            url = url.replace('ftp://', f'ftp://{user}:{pw}@')
+        return urllib.request.urlopen(url)
 
 
-def grab_links_from_page(url: str,
-                         regex: Union[str, Pattern] = '^https?://|^ftp://',
-                         ignore: str = '\/\?C=.;O=.') -> Tuple[List[str], List[str]]:
+def get_url_filelike(url: str, headers=None, auth=None):
+    """
+    Returns a streaming file-like (something that minimally allows 'read(bytes)') from an HTTP(S) or FTP URL.
+
+    :param url:
+    :type url:
+    :param headers:
+    :type headers:
+    :param auth:
+    :type auth:
+    :return:
+    :rtype:
+    """
+    resp = get_url_streaming(url, headers=headers, auth=auth)
+    if isinstance(resp, requests.Response):
+        return resp.raw
+    else:
+        return resp
+
+
+def grab_links_from_html_page(url: str,
+                              regex: Union[str, Pattern] = '^https?://|^ftp://',
+                              ignore: str = '\/\?C=.;O=.') -> Tuple[List[str], List[str]]:
     """
     Parses a remote HTTP(s) index page containing links, returns
     a list of the links, filtered by provided `regex`. Works best
@@ -89,9 +122,11 @@ def grab_links_from_page(url: str,
         ignore = re.compile(ignore)
 
     try:
-        resp = requests.get(url)
+        resp = requests.get(url, allow_redirects=True)
         resp.raise_for_status()
         text = resp.text
+        # Update the URL to the final destination in case we were redirected
+        url = resp.url
 
     except BaseException as e:
         raise e
@@ -140,9 +175,10 @@ def get_tar_file_manifest(
     manifest_url = _discover_manifest_url(tar_url)
 
     try:
-        req = requests.get(manifest_url)
-        req.raise_for_status()
-        text = requests.get(manifest_url).text
+        # req = requests.get(manifest_url)
+        # req.raise_for_status()
+        # text = requests.get(manifest_url).text
+        text = get_url_filelike(manifest_url).read().decode('utf-8')
     except BaseException as e:
         raise e
 

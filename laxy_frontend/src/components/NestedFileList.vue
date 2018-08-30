@@ -6,19 +6,21 @@
                 <md-toolbar class="md-transparent fill-width">
                     <h1 class="md-title">{{ titleText }}</h1>
                     <md-input-container v-if="!hideSearch" md-clearable>
-                        <md-input v-model="searchQuery" placeholder="Search"></md-input>
+                        <md-input v-model="searchQuery" :placeholder="searchBoxPlaceholder"></md-input>
                         <md-icon v-if="!searchQuery">search</md-icon>
                     </md-input-container>
                 </md-toolbar>
                 <md-toolbar class="md-transparent fill-width">
-                    <div v-if="!searchQuery.trim()" class="breadcrumbs">
-                        &nbsp;
-                        <span v-for="node in pathToRoot">
-                        <template v-if="node.id === '__root__'"><code>{{ rootPathName }} / </code></template>
-                        <template v-else><code>{{ node.name }} / </code></template>
-                    </span>
-                        <br/>
-                    </div>
+                    <slot name="breadcrumbs">
+                        <div v-if="!searchQuery.trim()" class="breadcrumbs">
+                            &nbsp;
+                            <span v-for="node in pathToRoot">
+                                <template v-if="node.id === '__root__'"><code>{{ rootPathName }} / </code></template>
+                                <template v-else><code>{{ node.name }} / </code></template>
+                            </span>
+                            <br/>
+                        </div>
+                    </slot>
                 </md-toolbar>
                 <md-table ref="file-table" @select="onSelect">
                     <md-table-header>
@@ -50,11 +52,31 @@
                                 </md-button>
                             </md-table-cell>
                         </md-table-row>
+                        <md-table-row v-if="showBackArrow"
+                                      @click.native="$emit('back-button-clicked')">
+                            <md-table-cell class="md-table-selection">
+                                <div class="push-left">
+                                    <md-icon>arrow_back</md-icon>
+                                </div>
+                            </md-table-cell>
+                            <md-table-cell>
+                                <div class="no-line-break"></div>
+                            </md-table-cell>
+                            <md-table-cell md-numeric>
+                                <md-button class="md-icon-button" :disabled="true">
+                                    <!-- empty placeholder button to preserve layout -->
+                                    <md-icon></md-icon>
+                                </md-button>
+                                <md-button class="md-icon-button push-right" :disabled="true">
+                                    <md-icon></md-icon>
+                                </md-button>
+                            </md-table-cell>
+                        </md-table-row>
                         <md-table-row v-for="node in currentLevelNodes" :md-item="node.obj" :key="node.id"
-                                      :md-selection="node.obj && !isInCart(node.obj)"
+                                      :md-selection="node.obj && selectableTypes.includes(node.meta.type) && !isInCart(node.obj)"
                                       @selected="onSelectedRow(node.obj)"
                                       @deselected="onDeselectedRow(node.obj)">
-                            <template v-if="node.obj">
+                            <template v-if="node.meta.type === 'file'">
                                 <!-- when in cart, insert a disabled checkbox
                                      (since :md-selection="false"  _removes_ the checkbox) -->
                                 <md-table-cell v-if="isInCart(node.obj)"
@@ -62,10 +84,17 @@
                                     <md-checkbox disabled></md-checkbox>
                                 </md-table-cell>
 
-                                <md-table-cell>
-                                    <div class="no-line-break">{{ node.obj.name | truncate }}</div>
+                                <md-table-cell @click.native="getProp(node.meta, 'onclick', (n) => {})(node)">
+                                    <div class="no-line-break">
+                                        <md-icon v-if="node.meta.tags && node.meta.tags.includes('archive')">
+                                            folder_special
+                                        </md-icon>
+                                        {{ node.obj.name | truncate }}
+                                    </div>
                                 </md-table-cell>
-                                <md-table-cell v-if="!hideActions" md-numeric>
+                                <md-table-cell v-if="!hideActions"
+                                               @click.native="getProp(node.meta, 'onclick', (n) => {})(node)"
+                                               md-numeric>
                                     <md-button v-if="getDefaultViewMethod(node.obj)"
                                                class="md-icon-button push-right"
                                                @click="getDefaultViewMethod(node.obj).method(node.obj)">
@@ -99,18 +128,19 @@
                                     </md-menu>
                                 </md-table-cell>
                             </template>
-                            <template v-else>
+                            <template v-else-if="node.meta.type === 'directory'">
                                 <!-- it's a directory, not a file -->
                                 <md-table-cell class="md-table-selection"
-                                               @click.native="getProp(node, 'meta.onclick', enterDirectory)(node)">
+                                               @click.native="getProp(node.meta, 'onclick', enterDirectory)(node)">
                                     <md-icon>folder</md-icon>
                                 </md-table-cell>
-                                <md-table-cell @click.native="getProp(node, 'meta.onclick', enterDirectory)(node)">
+                                <md-table-cell @click.native="getProp(node.meta, 'onclick', enterDirectory)(node)">
                                     <div class="no-line-break">
-                                      {{ node.name | truncate }}
+                                        {{ node.name | truncate }}
                                     </div>
                                 </md-table-cell>
-                                <md-table-cell md-numeric @click.native="getProp(node, 'meta.onclick', enterDirectory)(node)">
+                                <md-table-cell md-numeric
+                                               @click.native="getProp(node.meta, 'onclick', enterDirectory)(node)">
                                     <md-button class="md-icon-button push-right" :disabled="true">
                                         <!-- <md-icon>subdirectory_arrow_right</md-icon> -->
                                         <!-- empty placeholder button to preserve layout -->
@@ -217,11 +247,17 @@
         })
         public tagFilters: string[];
 
+        @Prop({default: () => ['file'], type: Array})
+        public selectableTypes: string[];
+
         @Prop({default: true})
         public hideSearch: boolean;
 
         @Prop({default: false})
         public hideActions: boolean;
+
+        @Prop({default: false})
+        public showBackArrow: boolean;
 
         @Prop({default: true})
         public autoSelectPair: boolean;
@@ -231,6 +267,9 @@
 
         @Prop(String)
         public jobId: string | null;
+
+        @Prop({default: 'Search', type: String})
+        public searchBoxPlaceholder: string;
 
         public searchQuery: string = "";
         public searching: boolean = false;
@@ -284,6 +323,7 @@
                 return sortBy(nodes,
                     [
                         (n: TreeNode<LaxyFile>) => n.obj != null,
+                        "meta.type",
                         "name"
                     ]);
             }

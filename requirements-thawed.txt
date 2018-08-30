@@ -20,6 +20,7 @@ enasearch
 attrdict
 robobrowser
 python-magic
+fs  # PyFilesystem
 
 # Base Django packages
 django
@@ -28,6 +29,7 @@ django-cors-headers
 django-extensions
 django-storages
 django-object-actions
+django-cache-memoize
 
 # The Bitbucket one
 # django-jsonfield  # https://bitbucket.org/schinckel/django-jsonfield

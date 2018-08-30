@@ -83,7 +83,7 @@ export class WebAPI {
 
     public static async remoteFilesList(url: string): Promise<AxiosResponse> {
         try {
-            const api_url = `/api/v1/discover-links/?url=${url}`;
+            const api_url = `/api/v1/remote-browse/?url=${url}`;
             return await this.fetcher.get(api_url);
         } catch (error) {
             throw error;

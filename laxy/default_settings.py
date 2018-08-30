@@ -321,6 +321,12 @@ JWT_AUTH = {
 See https://getblimp.github.io/django-rest-framework-jwt/
 '''
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'memory-cache',
+    }
+}
 
 LOGGING = {
     'version': 1,

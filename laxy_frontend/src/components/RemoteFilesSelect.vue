@@ -28,7 +28,7 @@ it will be untarred by the pipeline and the entire contents used as input.
                 </md-whiteframe>
             </md-layout>
             <md-layout md-column>
-                <form @submit.stop.prevent="listLinks(url)">
+                <form @submit.stop.prevent="submitUrl(url)">
                     <md-input-container>
                         <label>URL
                             <span>
@@ -42,7 +42,7 @@ it will be untarred by the pipeline and the entire contents used as input.
                                   placeholder="https://bioinformatics.erc.monash.edu/home/andrewperry/test/sample_data/">
                         </md-input>
                         <md-button class="md-icon-button"
-                                   @click="listLinks(url)">
+                                   @click="submitUrl(url)">
                             <md-icon type="submit">search</md-icon>
                         </md-button>
                     </md-input-container>
@@ -59,7 +59,7 @@ it will be untarred by the pipeline and the entire contents used as input.
                 <md-layout v-else
                            md-flex-large="75" md-flex-small="100">
                     <nested-file-list
-                            v-if="files && files.length > 0"
+                            v-if="listing && listing.length > 0"
                             id="remote-files-list"
                             class="fill-width"
                             ref="remote-files-list"
@@ -68,9 +68,17 @@ it will be untarred by the pipeline and the entire contents used as input.
                             :fileTree="fileTree"
                             :hide-search="false"
                             :hide-actions="true"
+                            :show-back-arrow="false"
                             :auto-select-pair="true"
+                            search-box-placeholder="Filter"
                             @select="onSelect"
-                            @refresh-error="showErrorDialog">
+                            @refresh-error="showErrorDialog"
+                            @back-button-clicked="listLinks(previousUrl)">
+
+                        <span slot="breadcrumbs">
+                            &nbsp;<code><a :href="navigatedUrl" target="_blank">{{ navigatedUrl }}</a></code>
+                        </span>
+
                     </nested-file-list>
                 </md-layout>
             </md-layout>
@@ -96,6 +104,8 @@ it will be untarred by the pipeline and the entire contents used as input.
     import "vue-material/dist/vue-material.css";
 
     import * as _ from "lodash";
+    import get from "lodash-es/get";
+
     import "es6-promise";
 
     import * as pluralize from "pluralize";
@@ -121,7 +131,14 @@ it will be untarred by the pipeline and the entire contents used as input.
     import {WebAPI} from "../web-api";
 
     import {ENADummySampleList as _dummysampleList} from "../test-data";
-    import {EMPTY_TREE_ROOT, fileListToTree, findPair, simplifyFastqName, TreeNode} from "../file-tree-util";
+    import {
+        EMPTY_TREE_ROOT, FileListItem,
+        fileListToTree,
+        findPair,
+        flattenTree, is_archive_url, objListToTree,
+        simplifyFastqName,
+        TreeNode
+    } from "../file-tree-util";
 
     interface DbAccession {
         accession: string;
@@ -136,9 +153,12 @@ it will be untarred by the pipeline and the entire contents used as input.
         public showButtons: boolean | undefined;
 
         public url: string = "https://bioinformatics.erc.monash.edu/home/andrewperry/test/sample_data/";
-        public files: Array<LaxyFile> = [];
+        public initialUrl: string = "";  // the URL initially submitted to the form, for tracking navigation state
+        public navigatedUrl: string = "";
+        public previousUrl: string = "";
+        public listing: Array<any> = [];
 
-        public selectedFiles: LaxyFile[] = [];
+        public selectedFiles: any[] = [];
 
         public snackbar_message: string = "Everything is fine. ☃";
         public snackbar_duration: number = 2000;
@@ -146,25 +166,47 @@ it will be untarred by the pipeline and the entire contents used as input.
         public submitting: boolean = false;
         public error_alert_message: string = "Everything is fine.";
 
-        // for lodash in templates
-        get _() {
-            return _;
-        }
-
         created() {
 
         }
 
-        get fileTree(): TreeNode<LaxyFile> {
-            if (this.files) {
-                return fileListToTree(this.files);
+        get fileTree(): TreeNode<FileListItem> {
+            // This file tree isn't actually a tree, but a single (non-nested) list of children on the root node.
+            // This allows us to re-use the NestedFileList component.
+            // Directory nodes are given 'meta.onclick' callbacks that trigger retrieving their remote listing, and
+            // resulting in an update of this item listing.
+            if (this.listing) {
+                // Turn the list of items into a (single level) TreeNode object
+                const tree = objListToTree<FileListItem>(
+                    this.listing,
+                    (i: FileListItem) => {
+                        return [i.name];
+                    },
+                    (i: FileListItem) => {
+                        return i.name;
+                    });
+                // const tree = fileListToTree<FileListItem>(this.listing);
+                for (let node of tree.children) {
+                    const item = node.obj as FileListItem;
+                    node.meta.type = item.type;
+                    node.meta.tags = item.tags;
+                    // add onclick callbacks to directory and archive nodes
+                    if (item && (item.type === 'directory' || item.tags.includes('archive'))) {
+                        node.meta.onclick = () => this.listLinks(item.location);
+                    }
+                }
+                return tree;
             } else {
                 return EMPTY_TREE_ROOT;
             }
         }
 
         get hasResults() {
-            return !(this.files == null || this.files.length === 0);
+            return !(this.listing == null || this.listing.length === 0);
+        }
+
+        urlIsParentPath(longurl: string, shorturl: string): boolean {
+            return longurl.length > shorturl.length && longurl.indexOf(shorturl) === 0;
         }
 
         onSelect(rows: any) {
@@ -178,8 +220,8 @@ it will be untarred by the pipeline and the entire contents used as input.
 
         remove(rows: LaxyFile[]) {
             for (const row of rows) {
-                const i = this.files.indexOf(row);
-                this.files.splice(i, 1);
+                const i = this.listing.indexOf(row);
+                this.listing.splice(i, 1);
             }
         }
 
@@ -220,12 +262,19 @@ it will be untarred by the pipeline and the entire contents used as input.
         //     // console.log(row);
         // }
 
+        async submitUrl(url: string) {
+            this.initialUrl = url;
+            await this.listLinks(url);
+        }
+
         async listLinks(url: string) {
-            this.files = [];
+            this.listing = [];
             try {
                 this.submitting = true;
                 const response = await WebAPI.remoteFilesList(url);
                 this.submitting = false;
+                this.previousUrl = `${this.navigatedUrl}`;
+                this.navigatedUrl = url;
                 this.populateSelectionList(response.data);
             } catch (error) {
                 console.log(error);
@@ -236,13 +285,38 @@ it will be untarred by the pipeline and the entire contents used as input.
         }
 
         populateSelectionList(data: any) {
-            this.files = [];
-            // TODO: We don't yet handle 'directories'
-            // for (let d of data['directories']) {
-            //     this.files.push(d as LaxyFile);
-            // }
-            for (let f of data['files']) {
-                this.files.push(f as LaxyFile);
+            this.listing = [];
+            if (is_archive_url(this.navigatedUrl)) {
+                // add a '..' entry to navigate out of TAR archive
+                const parts = this.navigatedUrl.split('/');
+                const archive_name = parts.pop();
+                const parentDir = parts.join('/');
+                this.listing.push({
+                    location: parentDir,
+                    name: '..',
+                    type: 'directory',
+                    tags: [],
+                } as FileListItem)
+            }
+            for (let f of data['listing']) {
+                if (f.type === 'directory') {
+
+                    // don't allow navigation down the tree below the initially submitted URL
+                    if (this.urlIsParentPath(this.initialUrl, f.location)) {
+                        continue;
+                    }
+
+                    // rename URLs that lead down toward the base of the tree
+                    if (this.urlIsParentPath(this.navigatedUrl, f.location)) {
+                        f.name = '..';
+                        // or skip them ?
+                        // continue;
+                    }
+
+                    if (f.meta === undefined) f.meta = {};
+                    f.meta.onclick = () => this.listLinks(f['location']);
+                }
+                this.listing.push(f);
             }
             console.log(data['archives']);
         }

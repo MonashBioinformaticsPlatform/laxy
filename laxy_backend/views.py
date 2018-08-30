@@ -2,10 +2,12 @@ import asyncio
 from collections import OrderedDict
 import coreapi
 import coreschema
+from fnmatch import fnmatch
 import json_merge_patch
 import jsonpatch
 import logging
 import os
+import pydash
 import requests
 import rest_framework_jwt
 from celery import chain
@@ -18,6 +20,9 @@ from django.http import HttpResponse, StreamingHttpResponse
 from django.urls import reverse
 from django.utils.encoding import force_text
 from django_filters.rest_framework import DjangoFilterBackend
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
+from fs.errors import DirectoryExpected
 from io import BytesIO
 from pathlib import Path
 import paramiko
@@ -74,8 +79,8 @@ from .serializers import (PatchSerializerResponse,
                           EventLogSerializer, JobEventLogSerializer,
                           JobFileSerializerCreateRequest,
                           InputOutputFilesResponse,
-                          RedirectResponseSerializer)
-from .util import sh_bool, laxy_sftp_url, generate_uuid
+                          RedirectResponseSerializer, FileListing)
+from .util import sh_bool, laxy_sftp_url, generate_uuid, multikeysort
 from .storage import http_remote_index
 from .view_mixins import (JSONView, GetMixin, PatchMixin,
                           DeleteMixin, PostMixin, CSVTextParser,
@@ -2098,104 +2103,138 @@ class SendFileToDegust(JSONView):
                                 reason="Error contacting Degust.")
 
 
-class DiscoverLinksView(JSONView):
+class RemoteBrowseView(JSONView):
     renderer_classes = (JSONRenderer,)
-    serializer_class = SchemalessJsonResponseSerializer
+    serializer_class = FileListing
     filter_backends = (RemoteFilesQueryParams,)
     api_docs_visible_to = 'public'
 
-    @view_config(response_serializer=SchemalessJsonResponseSerializer)
+    @view_config(response_serializer=FileListing)
+    @method_decorator(cache_page(10 * 60))
     def get(self, request, version=None):
+        """
+        Returns a single level of a file/directory tree.
+        Takes query parameters:
+        * `url` - the URL (http[s]:// or ftp://) to retrieve.
+        * `fileglob` - a glob pattern to filter returned files by (eg `*.csv`). Doesn't filter directories.
+        eg
+
+        **Request:**
+
+        `GET http://laxy.io/api/v1/remote-browse/?url=ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR343/001/SRR3438011/&fileglob=*.gz`
+
+        **Response:**
+        ```json
+        {
+          "listing":[
+                {
+                  "type":"file",
+                  "name":"SRR3438011_1.fastq.gz",
+                  "location":"ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR343/001/SRR3438011/SRR3438011_1.fastq.gz",
+                  "tags": []
+                },
+                {
+                  "type":"directory",
+                  "name":"FastQC_reports",
+                  "location":"ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR343/001/SRR3438011/FastQC_reports/",
+                  "tags": []
+                },
+                {
+                  "type":"file",
+                  "name":"data.tar",
+                  "location":"ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR343/001/SRR3438011/data.tar.gz",
+                  "tags": ['archive']
+                }
+            ]
+        }
+        ```
+
+        <!--
+        :param request:
+        :type request:
+        :param version:
+        :type version:
+        :return:
+        :rtype:
+        -->
+        """
         url = request.query_params.get('url', None)
-        basepath = urlparse(url).path
-        if url is not None:
-            file_links, dir_links, archive_files = [], [], []
+        fileglob = request.query_params.get('fileglob', '*')
 
-            if is_archive_link(url):
-                try:
-                    # archive_files = http_remote_index.grab_archive_contents(url)
-                    archive_files = http_remote_index.get_tar_file_manifest(url)
-                except HTTPError as ex:
-                    # This gets thrown if the associated tar manifest-md5 file
-                    # doesn't exist. We just return the TAR file URL itself,
-                    # rather than a list of it's contents
-                    file_links = [url]
+        if url is None:
+            return HttpResponse(status=status.HTTP_400_BAD_REQUEST,
+                                reason="url query parameter is required.")
 
-                    """
-                    if ex.response.status_code == status.HTTP_404_NOT_FOUND:
-                        # This gets thrown if the associated tar manifest file
-                        # doesn't exist
-                        return Response({'status': ex.response.status_code,
-                                         'message': str(ex)},
-                                        status=status.HTTP_404_NOT_FOUND)
-                    else:
-                        return Response({}, status=ex.response.status_code)
-                    """
-            else:
-                file_links, dir_links = http_remote_index.grab_links_from_page(url)
+        # def _looks_like_archive(fn):
+        #     archive_extensions = ['.tar']
+        #     return any([fn.endswith(ext) for ext in archive_extensions])
 
-            def _get_relative(f_url):
-                fpath = Path(urlparse(f_url).path)
-                try:
-                    relpath = str(fpath.parent.relative_to(basepath))
-                except ValueError:
-                    relpath = None
-                if relpath == '.':
-                    relpath = ''
-                return relpath
+        listing = []
+        scheme = urlparse(url).scheme
+        if is_archive_link(url):
+            try:
+                archive_files = http_remote_index.get_tar_file_manifest(url)
+                for f in archive_files:
+                    filepath = f['filepath']
+                    listing.append(dict(name=filepath,
+                                        location=f'{url}#{filepath}',
+                                        type='file',
+                                        tags=['inside_archive']))
+            except BaseException as ex:
+                logger.debug(f'Unable to find archive manifest for {url}')
+                logger.exception(ex)
+                fn = Path(urlparse(url).path).name
+                listing = [dict(name=fn,
+                                location=f'{url}',
+                                type='file',
+                                tags=['archive'])]
 
-            def _file_url_to_file_obj(f_url):
-                fpath = Path(urlparse(f_url).path)
-                relpath = _get_relative(f_url)
+        elif scheme == 'ftp':
+            from fs import open_fs
+            try:
+                ftp_fs = open_fs(url)
 
-                ff = FileSerializer(dict(
-                    id='__%s' % generate_uuid(),
-                    owner=request.user,
-                    name=fpath.name,
-                    path=relpath,
-                    location=f_url,
-                    fileset=None,
-                    checksum=None,
-                    metadata={}))
-                return ff
+                for step in ftp_fs.walk(filter=[fileglob], search='breadth', max_depth=1):
+                    listing.extend([dict(type='directory',
+                                         name=i.name,
+                                         location=f'{url.rstrip("/")}/{i.name}',
+                                         tags=[])
+                                    for i in step.dirs])
+                    listing.extend([dict(type='file',
+                                         name=i.name,
+                                         location=f'{url.rstrip("/")}/{i.name}',
+                                         tags=['archive'] if is_archive_link(i.name) else [])
+                                    for i in step.files])
+            except DirectoryExpected as ex:
+                fn = Path(urlparse(url).path).name
+                listing = [dict(name=fn,
+                                location=f'{url}',
+                                type='file',
+                                tags=['archive'] if is_archive_link(fn) else [])]
 
-            files = []
-            afile_objs = []
-            for afile in archive_files:
-                fp = afile['filepath']
-                ff = FileSerializer(dict(
-                    id='__%s' % generate_uuid(),
-                    owner=request.user,
-                    name=str(Path(fp).name),
-                    path=str(Path(fp).parent),
-                    location=f'{url}#{fp}',
-                    fileset=None,
-                    checksum=afile['checksum'],
-                    metadata={},
-                    type_tags=['in_archive']))
-                files.append(ff.data)
+        elif scheme == 'http' or scheme == 'https':
+            file_links, dir_links = http_remote_index.grab_links_from_html_page(url)
 
-            for f in file_links:
-                ff = _file_url_to_file_obj(f)
-                files.append(ff.data)
+            for i in file_links:
+                name = Path(urlparse(i).path).name
+                if not fnmatch(name, fileglob):
+                    continue
+                listing.append(dict(type='file',
+                                    name=name,
+                                    location=i,
+                                    tags=['archive'] if is_archive_link(name) else []))
+            for i in dir_links:
+                name = Path(urlparse(i).path).name
+                listing.append(dict(type='directory',
+                                    name=name,
+                                    location=f'{i.rstrip("/")}/',
+                                    tags=[]))
 
-            dirs = []
-            for d in dir_links:
-                relpath = None
-                if url in d:
-                    relpath = str(Path(urlparse(d).path).relative_to(basepath))
-                if relpath == '.':
-                    relpath = ''
-                dirs.append(dict(id='__%s' % generate_uuid(),
-                                 name=Path(urlparse(d).path).name,
-                                 path=relpath,
-                                 location=d))
-
-            return Response({'files': files,
-                             'directories': dirs},
-                            status=status.HTTP_200_OK)
-
-        return Response({}, status=status.HTTP_400_BAD_REQUEST)
+        # listing = pydash.sort_by(listing, ['type', 'name'])
+        listing = multikeysort(listing, ['type', 'name'])
+        item_list = FileListing({'listing': listing})
+        return Response(item_list.data,
+                        status=status.HTTP_200_OK)
 
 
 def _get_or_create_drf_token(user):
