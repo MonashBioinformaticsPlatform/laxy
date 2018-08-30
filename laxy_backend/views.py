@@ -206,6 +206,9 @@ class RemoteFilesQueryParams(QueryParamFilterBackend):
             dict(name='url',
                  example='https://bioinformatics.erc.monash.edu/home/andrewperry/test/sample_data/',
                  description='A URL containing links to input data files'),
+            dict(name='fileglob',
+                 example='*.fastq.gz',
+                 description="A glob (wildcard) expression to filter files returned. Doesn't filter directories"),
         ])
 
 
@@ -2109,8 +2112,8 @@ class RemoteBrowseView(JSONView):
     filter_backends = (RemoteFilesQueryParams,)
     api_docs_visible_to = 'public'
 
+    # @method_decorator(cache_page(10 * 60))
     @view_config(response_serializer=FileListing)
-    @method_decorator(cache_page(10 * 60))
     def get(self, request, version=None):
         """
         Returns a single level of a file/directory tree.
