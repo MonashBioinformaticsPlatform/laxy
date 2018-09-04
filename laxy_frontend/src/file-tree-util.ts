@@ -155,6 +155,7 @@ export function downloadFile(file_id: string | LaxyFile, fileset: LaxyFileSet | 
 export function truncateFastqFilename(filename: string): string {
     let fn = filename.replace('_001.fastq.gz', ''); // default Illumina
     fn = fn.replace('.fastq.gz', '');  // ENA/SRA
+    fn = fn.replace('.fasta.gz', '');  // occasionally we get FASTA format reads
     return fn;
 }
 
@@ -172,7 +173,7 @@ export function simplifyFastqName(filename: string): string {
  */
 export function findPair(file: any, files: any[], getName: Function | null = null): any | null {
     if (getName == null) {
-        getName = (f: LaxyFile) => f.name;
+        getName = (f: any) => f.name;
     }
     const fn = truncateFastqFilename(getName(file));
     for (const f of files) {
