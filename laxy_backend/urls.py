@@ -79,9 +79,6 @@ api_urls = [
             Logout.as_view(),
             name='api_logout'),
 
-    re_path(r'job/(?P<job_id>[a-zA-Z0-9\-_]+)/$',
-            JobView.as_view(),
-            name='job'),
     re_path(r'job/$',
             JobCreate.as_view(),
             name='create_job'),
@@ -89,25 +86,28 @@ api_urls = [
             # JobListView.as_view({'get': 'list'}),
             JobListView.as_view(),
             name='list_jobs'),
-    re_path(r'job/(?P<job_id>[a-zA-Z0-9\-_]+)/event/$',
-            JobEventLogCreate.as_view(),
-            name='create_job_eventlog'),
-    re_path(r'job/(?P<job_id>[a-zA-Z0-9\-_]+)/files/$',
-            JobFileBulkRegistration.as_view(),  # POST (csv, tsv)
-            name='job_file_bulk'),
     re_path(r'job/(?P<job_id>[a-zA-Z0-9\-_]+)/files/(?P<file_path>.*)$',
             JobFileView.as_view(),  # GET, PUT
             name='job_file'),
+    re_path(r'job/(?P<job_id>[a-zA-Z0-9\-_]+)/files/$',
+            JobFileBulkRegistration.as_view(),  # POST (csv, tsv)
+            name='job_file_bulk'),
+    re_path(r'job/(?P<job_id>[a-zA-Z0-9\-_]+)/event/$',
+            JobEventLogCreate.as_view(),
+            name='create_job_eventlog'),
+    re_path(r'job/(?P<job_id>[a-zA-Z0-9\-_]+)/$',
+            JobView.as_view(),
+            name='job'),
 
     re_path(r'file/$',
             FileCreate.as_view(),
             name='create_file'),
-    re_path(r'file/(?P<uuid>[a-zA-Z0-9\-_]+)/$',
-            FileView.as_view(),
-            name='file'),
     re_path(r'file/(?P<uuid>[a-zA-Z0-9\-_]+)/content/(?P<filename>.*)$',
             FileContentDownload.as_view(),
             name='file_download'),
+    re_path(r'file/(?P<uuid>[a-zA-Z0-9\-_]+)/$',
+            FileView.as_view(),
+            name='file'),
 
     re_path(r'fileset/(?P<uuid>[a-zA-Z0-9\-_]+)/$',
             FileSetView.as_view(),
@@ -174,5 +174,3 @@ urlpatterns = [
 
     re_path(r'^api/v1/admin/', include(admin_urls)),
 ]
-
-urlpatterns = format_suffix_patterns(urlpatterns)
