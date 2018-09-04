@@ -185,14 +185,18 @@ Assuming the Postgres (executable) container is `laxy_db_1` and it's data volume
 we can export a tar archive of the database files like:
 
 ```bash
-docker run --rm --volumes-from laxy_db_1 -v $(pwd):/backup busybox tar cvf /backup/postgres-dbdata.tar /var/lib/postgresql/data/pgdata
+DBTAR=postgres-dbdata-$(date +%s).tar
+docker run --rm --volumes-from laxy_db_1 -v $(pwd):/backup busybox tar cvf /backup/${DBTAR} /var/lib/postgresql/data/pgdata
 ```
 
 We can copy this archive back into a new volume container (`database_copy`) like:
 
 ```bash
-docker run -d -v /var/lib/postgresql/data/pgdata --name database_copy busybox echo "Data-only container"
-docker run --rm --volumes-from database_copy -v $(pwd):/backup busybox tar xvf /backup/postgres-dbdata-*.tar
+# DBTAR=postgres-dbdata-*.tar
+DBVOLNAME=database_copy
+# DBVOLNAME=laxy_dbdata
+docker volume create database_copy
+docker run --rm -v ${DBVOLNAME}:/var/lib/postgresql/data/pgdata  -v $(pwd):/backup busybox tar xvf /backup/${DBTAR}
 ```
 
 To clone the volume 'directly' into a new volume, use the 
