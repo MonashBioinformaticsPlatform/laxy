@@ -110,7 +110,14 @@ Laxy (and associated services) can run under Docker Compose.
 
 ```bash
 docker-compose -f docker-compose.yml -f docker-compose.dev.yml build
-docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+```
+
+Once running, to watch the logs:
+```bash
+docker-compose logs -f -t
+# or for just one service (eg django)
+# docker-compose logs -f -t django
 ```
 
 To manually create the admin user (`docker-compose.dev.yml` does this itself using
@@ -121,6 +128,11 @@ docker container exec -it laxy_django_1 \
   python manage.py shell -c "from django.contrib.auth import get_user_model; User = get_user_model(); \
                              User.objects.filter(username='admin').count() or \
                              User.objects.create_superuser('admin', 'admin@example.com', 'adminpass')"
+```
+
+To pull down the stack, do:
+```bash
+docker-compose down
 ```
 
 ##### Database dumps and migrations
