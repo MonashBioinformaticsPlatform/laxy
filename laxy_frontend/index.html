@@ -87,13 +87,31 @@
             font-size: 96px;
         }
 
+        .bolt-to-top {
+            position: fixed !important;
+            max-width: 100%;
+            top: 0;
+            right: 0;
+            left: 0;
+            z-index: 3;
+        }
+
+        .main-router-content {
+            margin-top: 64px;  /* spaces main content down from fixed position top toolbar */
+        }
+
+        /* equivalent to vue-material 2.x's  md-elevation-2 class */
+        .shadow {
+            box-shadow: 0 3px 1px -2px rgba(0,0,0,.2), 0 2px 2px 0 rgba(0,0,0,.14), 0 1px 5px 0 rgba(0,0,0,.12);
+        }
+
     </style>
     <title>Laxy</title>
 </head>
 <body>
 <div id="app">
     <div v-cloak>
-        <md-toolbar>
+        <md-toolbar class="bolt-to-top shadow">
             <md-button class="md-icon-button" @click="toggleLeftSidenav">
                 <md-icon>menu</md-icon>
             </md-button>
@@ -216,7 +234,7 @@
             </md-list>
         </md-sidenav>
 
-        <router-view></router-view>
+        <router-view class="main-router-content"></router-view>
     </div>
 </div>
 <script src="dist/bundle.js"></script>
