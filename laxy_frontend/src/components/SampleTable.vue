@@ -9,7 +9,7 @@
         </md-table-header>
         <md-table-body>
             <md-table-row v-for="(sample, index) in samples.items"
-                          :key="sample.name"
+                          :key="JSON.stringify([sample.id, sample.name, sample.files])"
                           :md-item="sample"
                           md-selection>
                 <md-table-cell v-for="field in fields" :key="field">

@@ -26,7 +26,7 @@
 
                     </div>
                     <md-layout>
-                        <router-link to="/ENAflow">
+                        <router-link to="/rnaseq">
                             <md-card md-with-hover id="rnaseq">
                                 <md-card-header>
                                     <div class="md-title">RNA-Seq</div>
@@ -60,7 +60,7 @@
                                     <md-card-actions>
                                         <router-link tag="md-button"
                                                      class="md-primary md-raised"
-                                                     to="/ENAflow">
+                                                     to="/rnaseq">
                                             Run an RNA-Seq analysis
                                         </router-link>
                                     </md-card-actions>

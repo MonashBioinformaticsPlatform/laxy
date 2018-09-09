@@ -20,6 +20,7 @@ export const SET_PIPELINE_DESCRIPTION = 'set_pipeline_description';
 export const SET_JOBS = 'set_jobs';
 export const SET_FILESET = 'set_fileset';
 export const SET_VIEWED_JOB = 'set_viewed_job';
+export const SET_API_URL = 'set_api_url';
 
 export const FETCH_USER_PROFILE = 'fetch_user_profile';
 export const FETCH_JOBS = 'fetch_jobs';
@@ -43,6 +44,7 @@ export const Store = new Vuex.Store({
         jobs: {total: 0, jobs: [] as ComputeJob[]} as JobsPage,
         filesets: {} as { [key: string]: LaxyFileSet },
         currentViewedJob: {} as ComputeJob,
+        api_url: 'http://118.138.240.175:8001',
     },
     getters: {
         samples: state => {
@@ -111,6 +113,9 @@ export const Store = new Vuex.Store({
         },
     },
     mutations: {
+        [SET_API_URL](state, url: string) {
+            state.api_url = url;
+        },
         [SET_USER_PROFILE](state, profile_info: {}) {
             state.user_profile = profile_info;
         },

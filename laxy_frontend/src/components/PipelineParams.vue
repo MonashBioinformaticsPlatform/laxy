@@ -84,14 +84,16 @@
     import {DummyPipelineConfig as _dummyPipelineConfig} from "../test-data";
 
     @Component({
-        props: {showButtons: Boolean},
+        props: {},
         filters: {},
         beforeRouteLeave(to: any, from: any, next: any) {
             (this as any).beforeRouteLeave(to, from, next);
         }
     })
     export default class PipelineParams extends Vue {
-        public showButtons: boolean | undefined;
+
+        @Prop({default: true, type: Boolean})
+        public showButtons: boolean;
 
         public submitting: boolean = false;
         public error_alert_message: string = "Everything is fine. 🏩";
@@ -217,7 +219,7 @@
                 }
 
             } catch (error) {
-
+                console.error(error);
             }
         }
 

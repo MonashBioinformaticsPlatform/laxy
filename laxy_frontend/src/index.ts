@@ -42,12 +42,12 @@ import {truncateString} from './util';
 import FrontPage from './components/FrontPage.vue';
 import RNASeqSetup from './components/RNASeqSetup.vue';
 import InputDataForm from './components/InputFilesForm.vue';
-import ENAFileSelect from './components/ENAFileSelect.vue';
-import RemoteFilesSelect from './components/RemoteFilesSelect.vue';
+// import ENAFileSelect from './components/ENA/ENAFileSelect.vue';
+import RemoteFilesSelect from './components/RemoteSelect/RemoteFilesSelect.vue';
 import SampleCart from './components/SampleCart.vue';
 import SampleTable from './components/SampleTable.vue';
 import PipelineParams from './components/PipelineParams.vue';
-import ENAFlow from './components/ENAFlow.vue';
+import ENAFlow from './components/ENA/ENAFlow.vue';
 import JobList from './components/JobList.vue';
 import JobPage from './components/JobPage.vue';
 import JobStatusCard from './components/JobStatusCard.vue';
@@ -56,7 +56,7 @@ import EventLog from './components/EventLog.vue';
 
 Vue.component('input-files-form', InputDataForm);
 Vue.component('sample-table', SampleTable);
-Vue.component('ena-search', ENAFileSelect);
+// Vue.component('ena-search', ENAFileSelect);
 Vue.component('sample-cart', SampleCart);
 Vue.component('pipeline-params', PipelineParams);
 Vue.component('file-list', FileList);
@@ -105,12 +105,12 @@ const router = new VueRouter({
             component: RNASeqSetup,
             props: true,
         },
-        {
-            path: '/enaselect',
-            name: 'enaselect',
-            component: ENAFileSelect,
-            props: true,
-        },
+        // {
+        //     path: '/enaselect',
+        //     name: 'enaselect',
+        //     component: ENAFileSelect,
+        //     props: true,
+        // },
         {
             path: '/remoteselect',
             name: 'remoteselect',
@@ -123,12 +123,12 @@ const router = new VueRouter({
             component: SampleCart,
             props: true,
         },
-        {
-            path: '/setupRun',
-            name: 'setupRun',
-            component: PipelineParams,
-            props: true,
-        },
+        // {
+        //     path: '/setupRun',
+        //     name: 'setupRun',
+        //     component: PipelineParams,
+        //     props: true,
+        // },
         {
             path: '/jobs',
             name: 'jobs',
@@ -233,8 +233,8 @@ const App = new Vue({
         routeTo(name: string, params: any = {}) {
             this.$router.push({name: name, params: params});
         },
-        toggleLeftSidenav() {
-            ((this.$refs as any).leftSidenav as any).toggle();
+        toggleSidenav(refName: string) {
+            ((this.$refs as any)[refName] as any).toggle();
         },
         open(ref: string) {
             console.log('Opened: ' + ref);

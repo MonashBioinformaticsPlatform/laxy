@@ -18,38 +18,35 @@
                     </md-input-container>
 
                     <div id="ena_form" v-if="selected_source == 'ENA'">
-                        <md-input-container v-for="(accession, i) in ena_ids" :key="i">
-                            <label>Accession</label>
-                            <md-input v-model="accession.accession"></md-input>
-                            <md-button class="md-icon-button" @click="ena_ids.splice(i, 1)">
-                                <md-icon>delete</md-icon>
+                        <md-whiteframe md-elevation="5" class="pad-16 fill-vertical">
+                            <ENASearchAboutBox ref="aboutENA"></ENASearchAboutBox>
+                            <!--
+                            <md-button @click="hideAboutBox"
+                                       class="md-fab md-mini md-dense md-clean md-fab-top-right">
+                                <md-icon>close</md-icon>
                             </md-button>
-                        </md-input-container>
-                        <md-button class="md-fab md-mini" @click="ena_ids.push({accession: ''})">
-                            <md-icon>add</md-icon>
-                        </md-button>
-                    </div>
-
-                    <div id="sra_form" v-if="selected_source == 'SRA'">
-                        <md-input-container v-for="(accession, i) in sra_ids" :key="i">
-                            <label>Accession</label>
-                            <md-input v-model="accession.accession"></md-input>
-                            <md-button class="md-icon-button" @click="sra_ids.splice(i, 1)">
-                                <md-icon>delete</md-icon>
-                            </md-button>
-                        </md-input-container>
-                        <md-button class="md-fab md-mini" @click="sra_ids.push({accession: ''})">
-                            <md-icon>add</md-icon>
-                        </md-button>
+                            -->
+                        </md-whiteframe>
+                        <ena-file-select :show-about-box="false" :show-buttons="true" ref="enaSearch">
+                        </ena-file-select>
                     </div>
 
                     <div id="url_form" v-if="selected_source == 'URL'">
-                        <md-input-container>
-                            <label>URL</label>
-                            <md-input v-model="url_input"></md-input>
-                        </md-input-container>
+                        <remote-files-select :show-about-box="true" :show-buttons="true"></remote-files-select>
+                    </div>
+                    <div id="csv_form" v-if="selected_source == 'CSV'">
+                        <CSVSampleListUpload></CSVSampleListUpload>
                     </div>
                     <div id="cloudstor_form" v-if="selected_source == 'CLOUDSTOR'">
+                        <md-whiteframe md-elevation="5" class="pad-16 fill-vertical">
+                            <div ref="aboutClourStor">
+                                Paste a link to a shared <a
+                                    href="https://cloudstor.aarnet.edu.au/plus/index.php/apps/files/">CloudStor</a>
+                                folder here (eg
+                                <code>https://cloudstor.aarnet.edu.au/plus/index.php/s/RaNd0MlooK1NgID</code>)
+                                and the password if required.
+                            </div>
+                        </md-whiteframe>
                         <md-input-container>
                             <label>CloudStor share link</label>
                             <md-input v-model="url_input"
@@ -61,6 +58,20 @@
                         </md-input-container>
                     </div>
                     <div id="sftp_upload_form" v-if="selected_source == 'SFTP_UPLOAD'">
+                        <md-whiteframe md-elevation="5" class="pad-16 fill-vertical">
+                            <div ref="aboutSFTP">
+                                <p>
+                                    FASTQ data can be uploaded to our secure server for analysis.
+                                    When you enter a dataset name and press <em>"Generate"</em>, a
+                                    username and temporary password will be created for you on the
+                                    <em>{{ sftp_upload_host }}</em> server.
+                                    You can use these to upload your data via SFTP.
+                                </p>
+                                <p>
+                                    <em>Please note that raw data uploaded is deleted after two weeks.</em>
+                                </p>
+                            </div>
+                        </md-whiteframe>
                         <div v-show="!sftp_upload_credentials">
                             <h4>Generate upload credentials</h4>
                             <md-input-container :class="{'md-input-invalid': dataset_name_invalid }">
@@ -68,7 +79,8 @@
                                 <md-input required id="dataset_name" v-model="dataset_name"></md-input>
                                 <span class="md-error">Dataset name must be specified</span>
                             </md-input-container>
-                            <md-button class="md-raised md-primary" @click="generateSFTPUploadCredentials()">Generate
+                            <md-button class="md-raised md-primary" @click="generateSFTPUploadCredentials()">
+                                Generate
                             </md-button>
                         </div>
                         <div id="sftp_upload_credentials" v-show="sftp_upload_credentials">
@@ -90,56 +102,54 @@
                     <br/>
                 </form>
             </md-layout>
+            <!--
+    <md-layout md-column style="padding: 16px;">
+        <md-whiteframe md-elevation="5" class="pad-16 fill-vertical">
 
-            <md-layout md-column style="padding: 16px;">
-                <md-whiteframe md-elevation="5" style="padding: 16px; min-height: 100%;">
-                    <div v-if="selected_source == 'ENA'">The <a href="http://www.ebi.ac.uk/ena">European Nucleotide Archive (ENA)</a>
-                        at
-                        EMBL-EBI stores publicly available raw sequencing data from high-throughput sequencing platforms.
-                        <br/><br/>
-                        Example accession: <code>PRJNA214799</code>.
-                    </div>
-                    <div v-if="selected_source == 'SRA'">
-                        The <a href="https://www.ncbi.nlm.nih.gov/sra">Sequence Read Archive (SRA)</a> at NCBI
-                        stores publicly available raw sequencing data from high-throughput sequencing platforms.
-                        <br/><br/>
-                        Example accessions: <code v-for="i in _.range(78, 85)">SRR9500{{i}}<span v-if="i < 84">, </span></code>
-                    </div>
-                    <div v-if="selected_source == 'URL'">
-                        If your raw read FASTQ data exists at a particular URL, you can paste it here.
-                        Valid protocols are <code>http://</code>, <code>https://</code> or <code>ftp://</code>.
+            <div v-if="selected_source == 'ENA'">
+                <ENASearchAboutBox></ENASearchAboutBox>
+            </div>
+            <div v-if="selected_source == 'SRA'">
+                The <a href="https://www.ncbi.nlm.nih.gov/sra">Sequence Read Archive (SRA)</a> at NCBI
+                stores publicly available raw sequencing data from high-throughput sequencing platforms.
+                <br/><br/>
+                Example accessions: <code v-for="i in _.range(78, 85)">SRR9500{{i}}<span v-if="i < 84">, </span></code>
+            </div>
+            <div v-if="selected_source == 'URL'">
+                If your raw read FASTQ data exists at a particular URL, you can paste it here.
+                Valid protocols are <code>http://</code>, <code>https://</code> or <code>ftp://</code>.
 
-                        You files can be in an index directory or a single tar archive, eg:
+                You files can be in an index directory or a single tar archive, eg:
 
-                        <a href="http://bioinformatics.erc.monash.edu/~andrewperry/laxy/test1/">
-                            http://bioinformatics.erc.monash.edu/~andrewperry/laxy/test1/</a>
+                <a href="http://bioinformatics.erc.monash.edu/~andrewperry/laxy/test1/">
+                    http://bioinformatics.erc.monash.edu/~andrewperry/laxy/test1/</a>
 
-                        or
+                or
 
-                        <a href="http://bioinformatics.erc.monash.edu/~andrewperry/laxy/test2/my_fastqs.tar">
-                            http://bioinformatics.erc.monash.edu/~andrewperry/laxy/test2/my_fastqs.tar</a>
-                    </div>
-                    <div v-if="selected_source == 'CLOUDSTOR'">
-                        Paste a link to a shared <a href="https://cloudstor.aarnet.edu.au/plus/index.php/apps/files/">CloudStor</a>
-                        folder here (eg <code>https://cloudstor.aarnet.edu.au/plus/index.php/s/RaNd0MlooK1NgID</code>)
-                        and the password if required.
-                    </div>
-                    <div v-if="selected_source == 'SFTP_UPLOAD'">
-                        <p>
-                            FASTQ data can be uploaded to our secure server for analysis.
-                            When you enter a dataset name and press <em>"Generate"</em>, a
-                            username and temporary password will be created for you on the
-                            <em>{{ sftp_upload_host }}</em> server.
-                            You can use these to upload your data via SFTP.
-                        </p>
-                        <p>
-                            <em>Please note that raw data uploaded is deleted after two weeks.</em>
-                        </p>
+                <a href="http://bioinformatics.erc.monash.edu/~andrewperry/laxy/test2/my_fastqs.tar">
+                    http://bioinformatics.erc.monash.edu/~andrewperry/laxy/test2/my_fastqs.tar</a>
+            </div>
+            <div v-if="selected_source == 'CLOUDSTOR'">
+                Paste a link to a shared <a href="https://cloudstor.aarnet.edu.au/plus/index.php/apps/files/">CloudStor</a>
+                folder here (eg <code>https://cloudstor.aarnet.edu.au/plus/index.php/s/RaNd0MlooK1NgID</code>)
+                and the password if required.
+            </div>
+            <div v-if="selected_source == 'SFTP_UPLOAD'">
+                <p>
+                    FASTQ data can be uploaded to our secure server for analysis.
+                    When you enter a dataset name and press <em>"Generate"</em>, a
+                    username and temporary password will be created for you on the
+                    <em>{{ sftp_upload_host }}</em> server.
+                    You can use these to upload your data via SFTP.
+                </p>
+                <p>
+                    <em>Please note that raw data uploaded is deleted after two weeks.</em>
+                </p>
 
-                    </div>
-
-                </md-whiteframe>
-            </md-layout>
+            </div>
+        </md-whiteframe>
+    </md-layout>
+                    -->
 
         </md-layout>
     </div>
@@ -155,24 +165,29 @@
     import Vue, {ComponentOptions} from 'vue';
     import Component from 'vue-class-component';
     import {Emit, Inject, Model, Prop, Provide, Watch} from 'vue-property-decorator'
+    import ENAFileSelect from "./ENA/ENAFileSelect";
+    import ENASearchAboutBox from "./ENA/ENASearchAboutBox";
+    import RemoteFilesSelect from "./RemoteSelect/RemoteFilesSelect";
+    import CSVSampleListUpload from "./CSVSampleListUpload";
 
     interface DbAccession {
         accession: string;
     }
 
-    @Component({props: {}})
+    @Component({
+        components: {CSVSampleListUpload, RemoteFilesSelect, ENASearchAboutBox, 'ena-file-select': ENAFileSelect},
+        props: {}
+    })
     export default class InputFilesForm extends Vue {
 
         sources: object = [
-            {type: 'ENA', text: 'European Nucleotide Archive at EBI-EMBL (ENA)'},
-            {type: 'SRA', text: 'Sequence Read Archive at NCBI (SRA)'},
-            {type: 'URL', text: 'URL'},
-            {type: 'CLOUDSTOR', text: 'CloudStor'},
-            {type: 'SFTP_UPLOAD', text: 'SFTP upload'},
+            {type: 'ENA', text: 'Public data from ENA or SRA'},
+            {type: 'URL', text: 'Files on a web or FTP server (URL)'},
+            {type: 'CSV', text: 'Sample list from CSV / Excel'},
+            // {type: 'CLOUDSTOR', text: 'CloudStor'},
+            // {type: 'SFTP_UPLOAD', text: 'SFTP upload'},
         ];
-        selected_source: string = 'SRA';
-        ena_ids: DbAccession[] = [{accession: ''} as DbAccession];
-        sra_ids: DbAccession[] = [{accession: ''} as DbAccession];
+        selected_source: string = 'ENA';
         url_input: string = '';
         cloudstor_link_password: string = '';
         user_email: string = 'my.username@example.com';
@@ -227,8 +242,8 @@
             const a = document.createElement('a');
             a.href = url;
             return (a.host != null &&
-                    a.host != window.location.host &&
-                    _.includes(valid_protocols, a.protocol)
+                a.host != window.location.host &&
+                _.includes(valid_protocols, a.protocol)
             );
         }
 
@@ -237,29 +252,10 @@
             const a = document.createElement('a');
             a.href = url;
             return (a.host != null &&
-                    a.host != window.location.host &&
-                    _.includes(valid_protocols, a.protocol) &&
-                    a.host == 'cloudstor.aarnet.edu.au'
+                a.host != window.location.host &&
+                _.includes(valid_protocols, a.protocol) &&
+                a.host == 'cloudstor.aarnet.edu.au'
             );
-        }
-
-        addToENAList(accession: string) {
-            this.ena_ids.push({accession: accession} as DbAccession);
-        }
-
-        addToSRAList(accession: string) {
-            this.sra_ids.push({accession: accession} as DbAccession);
-        }
-
-
-        validateENAId(accession: DbAccession) {
-            // https://www.ebi.ac.uk/ena/submit/accession-number-formats
-            return (accession.accession.trim().length >= 9);
-        }
-
-        validateSRAId(accession: DbAccession) {
-            // https://www.ncbi.nlm.nih.gov/books/NBK56913/#search.why_does_sra_have_so_many_differe
-            return (accession.accession.trim().length >= 9);
         }
 
         @Watch('selected_source')
@@ -267,33 +263,13 @@
             this.$emit('dataSourceChanged');
         }
 
-        @Watch('ena_ids', {immediate: true, deep: true})
-        onENAIdChanged(newVal: DbAccession[], oldVal: DbAccession[]) {
-            // validate every accession in newVal
-            if (_.every(_.map(newVal, this.validateENAId))) {
-                this.$emit('stepDone');
-            } else {
-                this.$emit('invalidData');
-            }
-        }
-
-        @Watch('sra_ids', {immediate: true, deep: true})
-        onSRAIdChanged(newVal: DbAccession[], oldVal: DbAccession[]) {
-            // every accession in newVal
-            if (_.every(_.map(newVal, this.validateSRAId))) {
-                this.$emit('stepDone');
-            } else {
-                this.$emit('invalidData');
-            }
-        }
-
         @Watch('url_input', {immediate: true})
         onURLInputChanged(newVal: string, oldVal: string) {
             if (this.selected_source == 'URL' &&
-                    this.isValidURL(newVal)) {
+                this.isValidURL(newVal)) {
                 this.$emit('stepDone');
             } else if (this.selected_source == 'CLOUDSTOR' &&
-                    this.isCloudStorURL(newVal)) {
+                this.isCloudStorURL(newVal)) {
                 this.$emit('stepDone');
             } else {
                 this.$emit('invalidData');

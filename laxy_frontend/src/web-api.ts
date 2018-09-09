@@ -6,19 +6,28 @@ import axios, {AxiosResponse} from 'axios';
 const Cookies = require('js-cookie');
 
 export class WebAPI {
-    private static baseUrl: string = 'http://118.138.240.175:8001';
-    // private static baseUrl: string = 'http://localhost:8001';
+
+    public static apiSettings = {
+        // url: 'http://118.138.240.175:8001',
+        url: 'http://localhost:8001',
+    };
+    public static get baseUrl(): string {
+        return WebAPI.apiSettings.url;
+    }
+
     /* Axios has this silly quirk where the Content-Type header is removed
        unless you have 'data'. So we add empty data.
      */
-    public static fetcher = axios.create({
+    private static axoisConfig = {
         baseURL: WebAPI.baseUrl,
         withCredentials: true,
         xsrfHeaderName: 'X-CSRFToken',
         xsrfCookieName: 'csrftoken',
         headers: {'Content-Type': 'application/json'},
         data: {},
-    });
+    };
+
+    public static fetcher = axios.create(WebAPI.axoisConfig);
 
     public static async getAuthToken(user: string, pass: string): Promise<string> {
         try {
@@ -169,6 +178,17 @@ export class WebAPI {
     public static downloadJobFileByPathUrl(job_id: string,
                                            filepath: string): string {
         return `${this.baseUrl}/api/v1/job/${job_id}/files/${filepath}?download`;
+    }
+
+    public static async createSampleset(csvFormData: FormData) {
+        try {
+            const config = Object.assign({}, WebAPI.axoisConfig);
+            config.headers = {'Content-Type': 'multipart/form-data'};
+            const formPostfetcher = axios.create(config);
+            return await formPostfetcher.post('/api/v1/sampleset/', csvFormData) as AxiosResponse;
+        } catch (error) {
+            throw error;
+        }
     }
 
     /*

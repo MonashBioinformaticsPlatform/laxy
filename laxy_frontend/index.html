@@ -44,6 +44,14 @@
             color: rgba(255, 255, 255, 0.87) !important;
         }
 
+        .fill-vertical {
+            min-height: 100%;
+        }
+
+        .pad-16 {
+            padding: 16px;
+        }
+
         .pad-32 {
             padding: 32px;
         }
@@ -97,12 +105,16 @@
         }
 
         .main-router-content {
-            margin-top: 64px;  /* spaces main content down from fixed position top toolbar */
+            margin-top: 64px; /* spaces main content down from fixed position top toolbar */
         }
 
         /* equivalent to vue-material 2.x's  md-elevation-2 class */
         .shadow {
-            box-shadow: 0 3px 1px -2px rgba(0,0,0,.2), 0 2px 2px 0 rgba(0,0,0,.14), 0 1px 5px 0 rgba(0,0,0,.12);
+            box-shadow: 0 3px 1px -2px rgba(0, 0, 0, .2), 0 2px 2px 0 rgba(0, 0, 0, .14), 0 1px 5px 0 rgba(0, 0, 0, .12);
+        }
+
+        #rightSideNav > div.md-sidenav-content {
+            width: 90%;
         }
 
     </style>
@@ -112,7 +124,7 @@
 <div id="app">
     <div v-cloak>
         <md-toolbar class="bolt-to-top shadow">
-            <md-button class="md-icon-button" @click="toggleLeftSidenav">
+            <md-button class="md-icon-button" @click="toggleSidenav('leftSidenav')">
                 <md-icon>menu</md-icon>
             </md-button>
             <h1 class="md-title logo-text">
@@ -125,7 +137,8 @@
             <span style="flex: 1"></span>
 
             <div style="padding-left: 32px; padding-right: 32px;">
-                <md-button href="#/cart" class="md-icon-button">
+                <md-button class="md-icon-button" @click="toggleSidenav('rightSidenav')">
+                    <!-- <md-button href="#/cart" class="md-icon-button"> -->
                     <md-icon>shopping_cart</md-icon>
                 </md-button>
                 {{ sample_cart_count }}
@@ -182,7 +195,8 @@
 
         </md-toolbar>
 
-        <md-sidenav class="md-left" ref="leftSidenav" @open="open('Left')"
+        <md-sidenav class="md-left" ref="leftSidenav"
+                    @open="open('Left')"
                     @close="close('Left')">
             <md-toolbar class="md-large">
                 <h3 class="md-title">~</h3>
@@ -190,48 +204,38 @@
             <md-list md-dense>
                 <md-list-item>
                     <router-link :to="{name: 'home'}" exact>
-                        <span v-on:click="toggleLeftSidenav()"><md-icon>home</md-icon>&nbsp;&nbsp;Home</span>
-                    </router-link>
-                </md-list-item>
-                <md-list-item>
-                    <router-link to="/ENAflow">
-                        <span v-on:click="toggleLeftSidenav()"><md-icon>play_circle_outline</md-icon>&nbsp;&nbsp;Run from ENA/SRA data</span>
-                    </router-link>
-                </md-list-item>
-                <md-list-item>
-                    <router-link to="/jobs">
-                        <span v-on:click="toggleLeftSidenav()"><md-icon>view_list</md-icon>&nbsp;&nbsp;Jobs</span>
-                    </router-link>
-                </md-list-item>
-
-                <!--
-                <md-list-item>
-                    <router-link to="/files">
-                        <span v-on:click="toggleLeftSidenav()">Files</span>
+                        <span @click="toggleSidenav('leftSidenav')"><md-icon>home</md-icon>&nbsp;&nbsp;Home</span>
                     </router-link>
                 </md-list-item>
                 <md-list-item>
                     <router-link to="/rnaseq">
-                        <span v-on:click="toggleLeftSidenav()">RNASeq</span>
+                        <span @click="toggleSidenav('leftSidenav')"><md-icon>play_circle_outline</md-icon>&nbsp;&nbsp;Run an RNA-Seq analysis</span>
                     </router-link>
                 </md-list-item>
                 <md-list-item>
-                    <router-link to="/enaselect">
-                        <span v-on:click="toggleLeftSidenav()">Use data from ENA</span>
+                    <router-link to="/jobs">
+                        <span @click="toggleSidenav('leftSidenav')"><md-icon>view_list</md-icon>&nbsp;&nbsp;Jobs</span>
                     </router-link>
                 </md-list-item>
-                <md-list-item>
-                    <router-link to="/cart">
-                        <span v-on:click="toggleLeftSidenav()">Sample Cart</span>
-                    </router-link>
-                </md-list-item>
-                <md-list-item>
-                    <router-link to="/setupRun">
-                        <span v-on:click="toggleLeftSidenav()">Pipeline parameters</span>
-                    </router-link>
-                </md-list-item>
-                -->
             </md-list>
+        </md-sidenav>
+
+        <md-sidenav id="rightSideNav"
+                    class="md-right" ref="rightSidenav"
+                    @open="open('Right')"
+                    @close="close('Right')">
+            <md-toolbar>
+                <div class="md-toolbar-container">
+                    <h3 class="md-title">Sample cart</h3>
+                    <div class="push-right">
+                        <md-button @click="toggleSidenav('rightSidenav')"
+                                   class="md-icon-button md-mini md-dense md-clean">
+                            <md-icon>close</md-icon>
+                        </md-button>
+                    </div>
+                </div>
+            </md-toolbar>
+            <sample-cart></sample-cart>
         </md-sidenav>
 
         <router-view class="main-router-content"></router-view>
