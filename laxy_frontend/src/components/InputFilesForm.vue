@@ -168,7 +168,7 @@
     import ENAFileSelect from "./ENA/ENAFileSelect";
     import ENASearchAboutBox from "./ENA/ENASearchAboutBox";
     import RemoteFilesSelect from "./RemoteSelect/RemoteFilesSelect";
-    import CSVSampleListUpload from "./CSVSampleListUpload";
+    import CSVSampleListUpload from "./CSVSampleListUpload/CSVSampleListUpload";
 
     interface DbAccession {
         accession: string;

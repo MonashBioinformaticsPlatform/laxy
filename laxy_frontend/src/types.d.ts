@@ -47,3 +47,20 @@ declare interface ViewMethod {
     tags: string[];
     method: Function;
 }
+
+// expanded FormData interface - some methods not available in older browsers
+declare interface IFormData {
+    entries(): any[]; // Iterator<Array<any>>;
+
+    append(name: string, value: string | Blob | File, fileName?: string): void;
+
+    delete(name: string): void;
+
+    get(name: string): FormDataEntryValue | null;
+
+    getAll(name: string): FormDataEntryValue[];
+
+    has(name: string): boolean;
+
+    set(name: string, value: string | Blob | File, fileName?: string): void;
+}
