@@ -53,7 +53,6 @@ services:
     depends_on:
       - db
       - rabbitmq
-      - redis
 
   flower:
     image: laxy:latest
@@ -70,7 +69,6 @@ services:
       - db
       - rabbitmq
       - celeryd
-      - redis
 
   nginx:
     image: nginx
