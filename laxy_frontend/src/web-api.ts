@@ -182,10 +182,16 @@ export class WebAPI {
 
     public static async createSampleset(csvFormData: FormData) {
         try {
+            // copy config
             const config = Object.assign({}, WebAPI.axoisConfig);
-            config.headers = {'Content-Type': 'multipart/form-data'};
+            // Axios automatically uses Content-Type: multipart/form-data for FormData POSTs,
+            // so we don't need to explicitly set the header here
+            // config.headers = {'Content-Type': 'multipart/form-data'};
+            delete config.data;  // if this is present, form POST fails (empty !)
+            // we need to create a new fetcher, if we attempt to reuse the static one with this new config
+            // it  won't work (results in empty form POST !)
             const formPostfetcher = axios.create(config);
-            return await formPostfetcher.post('/api/v1/sampleset/', csvFormData) as AxiosResponse;
+            return await formPostfetcher.post('/api/v1/sampleset/', csvFormData, config) as AxiosResponse;
         } catch (error) {
             throw error;
         }
