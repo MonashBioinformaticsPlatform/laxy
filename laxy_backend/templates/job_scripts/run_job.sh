@@ -225,6 +225,28 @@ function get_input_data_urls() {
     echo "${urls}"
 }
 
+function detect_pairs() {
+    PAIRIDS=""
+    EXTN=".fastq.gz"
+    if stat -t "${JOB_PATH}/input/*_R2_001.fastq.gz" >/dev/null 2>&1; then
+      EXTN="_001.fastq.gz"
+      PAIRIDS="_R1,_R2"
+    elif stat -t "${JOB_PATH}input/*_R2.fastq.gz" >/dev/null 2>&1; then
+      EXTN=".fastq.gz"
+      PAIRIDS="_R1,_R2"
+    elif stat -t "${JOB_PATH}input/*_2.fastq.gz" >/dev/null 2>&1; then
+      EXTN=".fastq.gz"
+      PAIRIDS="_1,_2"
+    # Very occasionally, we get FASTA format reads
+    elif stat -t "${JOB_PATH}input/*_R2.fasta.gz" >/dev/null 2>&1; then
+      EXTN=".fasta.gz"
+      PAIRIDS="_R1,_R2"
+    elif stat -t "${JOB_PATH}input/*_2.fasta.gz" >/dev/null 2>&1; then
+      EXTN=".fasta.gz"
+      PAIRIDS="_1,_2"
+    fi
+}
+
 #function filter_ena_urls() {
 #    local urls
 #    urls=$(get_input_data_urls)
@@ -359,16 +381,7 @@ set +o errexit
 # quick and dirty detection of paired-end or not
 PAIRIDS=""
 EXTN=".fastq.gz"
-if stat -t input/*_R2_001.fastq.gz >/dev/null 2>&1; then
-  EXTN="_001.fastq.gz"
-  PAIRIDS="_R1,_R2"
-elif stat -t input/*_R2.fastq.gz >/dev/null 2>&1; then
-  EXTN=".fastq.gz"
-  PAIRIDS="_R1,_R2"
-elif stat -t input/*_2.fastq.gz >/dev/null 2>&1; then
-  EXTN=".fastq.gz"
-  PAIRIDS="_1,_2"
-fi
+detect_pairs
 
 if [[ ! -z "PAIRIDS" ]]; then
     ${PREFIX_JOB_CMD} \
