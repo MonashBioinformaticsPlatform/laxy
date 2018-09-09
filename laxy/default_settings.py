@@ -197,7 +197,8 @@ if DEBUG:
     CORS_ORIGIN_ALLOW_ALL = True
     CSRF_TRUSTED_ORIGINS = ('localhost:8002',)
 else:
-    CORS_ORIGIN_WHITELIST = ('localhost:8002',
+    CORS_ORIGIN_WHITELIST = (':8002',
+                             'localhost:8002',
                              'erc.monash.edu',
                              'erc.monash.edu.au',
                              '118.138.240.175:8002',
