@@ -55,7 +55,7 @@
                 //
             }
             else if (stepName === 'sampleCart') {
-                (this.$refs[stepName] as any).saveSampleList();
+                (this.$refs[stepName] as any).save();
             }
             else if (stepName === 'pipelineParams') {
                 (this.$refs[stepName] as any).save();

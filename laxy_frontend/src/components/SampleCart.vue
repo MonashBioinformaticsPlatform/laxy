@@ -43,24 +43,25 @@
             <md-layout md-gutter>
                 <md-layout>
                     <md-layout v-if="samples != null">
-                        <md-input-container>
+                        <md-input-container v-if="editableSetName">
                             <label>Sample list name</label>
                             <md-input v-model="_samples.name"
                                       placeholder="My sample list"></md-input>
                         </md-input-container>
+                        <div v-else>
+                            <h4>{{ samples.name }}</h4>
+                        </div>
 
                         <sample-table :samples="samples"
-                                      :fields="['name', 'R1', 'R2']"
-                                      :editable_fields="['name']"
+                                      :fields="fields"
+                                      :editable-fields="editableFields"
+                                      :selectable="selectable"
                                       @selected="onSelect"></sample-table>
 
-                        <md-toolbar class="md-dense" :disabled="submitting"
+                        <md-toolbar v-if="showToolbar"
+                                    class="md-dense" :disabled="submitting"
                                     style="width: 100%;">
-                            <md-menu md-size="5">
-                                <!--<md-button md-menu-trigger>-->
-                                <!--<md-icon>add</md-icon>-->
-                                <!--Add sample-->
-                                <!--</md-button>-->
+                            <md-menu v-if="showAddMenu" md-size="5">
                                 <md-button id="add_menu_button"
                                            class="md-icon-button"
                                            md-menu-trigger>
@@ -90,7 +91,7 @@
                             </md-button>
                             <span style="flex: 1;"></span>
                             <md-button class="md-icon-button"
-                                       @click="saveSampleList"
+                                       @click="save"
                                        :disabled="submitting">
                                 <md-icon>save</md-icon>
                                 <md-tooltip md-direction="top">Save</md-tooltip>
@@ -158,7 +159,7 @@
     import {DummySampleList as _dummySampleList} from "../test-data";
 
     @Component({
-        props: {showButtons: Boolean},
+        props: {},
         filters: {},
         beforeRouteLeave(to: any, from: any, next: any) {
             (this as any).beforeRouteLeave(to, from, next);
@@ -167,7 +168,28 @@
     export default class SampleCart extends Vue {
         _DEBUG: boolean = false;
 
-        public showButtons: boolean | undefined;
+        @Prop({default: true, type: Boolean})
+        public showButtons: boolean;
+
+        @Prop({default: true, type: Boolean})
+        public showToolbar: boolean;
+
+        @Prop({default: true, type: Boolean})
+        public showAddMenu: boolean;
+
+        @Prop({default: true, type: Boolean})
+        public editableSetName: boolean;
+
+        @Prop({default: true, type: Boolean})
+        public selectable: boolean;
+
+        // = ["name", "metadata.condition", "R1", "R2"];
+        @Prop({default: () => ['name', 'R1', 'R2'], type: Array})
+        public fields: Array<string>;
+
+        // = ["name", "metadata.condition"];
+        @Prop({default: () => [], type: Array})
+        public editableFields: Array<string>;
 
         public submitting: boolean = false;
         public error_alert_message: string = "Everything is fine. 🐺";
@@ -253,7 +275,9 @@
                 this.submitting = false;
                 this.flashSnackBarMessage("Saved !");
                 // coerce JSON into a list of proper Sample objects, ensuring all properties are present
-                const _samples: Sample[] = _.map(response.data.samples, (s) => { return new Sample(s)});
+                const _samples: Sample[] = _.map(response.data.samples, (s) => {
+                    return new Sample(s)
+                });
                 this.populateSelectionList(_samples);
 
                 // TODO: Save and highlight validation issues (eg identical sample names)
@@ -282,7 +306,7 @@
             this.$store.commit(SET_SAMPLES, this.samples);
         }
 
-        saveSampleList() {
+        save() {
             this.submit();
         }
 
@@ -290,7 +314,7 @@
             try {
                 await this.submit();
                 this.routeTo("setupRun");
-            } catch(error) {
+            } catch (error) {
                 throw error;
             }
         }

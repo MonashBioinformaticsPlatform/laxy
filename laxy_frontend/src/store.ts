@@ -183,6 +183,7 @@ export const Store = new Vuex.Store({
                 // rollback to saved copy if server update fails
                 commit(SET_SAMPLES, preCommit);
                 console.log(error);
+                throw error;
             }
         },
         async [SET_PIPELINE_PARAMS]({commit, state}, params: any) {

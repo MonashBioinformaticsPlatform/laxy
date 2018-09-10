@@ -24,12 +24,17 @@
                     </md-select>
                 </md-input-container>
             </md-whiteframe>
+
             <md-whiteframe style="padding: 32px;">
-                <h3>Sample conditions</h3>
-                <sample-table :samples="samples"
-                              :fields="['name', 'metadata.condition']"
-                              :editable_fields="['metadata.condition']"
-                              @selected="onSelect"></sample-table>
+                <h3>Sample summary</h3>
+                <sample-cart :samples="samples"
+                             :fields="['name', 'metadata.condition', 'R1', 'R2']"
+                             :show-toolbar="false"
+                             :show-add-menu="false"
+                             :show-buttons="false"
+                             :editable-set-name="false"
+                             :selectable="false"
+                             @selected="onSelect"></sample-cart>
             </md-whiteframe>
             <md-layout v-if="showButtons">
                 <md-button class="md-primary md-raised" @click="save">
@@ -55,7 +60,8 @@
 <script lang="ts">
     import "vue-material/dist/vue-material.css";
 
-    import * as _ from "lodash";
+    import cloneDeep from "lodash-es/cloneDeep";
+
     import "es6-promise";
 
     import axios, {AxiosResponse} from "axios";
@@ -84,6 +90,7 @@
     import {DummyPipelineConfig as _dummyPipelineConfig} from "../test-data";
 
     @Component({
+        components: {},
         props: {},
         filters: {},
         beforeRouteLeave(to: any, from: any, next: any) {
@@ -124,13 +131,8 @@
 
         public _samples: SampleSet;
         get samples(): SampleSet {
-            this._samples = _.cloneDeep(this.$store.state.samples);
+            this._samples = cloneDeep(this.$store.state.samples);
             return this._samples;
-        }
-
-        // for lodash in templates
-        get _() {
-            return _;
         }
 
         get description() {
@@ -161,7 +163,7 @@
         }
 
         created() {
-            this._samples = _.cloneDeep(this.$store.state.samples);
+            this._samples = cloneDeep(this.$store.state.samples);
         }
 
         prepareData() {

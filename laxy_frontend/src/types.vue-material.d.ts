@@ -30,3 +30,8 @@ declare interface MdTable extends Element {
     // methods
     setRowSelection(selected: boolean, row: any): void;
 }
+
+// declare module 'vue2-collapse' {
+//     const VueCollapse: any;
+//     export = VueCollapse;
+// }

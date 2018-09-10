@@ -11,9 +11,9 @@
             <md-table-row v-for="(sample, index) in samples.items"
                           :key="JSON.stringify([sample.id, sample.name, sample.files])"
                           :md-item="sample"
-                          md-selection>
+                          :md-selection="selectable">
                 <md-table-cell v-for="field in fields" :key="field">
-                    <span v-if="editable_fields.includes(field)">
+                    <span v-if="editableFields.includes(field)">
                         <md-input-container v-if="field.startsWith('metadata.')">
                             <md-input v-model="sample.metadata[field.split('metadata.').pop()]"
                                       :placeholder="field.split('metadata.').pop()">
@@ -28,8 +28,8 @@
                           {{ deep_path(sample, field) | numeral_format('0 a') }}
                     </span>
                     <span v-else-if="field === 'R1' || field === 'R2'">
-                        <span v-for="file in _.filter(sample.files, (f) => _.get(f, field, false))">
-                            {{ file_basename(_.get(file, field, '')) }}
+                        <span v-for="file in filter(sample.files, (f) => get(f, field, false))">
+                            {{ file_basename(get(file, field, '')) }}
                                 <md-tooltip>{{ file[field] }}</md-tooltip>
                         </span>
                     </span>
@@ -45,7 +45,10 @@
 <script lang="ts">
     import "vue-material/dist/vue-material.css";
 
-    import * as _ from "lodash";
+    import get from "lodash-es/get";
+    import set from "lodash-es/set";
+    import filter from "lodash-es/filter";
+
     import "es6-promise";
 
     import axios, {AxiosResponse} from "axios";
@@ -66,32 +69,45 @@
     import {DummySampleList as _dummySampleList} from "../test-data";
 
     @Component({
-        props: {
-            samples: {},
-            fields: Array,
-            editable_fields: Array
-        },
         filters: {}
     })
     export default class SampleTable extends Vue {
         // public samples: Array<Sample> = _dummySampleList;
-        public samples: SampleSet;
-        public selectedSamples: Array<Sample> = [];
 
-        // fields and editable_fields can be either top level properties of
+        @Prop({default: {}, type: SampleSet})
+        public samples: SampleSet;
+
+        ////
+        // fields and editableFields can be either top level properties of
         // Sample (eg name, id) or properties of metadata (eg metadata.condition),
         // specified via dot notation: metadata.condition
-        public fields: Array<string>; // = ["name", "metadata.condition", "R1", "R2"];
-        public editable_fields: Array<string>; // = ["name", "metadata.condition"];
+
+        // = ["name", "metadata.condition", "R1", "R2"];
+        @Prop({default: () => [], type: Array})
+        public fields: Array<string>;
+
+        // = ["name", "metadata.condition"];
+        @Prop({default: () => [], type: Array})
+        public editableFields: Array<string>;
+        ////
+
+        @Prop({default: true, type: Boolean})
+        public selectable: boolean;
+
+        public selectedSamples: Array<Sample> = [];
 
         // for lodash in templates
-        get _() {
-            return _;
-        }
+        // get _() {
+        //     return _;
+        // }
+
+        // lodash for templates
+        get = get;
+        filter  = filter;
 
         /* Sets/retrieves a property deeply.nested.in.an.object */
         deep_path(obj: any, path: string): any {
-            return _.get(obj, path);
+            return get(obj, path);
         }
 
         file_basename(filepath: string): string | undefined {
@@ -108,7 +124,7 @@
         }
 
         onChangeField(sample: Sample, field_path: string, newValue: string) {
-            _.set(sample, field_path, newValue);
+            set(sample, field_path, newValue);
         }
 
         removeSelected() {

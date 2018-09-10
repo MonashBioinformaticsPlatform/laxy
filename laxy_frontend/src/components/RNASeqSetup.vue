@@ -3,6 +3,7 @@
         <md-stepper @completed="startJob">
             <md-step md-label="Data source"
                      :md-continue="dataSource_stepComplete"
+                     @exitstep="onExitStep('dataSource')"
                      ref="dataSource">
                 <input-files-form v-on:stepDone=""
                                   v-on:invalidData=""
@@ -15,14 +16,21 @@
             <md-step md-label="Describe samples" md-message="Specify conditions, pair ends"
                      :md-continue="describeSamples_stepComplete"
                      :md-disabled="!dataSource_stepComplete"
+                     @exitstep="onExitStep('describeSamples')"
                      ref="describeSamples">
-                <sample-cart :show-buttons="false" ref="sampleCart"></sample-cart>
+                <sample-cart :fields="['name', 'metadata.condition', 'R1', 'R2']"
+                             :editable-fields="['name', 'metadata.condition']"
+                             :show-buttons="false"
+                             :show-toolbar="true"
+                             :show-add-menu="false"
+                             ref="describeSamples_sampleCart"></sample-cart>
             </md-step>
             <md-step md-label="Pipeline settings"
                      md-message="Use the defaults Luke !"
                      md-button-continue="Start job"
                      :md-continue="pipelineSettings_stepComplete"
                      :md-disabled="!describeSamples_stepComplete"
+                     @exitstep="onExitStep('pipelineSettings')"
                      ref="pipelineSettings">
                 <pipeline-params :show-buttons="false" ref="pipelineParams"></pipeline-params>
             </md-step>
@@ -43,22 +51,8 @@
     import {Emit, Inject, Model, Prop, Provide, Watch} from 'vue-property-decorator'
     import VueMaterial from 'vue-material';
 
-    // import InputFilesForm from 'InputFilesForm.vue';
-
-    //    interface RNASeqSetup extends Vue {
-    //    }
-
-    //    interface MdStep extends Vue {
-    //        mdActive: boolean;
-    //        mdContinue: boolean;
-    //    }
-
     @Component({props: {}})
     export default class RNASeqSetup extends Vue {
-//        components: {
-//            // 'input-files-form': InputFilesForm
-//        },
-
         get dataSource_stepComplete() {
             return this.$store.getters.sample_cart_count > 0;
         }
@@ -73,9 +67,38 @@
 //
 //            this.dataSource_stepComplete = true;
 //        }
+
+        async scrollToTop() {
+            const topOfPage = {x: 0, y: 0};
+            const duration = 300; // ms
+            return new Promise((resolve, reject) => {
+                window.scrollTo({
+                    top: topOfPage.y,
+                    left: topOfPage.x,
+                    behavior: 'smooth'
+                });
+                setTimeout(() => {
+                    resolve(topOfPage);
+                }, duration);
+            });
+        }
+
+        onExitStep(stepName: string) {
+            if (stepName === 'dataSource') {
+                this.scrollToTop();
+            }
+            else if (stepName === 'describeSamples') {
+                 (this.$refs['describeSamples_sampleCart'] as any).save();
+                 this.scrollToTop();
+            }
+            else if (stepName === 'pipelineSettings') {
+                this.scrollToTop();
+            }
+        }
+
         async startJob() {
             try {
-                await (this.$refs['pipelineParams'] as any).run();
+                await (this.$refs['pipelineSettings'] as any).run();
                 this.$router.push('jobs');
             }
             catch (error) {
