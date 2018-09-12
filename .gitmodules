@@ -5,3 +5,6 @@
 [submodule "laxy_frontend/local_node_modules/vue-material-types"]
 	path = laxy_frontend/local_node_modules/vue-material-types
 	url = https://github.com/pansapiens/vue-material-types.git
+[submodule "laxy_frontend/local_node_modules/vue-authenticate"]
+	path = laxy_frontend/local_node_modules/vue-authenticate
+	url = /Users/perry/devel/laxy/laxy_frontend/local_node_modules/vue-authenticate

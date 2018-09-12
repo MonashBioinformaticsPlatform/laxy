@@ -32,6 +32,7 @@ django-filter==1.1.0
 django-guardian==1.4.9
 hg+https://bitbucket.org/schinckel/django-jsonfield#egg=django-jsonfield
 django-object-actions==1.0.0
+django-rest-framework-social-oauth2==1.1.0
 django-rest-swagger==2.1.2
 django-reversion==2.0.13
 django-storages==1.6.6
@@ -80,12 +81,14 @@ PyYAML==3.12
 redis==2.10.6
 requests==2.18.4
 requests-oauthlib==0.8.0
+rest-social-auth==1.3.1
 robobrowser==0.5.3
 rows==0.3.1
 s3transfer==0.1.12
 simplejson==3.13.2
 six==1.11.0
 snowballstemmer==1.2.1
+social-auth-app-django==2.1.0
 Sphinx==1.6.6
 sphinx-rtd-theme==0.2.4
 sphinxcontrib-websupport==1.0.1

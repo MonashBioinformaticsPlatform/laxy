@@ -146,13 +146,12 @@
     import {FETCH_JOBS} from "../store";
     import {WebAPI} from "../web-api";
 
+    //import {AuthMixin} from "../index";
+
     import {DummyJobList as _dummyJobList} from "../test-data";
 
-    @Component({
-        props: {},
-        filters: {},
-    })
-    export default class JobList extends Vue {
+    @Component({})
+    export default class JobList extends Vue {// Mixins<AuthMixin>(AuthMixin) {
         _DEBUG: boolean = false;
 
         // public jobs: any[] = [];
@@ -176,6 +175,9 @@
         }
 
         created() {
+            //(new AuthMixin()).authenticate('google');
+            //this.authenticate('google');
+
             // this.jobs = _dummyJobList;
             this.refresh();
         }

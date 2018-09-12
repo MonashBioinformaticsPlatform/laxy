@@ -16,12 +16,13 @@
   "author": "",
   "license": "ISC",
   "//dev": {
-    "@types/vue-material": "git+https://github.com/calebsander/vue-material-types.git#master",
-    "vue-material": "git+https://github.com/pansapiens/vue-material.git#custom-0.8.1"
+    "@types/vue-material": "git+https://github.com/pansapiens/vue-material-types.git#master",
+    "vue-material": "git+https://github.com/pansapiens/vue-material.git#custom-0.8.1",
+    "vue-authenticate": "git+https://github.com/pansapiens/vue-authenticate.git#master"
   },
   "//dev2": {
     "vue-material": "^0.8.1",
-    "@types/vue-material": "file:./local_node_modules/vue-material-types"
+    "@types/vue-material": "file:local_node_modules/vue-material-types"
   },
   "devDependencies": {
     "@types/axios": "^0.14.0",
@@ -36,14 +37,17 @@
     "css-loader": "^0.28.11",
     "extract-text-webpack-plugin": "^3.0.2",
     "file-loader": "^0.11.2",
+    "node-sass": "^4.9.3",
     "npm": "^5.8.0",
     "nyan-progress-webpack-plugin": "^1.2.0",
+    "sass-loader": "^7.1.0",
     "style-loader": "^0.18.2",
     "ts-loader": "^2.0.3",
     "tslint": "^5.9.1",
     "typescript": "^2.8.1",
     "vue-loader": "^13.7.1",
     "vue-material": "file:local_node_modules/vue-material",
+    "vue-mixin-decorator": "^1.0.0",
     "vue-template-compiler": "^2.5.16",
     "webpack": "^3.11.0",
     "webpack-dev-server": "^2.11.2",
@@ -59,6 +63,8 @@
     "numeral": "^2.0.6",
     "pluralize": "^7.0.0",
     "vue": "^2.5.16",
+    "vue-authenticate": "file:local_node_modules/vue-authenticate",
+    "vue-axios": "^2.1.3",
     "vue-class-component": "^6.2.0",
     "vue-markdown": "^2.2.4",
     "vue-moment": "^2.2.0",

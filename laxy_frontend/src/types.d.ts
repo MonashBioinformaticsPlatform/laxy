@@ -1,6 +1,6 @@
 // import {LaxyFile} from './model';
 
-// declare function require(path: string): any;
+declare function require(path: string): any;
 
 declare interface ENASample {
     // pair?: ENASample,

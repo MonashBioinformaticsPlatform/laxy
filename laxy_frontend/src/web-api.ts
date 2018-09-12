@@ -10,7 +10,9 @@ export class WebAPI {
     public static apiSettings = {
         // url: 'http://118.138.240.175:8001',
         url: 'http://localhost:8001',
+        frontendUrl: null, // `http://localhost:8002/`,
     };
+
     public static get baseUrl(): string {
         return WebAPI.apiSettings.url;
     }
@@ -18,7 +20,7 @@ export class WebAPI {
     /* Axios has this silly quirk where the Content-Type header is removed
        unless you have 'data'. So we add empty data.
      */
-    private static axoisConfig = {
+    public static readonly axiosConfig = {
         baseURL: WebAPI.baseUrl,
         withCredentials: true,
         xsrfHeaderName: 'X-CSRFToken',
@@ -27,17 +29,42 @@ export class WebAPI {
         data: {},
     };
 
-    public static fetcher = axios.create(WebAPI.axoisConfig);
+    public static fetcher = axios.create(WebAPI.axiosConfig);
+
+    /*
+     * Token authentication is currently not in use - session authentication via
+     *  cookies is preferred due to less opportunities for XSS vulnerabilities.
+
+    public static readonly authTokenName = 'accessToken';
+
+    public static storeAccessToken(token: string) {
+        // sessionStorage.setItem(WebAPI.authTokenName, token);
+        localStorage.setItem(WebAPI.authTokenName, token);
+    }
+
+    public static get accessToken() {
+        return localStorage.getItem(WebAPI.authTokenName);
+    }
+
+    public static getAuthHeader() {
+        const token = WebAPI.accessToken;
+        return {Authorization: `Bearer ${token}`};
+    }
 
     public static async getAuthToken(user: string, pass: string): Promise<string> {
         try {
             const response = await this.fetcher.post(`/api/v1/auth/get-token/`,
                 {username: user, password: pass}) as AxiosResponse;
-            sessionStorage.setItem('accessToken', response.data.token);
+            WebAPI.storeAccessToken(response.data.token);
             return response.data.token;
         } catch (error) {
             throw error;
         }
+    }
+    */
+
+    public static getCsrfToken(): string {
+        return Cookies.get('csrftoken');
     }
 
     public static async login(user: string, pass: string) {
@@ -58,15 +85,6 @@ export class WebAPI {
         }
     }
 
-    public static async isLoggedIn() {
-        try {
-            const result = await this.fetcher.get(`/accounts/profile/`) as AxiosResponse;
-            return true;
-        } catch (error) {
-            return false;
-        }
-    }
-
     public static async getUserProfile() {
         try {
             return await this.fetcher.get(`/accounts/profile/`) as AxiosResponse;
@@ -75,13 +93,13 @@ export class WebAPI {
         }
     }
 
-    public static getAuthHeader() {
-        const token = sessionStorage.getItem('accessToken');
-        return {Authorization: `Bearer ${token}`};
-    }
-
-    public static getCsrfToken(): string {
-        return Cookies.get('csrftoken');
+    public static async isLoggedIn() {
+        try {
+            const result = await this.getUserProfile();
+            return true;
+        } catch (error) {
+            return false;
+        }
     }
 
     public static async enaSearch(accession_list: string[]): Promise<AxiosResponse> {
@@ -183,7 +201,7 @@ export class WebAPI {
     public static async createSampleset(csvFormData: FormData) {
         try {
             // copy config
-            const config = Object.assign({}, WebAPI.axoisConfig);
+            const config = Object.assign({}, WebAPI.axiosConfig);
             // Axios automatically uses Content-Type: multipart/form-data for FormData POSTs,
             // so we don't need to explicitly set the header here
             // config.headers = {'Content-Type': 'multipart/form-data'};

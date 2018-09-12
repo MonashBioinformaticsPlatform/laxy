@@ -4,7 +4,8 @@
     "sourceMap": true,
     "strict": true,
     "strictNullChecks": true,
-    "strictPropertyInitialization": false, // for vue-class-component properties
+    "strictPropertyInitialization": false,
+    // for vue-class-component properties
     //"declaration": true,
     "noImplicitReturns": true,
     "module": "commonjs",

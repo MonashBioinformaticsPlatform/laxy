@@ -14,7 +14,6 @@ import logging
 import os
 from datetime import timedelta
 import tempfile
-from pathlib import Path
 from django.core.exceptions import ImproperlyConfigured
 import environ
 
@@ -65,6 +64,8 @@ default_env = PrefixedEnv(
     MEDIA_ROOT=(str, str(app_root.path('uploads')())),
     MEDIA_URL=(str, 'uploads/'),
     FILE_CACHE_PATH=(str, tempfile.gettempdir()),
+    SOCIAL_AUTH_GOOGLE_OAUTH2_KEY=(str, ''),
+    SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET=(str, ''),
 )
 
 
@@ -139,6 +140,7 @@ STATIC_ROOT = str(env('STATIC_ROOT'))
 
 # Application definition
 
+# Required since Laxy overrides the default Django User model
 AUTH_USER_MODEL = 'laxy_backend.User'
 
 INSTALLED_APPS = [
@@ -159,6 +161,13 @@ INSTALLED_APPS = [
     'drf_openapi',
     'reversion',
     'storages',
+    # for python-social-auth with DRF
+
+    'oauth2_provider',
+    'social_django',  # OAuth2 backends
+    'rest_framework_social_oauth2',  # OAuth2 callback ('complete') endpoints
+    'rest_social_auth',  # Login endpoints, hands off to social login services
+
     'laxy_backend',
 ]
 
@@ -187,6 +196,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'social_django.context_processors.backends',
+                'social_django.context_processors.login_redirect',
             ],
         },
     },
@@ -204,6 +215,34 @@ else:
                              '118.138.240.175:8002',
                              )
 CORS_ALLOW_CREDENTIALS = True
+# CSRF_COOKIE_SECURE = True
+# SESSION_COOKIE_SECURE = True
+
+AUTHENTICATION_BACKENDS = (
+    # 'social_core.backends.open_id.OpenIdAuth',   # not required ?
+    # 'social_core.backends.google.GoogleOpenId',  # not required ?
+
+    'social_core.backends.google.GoogleOAuth2',
+    # 'laxy.auth_backends.GoogleOAuth2NoState',
+    'rest_framework_social_oauth2.backends.DjangoOAuth2',
+    'django.contrib.auth.backends.ModelBackend',
+)
+
+SOCIAL_AUTH_RAISE_EXCEPTIONS = DEBUG
+SOCIAL_AUTH_URL_NAMESPACE = 'social'
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = str(env('SOCIAL_AUTH_GOOGLE_OAUTH2_KEY'))
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = str(env('SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET'))
+SOCIAL_AUTH_GOOGLE_OAUTH2_FIELDS = ['email', 'username']
+SOCIAL_AUTH_POSTGRES_JSONFIELD = True
+# SOCIAL_AUTH_REDIRECT_IS_HTTPS = True
+
+# https://github.com/st4lk/django-rest-social-auth#settings
+REST_SOCIAL_OAUTH_REDIRECT_URI = '/'  # ''http://localhost:8002/'
+REST_SOCIAL_DOMAIN_FROM_ORIGIN = True
+
+# OAuth2 provider
+DRFSO2_PROPRIETARY_BACKEND_NAME = 'Laxy'
+# DRFSO2_URL_NAMESPACE = 'laxy_backend'
 
 REST_FRAMEWORK = {
     'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.URLPathVersioning',
@@ -220,6 +259,8 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication',
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.BasicAuthentication',
+        'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
+        'rest_framework_social_oauth2.authentication.SocialAuthentication',
     ),
     'DEFAULT_RENDERER_CLASSES': (
         'rest_framework.renderers.JSONRenderer',
@@ -322,12 +363,12 @@ JWT_AUTH = {
 See https://getblimp.github.io/django-rest-framework-jwt/
 '''
 
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'memory-cache',
-    }
-}
+# CACHES = {
+#     'default': {
+#         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+#         'LOCATION': 'memory-cache',
+#     }
+# }
 
 LOGGING = {
     'version': 1,

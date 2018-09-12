@@ -30,6 +30,9 @@ django-extensions
 django-storages
 django-object-actions
 django-cache-memoize
+social-auth-app-django
+rest-social-auth
+django-rest-framework-social-oauth2
 
 # The Bitbucket one
 # django-jsonfield  # https://bitbucket.org/schinckel/django-jsonfield
