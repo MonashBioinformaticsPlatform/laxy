@@ -41,6 +41,11 @@
 
 <script lang="ts">
     import "vue-material/dist/vue-material.css";
+    import '../../assets/outline-directions_run-24px.svg';
+    import '../../assets/outline-check_circle_outline-24px.svg';
+    import '../../assets/outline-cancel_presentation-24px.svg';
+    import '../../assets/outline-error_outline-24px.svg';
+
     import Component from "vue-class-component";
     import {getThemedStatusColor, cssGradient} from "../palette";
     import JobStatusCard from "./JobStatusCard.vue";

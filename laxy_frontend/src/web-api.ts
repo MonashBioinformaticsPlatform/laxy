@@ -8,9 +8,10 @@ const Cookies = require('js-cookie');
 export class WebAPI {
 
     public static apiSettings = {
-        // url: 'http://118.138.240.175:8001',
-        url: 'http://localhost:8001',
-        frontendUrl: null, // `http://localhost:8002/`,
+        url: process.env.NODE_ENV === 'production' ?
+            process.env.LAXY_FRONTEND_API_URL : 'http://localhost:8001',
+        frontendUrl: process.env.NODE_ENV === 'production' ?
+            process.env.LAXY_FRONTEND_URL : 'http://localhost:8002',
     };
 
     public static get baseUrl(): string {

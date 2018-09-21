@@ -4,17 +4,21 @@
 git clone --recurse-submodules https://github.com/MonashBioinformaticsPlatform/laxy.git
 ```
 
-## Fronted development server
+## Frontend
 
-```
+The Laxy frontend is a Vue.js Single-Page Application that runs in the browser and communicates with a Laxy backend server.
+
+### Development
+```bash
+cp -n .env.example .env
 cd laxy_frontend
 npm install
 npm run build
 npm start
-open http://localhost:9997/
+open http://localhost:8002/
 ```
 
-### Building vue-material
+#### Building vue-material
 The repository contains a subrepo for vue-material (1.x, custom fork).
 If you make changes to vue-material, rebuild it like:
 
@@ -22,6 +26,17 @@ If you make changes to vue-material, rebuild it like:
 cd laxy_frontend/local_node_modules/vue-material
 npm run build:lib
 ```
+
+### Building for production
+
+Create `.env` (see `.env.example`), change frontend variables as required (eg `LAXY_FRONTEND_*`).
+
+```bash
+NODE_ENV=production npm run build
+```
+
+Environment variables will override variables read from `.env`.
+These variables are used by the Webpack (`dotenv-webpack`) build to substitute references to `process.env.SOME_ENV_VAR`.
 
 ## Backend
 
@@ -56,7 +71,7 @@ GRANT ALL PRIVILEGES ON DATABASE laxy TO laxy;
 ```bash
 # Copy the example settings environment and edit as required,
 # including the database name and password above. 
-cp .env_example .env
+cp -n .env.example .env
 vi .env
 ```
 

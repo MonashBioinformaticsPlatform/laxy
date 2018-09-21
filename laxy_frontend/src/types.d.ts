@@ -2,6 +2,11 @@
 
 declare function require(path: string): any;
 
+// So we can access process.env environment variables (like NODE_ENV) at build time
+declare var process: {
+    env: { [index: string]: string };
+};
+
 declare interface ENASample {
     // pair?: ENASample,
     run_accession?: string;

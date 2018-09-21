@@ -10,8 +10,8 @@
     "dev": "webpack-dev-server -d --progress --watch --port 8002 --open --content-base ./ && python3 ../manage.py runserver 8001",
     "django": "python3 ../manage.py runserver 8001",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "webpack-dev-server -d --watch --port 8002 --open --content-base ./",
-    "public_demo": "webpack-dev-server --port 8002 --host 0.0.0.0 --content-base ./"
+    "start": "webpack-dev-server -d --watch --port 8002 --open --content-base ./dist/",
+    "public_demo": "webpack-dev-server --port 8002 --host 0.0.0.0 --content-base ./dist/"
   },
   "author": "",
   "license": "ISC",
@@ -34,6 +34,7 @@
     "@types/vue-markdown": "^2.2.0",
     "@types/vue-material": "file:local_node_modules/vue-material-types",
     "babel-core": "^6.26.3",
+    "copy-webpack-plugin": "^4.5.2",
     "css-loader": "^0.28.11",
     "extract-text-webpack-plugin": "^3.0.2",
     "file-loader": "^0.11.2",
@@ -55,6 +56,7 @@
   },
   "dependencies": {
     "axios": "^0.16.2",
+    "dotenv-webpack": "^1.5.7",
     "es6-promise": "^4.2.4",
     "js-cookie": "^2.2.0",
     "lodash": "^4.17.10",

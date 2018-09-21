@@ -1,32 +1,22 @@
-declare function require(path: string): any;
-
-// require('file-loader?name=[name].[ext]!../src/index.html');
+import 'file-loader?emitFile=false!../../.env';  // watch .env but DON'T output the file ! (emitFile=false)
+// import 'file-loader?name=[name].[ext]!../index.html';
+import 'file-loader?name=[name].[ext]?[hash]&outputPath=assets/!../assets/favicon.ico';
 import 'vue-material/dist/vue-material.css';
 // import 'css/slider.css';
 
 import 'es6-promise';
-
 const numeral = require('numeral');
-
 import axios, {AxiosResponse} from 'axios';
 
 import Vue, {ComponentOptions} from 'vue';
 
-declare var process: {
-    env: {
-        NODE_ENV: string
-    }
-};
-
-// Vue.config.devtools = true; // process.env.NODE_ENV !== 'production'
-// Vue.config.performance = true;  // process.env.NODE_ENV !== 'production'
+Vue.config.devtools = process.env.NODE_ENV !== 'production';
+// Vue.config.performance = process.env.NODE_ENV !== 'production'
 
 import Vuex from 'vuex';
-
 Vue.use(Vuex);
 
 import VueRouter, {RouterOptions} from 'vue-router';
-
 Vue.use(VueRouter);
 
 // import VueAxios from 'vue-axios';
@@ -96,6 +86,7 @@ const App = new Vue({
         return {};
     },
     async created() {
+        console.log(process.env.LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID);
         await this.$store.dispatch(FETCH_USER_PROFILE);
     },
     methods: {

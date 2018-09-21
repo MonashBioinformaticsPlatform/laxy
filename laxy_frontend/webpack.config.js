@@ -1,10 +1,22 @@
 const path = require('path');
 const webpack = require('webpack');
 const WebpackShellPlugin = require('webpack-shell-plugin');
+const Dotenv = require('dotenv-webpack');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 const NyanProgressPlugin = require('nyan-progress-webpack-plugin');
 
 const plugins = [
-    new NyanProgressPlugin()
+    new NyanProgressPlugin(),
+    new Dotenv({
+        path: '../.env',
+        safe: false, // load '.env.example' to verify the '.env' variables are all set. Can also be a string to a different file.
+        systemvars: true, // load all the predefined 'process.env' variables which will override local dotenv specs.
+        silent: false, // hide any errors
+    }),
+    // copy index.html to dist
+    new CopyWebpackPlugin([{
+      from: './index.html'
+    }]),
 ];
 
 /*
@@ -50,7 +62,8 @@ module.exports = {
                 test: /\.(png|jpg|gif|svg)$/,
                 loader: 'file-loader',
                 options: {
-                    name: '[name].[ext]?[hash]'
+                    name: '[name].[ext]?[hash]',
+                    outputPath: 'assets/',
                 }
             },
             {

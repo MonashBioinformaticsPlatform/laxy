@@ -85,4 +85,4 @@ services:
     networks:
       - private
     volumes:
-       - static:/usr/share/nginx/html:ro
+       - ./laxy_frontend/dist:/usr/share/nginx/html:ro

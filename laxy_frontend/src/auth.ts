@@ -1,3 +1,5 @@
+import trim from 'lodash-es/trim';
+
 // const VueAuthenticate = require('vue-authenticate');  // without TypeScript types
 import {VueAuthenticate, AuthenticateOptions, ProviderOptions} from 'vue-authenticate';
 
@@ -23,13 +25,13 @@ export const AuthOptions: AuthenticateOptions = {
         // We are essentially using the flow as depicted here (without using any of Google's provided Javascript):
         // https://developers.google.com/identity/sign-in/web/server-side-flow
         google: {
-            clientId: '474709025289-vm2t2ikg08ij9mvl3h813l86nng1e4eh.apps.googleusercontent.com',
+            clientId: process.env.LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID || '',
 
             // redirectUri must match a redirect_uri defined at
             // https://console.developers.google.com/apis/credentials
             // We use the URL to the frontend as the redirect if we are capturing the authorization code returned via
             // in the frontend popup (rather than having Google hit laxy_backend directly)
-            redirectUri: WebAPI.apiSettings.frontendUrl ||
+            redirectUri: `${trim(WebAPI.apiSettings.frontendUrl, '/')}/` ||
                 `http://${window.location.hostname}:${window.location.port}/`,
 
             // We can also have Google redirect to laxy_backend directly (using a view from

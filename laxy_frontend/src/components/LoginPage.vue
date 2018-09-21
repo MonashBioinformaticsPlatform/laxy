@@ -73,6 +73,9 @@
 </template>
 
 <script lang="ts">
+    import '../../assets/favicon-grey-24.png';
+    import '../../assets/btn_google_signin_dark_normal_web.png';
+
     import get from 'lodash-es/get';
 
     import Vue from 'vue';
