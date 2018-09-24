@@ -146,13 +146,22 @@ class User(AbstractUser, UUIDModel):
 
 
 class UserProfile(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE,
-                             blank=False,
-                             related_name='profile')
-    # favorite_color = models.CharField(default='2196F3', max_length=6)
+    user = models.OneToOneField(User,
+                                primary_key=True,
+                                on_delete=models.CASCADE,
+                                blank=False,
+                                related_name='profile')
+    image_url = models.URLField(blank=True, null=True)
 
 
-class JSONSerializable():
+@receiver(post_save, sender=User)
+def create_or_update_user_profile(sender, instance, created, **kwargs):
+    if created or not UserProfile.objects.filter(user=instance).exists():
+        UserProfile.objects.create(user=instance)
+    instance.profile.save()
+
+
+class JSONSerializable:
     def to_json(self):
         return serialize('json', self)
 
@@ -892,7 +901,6 @@ class FileSet(Timestamped, UUIDModel):
         files = unique(files)
 
         with transaction.atomic():
-
             # unsaved Files must be saved before calling self.files.add
             [f.save() for f in files if not f.pk]
 

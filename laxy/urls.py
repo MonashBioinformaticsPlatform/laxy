@@ -30,6 +30,7 @@ rest_social_auth_urls = [
     re_path(r'', include('rest_social_auth.urls_jwt')),
     re_path(r'', include('rest_social_auth.urls_token')),
     # re_path(r'', include('rest_social_auth.urls_session')),
+
     re_path(r'^social/session/(?:(?P<provider>[a-zA-Z0-9_-]+)/?)?$',
             PublicSocialSessionAuthView.as_view(),
             name='login_social_session_public'),

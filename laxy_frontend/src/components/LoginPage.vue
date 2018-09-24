@@ -103,6 +103,10 @@
             return get(this.$store.state.user_profile, 'username', 'anonymous')
         }
 
+        public async created() {
+
+        }
+
         public async login(provider: string) {
             let providerData = {provider: provider};
             if (provider === 'laxy') {

@@ -5,8 +5,9 @@ import cloneDeep from 'lodash-es/cloneDeep';
 import update from 'lodash-es/update';
 import head from 'lodash-es/head';
 
+import Vue from 'vue';
 import Vuex from 'vuex';
-import Vue from 'Vue';
+
 import axios, {AxiosResponse} from 'axios';
 import {ComputeJob, LaxyFile, Sample, SampleSet} from './model';
 import {WebAPI} from './web-api';

@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin
 import django.forms
 from django.urls import reverse
@@ -17,9 +18,10 @@ from .models import (Job,
                      FileSet,
                      SampleSet,
                      PipelineRun,
-                     EventLog)
+                     EventLog, UserProfile)
 
-from .models import URIValidator, User
+from .models import URIValidator
+User = get_user_model()
 
 
 class Timestamped:
@@ -34,6 +36,28 @@ class Timestamped:
 
     def modified(self, obj):
         return humanize.naturaltime(obj.modified_time)
+
+
+class ProfileInline(admin.StackedInline):
+    model = UserProfile
+    can_delete = False
+    verbose_name_plural = 'Profile'
+    fk_name = 'user'
+
+
+class LaxyUserAdmin(UserAdmin):
+    inlines = (ProfileInline, )
+    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff',)
+    list_select_related = ('profile', )
+
+    def get_inline_instances(self, request, obj=None):
+        if not obj:
+            return list()
+        return super(LaxyUserAdmin, self).get_inline_instances(request, obj)
+
+
+class UserProfileAdmin(admin.ModelAdmin):
+    pass
 
 
 class ComputeResourceAdmin(Timestamped, VersionAdmin):
@@ -222,7 +246,8 @@ class EventLogAdmin(admin.ModelAdmin):
                      'extra',)
 
 
-admin.site.register(User, UserAdmin)  # for our custom User model
+admin.site.register(User, LaxyUserAdmin)  # for our custom User model
+admin.site.register(UserProfile, UserProfileAdmin)
 admin.site.register(Job, JobAdmin)
 admin.site.register(ComputeResource, ComputeResourceAdmin)
 admin.site.register(File, FileAdmin)

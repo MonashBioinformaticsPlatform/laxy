@@ -1,9 +1,9 @@
 declare function require(path: string): any;
 
 import 'es6-promise';
-import axios, {AxiosResponse} from 'axios';
+import axios, {AxiosResponse, AxiosRequestConfig} from 'axios';
 
-const Cookies = require('js-cookie');
+import * as Cookies from 'js-cookie';
 
 export class WebAPI {
 
@@ -21,7 +21,7 @@ export class WebAPI {
     /* Axios has this silly quirk where the Content-Type header is removed
        unless you have 'data'. So we add empty data.
      */
-    public static readonly axiosConfig = {
+    public static readonly axiosConfig: AxiosRequestConfig = {
         baseURL: WebAPI.baseUrl,
         withCredentials: true,
         xsrfHeaderName: 'X-CSRFToken',
@@ -64,11 +64,33 @@ export class WebAPI {
     }
     */
 
-    public static getCsrfToken(): string {
+    public static async getCsrfToken() {
+        const token = WebAPI._getStoredCsrfToken();
+        if (!token) {
+            try {
+                await WebAPI.requestCsrfToken();
+                return WebAPI._getStoredCsrfToken();
+            } catch (error) {
+                throw error;
+            }
+        } else {
+            return token;
+        }
+    }
+
+    public static _getStoredCsrfToken(): string | undefined {
         return Cookies.get('csrftoken');
     }
 
-    public static async login(user: string, pass: string) {
+    public static async requestCsrfToken(): Promise<AxiosResponse> {
+        try {
+            return await this.fetcher.get(`/api/v1/auth/csrftoken/`) as AxiosResponse;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    public static async login(user: string, pass: string): Promise<AxiosResponse> {
         try {
             return await this.fetcher.post(`/api/v1/auth/login/`,
                 {username: user, password: pass}) as AxiosResponse;
@@ -77,7 +99,7 @@ export class WebAPI {
         }
     }
 
-    public static async logout() {
+    public static async logout(): Promise<AxiosResponse> {
         try {
             return await this.fetcher.get(`/api/v1/auth/logout/`) as AxiosResponse;
             // TODO: unset Vuex store user_profile here
@@ -86,7 +108,7 @@ export class WebAPI {
         }
     }
 
-    public static async getUserProfile() {
+    public static async getUserProfile(): Promise<AxiosResponse> {
         try {
             return await this.fetcher.get(`/accounts/profile/`) as AxiosResponse;
         } catch (error) {
@@ -118,7 +140,7 @@ export class WebAPI {
         }
     }
 
-    public static async getJobs(page: number, page_size: number) {
+    public static async getJobs(page: number, page_size: number): Promise<AxiosResponse> {
         try {
             return await this.fetcher.get(
                 `/api/v1/jobs/?page=${page}&page_size=${page_size}`) as AxiosResponse;
@@ -127,7 +149,7 @@ export class WebAPI {
         }
     }
 
-    public static async getJob(job_id: string) {
+    public static async getJob(job_id: string): Promise<AxiosResponse> {
         try {
             return await this.fetcher.get(
                 `/api/v1/job/${job_id}/`) as AxiosResponse;
@@ -136,7 +158,7 @@ export class WebAPI {
         }
     }
 
-    public static async cancelJob(id: string) {
+    public static async cancelJob(id: string): Promise<AxiosResponse> {
         try {
             return await this.fetcher.patch(
                 `/api/v1/job/${id}/`,
@@ -146,7 +168,7 @@ export class WebAPI {
         }
     }
 
-    public static async getJobEventLog(job_id: string) {
+    public static async getJobEventLog(job_id: string): Promise<AxiosResponse> {
         try {
             return await this.fetcher.get(
                 `/api/v1/eventlogs/?object_id=${job_id}`) as AxiosResponse;
@@ -155,7 +177,7 @@ export class WebAPI {
         }
     }
 
-    public static async getFileSet(fileset_id: string) {
+    public static async getFileSet(fileset_id: string): Promise<AxiosResponse> {
         try {
             return await this.fetcher.get(
                 `/api/v1/fileset/${fileset_id}/`) as AxiosResponse;
@@ -164,7 +186,7 @@ export class WebAPI {
         }
     }
 
-    public static async getFileRecord(file_id: string) {
+    public static async getFileRecord(file_id: string): Promise<AxiosResponse> {
         try {
             return await this.fetcher.get(
                 this.viewFileByIdUrl(file_id)) as AxiosResponse;
@@ -199,7 +221,7 @@ export class WebAPI {
         return `${this.baseUrl}/api/v1/job/${job_id}/files/${filepath}?download`;
     }
 
-    public static async createSampleset(csvFormData: FormData) {
+    public static async createSampleset(csvFormData: FormData): Promise<AxiosResponse> {
         try {
             // copy config
             const config = Object.assign({}, WebAPI.axiosConfig);

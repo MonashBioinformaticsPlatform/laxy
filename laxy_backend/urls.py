@@ -29,7 +29,8 @@ from laxy_backend.views import (JobView, JobCreate,
                                 JobFileView, JobFileBulkRegistration, trigger_file_registration,
                                 SendFileToDegust, RemoteBrowseView)
 
-from laxy_backend.view_auth import Login, Logout, view_user_profile, check_token, PublicSocialSessionAuthView
+from laxy_backend.view_auth import (Login, Logout, view_user_profile, check_token, PublicSocialSessionAuthView,
+                                    CsrfCookieView)
 
 app_name = 'laxy_backend'
 
@@ -72,7 +73,8 @@ api_urls = [
     #     ComputeResourceCreate.as_view(),
     #     name='compute_resource'),
 
-    re_path(r'auth/check/', check_token),
+    re_path(r'auth/check/$', check_token),
+    re_path('auth/csrftoken/$', CsrfCookieView.as_view()),
 
     # re_path(r'^api/login/social/session/(?:(?P<provider>[a-zA-Z0-9_-]+)/?)?$',
     #         PublicSocialSessionAuthView.as_view(),

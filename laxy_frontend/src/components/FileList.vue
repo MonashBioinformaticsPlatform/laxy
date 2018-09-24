@@ -64,14 +64,14 @@
 <script lang="ts">
     import "vue-material/dist/vue-material.css";
 
-    // import * as _ from "lodash";
+    import "es6-promise";
 
     import filter from "lodash-es/filter";
     import map from "lodash-es/map";
     import head from "lodash-es/head";
 
-    import Memoize from "lodash-decorators/Memoize";
-    import "es6-promise";
+    import {Memoize} from "lodash-decorators";
+    // import Memoize from "lodash-decorators/Memoize";
 
     import axios, {AxiosResponse} from "axios";
     import Vue, {ComponentOptions} from "vue";

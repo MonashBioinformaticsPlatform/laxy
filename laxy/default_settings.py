@@ -204,19 +204,37 @@ TEMPLATES = [
 ]
 
 # https://github.com/ottoyiu/django-cors-headers#configuration
+CSRF_COOKIE_DOMAIN = env('CSRF_COOKIE_DOMAIN')
 if DEBUG:
-    CORS_ORIGIN_ALLOW_ALL = True
-    CSRF_TRUSTED_ORIGINS = ('localhost:8002',)
+    # CORS_ORIGIN_ALLOW_ALL = True
+
+    CORS_ORIGIN_WHITELIST = (
+        'localhost:8002',
+        'dev.laxy.io:8002',
+    )
+    # Applies to HTTPS only
+    CSRF_TRUSTED_ORIGINS = (
+        'localhost',
+        'laxy.io',
+        '.laxy.io',
+    )
 else:
-    CORS_ORIGIN_WHITELIST = (':8002',
-                             'localhost:8002',
-                             'erc.monash.edu',
-                             'erc.monash.edu.au',
-                             '118.138.240.175:8002',
-                             )
+    CORS_ORIGIN_WHITELIST = (
+        'dev.laxy.io:8002',
+    )
+    # Applies to HTTPS only
+    CSRF_TRUSTED_ORIGINS = (
+        'laxy.io',
+        '.laxy.io',
+    )
+
+    # TODO: These should probably be on in production, once HTTPS is enabled
+    # Only send CSRF cookie on a secure HTTPS connection
+    # CSRF_COOKIE_SECURE = True
+    # Only send session cookie on a secure HTTPS connection
+    # SESSION_COOKIE_SECURE = True
+
 CORS_ALLOW_CREDENTIALS = True
-# CSRF_COOKIE_SECURE = True
-# SESSION_COOKIE_SECURE = True
 
 AUTHENTICATION_BACKENDS = (
     # 'social_core.backends.open_id.OpenIdAuth',   # not required ?
@@ -243,6 +261,22 @@ REST_SOCIAL_DOMAIN_FROM_ORIGIN = True
 # OAuth2 provider
 DRFSO2_PROPRIETARY_BACKEND_NAME = 'Laxy'
 # DRFSO2_URL_NAMESPACE = 'laxy_backend'
+
+SOCIAL_AUTH_PIPELINE = (
+    'social_core.pipeline.social_auth.social_details',
+    'social_core.pipeline.social_auth.social_uid',
+    'social_core.pipeline.social_auth.auth_allowed',
+    'social_core.pipeline.social_auth.social_user',
+    'social_core.pipeline.user.get_username',
+    # 'social_core.pipeline.mail.mail_validation',
+    # 'social_core.pipeline.social_auth.associate_by_email',
+    'social_core.pipeline.user.create_user',
+    'social_core.pipeline.social_auth.associate_user',
+    'social_core.pipeline.social_auth.load_extra_data',
+    'social_core.pipeline.user.user_details',
+    # custom function to get avatar for different services
+    'laxy_backend.view_auth.set_social_avatar',
+)
 
 REST_FRAMEWORK = {
     'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.URLPathVersioning',

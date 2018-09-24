@@ -169,11 +169,12 @@
     import lodashGet from "lodash-es/get";
     import head from "lodash-es/head";
     import sortBy from "lodash-es/sortBy";
-    import flatten from "lodash-es/flatten";
-    import flatMapDeep from "lodash-es/flatMapDeep";
+    // import flatten from "lodash-es/flatten";
+    // import flatMapDeep from "lodash-es/flatMapDeep";
 
-    import Memoize from "lodash-decorators/Memoize";
-    import Debounce from "lodash-decorators/Debounce";
+    import {Memoize, Debounce} from "lodash-decorators";
+    // import Memoize from "lodash-decorators/Memoize";
+    // import Debounce from "lodash-decorators/Debounce";
 
     import "es6-promise";
 

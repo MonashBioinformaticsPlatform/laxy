@@ -32,7 +32,7 @@ npm run build:lib
 Create `.env` (see `.env.example`), change frontend variables as required (eg `LAXY_FRONTEND_*`).
 
 ```bash
-NODE_ENV=production npm run build
+npm run build:prod
 ```
 
 Environment variables will override variables read from `.env`.
