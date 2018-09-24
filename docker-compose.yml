@@ -13,6 +13,7 @@ services:
     depends_on:
       - db
       - celeryd
+      - nginx
 
   db:
     image: postgres
@@ -81,8 +82,8 @@ services:
 #      - private
 #    volumes:
 #       - static:/usr/share/nginx/html:ro
-    depends_on:
-      - django
+#    depends_on:
+#      - django
 
 volumes:
   dbdata:
