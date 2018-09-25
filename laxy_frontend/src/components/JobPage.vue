@@ -95,33 +95,33 @@
                     <transition name="fade">
                         <md-layout md-flex-medium="100"
                                    v-show="showTab === 'summary' || showTab == null" md-column>
-                                <file-list v-if="job != null && job.status !== 'running'"
-                                           ref="report-files"
-                                           title="Reports"
-                                           :fileset-id="job.output_fileset_id"
-                                           :tag-filters="['report', 'html']"
-                                           :hide-search="true"
-                                           :job-id="jobId"
-                                           @refresh-error="showErrorDialog">
-                                </file-list>
-                                <file-list v-if="job != null && job.status !== 'running'"
-                                           ref="count-files"
-                                           title="Count files"
-                                           :fileset-id="job.output_fileset_id"
-                                           :tag-filters="['degust', 'counts']"
-                                           :hide-search="true"
-                                           :job-id="jobId"
-                                           @refresh-error="showErrorDialog">
-                                </file-list>
-                                <file-list v-if="job != null && job.status !== 'running'"
-                                           ref="alignment-files"
-                                           title="Alignment files"
-                                           :fileset-id="job.output_fileset_id"
-                                           :tag-filters="['bam', 'bai']"
-                                           :hide-search="false"
-                                           :job-id="jobId"
-                                           @refresh-error="showErrorDialog">
-                                </file-list>
+                            <file-list v-if="job != null && job.status !== 'running'"
+                                       ref="report-files"
+                                       title="Reports"
+                                       :fileset-id="job.output_fileset_id"
+                                       :tag-filters="['report', 'html']"
+                                       :hide-search="true"
+                                       :job-id="jobId"
+                                       @refresh-error="showErrorDialog">
+                            </file-list>
+                            <file-list v-if="job != null && job.status !== 'running'"
+                                       ref="count-files"
+                                       title="Count files"
+                                       :fileset-id="job.output_fileset_id"
+                                       :tag-filters="['degust', 'counts']"
+                                       :hide-search="true"
+                                       :job-id="jobId"
+                                       @refresh-error="showErrorDialog">
+                            </file-list>
+                            <file-list v-if="job != null && job.status !== 'running'"
+                                       ref="alignment-files"
+                                       title="Alignment files"
+                                       :fileset-id="job.output_fileset_id"
+                                       :tag-filters="['bam', 'bai']"
+                                       :hide-search="false"
+                                       :job-id="jobId"
+                                       @refresh-error="showErrorDialog">
+                            </file-list>
 
                             <!--
                             <nested-file-list v-if="job && job.status !== 'running'"
@@ -136,6 +136,7 @@
                                               @refresh-error="showErrorDialog"></nested-file-list>
                             -->
                             <event-log v-if="job && job.status === 'running'"
+                                       ref="eventlogSummary"
                                        :job-id="jobId"
                                        @refresh-error="showErrorDialog"></event-log>
                         </md-layout>
@@ -379,7 +380,18 @@
                 this.refreshing = true;
                 // const response = await WebAPI.getJob(this.jobId);
                 // this.job = response.data as ComputeJob;
+
                 await this.$store.dispatch(FETCH_JOB, this.jobId);
+
+                let eventlog = null;
+                if (this.showTab == "eventlog") {
+                    eventlog = (this.$refs.eventlog as any);
+                }
+                if (this.showTab == "summary") {
+                    eventlog = (this.$refs.eventlogSummary as any);
+                }
+                if (eventlog) await eventlog.refresh();
+
                 this.job = this.$store.state.currentViewedJob;
 
                 // do web requests if filesets not yet populated
@@ -405,9 +417,9 @@
                 //     (this.$refs.input as any).refresh();
                 // }
 
-                if (this.showTab == "eventlog") {
-                    (this.$refs.eventlog as any).refresh();
-                }
+                // if (this.showTab == "eventlog") {
+                //     (this.$refs.eventlog as any).refresh();
+                // }
 
                 this.refreshing = false;
                 if (successMessage) this.flashSnackBarMessage(successMessage, 500);

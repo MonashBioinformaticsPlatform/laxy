@@ -117,10 +117,10 @@ const App = new Vue({
             ((this.$refs as any)[refName] as any).toggle();
         },
         open(ref: string) {
-            console.log('Opened: ' + ref);
+            // console.log('Opened: ' + ref);
         },
         close(ref: string) {
-            console.log('Closed: ' + ref);
+            // console.log('Closed: ' + ref);
         },
     },
     computed: {
