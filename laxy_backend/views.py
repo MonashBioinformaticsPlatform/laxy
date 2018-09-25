@@ -1902,9 +1902,13 @@ class EventLogListView(generics.ListAPIView):
     # permission_classes = (IsAuthenticated,)
 
     def get_queryset(self):
-        return (EventLog.objects
-                .filter(user=self.request.user)
-                .order_by('-timestamp'))
+        if self.request.user.is_superuser:
+            return (EventLog.objects
+                    .order_by('-timestamp'))
+        else:
+            return (EventLog.objects
+                    .filter(user=self.request.user)
+                    .order_by('-timestamp'))
 
 
 class EventLogCreate(JSONView):
