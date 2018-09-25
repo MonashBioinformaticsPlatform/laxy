@@ -189,6 +189,7 @@ def index_remote_files(self, task_data=None, **kwargs):
     job = Job.objects.get(id=job_id)
     result = task_data.get('result')
     clobber = task_data.get('clobber', False)
+    include_checksums = task_data.get('include_checksums', False)
     master_ip = job.compute_resource.host
     gateway = job.compute_resource.gateway_server
 
@@ -294,6 +295,12 @@ def index_remote_files(self, task_data=None, **kwargs):
 
             job.input_files.add(input_files)
 
+            if include_checksums:
+                for fs in [job.input_files, job.output_files]:
+                    for f in fs:
+                        calculate_file_checksums.apply_async(
+                            args=({'file_ids': [f.id]},))
+
         succeeded = True
     except BaseException as e:
         succeeded = False
@@ -316,6 +323,31 @@ def index_remote_files(self, task_data=None, **kwargs):
     task_data.update(result=result)
 
     return task_data
+
+
+@shared_task(bind=True, track_started=True)
+def calculate_file_checksums(self, task_data=None, **kwargs):
+    from ..models import Job, File
+
+    if task_data is None:
+        raise InvalidTaskError("task_data is None")
+
+    _init_fabric_env()
+
+    file_ids = task_data.get('file_ids')
+    for fid in file_ids:
+        f = File.objects.get(id=fid)
+        if f.location.startwith('laxy+sftp://'):
+            # TODO: Slice up URL to get ComputeResource and path,
+            # use fabric to run md5sum on the compute node to return the checksum
+            pass
+        else:
+            # TODO: Pull down file from it's URL, streaming calculate checksum
+            pass
+
+
+
+
 
 
 @shared_task(bind=True, track_started=True)

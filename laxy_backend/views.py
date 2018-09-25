@@ -1521,6 +1521,7 @@ class JobView(JSONView):
                     (new_status == Job.STATUS_COMPLETE or
                      new_status == Job.STATUS_FAILED)):
                 task_data = dict(job_id=job_id)
+                task_data['include_checksums'] = True
                 result = tasks.index_remote_files.apply_async(
                     args=(task_data,))
                 # link_error=self._task_err_handler.s(job_id))
