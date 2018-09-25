@@ -8,9 +8,9 @@ import * as Cookies from 'js-cookie';
 export class WebAPI {
 
     public static apiSettings = {
-        url: process.env.NODE_ENV === 'production' ?
+        url: process.env.LAXY_FRONTEND_API_URL != null ?
             process.env.LAXY_FRONTEND_API_URL : 'http://localhost:8001',
-        frontendUrl: process.env.NODE_ENV === 'production' ?
+        frontendUrl: process.env.LAXY_FRONTEND_URL !== null ?
             process.env.LAXY_FRONTEND_URL : 'http://localhost:8002',
     };
 
