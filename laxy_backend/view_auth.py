@@ -27,7 +27,7 @@ from drf_openapi.utils import view_config
 
 from laxy_backend.models import UserProfile
 from laxy_backend.views import _get_or_create_drf_token
-from .serializers import LoginRequestSerializer, SocialAuthLoginRequest, SocialAuthLoginResponse
+from .serializers import LoginRequestSerializer, SocialAuthLoginRequest, SocialAuthLoginResponse, UserProfileResponse
 from .jwt_helpers import create_jwt_user_token, get_jwt_user_header_dict
 
 # from .models import User
@@ -117,22 +117,44 @@ class Logout(APIView):
         return Response()
 
 
-@login_required()
-def view_user_profile(request):
-    user = request.user
-    token = _get_or_create_drf_token(user)
+class UserProfileView(APIView):
+    renderer_classes = (JSONRenderer,)
+    permission_classes = (IsAuthenticated,)
 
-    jwt_token = create_jwt_user_token(user.username)[0]
-    drf_token = token.key
+    @view_config(response_serializer=UserProfileResponse)
+    def get(self, request, version=None):
+        """
+        Returns the authenticated users profile information.
 
-    return JsonResponse({'username': user.get_username(),
-                         'full_name': user.get_full_name(),
-                         'email': user.email,
-                         'profile_pic': get_profile_pic_url(user),
-                         'token': jwt_token,
-                         'drf_authtoken': drf_token,
-                         'jwt_authorization_header_prefix': settings.JWT_AUTH.get('JWT_AUTH_HEADER_PREFIX', u'Bearer'),
-                         'drf_authorization_header_prefix': 'Token'})
+        <!--
+        :param request:
+        :type request:
+        :param version:
+        :type version:
+        :return:
+        :rtype:
+        -->
+        """
+        user = request.user
+        token = _get_or_create_drf_token(user)
+
+        jwt_token = create_jwt_user_token(user.username)[0]
+        drf_token = token.key
+
+        return JsonResponse({'id': user.id,
+                             'username': user.get_username(),
+                             'full_name': user.get_full_name(),
+                             'email': user.email,
+                             'profile_pic': get_profile_pic_url(user),
+
+                             # TODO: Determine if these tokens are used anywhere by clients (eg frontend / run_job.sh)
+                             #       and if not remove them from here. Out of scope for user profile and a potential
+                             #       security issue
+                             'token': jwt_token,
+                             'drf_authtoken': drf_token,
+                             'jwt_authorization_header_prefix': settings.JWT_AUTH.get('JWT_AUTH_HEADER_PREFIX',
+                                                                                      u'Bearer'),
+                             'drf_authorization_header_prefix': 'Token'})
 
 
 @login_required()

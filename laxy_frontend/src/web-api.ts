@@ -110,7 +110,7 @@ export class WebAPI {
 
     public static async getUserProfile(): Promise<AxiosResponse> {
         try {
-            return await this.fetcher.get(`/accounts/profile/`) as AxiosResponse;
+            return await this.fetcher.get(`/api/v1/user/profile/`) as AxiosResponse;
         } catch (error) {
             throw error;
         }

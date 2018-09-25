@@ -542,3 +542,18 @@ class SocialAuthLoginResponse(serializers.Serializer):
     first_name = serializers.CharField()
     last_name = serializers.CharField()
     email = serializers.CharField()
+
+class UserProfileResponse(serializers.Serializer):
+    id = serializers.CharField(required=True)
+    username = serializers.CharField(required=True)
+    full_name = serializers.CharField()
+    email = serializers.CharField()
+    profile_pic = serializers.URLField()
+
+    # TODO: Determine if these tokens are used anywhere by clients (eg frontend / run_job.sh)
+    #       and if not remove them from here. Out of scope for user profile and a potential
+    #       security issue
+    token = serializers.CharField()
+    drf_token = serializers.CharField()
+    jwt_authorization_header_prefix = serializers.CharField()
+    drf_authorization_header_prefix = serializers.CharField()

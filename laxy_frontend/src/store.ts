@@ -47,7 +47,7 @@ export const Store = new Vuex.Store({
             jobs: {total: 0, jobs: [] as ComputeJob[]} as JobsPage,
             filesets: {} as { [key: string]: LaxyFileSet },
             currentViewedJob: {} as ComputeJob,
-            api_url: 'http://118.138.240.175:8001',
+            api_url: 'http://dev-api.laxy.io:8001',
         },
         getters: {
             is_authenticated: state => {

@@ -12,7 +12,7 @@ export const AuthOptions: AuthenticateOptions = {
     withCredentials: true,
 
     baseUrl: WebAPI.baseUrl,
-    authCheckUrl: `/accounts/profile/`,
+    authCheckUrl: `/api/v1/user/profile/`,
 
     // Token auth settings (not in use)
     // storageType: 'localStorage',

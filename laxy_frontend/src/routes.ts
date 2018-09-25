@@ -1,4 +1,5 @@
 import VueRouter, {RouterOptions} from 'vue-router';
+import {FETCH_USER_PROFILE, Store} from './store';
 
 import FrontPage from './components/FrontPage.vue';
 import LoginPage from './components/LoginPage.vue';
@@ -8,6 +9,25 @@ import SampleCart from './components/SampleCart.vue';
 import ENAFlow from './components/ENA/ENAFlow.vue';
 import JobList from './components/JobList.vue';
 import JobPage from './components/JobPage.vue';
+
+async function requireAuth(to: any, from: any, next: Function) {
+    // If profile isn't set, user MAY be authenticated (by existing an cookie/token) but
+    // during a fresh page load where the Vuex stote is empty the initial request
+    // to grab the user profile may not be complete yet. We wait for the user profile request, when check
+    // if we are actually authenticated and continue to requested route, or redirect to /login.
+    if (Store.state.user_profile === null) {
+        try {
+            await Store.dispatch(FETCH_USER_PROFILE);
+        } catch (error) {
+            next('/login');
+        }
+    }
+    if (!Store.getters.is_authenticated) {
+        next('/login');
+    } else {
+        next();
+    }
+}
 
 export const router = new VueRouter({
     routes: [
@@ -25,16 +45,24 @@ export const router = new VueRouter({
             props: true,
         },
         {
+            path: '/logout',
+            name: 'login',
+            component: LoginPage,
+            props: true,
+        },
+        {
             path: '/ENAflow',
             name: 'ENAflow',
             component: ENAFlow,
             props: true,
+            beforeEnter: requireAuth,
         },
         {
             path: '/rnaseq',
             name: 'rnaseq',
             component: RNASeqSetup,
             props: true,
+            beforeEnter: requireAuth,
         },
         // {
         //     path: '/enaselect',
@@ -47,12 +75,14 @@ export const router = new VueRouter({
             name: 'remoteselect',
             component: RemoteFilesSelect,
             props: {showButtons: true},
+            beforeEnter: requireAuth,
         },
         {
             path: '/cart',
             name: 'cart',
             component: SampleCart,
             props: true,
+            beforeEnter: requireAuth,
         },
         // {
         //     path: '/setupRun',
@@ -65,18 +95,21 @@ export const router = new VueRouter({
             name: 'jobs',
             component: JobList,
             props: true,
+            beforeEnter: requireAuth,
         },
         {
             path: '/job/:jobId',
             name: 'job',
             component: JobPage,
             props: true,
+            beforeEnter: requireAuth,
         },
         {
             path: '/job/:jobId/:showTab',
             name: 'jobTab',
             component: JobPage,
             props: true,
+            beforeEnter: requireAuth,
         },
     ],
     // mode: 'history',
