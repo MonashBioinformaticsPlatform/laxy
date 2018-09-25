@@ -219,7 +219,7 @@
                     // return the resulting '?code=' URL from Degust back
                     // to the client to open a new tab.
                     // Sadly needs popup whitelisting by the user.
-                    const url = `/api/v1/_action/send_to/degust/${file_id}/`;
+                    const url = `/api/v1/action/send-to/degust/${file_id}/`;
                     const resp = await WebAPI.fetcher.post(url);
                     if (resp.data.status == 200) {
                         window.open(resp.data.redirect);

@@ -18,6 +18,11 @@ from django.contrib import admin
 
 from rest_framework import routers
 from rest_framework.urlpatterns import format_suffix_patterns
+
+from rest_framework_jwt.views import (obtain_jwt_token,
+                                      refresh_jwt_token,
+                                      verify_jwt_token)
+
 from laxy_backend.views import (JobView, JobCreate,
                                 FileCreate, FileView, FileContentDownload,
                                 FileSetCreate, FileSetView,
@@ -29,11 +34,10 @@ from laxy_backend.views import (JobView, JobCreate,
                                 JobFileView, JobFileBulkRegistration, trigger_file_registration,
                                 SendFileToDegust, RemoteBrowseView)
 
-from laxy_backend.view_auth import (Login, Logout, view_user_profile, check_token, PublicSocialSessionAuthView,
-                                    CsrfCookieView)
+from laxy_backend.view_auth import (Login, Logout, view_user_profile, PublicSocialSessionAuthView,
+                                    CsrfCookieView, check_drf_token)
 
 app_name = 'laxy_backend'
-
 
 # See: https://docs.djangoproject.com/en/2.0/topics/http/urls/#registering-custom-path-converters
 class UUID62Converter:
@@ -55,6 +59,23 @@ register_converter(UUID62Converter, 'uuid62')
 # - api/v1/use-dashes-in-the-path/
 # - ?use_underscores=in_query_params
 
+jwt_urls = [
+    # https://getblimp.github.io/django-rest-framework-jwt/
+    re_path(r'^get/$', obtain_jwt_token, name='jwt-get-token'),
+    re_path(r'^refresh/$', refresh_jwt_token, name='jwt-refresh-token'),
+    re_path(r'^verify/$', verify_jwt_token, name='jwt-verify-token'),
+]
+
+rest_social_auth_urls = [
+    re_path(r'', include('rest_social_auth.urls_jwt')),
+    re_path(r'', include('rest_social_auth.urls_token')),
+    # re_path(r'', include('rest_social_auth.urls_session')),
+
+    re_path(r'^social/session/(?:(?P<provider>[a-zA-Z0-9_-]+)/?)?$',
+            PublicSocialSessionAuthView.as_view(),
+            name='login_social_session_public'),
+]
+
 api_urls = [
     # New format Django URLs - disabled until drf_openapi can properly format
     # them without escaping backslashes
@@ -73,12 +94,10 @@ api_urls = [
     #     ComputeResourceCreate.as_view(),
     #     name='compute_resource'),
 
-    re_path(r'auth/check/$', check_token),
-    re_path('auth/csrftoken/$', CsrfCookieView.as_view()),
+    re_path(r'auth/jwt/', include(jwt_urls)),
 
-    # re_path(r'^api/login/social/session/(?:(?P<provider>[a-zA-Z0-9_-]+)/?)?$',
-    #         PublicSocialSessionAuthView.as_view(),
-    #         name='login_social_session_public'),
+    re_path(r'auth/check-drf-token/$', check_drf_token),
+    re_path('auth/csrftoken/$', CsrfCookieView.as_view()),
 
     re_path(r'auth/login/$',
             Login.as_view(),
@@ -86,6 +105,16 @@ api_urls = [
     re_path(r'auth/logout/$',
             Logout.as_view(),
             name='api_logout'),
+
+    # Includes social_django.urls to enable social login,
+    # (/auth/login/{backend}/, /auth/complete/{backend}/, /auth/disconnect/{backend}/)
+    # as well as /auth/convert-token, /auth/revoke-token for the client-side OAuth2 flow
+    # (eg to convert a provider token returned by Google after login into a DRF access token for Laxy)
+    # Laxy can be an OAuth2 Provider itself via the /auth/authorize  and /auth/invalidate-sessions endpoints
+    re_path(r'^auth/social/oauth2/', include(('rest_framework_social_oauth2.urls', app_name),
+                                             namespace='rest_framework_social_oauth2')),
+
+    re_path(r'auth/login/', include(rest_social_auth_urls)),
 
     re_path(r'job/$',
             JobCreate.as_view(),
@@ -163,13 +192,13 @@ api_urls = [
             RemoteBrowseView.as_view(),
             name='remote-browse'),
 
-    re_path(r'_action/send_to/degust/(?P<file_id>[a-zA-Z0-9\-_]+)/$',
+    re_path(r'action/send-to/degust/(?P<file_id>[a-zA-Z0-9\-_]+)/$',
             SendFileToDegust.as_view(),
             name='send_to_degust'),
 ]
 
 admin_urls = [
-    re_path(r'tasks/register_job_files/(?P<job_id>[a-zA-Z0-9\-_]+)/$',
+    re_path(r'tasks/register-job-files/(?P<job_id>[a-zA-Z0-9\-_]+)/$',
             trigger_file_registration,
             name='task_register_job_files')
 ]

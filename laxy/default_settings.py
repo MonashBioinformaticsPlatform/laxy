@@ -260,7 +260,7 @@ REST_SOCIAL_DOMAIN_FROM_ORIGIN = True
 
 # OAuth2 provider
 DRFSO2_PROPRIETARY_BACKEND_NAME = 'Laxy'
-# DRFSO2_URL_NAMESPACE = 'laxy_backend'
+DRFSO2_URL_NAMESPACE = 'laxy_backend:rest_framework_social_oauth2'
 
 SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.social_auth.social_details',

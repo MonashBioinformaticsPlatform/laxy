@@ -527,3 +527,18 @@ class LoginRequestSerializer(serializers.Serializer):
 class RedirectResponseSerializer(serializers.Serializer):
     redirect = serializers.URLField(required=True)
     status = serializers.IntegerField(required=True)
+
+
+class SocialAuthLoginRequest(serializers.Serializer):
+    provider = serializers.CharField(required=True)
+    code = serializers.CharField(required=True)
+    clientId = serializers.CharField(required=True)
+    redirectUri = serializers.URLField(required=True)
+
+
+class SocialAuthLoginResponse(serializers.Serializer):
+    id = serializers.CharField(required=True)
+    username = serializers.CharField(required=True)
+    first_name = serializers.CharField()
+    last_name = serializers.CharField()
+    email = serializers.CharField()

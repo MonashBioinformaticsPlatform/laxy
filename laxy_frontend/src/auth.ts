@@ -52,7 +52,7 @@ export const AuthOptions: AuthenticateOptions = {
             // endpoints).
             // It should also set a session cookie if we are using this for authentication (eg the .rest_social_auth
             // `login/social/session/google-oauth2/` endpoint)
-            url: `/api/login/social/session/google-oauth2/`,  // Django session login (sets session cookie)
+            url: `/api/v1/auth/login/social/session/google-oauth2/`, // Django session login (sets session cookie)
 
             // for DRF tokens rather than session cookie
             // tokenType: 'Token',  // we use Authorization: Token hexb14f00 for DRF tokens

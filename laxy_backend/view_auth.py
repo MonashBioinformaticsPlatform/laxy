@@ -13,6 +13,7 @@ from rest_framework.permissions import (AllowAny,
 from rest_framework import status
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt, csrf_protect
+from django.middleware import csrf
 from rest_framework.decorators import api_view
 from django.http import HttpResponse, JsonResponse
 from rest_framework.authtoken.models import Token
@@ -26,7 +27,7 @@ from drf_openapi.utils import view_config
 
 from laxy_backend.models import UserProfile
 from laxy_backend.views import _get_or_create_drf_token
-from .serializers import LoginRequestSerializer
+from .serializers import LoginRequestSerializer, SocialAuthLoginRequest, SocialAuthLoginResponse
 from .jwt_helpers import create_jwt_user_token, get_jwt_user_header_dict
 
 # from .models import User
@@ -52,6 +53,35 @@ def ensure_user_profile_exists(func):
         func(*args, **kwargs)
 
     return wrapper
+
+
+def gravatar_url(email: str, style: str='retro', size: int=64) -> str:
+    """
+    Return the URL for a Gravatar profile picture based on an email address.
+
+    :param email: An email address. Doesn't actually need to be registered with Gravatar,
+                  an image will be generated automatically if no profile picture has been
+                  provided by the user.
+    :type email: str
+    :param style: Valid values are 'retro', 'robohash', 'mm', 'monsterid'.
+    :type style: str
+    :param size: Image width in pixels.
+    :type size: int
+    :return: The Gravatar image URL
+    :rtype: str
+    """
+    from urllib.parse import urlencode
+    import urllib, hashlib
+
+    default = style
+
+    gravatar_url = "https://www.gravatar.com/avatar/" + hashlib.md5(email.encode('utf-8').lower()).hexdigest() + "?"
+    gravatar_url += urlencode({'d': default, 's': str(size)})
+    return gravatar_url
+
+
+def get_profile_pic_url(user):
+    return user.profile.image_url or gravatar_url(user.email)
 
 
 class Login(APIView):
@@ -87,35 +117,6 @@ class Logout(APIView):
         return Response()
 
 
-def gravatar_url(email: str, style: str='retro', size: int=64) -> str:
-    """
-    Return the URL for a Gravatar profile picture based on an email address.
-
-    :param email: An email address. Doesn't actually need to be registered with Gravatar,
-                  an image will be generated automatically if no profile picture has been
-                  provided by the user.
-    :type email: str
-    :param style: Valid values are 'retro', 'robohash', 'mm', 'monsterid'.
-    :type style: str
-    :param size: Image width in pixels.
-    :type size: int
-    :return: The Gravatar image URL
-    :rtype: str
-    """
-    from urllib.parse import urlencode
-    import urllib, hashlib
-
-    default = style
-
-    gravatar_url = "https://www.gravatar.com/avatar/" + hashlib.md5(email.encode('utf-8').lower()).hexdigest() + "?"
-    gravatar_url += urlencode({'d': default, 's': str(size)})
-    return gravatar_url
-
-
-def get_profile_pic_url(user):
-    return user.profile.image_url or gravatar_url(user.email)
-
-
 @login_required()
 def view_user_profile(request):
     user = request.user
@@ -141,11 +142,22 @@ def show_jwt(request):
 
 @csrf_exempt
 @api_view(['POST'])
-def check_token(request, format=None):
-    token = Token.objects.filter(key=request.data['token']).exists()
-    return JsonResponse({"status": token})
+def check_drf_token(request, format=None):
+    """
+    Return `{"status": true}` if the Django Rest Framework API Token is valid.
 
-from django.middleware import csrf
+    <!--
+    :param request:
+    :type request:
+    :param format:
+    :type format:
+    :return:
+    :rtype:
+    -->
+    """
+    token_exists = Token.objects.filter(key=request.data['token']).exists()
+    return JsonResponse({"status": token_exists})
+
 
 class CsrfCookieView(APIView):
     """
@@ -173,10 +185,42 @@ class CsrfCookieView(APIView):
 class PublicSocialSessionAuthView(SocialSessionAuthView):
     permission_classes = (AllowAny,)
 
+    @view_config(request_serializer=SocialAuthLoginRequest, response_serializer=SocialAuthLoginResponse)
     def post(self, request, *args, **kwargs):
         """
+        This method takes authorization code returned by a social OAuth2 service (eg Google) and initiates the
+        server-side exchange of the authorization code for an access token (to access Google profile information).
+
+        If the OAuth2 exchange succeeds, the user is logged in to Laxy via returning a session cookie.
+        If the local Laxy user doesn't exist with an associated social account, a new user is created.
+        (Internally this method uses https://python-social-auth.readthedocs.io/en/latest/ ).
+
+        (eg this view does step 3 here: https://developers.google.com/identity/sign-in/web/server-side-flow
+        after Google login at `https://accounts.google.com/o/oauth2/auth?response_type=code&...`, and the authorization
+        code is returned to the frontend).
+
+        eg:
+
+        *Response*
+
+        Session cookie header:
+        ```
+        Set-Cookie: sessionid=y1dycuuj4ggk7tnxfikvwjvozsr1ijy9; expires=Mon, 08-Oct-2018 07:34:08 GMT; HttpOnly; Max-Age=1209600; Path=/
+        ```
+
+        Body (`Content-Type: application/json`):
+        ```json
+        {
+          "provider":"google-oauth2",
+          "code":"4/ZABVUPDPxkZzpqzbVPQyjFGymUoJLxKwhi3NWCtMLYYm51oYI2xSO9ej1RCuM2q8_fKmFKQISMroNBHyX_zdHKQ",
+          "clientId":"475709025290-vm2t2ikg08ji9mvl3h813l86nnj1e4oh.apps.googleusercontent.com",
+          "redirectUri":"http://laxy.example.com:8002/"
+        }
+        ```
+
         This method is CSRF protected - so the client MUST send a CSRF token in the request.
 
+        <!--
         :param request:
         :type request:
         :param args:
@@ -185,6 +229,7 @@ class PublicSocialSessionAuthView(SocialSessionAuthView):
         :type kwargs:
         :return:
         :rtype:
+        -->
         """
         return super(PublicSocialSessionAuthView, self).post(request, *args, **kwargs)
 
@@ -208,38 +253,38 @@ def set_social_avatar(backend, strategy, details, response, user=None, *args, **
 # This version of the view is required if we want to override the csrf_required decorator on the parent's method
 # Instead of using this, we ensure the client has a CSRF cookie already set.
 #
-class PublicSocialSessionAuthNoCsrfView(BaseSocialAuthView):
-    serializer_class = RestSocialAuthUserSerializer
-    permission_classes = (AllowAny,)
-
-    def do_login(self, backend, user):
-        social_auth_login(backend, user, user.social_user)
-
-    @method_decorator(csrf_exempt)
-    def post(self, request, *args, **kwargs):
-        from rest_social_auth.views import decorate_request
-        from social_core.exceptions import AuthException
-        from social_core.utils import parse_qs
-        from requests import HTTPError
-
-        input_data = self.get_serializer_in_data()
-        provider_name = self.get_provider_name(input_data)
-        if not provider_name:
-            return self.respond_error("Provider is not specified")
-        self.set_input_data(request, input_data)
-        decorate_request(request, provider_name)
-        serializer_in = self.get_serializer_in(data=input_data)
-        if self.oauth_v1() and request.backend.OAUTH_TOKEN_PARAMETER_NAME not in input_data:
-            # oauth1 first stage (1st is get request_token, 2nd is get access_token)
-            request_token = parse_qs(request.backend.set_unauthorized_token())
-            return Response(request_token)
-        serializer_in.is_valid(raise_exception=True)
-        try:
-            user = self.get_object()
-        except (AuthException, HTTPError) as e:
-            return self.respond_error(e)
-        if isinstance(user, HttpResponse):  # An error happened and pipeline returned HttpResponse instead of user
-            return user
-        resp_data = self.get_serializer(instance=user)
-        self.do_login(request.backend, user)
-        return Response(resp_data.data)
+# class PublicSocialSessionAuthNoCsrfView(BaseSocialAuthView):
+#     serializer_class = RestSocialAuthUserSerializer
+#     permission_classes = (AllowAny,)
+#
+#     def do_login(self, backend, user):
+#         social_auth_login(backend, user, user.social_user)
+#
+#     @method_decorator(csrf_exempt)
+#     def post(self, request, *args, **kwargs):
+#         from rest_social_auth.views import decorate_request
+#         from social_core.exceptions import AuthException
+#         from social_core.utils import parse_qs
+#         from requests import HTTPError
+#
+#         input_data = self.get_serializer_in_data()
+#         provider_name = self.get_provider_name(input_data)
+#         if not provider_name:
+#             return self.respond_error("Provider is not specified")
+#         self.set_input_data(request, input_data)
+#         decorate_request(request, provider_name)
+#         serializer_in = self.get_serializer_in(data=input_data)
+#         if self.oauth_v1() and request.backend.OAUTH_TOKEN_PARAMETER_NAME not in input_data:
+#             # oauth1 first stage (1st is get request_token, 2nd is get access_token)
+#             request_token = parse_qs(request.backend.set_unauthorized_token())
+#             return Response(request_token)
+#         serializer_in.is_valid(raise_exception=True)
+#         try:
+#             user = self.get_object()
+#         except (AuthException, HTTPError) as e:
+#             return self.respond_error(e)
+#         if isinstance(user, HttpResponse):  # An error happened and pipeline returned HttpResponse instead of user
+#             return user
+#         resp_data = self.get_serializer(instance=user)
+#         self.do_login(request.backend, user)
+#         return Response(resp_data.data)
