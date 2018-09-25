@@ -98,7 +98,7 @@
 
         async startJob() {
             try {
-                await (this.$refs['pipelineSettings'] as any).run();
+                await (this.$refs['pipelineParams'] as any).run();
                 this.$router.push('jobs');
             }
             catch (error) {
