@@ -47,11 +47,15 @@ if [[ ${BDS_SINGLE_NODE} == "yes" ]]; then
 
     # MEM=64000  # defaults for Human, Mouse
     MEM=40000  # defaults for Human, Mouse
-    CPUS=12
-    if [[ "$REFERENCE_GENOME" == "Saccharomyces_cerevisiae/Ensembl/R64-1-1" ]]; then
-        MEM=16000 # yeast (uses ~ 8Gb)
-        CPUS=8
-    fi
+    # M3 (typically 24 core nodes)
+    # CPUS=12
+    # laxy-compute-01 - 16 cores
+    CPUS=16
+    # TODO: We also need to set this in a custom sik.config so that BDS tasks don't exceed the memory budget SLURM
+#    if [[ "$REFERENCE_GENOME" == "Saccharomyces_cerevisiae/Ensembl/R64-1-1" ]]; then
+#        MEM=16000 # yeast (uses ~ 8Gb)
+#        CPUS=8
+#    fi
 else
     # system=generic or system=slurm in bds.config - BDS will run sbatch tasks
     MEM=2000
@@ -64,6 +68,16 @@ PREFIX_JOB_CMD=""
 if [[ "${SCHEDULER}" == "slurm" ]]; then
     PREFIX_JOB_CMD="srun ${SRUN_OPTIONS} "
 fi
+
+function add_sik_config() {
+   # Find that ComputeResource specific sik.config, and if there is none, use the default.
+   # Always copy it to the job input directory so preserve it.
+    SIK_CONFIG="${JOB_PATH}/../sik.config"
+    if [ ! -f "${SIK_CONFIG}" ]; then
+        SIK_CONFIG="$(dirname RNAsik)/../opt/rnasik-${PIPELINE_VERSION}/configs/sik.config"
+    fi
+    cp -n "${SIK_CONFIG}" "${JOB_PATH}/input/sik.config"
+}
 
 function send_event() {
     local event=${1:-"HEARTBEAT"}
@@ -218,6 +232,16 @@ function setup_bds_config() {
     fi
 }
 
+function add_sik_config() {
+   # Find that ComputeResource specific sik.config, and if there is none, use the default.
+   # Always copy it to the job input directory so preserve it.
+    SIK_CONFIG="${JOB_PATH}/../sik.config"
+    if [ ! -f "${SIK_CONFIG}" ]; then
+        SIK_CONFIG="$(dirname RNAsik)/../opt/rnasik-${PIPELINE_VERSION}/configs/sik.config"
+    fi
+    cp -n "${SIK_CONFIG}" "${JOB_PATH}/input/sik.config"
+}
+
 function get_input_data_urls() {
     # Output is one URL one per line
     local urls
@@ -282,6 +306,9 @@ get_igenome_aws "${REFERENCE_GENOME}"
 
 # Make a copy of the bds.config in the $JOB_PATH, possibly modified for SLURM
 setup_bds_config
+
+# Make a copy of the sik.config into $JOB_PATH/input/sik.config
+add_sik_config
 
 ####
 #### Stage input data ###
@@ -385,7 +412,9 @@ detect_pairs
 
 if [[ ! -z "PAIRIDS" ]]; then
     ${PREFIX_JOB_CMD} \
-       RNAsik -align star \
+       RNAsik \
+           -configFile ${JOB_PATH}/input/sik.config \
+           -align star \
            -fastaRef ${GENOME_FASTA} \
            -fqDir ../input \
            -counts \
@@ -395,7 +424,9 @@ if [[ ! -z "PAIRIDS" ]]; then
            >>job.out 2>>job.err
 else
     ${PREFIX_JOB_CMD} \
-       RNAsik -align star \
+       RNAsik \
+           -configFile ${JOB_PATH}/input/sik.config \
+           -align star \
            -fastaRef ${GENOME_FASTA} \
            -fqDir ../input \
            -counts \
