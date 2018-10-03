@@ -24,11 +24,7 @@ readonly JOB_PATH=${PWD}
 readonly PIPELINE_CONFIG="${JOB_PATH}/input/pipeline_config.json"
 readonly CONDA_BASE="${JOB_PATH}/../miniconda3"
 readonly REFERENCE_BASE="${PWD}/../references/iGenomes"
-
 readonly DOWNLOAD_CACHE_PATH="${PWD}/../cache"
-# TODO: Download cache currently broken - do not use
-readonly USE_DOWNLOAD_CACHE="no"
-readonly UNTAR_INPUT_FILES="yes"
 
 readonly SCHEDULER="slurm"
 # readonly SCHEDULER="local"
@@ -142,8 +138,10 @@ function init_conda_env() {
         ${CONDA_BASE}/bin/conda create --yes -m -n "${env_name}"
 
         # Install an up-to-date curl and GNU parallel
-        ${CONDA_BASE}/bin/conda install --yes -n "${env_name}" curl parallel jq awscli
+        ${CONDA_BASE}/bin/conda install --yes -n "${env_name}" curl aria2 parallel jq awscli
         ${CONDA_BASE}/bin/pip install oneliner
+
+        pip install --process-dependency-links -e git+https://github.com/MonashBioinformaticsPlatform/laxy#egg=laxy_downloader&subdirectory=laxy_downloader
 
         # Then install rnasik
         ${CONDA_BASE}/bin/conda install --yes -n "${env_name}" \
@@ -158,6 +156,8 @@ function init_conda_env() {
 
     # shellcheck disable=SC1090
     source "${CONDA_BASE}/bin/activate" "${CONDA_BASE}/envs/${env_name}"
+
+    ${CONDA_BASE}/bin/conda env export >"${JOB_PATH}/input/conda_environment.yml"
 
     set -o nounset
 }
@@ -318,71 +318,17 @@ if [ "${JOB_INPUT_STAGED}" == "no" ]; then
 
     send_event "INPUT_DATA_DOWNLOAD_STARTED"
 
-    readonly PARALLEL_DOWNLOADS=4
+    readonly PARALLEL_DOWNLOADS=8
     # one URL per line
     readonly urls=$(get_input_data_urls)
 
-    if [ "${USE_DOWNLOAD_CACHE}" == "yes" ]; then
-        # This simple download cache downloads all files into a cache directory
-        # at a path that matches the URL. We then symlink to those files.
-        # Most suitable to public database files (eg ENA/SRA).
-        # NOTE: The current implementation probably has bugs/corner cases for exotic URLs
-        # (eg creating paths based on the URL may be buggy - slash/ , colon: seem fine,
-        #  not sure if shell escaping is right for ?@# etc)
-        #
-        # TODO: Split the URL list into two lists - cache only the simple URLs
-        #   - one for URLs without special characters ?&#;:@
-        #   - one for 'simple' URLs (the rest)
-
-        # We can grep the download log for retrieved files like:
-        # $ grep -E " =>" ${JOB_PATH}/output/download.log  | cut -d "‘" -f 2 | sed s/’//
-
-        mkdir -p "${DOWNLOAD_CACHE_PATH}"
-        parallel --no-notice --line-buffer -j ${PARALLEL_DOWNLOADS} --halt now,fail=1 \
-          "wget -x -v --continue --trust-server-names --retry-connrefused --read-timeout=60 \
-               --waitretry 60 --timeout=30 --tries 8 \
-               --append-output output/download.log --directory-prefix ${DOWNLOAD_CACHE_PATH}/ {}" <<< """${urls}"""
-               # && ln -sf ${DOWNLOAD_CACHE_PATH}/{} input/" <<< """${urls}"""
-
-        # TODO: THIS FAILS WHEN THE FILE AS ALREADY BEEN CACHED !
-        #       download.log doesn't contain the filename when the file already exists.
-        #       We probably need to move to a dedicated downloader + caching script
-        #       at this point ...
-
-        # Grab the the absolute paths to downloaded files from the download.log, symlink to {job_path}/input
-        # shellcheck disable=SC1112
-        readonly downloaded_files="$(grep -E '’ saved \[' "${JOB_PATH}"/output/download.log | sed 's/[‘’]//g' | cut -d ' ' -f 6)"
-        for f in ${downloaded_files}; do
-            ln -sf "${f}" input/
-        done
-    else
-        parallel --no-notice --line-buffer -j ${PARALLEL_DOWNLOADS} --halt now,fail=1 \
-          "wget -v --continue --trust-server-names --retry-connrefused --read-timeout=60 \
-               --waitretry 60 --timeout=30 --tries 8 \
-               --append-output output/download.log --directory-prefix input/ {}" <<< """${urls}"""
-    fi
-
-    # If we have a URL in the form https://example.com/data.tar#reads.fastq.gz,
-    # splits the tar URL into filename and hash parts, extracts #file from .tar file
-    # eg https://example.com/data.tar#reads.fastq.gz --> tar -xf data.tar reads.fastq.gz
-    # Requires: pip install oneliner
-    cd input
-    echo "${urls}" | \
-      python -m oneliner -m subprocess,urllib.parse.[urlparse],pathlib.[Path] \
-              -nle "subprocess.run(['tar','-xvf', str(Path(urlparse(_.rsplit('#', 1)[0]).path).name), _.rsplit('#', 1)[1]]) if Path(urlparse(_.rsplit('#', 1)[0]).path).name.endswith('.tar') and '#' in _ else None"
-
-    # Remove the associated tar file after extraction
-    echo "${urls}" | \
-      python -m oneliner -m subprocess,urllib.parse.[urlparse],pathlib.[Path] \
-              -nle "subprocess.run(['rm', '-f', str(Path(urlparse(_.rsplit('#', 1)[0]).path).name)]) if Path(urlparse(_.rsplit('#', 1)[0]).path).name.endswith('.tar') and '#' in _ else None"
-
-    if [ "${UNTAR_INPUT_FILES}" == "yes" ]; then
-        # Just untar any remaining tars (eg, for the case where we are given a single TAR file)
-        # find . -name "*.tar" -exec ar xvf {} \;
-        find . -type f -exec sh -c 'case "$(file -b --mime-type "$0")" in *"application/x-tar"*) true;; *) false;; esac' {} \; -exec tar xvf {} \;
-    fi
-
-    cd ..
+    mkdir -p "${JOB_PATH}/../cache"
+    laxydl --no-progress \
+           --untar \
+           --parallel-downloads "${PARALLEL_DOWNLOADS}" \
+           --cache-path "${DOWNLOAD_CACHE_PATH}" \
+           --pipeline-config "${JOB_PATH}/input/pipeline_config.json" \
+           --destination-path "${JOB_PATH}/input"
 
     send_event "INPUT_DATA_DOWNLOAD_FINISHED"
 
