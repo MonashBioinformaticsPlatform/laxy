@@ -46,7 +46,7 @@ export const router = new VueRouter({
         },
         {
             path: '/logout',
-            name: 'login',
+            name: 'logout',
             component: LoginPage,
             props: true,
         },
