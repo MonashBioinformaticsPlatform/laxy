@@ -1,5 +1,5 @@
 <template>
-    <md-layout md-align="center" md-gutter="16">'
+    <md-layout md-align="center" md-gutter="16">
         <md-layout md-flex="25" md-flex-small="100" md-column>
             <md-card v-if="!is_authenticated" style="margin-top: 32px;">
                 <md-card-content>
