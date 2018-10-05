@@ -76,10 +76,12 @@ from .serializers import (PatchSerializerResponse,
                           PipelineRunCreateSerializer,
                           SchemalessJsonResponseSerializer,
                           JobListSerializerResponse,
-                          EventLogSerializer, JobEventLogSerializer,
+                          EventLogSerializer,
+                          JobEventLogSerializer,
                           JobFileSerializerCreateRequest,
                           InputOutputFilesResponse,
-                          RedirectResponseSerializer, FileListing)
+                          RedirectResponseSerializer,
+                          FileListing)
 from .util import sh_bool, laxy_sftp_url, generate_uuid, multikeysort
 from .storage import http_remote_index
 from .view_mixins import (JSONView, GetMixin, PatchMixin,

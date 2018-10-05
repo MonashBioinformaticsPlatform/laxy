@@ -488,7 +488,6 @@ class Job(Timestamped, UUIDModel):
         # https://colab.research.google.com/drive/1pWRRlthtJ1FGjmPJLRivlsJk716Ckaze
         if isinstance(tsv_table, str) or isinstance(tsv_table, bytes):
             table = rows.import_from_csv(BytesIO(tsv_table), skip_header=False)
-            print(table)
             table = json.loads(rows.export_to_json(table))
         elif isinstance(tsv_table, list):
             table = tsv_table
@@ -864,7 +863,6 @@ class FileSet(Timestamped, UUIDModel):
 
     name - The set name (eg directory name)
     files - The files in this FileSet.
-
     """
 
     name = CharField(max_length=2048)
@@ -962,10 +960,11 @@ class FileSet(Timestamped, UUIDModel):
 @reversion.register()
 class SampleSet(Timestamped, UUIDModel):
     """
-    A set of samples for a pipeline run. Might be used to represent a directory.
+    A set of samples for a pipeline run. This often reflects the state of the 'sample cart'
+    when setting up a job via the web frontend.
 
-    name - The set name (eg directory name)
-    samples - A JSON blob representing each 'sample' and the associated Files.
+    name - A short friendly name for the sample set.
+    samples - A JSON blob representing each 'sample' and the associated URLs or File IDs.
     owner - The User who owns this object.
     """
 
@@ -1130,14 +1129,7 @@ class PipelineRun(Timestamped, UUIDModel):
                             blank=True,
                             null=True,
                             on_delete=models.SET_NULL,
-                            related_name='pipeline_runs'
-                            )
-
-    # input_files = ForeignKey(FileSet,
-    #                          blank=True,
-    #                          null=True,
-    #                          on_delete=models.SET_NULL,
-    #                          related_name='pipeline_runs')
+                            related_name='pipeline_runs')
 
     # Sample metadata, keyed by sample name
     # - eg, mapping sample names to conditions
@@ -1152,6 +1144,6 @@ class PipelineRun(Timestamped, UUIDModel):
     description = CharField(max_length=2048, blank=True, null=True)
 
     def to_json(self):
-        # TODO: Convert File UUIDs into URLs here ?
+        # TODO: Convert File UUIDs into URLs here (or internal 'api/v1/file/{file_id}' URLs) ?
         from .serializers import PipelineRunSerializer
         return json.dumps(PipelineRunSerializer(self).data)
