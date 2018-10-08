@@ -28,30 +28,8 @@ logging.basicConfig(format='%(levelname)s: %(asctime)s -- %(message)s', level=lo
 
 
 def add_commandline_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
-    parser.add_argument('urls', nargs='*', default=list())
+    subparsers = parser.add_subparsers(help='sub-command help', dest='command')
 
-    parser.add_argument('--pipeline-config',
-                        type=argparse.FileType('r'))
-    parser.add_argument("--untar",
-                        help="Untar any tar archives to --destination-path",
-                        action="store_true")
-    parser.add_argument("--parallel-downloads",
-                        help="The maximum number of files to download concurrently.",
-                        type=int,
-                        default=8)
-    parser.add_argument("--no-aria2c",
-                        help="Download natively without using the Aria2c daemon.",
-                        action="store_true")
-    # parser.add_argument("--event-notification-url",
-    #                     help="URL to send progress events to",
-    #                     type=str)
-    parser.add_argument("--queue-then-exit",
-                        help="Rather than block waiting for downloads to finish, exit after queuing. Aria2 daemon will"
-                             "continue downloading in the background.",
-                        action="store_true")
-    # parser.add_argument("--use-local-cache",
-    #                     help="Cache files locally, downloads are symlinks to the cached copy",
-    #                     action="store_true")
     parser.add_argument("--cache-path",
                         help="URL to send progress events to",
                         default=get_default_cache_path(),
@@ -60,31 +38,7 @@ def add_commandline_args(parser: argparse.ArgumentParser) -> argparse.ArgumentPa
                         help="Remove local cached files older than this (in seconds) when downloader runs",
                         type=int,
                         default=30)
-    parser.add_argument("--copy-from-cache",
-                        help="When using a file from the local cache, copy it to the download location rather than "
-                             "symlinking.",
-                        action="store_true")
-    parser.add_argument("--expire-cache-only",
-                        help="Remove files older than --cache-age and exit. "
-                             "Don't download anything. Useful for cleaning the cache via a cron job. "
-                             "WARNING: Assumes the --cache-path only contains cache files - "
-                             "any file in this path may be DELETED.",
-                        action="store_true")
-    parser.add_argument("--destination-path",
-                        help="Symlink / copy downloaded files to this directory.",
-                        default=None,
-                        type=str)
-    parser.add_argument("--proxy",
-                        help="Specify the HTTP (and FTP) proxy to use in the format: "
-                             "[http://][USER:PASSWORD@]HOST[:PORT]",
-                        type=str,
-                        default=None)
-    parser.add_argument("--kill-aria",
-                        help="Stop all downloads and shutdown the download daemon (Aria2c).",
-                        action="store_true")
-    parser.add_argument("--no-progress",
-                        help="Don't show progress bar ...",
-                        action="store_true")
+
     parser.add_argument("--quiet",
                         help="Minimal output to stdout/stderr",
                         action="store_true")
@@ -92,57 +46,76 @@ def add_commandline_args(parser: argparse.ArgumentParser) -> argparse.ArgumentPa
                         help="Extra increased verbosity (debug logging)",
                         action="store_true")
 
+    dl_parser = subparsers.add_parser('download',
+                                      help='Download files.')
+    cache_parser = subparsers.add_parser('expire-cache',
+                                         help="Remove files older than --cache-age and exit. "
+                                              "Don't download anything. Useful for cleaning the cache via a cron job. "
+                                              "WARNING: Assumes the --cache-path only contains cache files - "
+                                              "any file in this path may be DELETED.")
+
+    killaria_parser = subparsers.add_parser('kill-aria',
+                                            help="Stop all downloads and shutdown the download daemon (Aria2c).")
+
+    # cache_parser.add_argument("--expire-cache-only",
+    #                           help="Remove files older than --cache-age and exit. "
+    #                                "Don't download anything. Useful for cleaning the cache via a cron job. "
+    #                                "WARNING: Assumes the --cache-path only contains cache files - "
+    #                                "any file in this path may be DELETED.",
+    #                           action="store_true")
+
+    dl_parser.add_argument('urls', nargs='*', default=list())
+
+    dl_parser.add_argument('--pipeline-config',
+                           help="Path to a pipeline_config.json file from Laxy. You must provide this if URLs aren't "
+                                "specified on the commandline",
+                           type=argparse.FileType('r'))
+    dl_parser.add_argument("--untar",
+                           help="Untar any tar archives to --destination-path",
+                           action="store_true")
+    dl_parser.add_argument("--parallel-downloads",
+                           help="The maximum number of files to download concurrently.",
+                           type=int,
+                           default=8)
+    dl_parser.add_argument("--no-aria2c",
+                           help="Download natively without using the Aria2c daemon.",
+                           action="store_true")
+    # parser.add_argument("--event-notification-url",
+    #                     help="URL to send progress events to",
+    #                     type=str)
+    dl_parser.add_argument("--queue-then-exit",
+                           help="Rather than block waiting for downloads to finish, exit after queuing. Aria2 daemon will"
+                                "continue downloading in the background.",
+                           action="store_true")
+
+    dl_parser.add_argument("--copy-from-cache",
+                           help="When using a file from the local cache, copy it to the download location rather than "
+                                "symlinking.",
+                           action="store_true")
+
+    dl_parser.add_argument("--destination-path",
+                           help="Symlink / copy downloaded files to this directory.",
+                           default=None,
+                           type=str)
+    dl_parser.add_argument("--proxy",
+                           help="Specify the HTTP (and FTP) proxy to use in the format: "
+                                "[http://][USER:PASSWORD@]HOST[:PORT]",
+                           type=str,
+                           default=None)
+    dl_parser.add_argument("--no-progress",
+                           help="Don't show progress bar ...",
+                           action="store_true")
+
     return parser
 
 
-def main():
+def _run_download_cli(args, rpc_secret):
     _initial_queued_wait_delay = 10  # seconds
     _polling_delay = 30  # seconds
-
-    parser = add_commandline_args(argparse.ArgumentParser())
-    args = parser.parse_args()
-
-    if not args.pipeline_config and \
-            not args.urls and \
-            not args.kill_aria and \
-            not args.expire_cache_only:
-        parser.print_help()
-        sys.exit(1)
-
-    if args.quiet:
-        logging.basicConfig(format='%(levelname)s: %(asctime)s -- %(message)s', level=logging.WARNING)
-        logger.setLevel(logging.INFO)
-    elif args.vvv:
-        logging.basicConfig(format='%(levelname)s: %(asctime)s -- %(message)s', level=logging.DEBUG)
-        logger.setLevel(logging.DEBUG)
-
-    rpc_secret_path = os.path.join(args.cache_path, '.aria2_rpc_secret')
-    rpc_secret = get_secret_key(rpc_secret_path)
 
     if not args.no_aria2c:
         daemon = aria.get_daemon(secret=rpc_secret)
         aria.log_status()
-
-    if args.kill_aria:
-        logger.info("Stopping all downloads and shuttting down Aria2c.")
-        daemon = aria.get_daemon(secret=rpc_secret)
-        try:
-            aria.stop_all()
-        except Exception as ex:
-            sys.exit(1)
-        try:
-            os.remove(rpc_secret_path)
-        except (IOError, FileNotFoundError) as ex:
-            logger.warning(f"Unable to remove RPC secret file at {rpc_secret_path} (wrong permissions or missing).")
-        sys.exit()
-
-    if args.expire_cache_only:
-        try:
-            clean_cache(args.cache_path, cache_age=args.cache_age)
-        except Exception as ex:
-            logger.exception(ex)
-            sys.exit(1)
-        sys.exit()
 
     config_urls = None
     if args.pipeline_config:
@@ -210,6 +183,50 @@ def main():
                                             args.destination_path,
                                             args.cache_path,
                                             filename=filename)
+
+
+def main():
+    parser = add_commandline_args(argparse.ArgumentParser())
+    args = parser.parse_args()
+
+    if args.quiet:
+        logging.basicConfig(format='%(levelname)s: %(asctime)s -- %(message)s', level=logging.WARNING)
+        logger.setLevel(logging.INFO)
+    elif args.vvv:
+        logging.basicConfig(format='%(levelname)s: %(asctime)s -- %(message)s', level=logging.DEBUG)
+        logger.setLevel(logging.DEBUG)
+
+    if args.command == 'expire-cache':
+        try:
+            clean_cache(args.cache_path, cache_age=args.cache_age)
+        except Exception as ex:
+            logger.exception(ex)
+            sys.exit(1)
+        sys.exit()
+
+    rpc_secret_path = os.path.join(args.cache_path, '.aria2_rpc_secret')
+    rpc_secret = get_secret_key(rpc_secret_path)
+
+    if args.command == 'kill_aria':
+        logger.info("Stopping all downloads and shuttting down Aria2c.")
+        daemon = aria.get_daemon(secret=rpc_secret)
+        try:
+            aria.stop_all()
+        except Exception as ex:
+            sys.exit(1)
+        try:
+            os.remove(rpc_secret_path)
+        except (IOError, FileNotFoundError) as ex:
+            logger.warning(f"Unable to remove RPC secret file at {rpc_secret_path} (wrong permissions or missing).")
+        sys.exit()
+
+    if args.command == 'download':
+        if (not args.pipeline_config and
+                not args.urls):
+            parser.print_help()
+            sys.exit(1)
+
+        _run_download_cli(args, rpc_secret)
 
 
 if __name__ == '__main__':

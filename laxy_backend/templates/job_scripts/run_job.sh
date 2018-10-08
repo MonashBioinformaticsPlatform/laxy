@@ -323,7 +323,8 @@ if [ "${JOB_INPUT_STAGED}" == "no" ]; then
     readonly urls=$(get_input_data_urls)
 
     mkdir -p "${JOB_PATH}/../cache"
-    laxydl --no-progress \
+    laxydl download \
+           --no-progress \
            --untar \
            --parallel-downloads "${PARALLEL_DOWNLOADS}" \
            --cache-path "${DOWNLOAD_CACHE_PATH}" \
