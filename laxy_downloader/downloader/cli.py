@@ -21,7 +21,9 @@ from .downloader import (get_default_cache_path,
                          create_symlink_to_cache,
                          create_copy_from_cache,
                          is_tar_url_with_fragment,
-                         untar_from_url_fragment)
+                         untar_from_url_fragment,
+                         notify_event,
+                         async_notify_event)
 
 from . import aria
 
@@ -59,9 +61,6 @@ def add_commandline_args(parser: argparse.ArgumentParser) -> argparse.ArgumentPa
     dl_parser.add_argument("--no-aria2c",
                            help="Download natively without using the Aria2c daemon.",
                            action="store_true")
-    # parser.add_argument("--event-notification-url",
-    #                     help="URL to send progress events to",
-    #                     type=str)
     dl_parser.add_argument("--queue-then-exit",
                            help="Rather than block waiting for downloads to finish, exit after queuing. Aria2 daemon will"
                                 "continue downloading in the background.",
@@ -95,6 +94,14 @@ def add_commandline_args(parser: argparse.ArgumentParser) -> argparse.ArgumentPa
                        help="Remove local cached files older than this (in seconds) when downloader runs",
                        type=int,
                        default=30)
+        p.add_argument("--event-notification-url",
+                       help="Laxy API URL to send progress events to.",
+                       default=None,
+                       type=str)
+        p.add_argument("--event-notification-auth-file",
+                       help="The path to a file containing authorization headers required for"
+                            "event notifications (curl-style, single line with 'Authorization: Bearer eyBigLongToken')",
+                       type=argparse.FileType('r'))
 
         p.add_argument("--quiet",
                        help="Minimal output to stdout/stderr",
@@ -104,6 +111,15 @@ def add_commandline_args(parser: argparse.ArgumentParser) -> argparse.ArgumentPa
                        action="store_true")
 
     return parser
+
+
+def _parse_auth_header_file(fh):
+    headers = {}
+    for l in fh:
+        if l.strip():
+            k, v = l.split(':', 1)
+            headers[k.strip()] = v.strip()
+    return headers
 
 
 def _run_download_cli(args, rpc_secret):
@@ -127,11 +143,20 @@ def _run_download_cli(args, rpc_secret):
     if config_urls is not None:
         urls = config_urls
 
+    api_url = args.event_notification_url
+    api_auth_headers = None
+    if args.event_notification_auth_file:
+        api_auth_headers = _parse_auth_header_file(args.event_notification_auth_file)
+
     if urls:
         if not args.no_aria2c:
             daemon = aria.get_daemon(secret=rpc_secret)
 
             async def aria_dl_and_poll():
+                await async_notify_event(api_url,
+                                         "INPUT_DATA_DOWNLOAD_STARTED",
+                                         auth_headers=api_auth_headers)
+
                 gids = aria.download_urls(urls,
                                           cache_path=args.cache_path,
                                           proxy=args.proxy,
@@ -149,14 +174,26 @@ def _run_download_cli(args, rpc_secret):
                 while not aria.downloads_finished(gids):
                     await trio_wait_with_progress(_polling_delay, 1, quiet=args.quiet or args.no_progress)
 
+                await async_notify_event(api_url,
+                                         "INPUT_DATA_DOWNLOAD_FINISHED",
+                                         auth_headers=api_auth_headers)
+
                 aria.purge_results()
 
             trio.run(aria_dl_and_poll)
         else:
             # trio.run(download, urls)
+            notify_event(api_url,
+                         "INPUT_DATA_DOWNLOAD_STARTED",
+                         auth_headers=api_auth_headers)
+
             download_concurrent(urls,
                                 args.cache_path,
                                 concurrent_downloads=args.parallel_downloads)
+
+            notify_event(api_url,
+                         "INPUT_DATA_DOWNLOAD_FINISHED",
+                         auth_headers=api_auth_headers)
 
         if args.destination_path is not None:
             for url in urls:

@@ -6,7 +6,7 @@ from contextlib import closing
 from urllib.parse import urlparse, urlsplit, urlunsplit
 from pathlib import Path
 import shutil
-from typing import List, Union
+from typing import List, Union, Mapping
 import logging
 import sys
 import os
@@ -28,11 +28,13 @@ import backoff
 from toolz.dicttoolz import merge as merge_dicts
 from requests.auth import HTTPBasicAuth
 import trio
+import asks
 from attrdict import AttrDict
-
 
 logger = logging.getLogger(__name__)
 # logging.basicConfig(format='%(levelname)s: %(asctime)s -- %(message)s', level=logging.INFO)
+
+asks.init(trio)
 
 
 def get_tmpdir():
@@ -442,3 +444,44 @@ def remove_url_fragment(url):
 def untar_from_url_fragment(cached, target_dir, url: str):
     fn = urlparse(url).fragment
     return untar(cached, target_dir, extract_files=[fn])
+
+
+async def async_notify_event(api_url: Union[str, None],
+                             event: str,
+                             extra: Union[Mapping, None] = None,
+                             auth_headers: Union[Mapping, None] = None):
+    if api_url is None:
+        return
+    if extra is None:
+        extra = {}
+    if auth_headers is None:
+        auth_headers = {}
+    headers = merge_dicts({'Content-Type': 'application/json'}, auth_headers)
+    data = {'event': event, 'extra': extra}
+    try:
+        resp = await asks.post(api_url, json=data, headers=headers, retries=3, timeout=30)
+        return resp
+    except BaseException as ex:
+        logger.exception(ex)
+
+
+@backoff.on_exception(backoff.expo,
+                      (requests.exceptions.RequestException,
+                       urllib.error.URLError),
+                      max_tries=3,
+                      jitter=backoff.full_jitter,
+                      on_giveup=lambda e: logger.debug(f"Event notification failed: {e.get('event', '')}"))
+def notify_event(api_url: Union[str, None],
+                 event: str,
+                 extra: Union[Mapping, None] = None,
+                 auth_headers: Union[Mapping, None] = None):
+    if api_url is None:
+        return
+    if extra is None:
+        extra = {}
+    if auth_headers is None:
+        auth_headers = {}
+    headers = merge_dicts({'Content-Type': 'application/json'}, auth_headers)
+    data = {'event': event, 'extra': extra}
+    resp = requests.post(api_url, json=data, headers=headers, timeout=30)
+    return resp

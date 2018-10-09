@@ -316,7 +316,7 @@ add_sik_config
 
 if [ "${JOB_INPUT_STAGED}" == "no" ]; then
 
-    send_event "INPUT_DATA_DOWNLOAD_STARTED"
+    # send_event "INPUT_DATA_DOWNLOAD_STARTED"
 
     readonly PARALLEL_DOWNLOADS=8
     # one URL per line
@@ -329,10 +329,12 @@ if [ "${JOB_INPUT_STAGED}" == "no" ]; then
            --no-progress \
            --untar \
            --parallel-downloads "${PARALLEL_DOWNLOADS}" \
+           --event-notification-url "${JOB_EVENT_URL}" \
+           --event-notification-auth-file "${JOB_PATH}/.private_request_headers"
            --pipeline-config "${JOB_PATH}/input/pipeline_config.json" \
            --destination-path "${JOB_PATH}/input"
 
-    send_event "INPUT_DATA_DOWNLOAD_FINISHED"
+    # send_event "INPUT_DATA_DOWNLOAD_FINISHED"
 
 fi
 
