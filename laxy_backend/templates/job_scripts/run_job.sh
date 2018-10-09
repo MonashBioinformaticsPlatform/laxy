@@ -324,7 +324,7 @@ if [ "${JOB_INPUT_STAGED}" == "no" ]; then
 
     mkdir -p "${JOB_PATH}/../cache"
     laxydl download \
-           -vvv
+           -vvv \
            --cache-path "${DOWNLOAD_CACHE_PATH}" \
            --no-progress \
            --untar \
