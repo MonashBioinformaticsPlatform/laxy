@@ -3,10 +3,10 @@ import cgi
 import json
 import urllib
 from contextlib import closing
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlsplit, urlunsplit
 from pathlib import Path
 import shutil
-from typing import List
+from typing import List, Union
 import logging
 import sys
 import os
@@ -44,6 +44,9 @@ def get_default_cache_path():
 
 
 def url_to_cache_key(url):
+    if is_tar_url_with_fragment(url):
+        url = remove_url_fragment(url)
+
     base64ed = urlsafe_b64encode(url.encode('utf-8')).decode('ascii')
     return base64ed
 
@@ -393,12 +396,49 @@ def create_copy_from_cache(url: str, target_dir, cache_path, filename=None):
     shutil.copyfile(cached, os.path.join(target_dir, filename))
 
 
-def untar(cached, target_dir):
+def untar(cached, target_dir, extract_files: Union[List[str], None] = None):
+    if extract_files is None:
+        extract_files = []
+
     if tarfile.is_tarfile(cached):
         cmd = ['tar', 'xvf', cached, '-C', target_dir]
+        cmd.extend(extract_files)
         result = subprocess.run(cmd)
         result.check_returncode()
     else:
         raise ValueError(f"{cached} is not a tar file")
 
     return result
+
+
+def is_tar_url_with_fragment(url: str, extensions: Union[List[str], None] = None):
+    if extensions is None:
+        extensions = ['.tar']
+
+    if '#' in url:
+        tar_fn = Path(urlparse(url).path).name
+        for ext in extensions:
+            if tar_fn.endswith(ext) and urlparse(url).fragment:
+                return True
+
+    return False
+
+
+def remove_url_fragment(url):
+    """
+    >>> remove_url_fragment("https://example.com/dir/thefile.tar#internal.txt")
+    'https://example.com/dir/thefile.tar'
+
+    :param url: A URL, possibly with a #fragment at the end
+    :type url: str
+    :return: The URL without the #fragment.
+    :rtype: str
+    """
+    urlparts = list(urlsplit(url))
+    urlparts[4] = ''  # remove hash fragment
+    return urlunsplit(urlparts)
+
+
+def untar_from_url_fragment(cached, target_dir, url: str):
+    fn = urlparse(url).fragment
+    return untar(cached, target_dir, extract_files=[fn])

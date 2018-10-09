@@ -19,7 +19,9 @@ from .downloader import (get_default_cache_path,
                          find_filename_and_size_from_url,
                          get_url_cached_path,
                          create_symlink_to_cache,
-                         create_copy_from_cache)
+                         create_copy_from_cache,
+                         is_tar_url_with_fragment,
+                         untar_from_url_fragment)
 
 from . import aria
 
@@ -160,7 +162,12 @@ def _run_download_cli(args, rpc_secret):
             for url in urls:
                 cached = get_url_cached_path(url, args.cache_path)
                 filename, _ = find_filename_and_size_from_url(url)
-                if tarfile.is_tarfile(cached) and args.untar:
+                if is_tar_url_with_fragment(url) and tarfile.is_tarfile(cached) and args.untar:
+                    # TODO: It's probably more efficient to group all URLs for the same tar file
+                    # and extract all #fragment files from their archive at once. But this works for now.
+                    logger.info(f"Untarring file from {cached} ({url})")
+                    untar_from_url_fragment(cached, args.destination_path, url)
+                elif tarfile.is_tarfile(cached) and args.untar:
                     logger.info(f"Untarring {cached} ({url})")
                     untar(cached, args.destination_path)
                 elif args.copy_from_cache:
