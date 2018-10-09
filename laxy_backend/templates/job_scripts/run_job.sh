@@ -330,7 +330,7 @@ if [ "${JOB_INPUT_STAGED}" == "no" ]; then
            --untar \
            --parallel-downloads "${PARALLEL_DOWNLOADS}" \
            --event-notification-url "${JOB_EVENT_URL}" \
-           --event-notification-auth-file "${JOB_PATH}/.private_request_headers"
+           --event-notification-auth-file "${JOB_PATH}/.private_request_headers" \
            --pipeline-config "${JOB_PATH}/input/pipeline_config.json" \
            --destination-path "${JOB_PATH}/input"
 
