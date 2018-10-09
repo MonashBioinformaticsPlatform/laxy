@@ -233,7 +233,7 @@
                 }
                 let sfiles: any = [{R1: f.location}];
                 if (pair != null) {
-                    sfiles = [{R1: f.location}, {R2: pair.location}];
+                    sfiles = [{R1: f.location, R2: pair.location}];
                 }
                 cart_samples.push({
                     name: sname,

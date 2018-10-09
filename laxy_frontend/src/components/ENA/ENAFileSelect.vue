@@ -125,7 +125,10 @@
 <script lang="ts">
     import "vue-material/dist/vue-material.css";
 
-    import * as _ from "lodash";
+    import get from "lodash-es/get";
+    import uniq from "lodash-es/uniq";
+    import compact from "lodash-es/compact";
+
     import "es6-promise";
 
     import * as pluralize from "pluralize";
@@ -231,11 +234,6 @@
         public submitting: boolean = false;
         public error_alert_message: string = "Everything is fine.";
 
-        // for lodash in templates
-        get _() {
-            return _;
-        }
-
         get hasResults() {
             return !(this.samples == null || this.samples.length === 0);
         }
@@ -267,9 +265,20 @@
             // console.log(this.selectedSamples);
             const cart_samples: Sample[] = [];
             for (let ena of this.selectedSamples) {
+
+                // Turn [{'R1','ftp://bla"}, {'R2': 'ftp://foo'}] into
+                //      [{'R1":'ftp://bla", 'R2': 'ftp://foo'}]
+                let files: any = {};
+                if (ena.fastq_ftp) {
+                    for (let f of ena.fastq_ftp) {
+                        Object.assign(files, f);
+                    }
+                }
+                files = [files];
+
                 cart_samples.push({
                     name: ena.sample_accession,
-                    files: ena.fastq_ftp,
+                    files: files,
                     metadata: {condition: "", ena: ena},
                 } as Sample);
             }
@@ -292,7 +301,7 @@
 
             // split on commas and spaces, make items unique
             let accession_list: string[] =
-                _.uniq(_.compact(accessions.trim().split(/[\s,]+/)));
+                uniq(compact(accessions.trim().split(/[\s,]+/)));
 
             try {
                 this.submitting = true;
