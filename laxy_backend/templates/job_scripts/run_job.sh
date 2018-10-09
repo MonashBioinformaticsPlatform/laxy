@@ -324,10 +324,11 @@ if [ "${JOB_INPUT_STAGED}" == "no" ]; then
 
     mkdir -p "${JOB_PATH}/../cache"
     laxydl download \
+           -vvv
+           --cache-path "${DOWNLOAD_CACHE_PATH}" \
            --no-progress \
            --untar \
            --parallel-downloads "${PARALLEL_DOWNLOADS}" \
-           --cache-path "${DOWNLOAD_CACHE_PATH}" \
            --pipeline-config "${JOB_PATH}/input/pipeline_config.json" \
            --destination-path "${JOB_PATH}/input"
 

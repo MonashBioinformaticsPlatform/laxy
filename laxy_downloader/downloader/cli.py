@@ -30,22 +30,6 @@ logging.basicConfig(format='%(levelname)s: %(asctime)s -- %(message)s', level=lo
 def add_commandline_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(help='sub-command help', dest='command')
 
-    parser.add_argument("--cache-path",
-                        help="URL to send progress events to",
-                        default=get_default_cache_path(),
-                        type=str)
-    parser.add_argument("--cache-age",
-                        help="Remove local cached files older than this (in seconds) when downloader runs",
-                        type=int,
-                        default=30)
-
-    parser.add_argument("--quiet",
-                        help="Minimal output to stdout/stderr",
-                        action="store_true")
-    parser.add_argument("-vvv",
-                        help="Extra increased verbosity (debug logging)",
-                        action="store_true")
-
     dl_parser = subparsers.add_parser('download',
                                       help='Download files.')
     cache_parser = subparsers.add_parser('expire-cache',
@@ -56,13 +40,6 @@ def add_commandline_args(parser: argparse.ArgumentParser) -> argparse.ArgumentPa
 
     killaria_parser = subparsers.add_parser('kill-aria',
                                             help="Stop all downloads and shutdown the download daemon (Aria2c).")
-
-    # cache_parser.add_argument("--expire-cache-only",
-    #                           help="Remove files older than --cache-age and exit. "
-    #                                "Don't download anything. Useful for cleaning the cache via a cron job. "
-    #                                "WARNING: Assumes the --cache-path only contains cache files - "
-    #                                "any file in this path may be DELETED.",
-    #                           action="store_true")
 
     dl_parser.add_argument('urls', nargs='*', default=list())
 
@@ -105,6 +82,24 @@ def add_commandline_args(parser: argparse.ArgumentParser) -> argparse.ArgumentPa
     dl_parser.add_argument("--no-progress",
                            help="Don't show progress bar ...",
                            action="store_true")
+
+    # Add common options to the main parser and most subparsers
+    for p in [parser, dl_parser, cache_parser]:
+        p.add_argument("--cache-path",
+                       help="URL to send progress events to",
+                       default=get_default_cache_path(),
+                       type=str)
+        p.add_argument("--cache-age",
+                       help="Remove local cached files older than this (in seconds) when downloader runs",
+                       type=int,
+                       default=30)
+
+        p.add_argument("--quiet",
+                       help="Minimal output to stdout/stderr",
+                       action="store_true")
+        p.add_argument("-vvv",
+                       help="Extra increased verbosity (debug logging)",
+                       action="store_true")
 
     return parser
 
