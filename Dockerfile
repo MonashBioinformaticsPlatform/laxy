@@ -4,10 +4,6 @@ RUN mkdir /app
 WORKDIR /app
 ADD . /app/
 
-# There may be secrets here. Environment vars should be injected when
-# running the container (eg via docker-compose).
-RUN rm /app/.env /app/.secret_key
-
 RUN pip3 install -U pip && \
     pip3 install -U -r requirements.txt
 

@@ -1,0 +1,10 @@
+.env
+.secret_key
+.env.*
+.git
+.gitignore
+.gitmodules
+.vscode
+.ignore
+
+docs
