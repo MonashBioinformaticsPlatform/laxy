@@ -28,7 +28,7 @@ plugins.push(new WebpackShellPlugin({
 */
 
 module.exports = {
-    watch: true,
+    watch: false,
     entry: "./src/index.ts",
     output: {
         path: path.resolve(__dirname, './dist'),

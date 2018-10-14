@@ -26,7 +26,7 @@
 
 
 <script lang="ts">
-    import 'vue-material/dist/vue-material.css';
+    // import 'vue-material/dist/vue-material.css';
 
     import * as _ from 'lodash';
     import 'es6-promise';
@@ -35,7 +35,7 @@
     import Vue, {ComponentOptions} from 'vue';
     import Component from 'vue-class-component';
     import {Emit, Inject, Model, Prop, Provide, Watch} from 'vue-property-decorator'
-    import VueMaterial from 'vue-material';
+    // import VueMaterial from 'vue-material';
 
     import ENAFileSelect from "./ENAFileSelect";
 

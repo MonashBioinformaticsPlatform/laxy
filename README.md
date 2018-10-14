@@ -1,4 +1,4 @@
-# Laxy Genomics Pipelines
+# Laxy Magical Mystery Tool
 
 ```bash
 git clone --recurse-submodules https://github.com/MonashBioinformaticsPlatform/laxy.git
@@ -13,18 +13,9 @@ The Laxy frontend is a Vue.js Single-Page Application that runs in the browser a
 cp -n .env.example .env
 cd laxy_frontend
 npm install
-npm run build
-npm start
+npm run build:dev
+npm run server
 open http://localhost:8002/
-```
-
-#### Building vue-material
-The repository contains a subrepo for vue-material (1.x, custom fork).
-If you make changes to vue-material, rebuild it like:
-
-```bash
-cd laxy_frontend/local_node_modules/vue-material
-npm run build:lib
 ```
 
 ### Building for production

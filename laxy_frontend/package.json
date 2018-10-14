@@ -2,29 +2,27 @@
   "name": "laxy",
   "version": "1.0.0",
   "description": "",
-  "main": "main.js",
+  "main": "dist/bundle.js",
   "scripts": {
-    "build": "webpack",
+    "build": "NODE_ENV='production' webpack",
     "build:dev": "NODE_ENV='dev' webpack",
     "build:prod": "NODE_ENV='production' webpack",
-    "watch": "webpack -d --watch --progress",
+    "watch": "NODE_ENV='dev' webpack -d --watch --progress",
     "dev": "webpack-dev-server -d --progress --watch --port 8002 --open --content-base ./ && python3 ../manage.py runserver 8001",
     "django": "python3 ../manage.py runserver 8001",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "webpack-dev-server -d --watch --port 8002 --open --content-base ./dist/",
-    "public_demo": "webpack-dev-server --port 8002 --host 0.0.0.0 --content-base ./dist/"
+    "server": "NODE_ENV='dev' webpack-dev-server -d --watch --port 8002 --open --content-base ./dist/"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "Andrew Perry <Andrew.Perry@monash.edu>",
+  "license": "Apache",
   "//comment": {
-    "vue-material": "file:local_node_modules/vue-material",
-    "@types/vue-material": "file:local_node_modules/vue-material-types",
     "vue-material": "git+https://github.com/pansapiens/vue-material.git#custom-0.8.1",
-    "vue-authenticate": "file:local_node_modules/vue-authenticate"
+    "@types/vue-material": "file:local_node_modules/vue-material-types",
+    "vue-authenticate": "git+https://github.com/pansapiens/vue-authenticate.git#master"
   },
   "//comment2": {
     "vue-material": "^0.8.1",
-    "@types/vue-material": "file:local_node_modules/vue-material-types"
+    "@types/vue-material": "git+https://github.com/pansapiens/vue-material-types.git#master"
   },
   "devDependencies": {
     "@types/axios": "^0.14.0",
@@ -50,7 +48,6 @@
     "tslint": "^5.9.1",
     "typescript": "^2.8.1",
     "vue-loader": "^13.7.1",
-    "vue-material": "git+https://github.com/pansapiens/vue-material.git#custom-0.8.1",
     "vue-mixin-decorator": "^1.0.0",
     "vue-template-compiler": "^2.5.16",
     "webpack": "^3.11.0",
@@ -72,6 +69,7 @@
     "vue-axios": "^2.1.3",
     "vue-class-component": "^6.2.0",
     "vue-markdown": "^2.2.4",
+    "vue-material": "git+https://github.com/pansapiens/vue-material.git#custom-0.8.1",
     "vue-moment": "^2.2.0",
     "vue-property-decorator": "^6.0.0",
     "vue-router": "^3.0.1",

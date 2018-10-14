@@ -15,7 +15,6 @@ Vue.config.devtools = process.env.NODE_ENV !== 'production';
 // Vue.config.performance = process.env.NODE_ENV !== 'production'
 
 import Vuex from 'vuex';
-
 Vue.use(Vuex);
 
 import VueRouter, {RouterOptions} from 'vue-router';
@@ -26,7 +25,8 @@ Vue.use(VueRouter);
 const VueAxios = require('vue-axios');
 Vue.use(VueAxios, axios);
 
-const VueMaterial = require('vue-material');
+// const VueMaterial = require('vue-material');
+import VueMaterial from 'vue-material';
 Vue.use(VueMaterial);
 
 const VueMoment = require('vue-moment');  // for date formatting

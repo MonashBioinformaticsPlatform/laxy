@@ -160,10 +160,6 @@
 </template>
 
 <script lang="ts">
-    import "vue-material/dist/vue-material.css";
-
-    // import * as _ from "lodash";
-
     import filter from "lodash-es/filter";
     import map from "lodash-es/map";
     import lodashGet from "lodash-es/get";
@@ -180,7 +176,6 @@
 
     import axios, {AxiosResponse} from "axios";
     import Vue, {ComponentOptions} from "vue";
-    import VueMaterial from "vue-material";
     import Component from "vue-class-component";
     import {
         Emit,

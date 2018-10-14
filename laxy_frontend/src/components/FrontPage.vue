@@ -146,15 +146,11 @@
 
 
 <script lang="ts">
-    import "vue-material/dist/vue-material.css";
-
     import * as _ from "lodash";
     import "es6-promise";
 
     import axios, {AxiosResponse} from "axios";
     import Vue, {ComponentOptions} from "vue";
-
-    const VueMaterial = require("vue-material");
 
     interface FrontPage extends Vue {
     }

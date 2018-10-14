@@ -43,8 +43,6 @@
 </template>
 
 <script lang="ts">
-    import "vue-material/dist/vue-material.css";
-
     import get from "lodash-es/get";
     import set from "lodash-es/set";
     import filter from "lodash-es/filter";
@@ -53,7 +51,6 @@
 
     import axios, {AxiosResponse} from "axios";
     import Vue, {ComponentOptions} from "vue";
-    import VueMaterial from "vue-material";
     import Component from "vue-class-component";
     import {
         Emit,

@@ -35,6 +35,7 @@ interface JobsPage {
     jobs: ComputeJob[];    // jobs for just the page we've retrieved
 }
 
+Vue.use(Vuex);
 export const Store = new Vuex.Store({
         strict: true,
         state: {

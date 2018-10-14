@@ -156,8 +156,6 @@
 </template>
 
 <script lang="ts">
-    import 'vue-material/dist/vue-material.css';
-
     import * as _ from 'lodash';
     import 'es6-promise';
 

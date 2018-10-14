@@ -27,7 +27,6 @@
 </template>
 
 <script lang="ts">
-    import "vue-material/dist/vue-material.css";
     import Vue, {ComponentOptions} from "vue";
     import Component from "vue-class-component";
     import {

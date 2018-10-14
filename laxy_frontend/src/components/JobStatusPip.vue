@@ -40,7 +40,6 @@
 </template>
 
 <script lang="ts">
-    import "vue-material/dist/vue-material.css";
     import '../../assets/outline-directions_run-24px.svg';
     import '../../assets/outline-check_circle_outline-24px.svg';
     import '../../assets/outline-cancel_presentation-24px.svg';

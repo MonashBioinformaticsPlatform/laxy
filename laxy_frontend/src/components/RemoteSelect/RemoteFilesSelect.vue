@@ -86,7 +86,6 @@
 
 
 <script lang="ts">
-    import "vue-material/dist/vue-material.css";
 
     import get from "lodash-es/get";
 
@@ -95,7 +94,6 @@
     import * as pluralize from "pluralize";
     import axios, {AxiosResponse} from "axios";
     import Vue, {ComponentOptions} from "vue";
-    import VueMaterial from "vue-material";
     import Component from "vue-class-component";
     import {
         Emit,
