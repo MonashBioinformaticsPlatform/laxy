@@ -6,7 +6,6 @@ const CopyWebpackPlugin = require('copy-webpack-plugin');
 const NyanProgressPlugin = require('nyan-progress-webpack-plugin');
 
 const plugins = [
-    new NyanProgressPlugin(),
     new Dotenv({
         path: '../.env',
         safe: false, // load '.env.example' to verify the '.env' variables are all set. Can also be a string to a different file.
@@ -15,7 +14,7 @@ const plugins = [
     }),
     // copy index.html to dist
     new CopyWebpackPlugin([{
-      from: './index.html'
+        from: './index.html'
     }]),
 ];
 
@@ -89,6 +88,12 @@ module.exports = {
     },
     devtool: 'inline-source-map',
 };
+
+if (process.env.NYAN === 'true') {
+    module.exports.plugins = (module.exports.plugins || []).concat([
+        new NyanProgressPlugin()
+    ]);
+}
 
 if (process.env.NODE_ENV === 'production') {
     module.exports.devtool = 'source-map';
