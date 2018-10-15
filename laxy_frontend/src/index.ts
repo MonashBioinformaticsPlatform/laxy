@@ -25,8 +25,8 @@ Vue.use(VueRouter);
 const VueAxios = require('vue-axios');
 Vue.use(VueAxios, axios);
 
-// const VueMaterial = require('vue-material');
-import VueMaterial from 'vue-material';
+const VueMaterial = require('vue-material');
+// import VueMaterial from 'vue-material';
 Vue.use(VueMaterial);
 
 const VueMoment = require('vue-moment');  // for date formatting
