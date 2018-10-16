@@ -115,7 +115,7 @@ DRF CoreAPI docs: http://localhost:8000/coreapi/
 Laxy (and associated services) can run under Docker Compose.
 
 ```bash
-docker-compose -f docker-compose.yml -f docker-compose.dev.yml build
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml build --build-arg GIT_COMMIT=$(git log -1 --format=%H)
 docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 ```
 

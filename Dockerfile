@@ -1,5 +1,9 @@
 FROM python:3.6
+
+ARG GIT_COMMIT=unspecified
+LABEL git_commit=$GIT_COMMIT
 ENV PYTHONUNBUFFERED 1
+
 RUN mkdir /app
 WORKDIR /app
 ADD . /app/
