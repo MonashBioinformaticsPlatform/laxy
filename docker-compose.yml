@@ -2,7 +2,8 @@ version: '3.2'
 
 services:
   django:
-    image: laxy:latest
+    # eg IMAGE_REPO=registry.gitlab.com/pansapiens/
+    image: "${IMAGE_REPO}laxy:latest"
     working_dir: /app
     environment:
       - LAXY_DATABASE_URL=postgres://postgres:postgres@db:5432/postgres
@@ -44,7 +45,7 @@ services:
 ##    - "6379"
 
   celeryd:
-    image: laxy:latest
+    image: "${IMAGE_REPO}laxy:latest"
     working_dir: /app
     environment:
       - LAXY_DATABASE_URL=postgres://postgres:postgres@db:5432/postgres
@@ -56,7 +57,7 @@ services:
       - rabbitmq
 
   flower:
-    image: laxy:latest
+    image: "${IMAGE_REPO}laxy:latest"
     environment:
       - LAXY_DEBUG=no
       - LAXY_BROKER_URL=amqp://guest@rabbitmq
