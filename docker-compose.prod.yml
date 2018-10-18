@@ -4,12 +4,13 @@ networks:
   private:
 
 volumes:
-  static:
+  static_assets:
   dbdata:
 
 services:
 
   django:
+    image: "${IMAGE_REPO:-registry.gitlab.com/pansapiens/}laxy:latest"
     deploy:
       restart_policy:
         condition: any
@@ -18,7 +19,7 @@ services:
       - LAXY_STATIC_ROOT=/usr/share/nginx/html/backend
       - LAXY_STATIC_URL=/backend/
     volumes:
-      -  static:/usr/share/nginx/html
+      -  static_assets:/usr/share/nginx/html
 # TODO: Make Django only accessible from the private Docker network, via
 #       'expose' rather than 'ports', reverse proxy via nginx config
 #   expose:
@@ -30,9 +31,9 @@ services:
     command: bash -c "sleep 10 &&
                       python3 manage.py makemigrations --no-input &&
                       python3 manage.py migrate --no-input &&
-                      mkdir -p /usr/share/nginx/html/backend &&
+                      mkdir -p "${LAXY_STATIC_ROOT}" &&
                       python3 manage.py collectstatic --no-input &&
-                      cp -r /app/laxy_frontend/* /usr/share/nginx/html &&
+                      cp -r /app/laxy_frontend/dist/* /usr/share/nginx/html/ &&
                       gunicorn laxy.wsgi -b 0.0.0.0:8001"
 
   db:
@@ -54,6 +55,7 @@ services:
       - private
 
   celeryd:
+    image: "${IMAGE_REPO:-registry.gitlab.com/pansapiens/}laxy:latest"
     # command: bash -c "celery -A laxy worker -B -E -l info --broker=${LAXY_BROKER_URL}"
     environment:
       - LAXY_DEBUG=no
@@ -64,12 +66,13 @@ services:
       - private
 
   flower:
+    image: "${IMAGE_REPO:-registry.gitlab.com/pansapiens/}laxy:latest"
     deploy:
       restart_policy:
         condition: any
     environment:
       - LAXY_DEBUG=no
-      - FLOWER_BASIC_AUTH=user:pass
+      # - FLOWER_BASIC_AUTH=${FLOWER_USER:?must_set_FLOWER_USER_env_var}:${FLOWER_PASS:?must_set_FLOWER_PASS_env_var}
     ports:
       - "5556:5556"
     networks:
@@ -85,4 +88,4 @@ services:
     networks:
       - private
     volumes:
-       - ./laxy_frontend/dist:/usr/share/nginx/html:ro
+       - static_assets:/usr/share/nginx/html:ro

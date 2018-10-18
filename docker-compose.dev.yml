@@ -52,4 +52,4 @@ services:
        # dev
        - "8002:80"
     volumes:
-      - ./laxy_frontend/dist:/usr/share/nginx/html
+      - ./laxy_frontend/dist:/usr/share/nginx/html:ro
