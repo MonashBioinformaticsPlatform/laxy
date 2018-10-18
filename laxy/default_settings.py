@@ -204,7 +204,7 @@ TEMPLATES = [
 ]
 
 # https://github.com/ottoyiu/django-cors-headers#configuration
-CSRF_COOKIE_DOMAIN = env('CSRF_COOKIE_DOMAIN')
+CSRF_COOKIE_DOMAIN = env('CSRF_COOKIE_DOMAIN', 'localhost')
 if DEBUG:
     # CORS_ORIGIN_ALLOW_ALL = True
 
@@ -416,11 +416,11 @@ LOGGING = {
         'django': {
             'handlers': ['console'],
             # 'level': os.getenv('DJANGO_LOG_LEVEL', 'DEBUG'),
-            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
+            'level': env('LOG_LEVEL', 'INFO'),
         },
         'laxy_backend': {
             'handlers': ['console'],
-            'level': os.getenv('DJANGO_LOG_LEVEL', 'DEBUG'),
+            'level': env('LOG_LEVEL', 'DEBUG'),
             'propagate': True,
         },
         # '': {
