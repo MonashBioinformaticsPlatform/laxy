@@ -9,7 +9,7 @@ services:
   django:
     build: .
     environment:
-      - LAXY_DEBUG=yes
+      # - LAXY_DEBUG=yes
       - LAXY_ADMIN_EMAIL=admin@example.com
       - LAXY_ADMIN_USERNAME=admin
       - LAXY_ADMIN_PASSWORD=adminpass

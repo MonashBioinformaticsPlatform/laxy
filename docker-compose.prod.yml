@@ -29,12 +29,14 @@ services:
     networks:
       - private
     command: bash -c "sleep 10 &&
+                      mkdir -p '${LAXY_STATIC_ROOT:-/usr/share/nginx/html/backend}' &&
+                      cp -r /app/laxy_frontend/dist/* /usr/share/nginx/html/ &&
                       python3 manage.py makemigrations --no-input &&
                       python3 manage.py migrate --no-input &&
-                      mkdir -p "${LAXY_STATIC_ROOT}" &&
                       python3 manage.py collectstatic --no-input &&
-                      cp -r /app/laxy_frontend/dist/* /usr/share/nginx/html/ &&
-                      gunicorn laxy.wsgi -b 0.0.0.0:8001"
+                      python3 manage.py runserver 0.0.0.0:8001"
+                      # TODO: Fix running under gunicorn
+                      # gunicorn laxy.wsgi -b 0.0.0.0:8001"
 
   db:
     deploy:
