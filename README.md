@@ -148,7 +148,7 @@ Migrate database in Docker container:
 docker container exec -it laxy_django_1  python manage.py migrate
 
 # or if the container isn't running:
-# docker-compose -f docker-compose.yml -f docker-compose.dev.yml run django python manage.py migrate
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml run django python manage.py migrate
 
 ```
 
