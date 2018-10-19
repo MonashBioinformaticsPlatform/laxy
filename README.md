@@ -21,12 +21,12 @@ open http://localhost:8002/
 ### Building for production
 
 Create `.env` (see `.env.example`), change frontend variables as required (eg `LAXY_FRONTEND_*`).
+Environment variables (eg as seen via the `env` shell command) will override variables read from `.env`.
 
 ```bash
 npm run build:prod
 ```
 
-Environment variables will override variables read from `.env`.
 These variables are used by the Webpack (`dotenv-webpack`) build to substitute references to `process.env.SOME_ENV_VAR`.
 
 ## Backend
@@ -59,6 +59,8 @@ ALTER DATABASE laxy OWNER TO laxy;
 GRANT ALL PRIVILEGES ON DATABASE laxy TO laxy;
 ```
 
+Configuration is taken from a `.env` file.
+Environment variables (eg `LAXY_*`) will override any variables defined in `.env`.
 ```bash
 # Copy the example settings environment and edit as required,
 # including the database name and password above. 
@@ -149,7 +151,6 @@ docker container exec -it laxy_django_1  python manage.py migrate
 
 # or if the container isn't running:
 docker-compose -f docker-compose.yml -f docker-compose.dev.yml run django python manage.py migrate
-
 ```
 
 Dump fixtures (JSON formatted database records):

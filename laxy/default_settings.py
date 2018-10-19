@@ -44,7 +44,9 @@ class PrefixedEnv(environ.Env):
 app_root = environ.Path(__file__) - 2
 BASE_DIR = str(app_root)
 envfile = app_root.path('.env')
-environ.Env.read_env(envfile())  # read the .env file
+# read the .env file - this does not clobber any environment variables already set,
+# so 'real' environment variables take precedence to those defined in .env
+environ.Env.read_env(envfile())
 
 default_env = PrefixedEnv(
     APP_ENV_PREFIX,
@@ -66,11 +68,37 @@ default_env = PrefixedEnv(
     FILE_CACHE_PATH=(str, tempfile.gettempdir()),
     SOCIAL_AUTH_GOOGLE_OAUTH2_KEY=(str, ''),
     SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET=(str, ''),
+    CORS_ORIGIN_WHITELIST=(list, []),
+    CSRF_TRUSTED_ORIGINS=(list, []),
 )
 
 
-def env(env_key=None, default=environ.Env.NOTSET):
-    return default_env('%s%s' % (APP_ENV_PREFIX, env_key), default=default)
+def env(env_key=None, default=environ.Env.NOTSET, transform=None):
+    """
+    Return the value of a particular environment variable, pre-registered in `default_env`,
+    automatically adding the APP_ENV_PREFIX.
+
+    Eg, if
+    ```python
+    APP_ENV_PREFIX = "LAXY_"
+    default_env = PrefixedEnv(APP_ENV_PREFIX, DEBUG=(bool, False))
+    env('DEBUG') # will return the value of the environment variable `LAXY_DEBUG`.
+    ```
+
+    :param env_key:
+    :type env_key: str
+    :param default: A default value to return if the environment variable is missing (unset).
+    :type default:
+    :param transform: A function (eg lamda) that will be applied to the value before returning it.
+                  Typically should return a modified (eg type-casted, filtered, escaped) version of the value.
+    :type transform: Function
+    :return: The value of the environment variable.
+    :rtype:
+    """
+    value = default_env('%s%s' % (APP_ENV_PREFIX, env_key), default=default)
+    if transform is not None:
+        value = transform(value)
+    return value
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
@@ -205,36 +233,43 @@ TEMPLATES = [
 
 # https://github.com/ottoyiu/django-cors-headers#configuration
 CSRF_COOKIE_DOMAIN = env('CSRF_COOKIE_DOMAIN', 'localhost')
-if DEBUG:
-    # CORS_ORIGIN_ALLOW_ALL = True
 
-    CORS_ORIGIN_WHITELIST = (
-        'localhost:8002',
-        'dev.laxy.io:8002',
-    )
-    # Applies to HTTPS only
-    CSRF_TRUSTED_ORIGINS = (
-        'localhost',
-        'laxy.io',
-        '.laxy.io',
-    )
-else:
-    CORS_ORIGIN_WHITELIST = (
-        'dev.laxy.io:8002',
-    )
-    # Applies to HTTPS only
-    CSRF_TRUSTED_ORIGINS = (
-        'laxy.io',
-        '.laxy.io',
-    )
+CORS_ORIGIN_WHITELIST = env('CORS_ORIGIN_WHITELIST',
+                            transform=lambda l: [i.strip() for i in l],
+                            default=[
+                                'laxy.io',
+                                'api.laxy.io',
+                                'api.laxy.io:8001',
+                                'dev.laxy.io:8002',
+                                'dev.laxy.io',
+                                'dev-api.laxy.io',
+                            ])
 
-    # TODO: These should probably be on in production, once HTTPS is enabled
-    # Only send CSRF cookie on a secure HTTPS connection
-    # CSRF_COOKIE_SECURE = True
-    # Only send session cookie on a secure HTTPS connection
-    # SESSION_COOKIE_SECURE = True
+# Applies to HTTPS only
+CSRF_TRUSTED_ORIGINS = env('CSRF_TRUSTED_ORIGINS',
+                           transform=lambda l: [i.strip() for i in l],
+                           default=[
+                               'laxy.io',
+                               '.laxy.io',
+                           ])
+
+# TODO: These should probably be on in production, once HTTPS is enabled
+# Only send CSRF cookie on a secure HTTPS connection
+# CSRF_COOKIE_SECURE = True
+# Only send session cookie on a secure HTTPS connection
+# SESSION_COOKIE_SECURE = True
 
 CORS_ALLOW_CREDENTIALS = True
+
+if DEBUG:
+    # This will add the {Access-Control-Allow-Origin: *} header.
+    # You probably never want with, since frontend client requests using withCredentials will fail when
+    # {Access-Control-Allow-Origin: *} is present.
+    # CORS_ORIGIN_ALLOW_ALL = True
+
+    CORS_ORIGIN_WHITELIST += ['localhost:8002']
+    # Applies to HTTPS only
+    CSRF_TRUSTED_ORIGINS += ['localhost']
 
 AUTHENTICATION_BACKENDS = (
     # 'social_core.backends.open_id.OpenIdAuth',   # not required ?
