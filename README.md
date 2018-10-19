@@ -68,6 +68,8 @@ cp -n .env.example .env
 vi .env
 ```
 
+(To manually source the `.env` file into your login shell for some purpose, do `export $(grep -v '^#' .env | xargs)`).
+
 Initialize the database, create an admin user:
 ```bash
 ./manage.py migrate

@@ -95,15 +95,21 @@ if (process.env.NYAN === 'true') {
     ]);
 }
 
+module.exports.plugins = (module.exports.plugins || []).concat([
+    new webpack.DefinePlugin({
+        'process.env': {
+            NODE_ENV: process.env.NODE_ENV || '"production"',
+            LAXY_FRONTEND_API_URL: process.env.LAXY_FRONTEND_API_URL || '"http://localhost:8001"',
+            LAXY_FRONTEND_URL: process.env.LAXY_FRONTEND_URL || '"http://localhost:8002"',
+            LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID: process.env.LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID || '""',
+        }
+    }),
+]);
+
 if (process.env.NODE_ENV === 'production') {
     module.exports.devtool = 'source-map';
     // http://vue-loader.vuejs.org/en/workflow/production.html
     module.exports.plugins = (module.exports.plugins || []).concat([
-        new webpack.DefinePlugin({
-            'process.env': {
-                NODE_ENV: '"production"'
-            }
-        }),
         new webpack.optimize.UglifyJsPlugin({
             sourceMap: true,
             compress: {
