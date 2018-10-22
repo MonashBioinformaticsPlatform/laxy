@@ -17,8 +17,8 @@ services:
       - .env
     environment:
       - LAXY_DEBUG=no
-      - LAXY_STATIC_ROOT=/usr/share/nginx/html/backend
-      - LAXY_STATIC_URL=/backend/
+      - LAXY_STATIC_ROOT=/usr/share/nginx/html/backend_static
+      - LAXY_STATIC_URL=${LAXY_FRONTEND_URL-//laxy.io}/backend_static/
     deploy:
       restart_policy:
         condition: any
@@ -33,7 +33,7 @@ services:
     networks:
       - private
     command: bash -c "sleep 10 &&
-                      mkdir -p '${LAXY_STATIC_ROOT:-/usr/share/nginx/html/backend}' &&
+                      mkdir -p '${LAXY_STATIC_ROOT:-/usr/share/nginx/html/backend_static}' &&
                       cp -r /app/laxy_frontend/dist/* /usr/share/nginx/html/ &&
                       python3 manage.py makemigrations --no-input &&
                       python3 manage.py migrate --no-input &&
