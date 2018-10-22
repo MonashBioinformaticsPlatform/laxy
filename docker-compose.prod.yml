@@ -10,14 +10,18 @@ volumes:
 services:
 
   django:
-    image: "${IMAGE_REPO:-registry.gitlab.com/pansapiens/}laxy:latest"
-    deploy:
-      restart_policy:
-        condition: any
+    image: "${IMAGE_REPO-registry.gitlab.com/pansapiens/}laxy:latest"
+    # We must specify the .env file so that it gets sourced - otherwise every variable in .env would
+    # need to be explicitly defined like: LAXY_DEBUG=${LAXY_DEBUG} in the environment section below.
+    env_file:
+      - .env
     environment:
       - LAXY_DEBUG=no
       - LAXY_STATIC_ROOT=/usr/share/nginx/html/backend
       - LAXY_STATIC_URL=/backend/
+    deploy:
+      restart_policy:
+        condition: any
     volumes:
       -  static_assets:/usr/share/nginx/html
 # TODO: Make Django only accessible from the private Docker network, via
@@ -39,6 +43,13 @@ services:
                       # gunicorn laxy.wsgi -b 0.0.0.0:8001"
 
   db:
+    env_file:
+      - .env
+#    environment:
+#      - POSTGRES_USER="${POSTGRES_USER}"
+#      - POSTGRES_PASSWORD="${POSTGRES_PASSWORD}"
+#      - POSTGRES_DB="${POSTGRES_DB}"
+#      - PGDATA="${PGDATA}"
     deploy:
       restart_policy:
         condition: any
@@ -57,8 +68,10 @@ services:
       - private
 
   celeryd:
-    image: "${IMAGE_REPO:-registry.gitlab.com/pansapiens/}laxy:latest"
+    image: "${IMAGE_REPO-registry.gitlab.com/pansapiens/}laxy:latest"
     # command: bash -c "celery -A laxy worker -B -E -l info --broker=${LAXY_BROKER_URL}"
+    env_file:
+      - .env
     environment:
       - LAXY_DEBUG=no
     deploy:
@@ -68,12 +81,14 @@ services:
       - private
 
   flower:
-    image: "${IMAGE_REPO:-registry.gitlab.com/pansapiens/}laxy:latest"
+    image: "${IMAGE_REPO-registry.gitlab.com/pansapiens/}laxy:latest"
+    env_file:
+      - .env
+    environment:
+      - LAXY_DEBUG=no
     deploy:
       restart_policy:
         condition: any
-    environment:
-      - LAXY_DEBUG=no
       # - FLOWER_BASIC_AUTH=${FLOWER_USER:?must_set_FLOWER_USER_env_var}:${FLOWER_PASS:?must_set_FLOWER_PASS_env_var}
     ports:
       - "5556:5556"
