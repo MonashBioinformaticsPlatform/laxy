@@ -101,6 +101,21 @@ def env(env_key=None, default=environ.Env.NOTSET, transform=None):
     return value
 
 
+def _cleanup_env_list(l):
+    """
+    Remove quota characters and strip whitespace.
+    Intended to cleanup environment variables that are comma-separated lists parsed by `environ`.
+
+    >>> _cleanup_quoted_list(['" something'])
+    ['something']
+
+    :param l:
+    :type l:
+    :return:
+    :rtype:
+    """
+    return [i.replace('"', '').replace("'", '').strip() for i in l]
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
 
@@ -235,7 +250,6 @@ TEMPLATES = [
 CSRF_COOKIE_DOMAIN = env('CSRF_COOKIE_DOMAIN', 'localhost')
 
 CORS_ORIGIN_WHITELIST = env('CORS_ORIGIN_WHITELIST',
-                            transform=lambda l: [i.strip() for i in l],
                             default=[
                                 'laxy.io',
                                 'api.laxy.io',
@@ -243,15 +257,16 @@ CORS_ORIGIN_WHITELIST = env('CORS_ORIGIN_WHITELIST',
                                 'dev.laxy.io:8002',
                                 'dev.laxy.io',
                                 'dev-api.laxy.io',
-                            ])
+                            ],
+                            transform=_cleanup_env_list)
 
 # Applies to HTTPS only
 CSRF_TRUSTED_ORIGINS = env('CSRF_TRUSTED_ORIGINS',
-                           transform=lambda l: [i.strip() for i in l],
                            default=[
                                'laxy.io',
                                '.laxy.io',
-                           ])
+                           ],
+                           transform=_cleanup_env_list)
 
 # TODO: These should probably be on in production, once HTTPS is enabled
 # Only send CSRF cookie on a secure HTTPS connection
