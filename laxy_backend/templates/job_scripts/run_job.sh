@@ -41,13 +41,15 @@ readonly BDS_SINGLE_NODE="yes"
 if [[ ${BDS_SINGLE_NODE} == "yes" ]]; then
     # system=local in bds.config - BDS will run each task as local process, not SLURM-aware
 
-    # MEM=64000  # defaults for Human, Mouse
-    MEM=40000  # defaults for Human, Mouse
-    # M3 (typically 24 core nodes)
-    # CPUS=12
-    # laxy-compute-01 - 16 cores
-    CPUS=16
-    # TODO: We also need to set this in a custom sik.config so that BDS tasks don't exceed the memory budget SLURM
+    # M3 (typically 24 core, ~256 Gb RAM nodes)
+    MEM=64000  # defaults for Human, Mouse
+    CPUS=12
+
+    # laxy-compute-01 - 16 cores, 64 Gb RAM
+    # MEM=40000  # defaults for Human, Mouse
+    # CPUS=16
+
+    # TODO: We also need to set this in a custom sik.config so that BDS tasks don't exceed the SLURM memory budget
 #    if [[ "$REFERENCE_GENOME" == "Saccharomyces_cerevisiae/Ensembl/R64-1-1" ]]; then
 #        MEM=16000 # yeast (uses ~ 8Gb)
 #        CPUS=8
@@ -141,7 +143,7 @@ function init_conda_env() {
         ${CONDA_BASE}/bin/conda install --yes -n "${env_name}" curl aria2 parallel jq awscli
         ${CONDA_BASE}/bin/pip install oneliner
 
-        pip install --process-dependency-links -e git+https://github.com/MonashBioinformaticsPlatform/laxy#egg=laxy_downloader&subdirectory=laxy_downloader
+        pip install --process-dependency-links -e "git+https://github.com/MonashBioinformaticsPlatform/laxy#egg=laxy_downloader&subdirectory=laxy_downloader"
 
         # Then install rnasik
         ${CONDA_BASE}/bin/conda install --yes -n "${env_name}" \

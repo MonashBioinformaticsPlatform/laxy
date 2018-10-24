@@ -84,7 +84,7 @@ Initialize the database, create an admin user:
 ./manage.py createsuperuser
 
 # You may want to prepopulate the database with some data
-./manage.py loadata laxy_backend/fixtures.json
+./manage.py loaddata laxy_backend/fixtures.json
 ```
 
 ### Run
@@ -173,7 +173,12 @@ docker container exec -it laxy_django_1  python manage.py dumpdata \
 
 Load fixtures:
 ```bash
-docker container exec -it laxy_django_1  python manage.py loaddata fixtures.json
+# Copy the fixtures to the container (if not already there)
+docker cp fixtures.json laxy_django_1:/tmp/
+# Apply fixture to the database via Django's loaddata command
+docker container exec -it laxy_django_1  python manage.py loaddata /tmp/fixtures.json
+# Remove copy of fixtures from container, may contain secrets
+docker exec -it laxy_django_1 rm /tmp/fixtures.json
 ```
 
 Dropping the test database when it's in use (eg, if tests we terminate prematurely before cleanup). 

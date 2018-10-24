@@ -24,6 +24,7 @@ services:
         max-size: "10k"
         max-file: "1"
     command: bash -c "sleep 10 &&
+                      python3 manage.py collectstatic --no-input &&
                       python3 manage.py makemigrations --no-input &&
                       python3 manage.py migrate --no-input &&
                       python3 manage.py runserver 0.0.0.0:8001 &&
