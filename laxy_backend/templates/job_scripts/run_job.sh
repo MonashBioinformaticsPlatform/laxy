@@ -26,10 +26,10 @@ readonly CONDA_BASE="${JOB_PATH}/../miniconda3"
 readonly REFERENCE_BASE="${PWD}/../references/iGenomes"
 readonly DOWNLOAD_CACHE_PATH="${PWD}/../cache"
 
-readonly SCHEDULER="slurm"
+readonly SCHEDULER="{{ SCHEDULER|default('slurm') }}"
 # readonly SCHEDULER="local"
 
-readonly BDS_SINGLE_NODE="yes"
+readonly BDS_SINGLE_NODE="{{ BDS_SINGLE_NODE|default('yes') }}"
 
 ##
 # These memory settings are important when running BigDataScript in single-node
