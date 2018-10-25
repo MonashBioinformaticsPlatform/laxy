@@ -25,6 +25,7 @@ readonly PIPELINE_CONFIG="${JOB_PATH}/input/pipeline_config.json"
 readonly CONDA_BASE="${JOB_PATH}/../miniconda3"
 readonly REFERENCE_BASE="${PWD}/../references/iGenomes"
 readonly DOWNLOAD_CACHE_PATH="${PWD}/../cache"
+readonly AUTH_HEADER_FILE="${JOB_PATH}/.private_request_headers"
 
 readonly SCHEDULER="{{ SCHEDULER|default('slurm') }}"
 # readonly SCHEDULER="local"
@@ -96,7 +97,7 @@ function send_event() {
 
     curl -X POST \
          -H "Content-Type: application/json" \
-         -H @"${JOB_PATH}/.private_request_headers" \
+         -H @"${AUTH_HEADER_FILE}" \
          -o /dev/null \
          -w "%{http_code}" \
          --connect-timeout 10 \
@@ -206,7 +207,7 @@ function register_files() {
 
     curl -X POST \
      -H "Content-Type: text/csv" \
-     -H @"${JOB_PATH}/.private_request_headers" \
+     -H @"${AUTH_HEADER_FILE}" \
      --silent \
      -o /dev/null \
      -w "%{http_code}" \
@@ -257,17 +258,17 @@ function detect_pairs() {
     if stat -t "${JOB_PATH}/input/*_R2_001.fastq.gz" >/dev/null 2>&1; then
       EXTN="_001.fastq.gz"
       PAIRIDS="_R1,_R2"
-    elif stat -t "${JOB_PATH}input/*_R2.fastq.gz" >/dev/null 2>&1; then
+    elif stat -t "${JOB_PATH}/input/*_R2.fastq.gz" >/dev/null 2>&1; then
       EXTN=".fastq.gz"
       PAIRIDS="_R1,_R2"
-    elif stat -t "${JOB_PATH}input/*_2.fastq.gz" >/dev/null 2>&1; then
+    elif stat -t "${JOB_PATH}/input/*_2.fastq.gz" >/dev/null 2>&1; then
       EXTN=".fastq.gz"
       PAIRIDS="_1,_2"
     # Very occasionally, we get FASTA format reads
-    elif stat -t "${JOB_PATH}input/*_R2.fasta.gz" >/dev/null 2>&1; then
+    elif stat -t "${JOB_PATH}/input/*_R2.fasta.gz" >/dev/null 2>&1; then
       EXTN=".fasta.gz"
       PAIRIDS="_R1,_R2"
-    elif stat -t "${JOB_PATH}input/*_2.fasta.gz" >/dev/null 2>&1; then
+    elif stat -t "${JOB_PATH}/input/*_2.fasta.gz" >/dev/null 2>&1; then
       EXTN=".fasta.gz"
       PAIRIDS="_1,_2"
     fi
@@ -332,7 +333,7 @@ if [ "${JOB_INPUT_STAGED}" == "no" ]; then
            --untar \
            --parallel-downloads "${PARALLEL_DOWNLOADS}" \
            --event-notification-url "${JOB_EVENT_URL}" \
-           --event-notification-auth-file "${JOB_PATH}/.private_request_headers" \
+           --event-notification-auth-file "${AUTH_HEADER_FILE}" \
            --pipeline-config "${JOB_PATH}/input/pipeline_config.json" \
            --destination-path "${JOB_PATH}/input"
 
@@ -417,7 +418,7 @@ register_files
 
 curl -X PATCH \
      -H "Content-Type: application/json" \
-     -H @"${JOB_PATH}/.private_request_headers" \
+     -H @"${AUTH_HEADER_FILE}" \
      --silent \
      -o /dev/null \
      -w "%{http_code}" \
@@ -430,5 +431,5 @@ curl -X PATCH \
 
 # Extra security: Remove the access token now that we don't need it anymore
 if [ ${DEBUG} != "yes" ]; then
-  rm ../.private_request_headers
+  rm "${AUTH_HEADER_FILE}"
 fi
