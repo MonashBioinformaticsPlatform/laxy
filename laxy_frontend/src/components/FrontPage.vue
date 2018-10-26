@@ -4,8 +4,12 @@
             <md-layout style="margin: 40px 10% 0 10%;"
                        md-vertical-align="stretch" md-column>
                 <md-whiteframe md-elevation="2" class="pad-32">
+
+                    <survey-callout></survey-callout>
+
                     <div class="pad-32">
-                        <h1 class="md-display-2"><span class="logo-text">Laxy</span> &nbsp;&nbsp; <span class="md-subheading"><em>Genomics Pipelines for Humans</em></span>
+                        <h1 class="md-display-2"><span class="logo-text">Laxy</span> &nbsp;&nbsp; <span
+                                class="md-subheading"><em>Genomics Pipelines for Humans</em></span>
                         </h1>
                         <md-boards :md-auto="true" :md-infinite="true" :md-duration="5000" :md-swipeable="true">
                             <md-board>
@@ -151,6 +155,7 @@
 
     import axios, {AxiosResponse} from "axios";
     import Vue, {ComponentOptions} from "vue";
+    import SurveyCallout from './SurveyCallout';
 
     interface FrontPage extends Vue {
     }
@@ -158,6 +163,7 @@
     export default Vue.extend({
         components: {
             // 'input-files-form': InputFilesForm
+            'survey-callout': SurveyCallout,
         },
         props: {},
         data() {

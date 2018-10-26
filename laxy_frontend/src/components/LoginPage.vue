@@ -2,6 +2,9 @@
     <md-layout md-align="center" md-gutter="16">
         <md-layout md-flex="25" md-flex-small="100" md-column>
             <md-card v-if="!is_authenticated" style="margin-top: 32px;">
+
+                <survey-callout></survey-callout>
+
                 <md-card-content>
                     <md-layout md-column>
                         <transition name="slide-fade">
@@ -59,6 +62,9 @@
                 </md-card-content>
             </md-card>
             <md-card v-if="is_authenticated" style="margin-top: 32px;">
+
+                <survey-callout></survey-callout>
+
                 <md-card-content>
                     <md-layout md-column>
                         <br>
@@ -84,7 +90,9 @@
     import {AUTHENTICATE_USER, SET_USER_PROFILE} from "../store";
     import {WebAPI} from "../web-api";
 
-    @Component({})
+    import SurveyCallout from './SurveyCallout';
+
+    @Component({components: {SurveyCallout}})
     export default class LoginPage extends Vue {
         public login_form_username: string = '';
         public login_form_password: string = '';
