@@ -326,7 +326,7 @@
         async mounted() {
             await this.refresh(null);
 
-            if (this.job && this.job.status === "running") {
+            if (this.job && (this.job.status === "running" || this.job.status === "created")) {
                 this._refreshPollerId = setInterval(() => {
                     this.refresh(null);
                 }, 10000);  // ms
