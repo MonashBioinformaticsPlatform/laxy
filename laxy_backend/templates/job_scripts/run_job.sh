@@ -27,10 +27,10 @@ readonly REFERENCE_BASE="${PWD}/../references/iGenomes"
 readonly DOWNLOAD_CACHE_PATH="${PWD}/../cache"
 readonly AUTH_HEADER_FILE="${JOB_PATH}/.private_request_headers"
 
-readonly SCHEDULER="{{ SCHEDULER|default('slurm') }}"
+readonly SCHEDULER="{{ SCHEDULER }}"
 # readonly SCHEDULER="local"
 
-readonly BDS_SINGLE_NODE="{{ BDS_SINGLE_NODE|default('yes') }}"
+readonly BDS_SINGLE_NODE="{{ BDS_SINGLE_NODE }}"
 
 ##
 # These memory settings are important when running BigDataScript in single-node
