@@ -39,7 +39,7 @@ readonly BDS_SINGLE_NODE="{{ BDS_SINGLE_NODE|default('yes') }}"
 # resources required to run the BDS workflow manager, not the tasks it launches (BDS
 # will [hopefully!] ask for appropriate resources in the sbatch jobs it launches).
 
-if [[ ${BDS_SINGLE_NODE} == "yes" ]]; then
+if [ ${BDS_SINGLE_NODE} == "yes" ]; then
     # system=local in bds.config - BDS will run each task as local process, not SLURM-aware
 
     # M3 (typically 24 core, ~256 Gb RAM nodes)
@@ -50,11 +50,10 @@ if [[ ${BDS_SINGLE_NODE} == "yes" ]]; then
     # MEM=40000  # defaults for Human, Mouse
     # CPUS=16
 
-    # TODO: We also need to set this in a custom sik.config so that BDS tasks don't exceed the SLURM memory budget
-#    if [[ "$REFERENCE_GENOME" == "Saccharomyces_cerevisiae/Ensembl/R64-1-1" ]]; then
-#        MEM=16000 # yeast (uses ~ 8Gb)
-#        CPUS=8
-#    fi
+    if [[ "${REFERENCE_GENOME}" == *"Saccharomyces_cerevisiae"* ]]; then
+        MEM=16000 # yeast (uses ~ 8Gb)
+        CPUS=4
+    fi
 else
     # system=generic or system=slurm in bds.config - BDS will run sbatch tasks
     MEM=2000
@@ -64,18 +63,27 @@ fi
 readonly SRUN_OPTIONS="--cpus-per-task=${CPUS} --mem=${MEM} -t 1-0:00 --ntasks-per-node=1 --ntasks=1 --job-name=laxy:${JOB_ID}"
 
 PREFIX_JOB_CMD=""
-if [[ "${SCHEDULER}" == "slurm" ]]; then
+if [ "${SCHEDULER}" == "slurm" ]; then
     PREFIX_JOB_CMD="srun ${SRUN_OPTIONS} "
 fi
 
 function add_sik_config() {
    # Find that ComputeResource specific sik.config, and if there is none, use the default.
    # Always copy it to the job input directory so preserve it.
+    local SIK_CONFIG
+
     SIK_CONFIG="${JOB_PATH}/../sik.config"
     if [ ! -f "${SIK_CONFIG}" ]; then
         SIK_CONFIG="$(dirname RNAsik)/../opt/rnasik-${PIPELINE_VERSION}/configs/sik.config"
     fi
-    cp -n "${SIK_CONFIG}" "${JOB_PATH}/input/sik.config"
+
+    # special lower resource sik.config for yeast
+    if [[ "${REFERENCE_GENOME}" == *"Saccharomyces_cerevisiae"* ]] && [[ -f "${JOB_PATH}/../sik.yeast.config" ]]; then
+        echo "Using low resource yeast specific sik.config."
+        SIK_CONFIG="${JOB_PATH}/../sik.yeast.config"
+    fi
+
+    cp -n "${SIK_CONFIG}" "${JOB_PATH}/input/sik.config" || true
 }
 
 function send_event() {
@@ -226,23 +234,13 @@ function setup_bds_config() {
     # TODO: This won't work yet since the default bds.config contains
     # ~/.bds/clusterGeneric/* paths to the SLURM wrapper scripts.
     # The SLURM wrappers don't appear to come with the bds conda package (yet)
-    # if [[ "${SCHEDULER}" == "slurm" ]]; then
+    # if [ "${SCHEDULER}" == "slurm" ]; then
     #     sed -i 's/#system = "local"/system = "generic"/' ${BDS_CONFIG}
     # fi
 
     if [ -f "${BDS_CONFIG}" ]; then
         export RNASIK_BDS_CONFIG="${BDS_CONFIG}"
     fi
-}
-
-function add_sik_config() {
-   # Find that ComputeResource specific sik.config, and if there is none, use the default.
-   # Always copy it to the job input directory so preserve it.
-    SIK_CONFIG="${JOB_PATH}/../sik.config"
-    if [ ! -f "${SIK_CONFIG}" ]; then
-        SIK_CONFIG="$(dirname RNAsik)/../opt/rnasik-${PIPELINE_VERSION}/configs/sik.config"
-    fi
-    cp -n "${SIK_CONFIG}" "${JOB_PATH}/input/sik.config"
 }
 
 function get_input_data_urls() {
@@ -363,7 +361,7 @@ PAIRIDS=""
 EXTN=".fastq.gz"
 detect_pairs
 
-if [[ ! -z "PAIRIDS" ]]; then
+if [ ! -z "PAIRIDS" ]; then
     ${PREFIX_JOB_CMD} \
        RNAsik \
            -configFile ${JOB_PATH}/input/sik.config \
