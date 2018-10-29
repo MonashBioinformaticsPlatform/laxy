@@ -13,8 +13,11 @@ services:
       - LAXY_ADMIN_EMAIL=admin@example.com
       - LAXY_ADMIN_USERNAME=admin
       - LAXY_ADMIN_PASSWORD=adminpass
+      - LAXY_STATIC_ROOT=/usr/share/nginx/html/backend_static
+      - LAXY_STATIC_URL=${LAXY_FRONTEND_URL-//dev.laxy.io:8002}/backend_static/
     volumes:
       - .:/app
+      - ./laxy_frontend/dist:/usr/share/nginx/html
     # Django app is publicly accessible without reverse proxy
     ports:
       - "8001:8001"

@@ -23,7 +23,7 @@ services:
       restart_policy:
         condition: any
     volumes:
-      -  static_assets:/usr/share/nginx/html
+      - static_assets:/usr/share/nginx/html
 # TODO: Make Django only accessible from the private Docker network, via
 #       'expose' rather than 'ports', reverse proxy via nginx config
 #   expose:
@@ -38,9 +38,7 @@ services:
                       python3 manage.py makemigrations --no-input &&
                       python3 manage.py migrate --no-input &&
                       python3 manage.py collectstatic --no-input &&
-                      python3 manage.py runserver 0.0.0.0:8001"
-                      # TODO: Fix running under gunicorn
-                      # gunicorn laxy.wsgi -b 0.0.0.0:8001"
+                      gunicorn laxy.wsgi -b 0.0.0.0:8001"
 
   db:
     env_file:
