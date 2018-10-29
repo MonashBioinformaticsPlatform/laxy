@@ -25,6 +25,25 @@
                         </md-option>
                     </md-select>
                 </md-input-container>
+                <md-switch v-model="show_advanced" id="advanced-toggle" name="advanced-toggle" class="md-primary">
+                    Show advanced options
+                </md-switch>
+                <transition name="fade">
+                    <md-layout v-if="show_advanced">
+                        <md-input-container v-if="show_advanced">
+                            <label for="genome">Pipeline version</label>
+                            <md-select name="pipeline_version"
+                                       id="pipeline_version"
+                                       v-model="pipeline_version">
+                                <md-option v-for="version in pipeline_versions"
+                                           :key="version"
+                                           :value="version">
+                                    {{ version }}
+                                </md-option>
+                            </md-select>
+                        </md-input-container>
+                    </md-layout>
+                </transition>
             </md-whiteframe>
 
             <md-whiteframe style="padding: 32px;">
@@ -101,6 +120,7 @@
 
         @Prop({default: true, type: Boolean})
         public showButtons: boolean;
+        public show_advanced = false;
 
         public submitting: boolean = false;
         public error_alert_message: string = "Everything is fine. 🏩";
@@ -131,6 +151,8 @@
 
         public reference_genome_valid: boolean = true;
 
+        public pipeline_versions = ['1.5.2'];
+
         public _samples: SampleSet;
         get samples(): SampleSet {
             this._samples = cloneDeep(this.$store.state.samples);
@@ -142,10 +164,9 @@
         }
 
         set description(txt: string) {
-            this.$store.commit(SET_PIPELINE_PARAMS, {
-                description: txt,
-                reference_genome: this.reference_genome,
-            });
+            let state = Object.assign({}, this.$store.state.pipelineParams);
+            state.description = txt;
+            this.$store.commit(SET_PIPELINE_PARAMS, state);
         }
 
         get reference_genome() {
@@ -153,11 +174,20 @@
         }
 
         set reference_genome(id: string) {
-            this.$store.commit(SET_PIPELINE_PARAMS, {
-                description: this.description,
-                reference_genome: id,
-            });
+            let state = Object.assign({}, this.$store.state.pipelineParams);
+            state.reference_genome = id;
+            this.$store.commit(SET_PIPELINE_PARAMS, state);
             this.validatePipelineParams();
+        }
+
+        get pipeline_version() {
+            return this.$store.getters.pipelineParams.pipeline_version;
+        }
+
+        set pipeline_version(version: string) {
+            let state = Object.assign({}, this.$store.state.pipelineParams);
+            state.pipeline_version = version;
+            this.$store.commit(SET_PIPELINE_PARAMS, state);
         }
 
         get_genome_description(reference: ReferenceGenome): string {

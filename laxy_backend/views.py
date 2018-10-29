@@ -1665,6 +1665,10 @@ class JobCreate(JSONView):
             #       Maybe do all genome_id to path resolution in run_job.sh
             # reference_genome_id = "Saccharomyces_cerevisiae/Ensembl/R64-1-1"
             reference_genome_id = job.params.get('params').get('genome')
+
+            default_pipeline_version = '1.5.2'  # '1.5.1+c53adf6'  # '1.5.1'
+            pipeline_version = job.params.get('params').get('pipeline_version', default_pipeline_version)
+
             # TODO: This ID check should probably move into the PipelineRun
             #       params serializer.
             if reference_genome_id not in REFERENCE_GENOME_MAPPINGS:
@@ -1695,7 +1699,20 @@ class JobCreate(JSONView):
                                  'JOB_FILE_REGISTRATION_URL': job_file_bulk_url,
                                  'JOB_INPUT_STAGED': sh_bool(False),
                                  'REFERENCE_GENOME': reference_genome_id,
-                                 'PIPELINE_VERSION': '1.5.2'  # '1.5.1+c53adf6',  # '1.5.1',
+                                 'PIPELINE_VERSION': pipeline_version,
+
+                                 # TODO: these should come from the ComputeResource
+                                 'SCHEDULER': 'slurm',
+
+                                 # TODO: This is very pipeline+ComputeResource specific
+                                 #       This should come from something like ComputeResource.pipeline_overrides -
+                                 #       a set of 'pipeline specific overrides' that when pipeline name and optionally
+                                 #       version (or other parameters) match, the pipeline_overrides params override any
+                                 #       default here.
+                                 #       eg ComputeResource.pipeline_overrides =
+                                 #          [{'name': 'rnasik', 'version': '1.5.1',
+                                 #           'overrides': {'BDS_SINGLE_NODE': True}}]
+                                 'BDS_SINGLE_NODE': sh_bool(False),
                              })
 
             # TESTING: Start cluster, run job, (pre-existing data), stop cluster
