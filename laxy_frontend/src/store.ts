@@ -19,6 +19,7 @@ export const ADD_SAMPLES = 'add_samples';
 export const SET_SAMPLES = 'set_samples';
 export const SET_SAMPLES_ID = 'set_samples_id';
 export const SET_PIPELINE_PARAMS = 'set_pipeline_params';
+export const SET_PIPELINE_PARAMS_VALID = 'set_pipeline_params_valid';
 export const SET_PIPELINE_DESCRIPTION = 'set_pipeline_description';
 export const SET_JOBS = 'set_jobs';
 export const SET_FILESET = 'set_fileset';
@@ -42,9 +43,10 @@ export const Store = new Vuex.Store({
             user_profile: null as any,
             samples: new SampleSet(),
             pipelineParams: {
-                reference_genome: 'hg19',
+                reference_genome: null,
                 description: '',
             },
+            pipelineParams_valid: false,
             jobs: {total: 0, jobs: [] as ComputeJob[]} as JobsPage,
             filesets: {} as { [key: string]: LaxyFileSet },
             currentViewedJob: {} as ComputeJob,
@@ -138,6 +140,9 @@ export const Store = new Vuex.Store({
             },
             [SET_PIPELINE_PARAMS](state, params: any) {
                 state.pipelineParams = params;
+            },
+            [SET_PIPELINE_PARAMS_VALID](state, valid: any) {
+                state.pipelineParams_valid = valid;
             },
             [SET_PIPELINE_DESCRIPTION](state, txt: any) {
                 state.pipelineParams.description = txt;

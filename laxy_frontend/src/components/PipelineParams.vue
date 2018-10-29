@@ -14,7 +14,9 @@
                 </md-input-container>
                 <md-input-container>
                     <label for="genome">Reference genome</label>
-                    <md-select name="genome" id="genome"
+                    <md-select name="genome"
+                               id="genome"
+                               :required="true"
                                v-model="reference_genome">
                         <md-option v-for="genome in available_genomes"
                                    :key="genome.id"
@@ -59,6 +61,7 @@
 
 <script lang="ts">
     import cloneDeep from "lodash-es/cloneDeep";
+    import map from "lodash-es/map";
 
     import "es6-promise";
 
@@ -77,7 +80,7 @@
     import {
         SET_SAMPLES,
         SET_PIPELINE_PARAMS,
-        SET_PIPELINE_DESCRIPTION
+        SET_PIPELINE_DESCRIPTION, SET_PIPELINE_PARAMS_VALID
     } from "../store";
 
     import {Sample, SampleSet} from "../model";
@@ -126,6 +129,8 @@
         // public reference_genome: string = this.available_genomes[0].id;
         // public description: string = '';
 
+        public reference_genome_valid: boolean = true;
+
         public _samples: SampleSet;
         get samples(): SampleSet {
             this._samples = cloneDeep(this.$store.state.samples);
@@ -152,6 +157,7 @@
                 description: this.description,
                 reference_genome: id,
             });
+            this.validatePipelineParams();
         }
 
         get_genome_description(reference: ReferenceGenome): string {
@@ -173,6 +179,16 @@
                 "description": this.description,
             };
             return data;
+        }
+
+        validatePipelineParams() {
+            let is_valid = false;
+            if (map(this.available_genomes, 'id').includes(this.reference_genome)) {
+                is_valid = true;
+            }
+            this.$store.commit(SET_PIPELINE_PARAMS_VALID, is_valid);
+
+            return is_valid;
         }
 
         async save() {
@@ -203,6 +219,11 @@
             try {
                 await this.save();
 
+                if (!this.validatePipelineParams()) {
+                    this.flashSnackBarMessage("Please select a reference genome.");
+                    return;
+                }
+
                 try {
                     this.submitting = true;
                     let response = null;
@@ -210,6 +231,7 @@
                         `/api/v1/job/?pipeline_run_id=${this.pipelinerun_uuid}`, {}) as AxiosResponse;
                     this.submitting = false;
                     this.flashSnackBarMessage("Saved !");
+                    return response;
                 } catch (error) {
                     console.log(error);
                     this.submitting = false;
@@ -220,6 +242,7 @@
             } catch (error) {
                 console.error(error);
             }
+            return null;
         }
 
         openDialog(ref: string) {

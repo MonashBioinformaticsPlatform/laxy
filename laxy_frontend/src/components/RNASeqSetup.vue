@@ -55,7 +55,10 @@
         }
 
         describeSamples_stepComplete: boolean = true;
-        pipelineSettings_stepComplete: boolean = true;
+
+        get pipelineSettings_stepComplete(): boolean {
+            return this.$store.state.pipelineParams_valid;
+        }
 
 //        enableStep() {
 //            let refName = 'describeSamples';
@@ -95,8 +98,12 @@
 
         async startJob() {
             try {
-                await (this.$refs['pipelineParams'] as any).run();
-                this.$router.push('jobs');
+                const response = await (this.$refs['pipelineParams'] as any).run();
+                if (response && response.data && response.data.id) {
+                    this.$router.push({name: 'job', params: { jobId: response.data.id }});
+                } else {
+                    this.$router.push('jobs');
+                }
             }
             catch (error) {
                 throw error;
