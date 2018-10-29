@@ -93,6 +93,7 @@ class JobAdmin(Timestamped, VersionAdmin):
                     'modified',
                     'completed',
                     '_compute_resource',
+                    '_owner_email',
                     '_status')
     ordering = ('-created_time', '-completed_time', '-modified_time',)
     search_fields = ('id', 'status', 'compute_resource', 'remote_id',)
@@ -121,6 +122,12 @@ class JobAdmin(Timestamped, VersionAdmin):
             self.color_mappings.get(obj.status, 'black'),
             obj.get_status_display(),
         )
+
+    def _owner_email(self, obj):
+        if obj.owner:
+            return obj.owner.email
+
+        return ''
 
     @takes_instance_or_queryset
     def trigger_file_ingestion(self, request, queryset):
