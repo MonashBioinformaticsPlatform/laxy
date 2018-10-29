@@ -4,7 +4,12 @@
             suggestion
             <md-icon class="arrow_l">arrow_forward</md-icon>
             <a href="https://goo.gl/forms/002RglNIaCbll7uH2" target="_blank">here</a>
-            <md-icon class="arrow_r">arrow_back</md-icon></h2>
+            <md-icon class="arrow_r">arrow_back</md-icon>
+        </h2>
+        <hr>
+        <h2>Please report issues and suggestions on
+            <a href="https://github.com/MonashBioinformaticsPlatform/laxy/issues" target="_blank">Github</a>
+        </h2>
     </md-whiteframe>
 </template>
 
