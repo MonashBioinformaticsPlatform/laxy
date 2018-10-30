@@ -12,7 +12,7 @@ services:
       # - LAXY_DEBUG=yes
       - LAXY_ADMIN_EMAIL=admin@example.com
       - LAXY_ADMIN_USERNAME=admin
-      - LAXY_ADMIN_PASSWORD=adminpass
+      # - LAXY_ADMIN_PASSWORD=adminpass
       - LAXY_STATIC_ROOT=/usr/share/nginx/html/backend_static
       - LAXY_STATIC_URL=${LAXY_FRONTEND_URL-//dev.laxy.io:8002}/backend_static/
     volumes:
@@ -30,8 +30,9 @@ services:
                       python3 manage.py collectstatic --no-input &&
                       python3 manage.py makemigrations --no-input &&
                       python3 manage.py migrate --no-input &&
-                      python3 manage.py runserver 0.0.0.0:8001 &&
-                      python manage.py shell -c \"from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.filter(username='${LAXY_ADMIN_USERNAME}').count() or User.objects.create_superuser('${LAXY_ADMIN_USERNAME}', '${LAXY_ADMIN_EMAIL}', '${LAXY_ADMIN_PASSWORD}');\";"
+                      python3 manage.py runserver 0.0.0.0:8001"
+                      # Insecure: This leaks the admin password (eg via ps -ef).
+                      # python manage.py shell -c \"from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.filter(username='${LAXY_ADMIN_USERNAME}').count() or User.objects.create_superuser('${LAXY_ADMIN_USERNAME}', '${LAXY_ADMIN_EMAIL}', '${LAXY_ADMIN_PASSWORD}');\";"
 
   celeryd:
     command: bash -c "celery -A laxy worker -B -E -l debug --broker=${LAXY_BROKER_URL}"
