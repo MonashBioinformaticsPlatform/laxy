@@ -99,10 +99,11 @@ module.exports.plugins = (module.exports.plugins || []).concat([
     new webpack.DefinePlugin({
         'process.env': {
             // NODE_ENV is used in some dependencies and breaks things if replaced via webpack DefinePlugin pre-processing.
-            // NODE_ENV: process.env.NODE_ENV || JSON.stringify('production'),
-            LAXY_FRONTEND_API_URL: process.env.LAXY_FRONTEND_API_URL || JSON.stringify('http://localhost:8001'),
-            LAXY_FRONTEND_URL: process.env.LAXY_FRONTEND_URL || JSON.stringify('http://localhost:8002'),
-            LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID: process.env.LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID || JSON.stringify(''),
+            // NODE_ENV: JSON.stringify(process.env.NODE_ENV) || JSON.stringify('production'),
+            LAXY_ENV: JSON.stringify(process.env.LAXY_ENV) || JSON.stringify(process.env.NODE_ENV) || JSON.stringify('prod'),
+            LAXY_FRONTEND_API_URL: JSON.stringify(process.env.LAXY_FRONTEND_API_URL) || JSON.stringify('http://localhost:8001'),
+            LAXY_FRONTEND_URL: JSON.stringify(process.env.LAXY_FRONTEND_URL) || JSON.stringify('http://localhost:8002'),
+            LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID: JSON.stringify(process.env.LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID) || JSON.stringify(''),
         }
     }),
 ]);

@@ -11,8 +11,11 @@ import axios, {AxiosResponse, AxiosRequestConfig} from 'axios';
 
 import Vue, {ComponentOptions} from 'vue';
 
-// Vue.config.devtools = process.env.NODE_ENV !== 'production';
-// Vue.config.performance = process.env.NODE_ENV !== 'production'
+const LAXY_ENV = process.env.LAXY_ENV === 'dev';
+Vue.config.productionTip = LAXY_ENV;
+Vue.config.devtools = LAXY_ENV;
+Vue.config.performance = LAXY_ENV;
+Vue.config.silent = !LAXY_ENV;
 
 import Vuex from 'vuex';
 Vue.use(Vuex);
@@ -86,7 +89,9 @@ const App = new Vue({
     router,
     store,
     data() {
-        return {};
+        return {
+            showHeaderMessage: process.env.LAXY_ENV === 'dev',
+        };
     },
     async created() {
         await WebAPI.requestCsrfToken();

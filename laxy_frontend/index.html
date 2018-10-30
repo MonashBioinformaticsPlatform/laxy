@@ -2,15 +2,43 @@
 <html>
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimal-ui">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Laxy">
+    <meta name="application-name" content="Laxy">
+    <meta name="description" content="Run analysis pipelines, hassle free.">
+
+    <!-- need browserconfig.xml (eg https://github.com/vuematerial/vue-material/blob/dev/docs/browserconfig.xml)
+    <meta name="msapplication-config" content="browserconfig.xml">
+    <meta name="msapplication-TileImage" content="assets/favicon.ico">
+    <meta name="msapplication-TileColor" content="#212121">
+    <meta name="theme-color" content="#212121">
+
+    //  need Apple sized icons, manifest.json (eg https://github.com/vuematerial/vue-material/blob/dev/docs/manifest.json)
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="194x194" href="/assets/favicon/favicon-194x194.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/assets/favicon/android-chrome-192x192.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon/favicon-16x16.png">
+    <link rel="manifest" href="manifest.json">
+    <link rel="mask-icon" href="/assets/favicon/safari-pinned-tab.svg" color="#212121">
+    -->
+
     <link rel="shortcut icon" type="image/png" href="assets/favicon.ico"/>
     <link rel="stylesheet"
           href="//fonts.googleapis.com/css?family=Roboto:300,400,500,700,400italic">
     <link rel="stylesheet"
           href="//fonts.googleapis.com/icon?family=Material+Icons">
+    <link href="https://unpkg.com/ionicons@4.4.6/dist/css/ionicons.min.css" rel="stylesheet">
+
     <!--    <link rel="stylesheet" href="vue-material/dist/vue-material.css">-->
     <!-- <link rel="stylesheet" href="https://unpkg.com/vue-material/dist/vue-material.css"> -->
     <!-- <script src="//unpkg.com/vue"></script> -->
     <!-- <script src="//unpkg.com/vue-material"></script> -->
+
+    <title>Laxy</title>
 
     <style>
         @import url('https://fonts.googleapis.com/css?family=Pacifico');
@@ -123,7 +151,6 @@
         #rightSideNav > div.md-sidenav-content {
             width: 90%;
         }
-
     </style>
     <title>Laxy</title>
 </head>
@@ -141,6 +168,18 @@
             <!--
             <h2 class="md-subheading">/ˈlaksi/ <em>noun</em>: some combination of lazy, lax and sexy.</h2>
             -->
+
+            <span style="flex: 1"></span>
+
+            <h4 v-if="showHeaderMessage">
+                <a href="https://github.com/MonashBioinformaticsPlatform/laxy/issues"
+                   target="_blank" style="color: white;">Please report issues and suggestions on Github</a> &nbsp;
+                <a href="https://github.com/MonashBioinformaticsPlatform/laxy/issues"
+                   target="_blank" style="color: white; text-decoration: none">
+                    <md-icon md-iconset="ion-logo-github" class="md-size-1x" style="padding-bottom: 4px"></md-icon>
+                </a>
+            </h4>
+
             <span style="flex: 1"></span>
 
             <div v-if="logged_in" style="padding-left: 32px; padding-right: 32px;">
@@ -230,7 +269,4 @@
 </div>
 <script src="bundle.js"></script>
 </body>
-<style>
-
-</style>
 </html>
