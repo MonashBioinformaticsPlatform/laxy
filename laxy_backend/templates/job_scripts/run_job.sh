@@ -228,18 +228,34 @@ function register_files() {
 }
 
 function setup_bds_config() {
-    BDS_CONFIG="${JOB_PATH}/input/bds.config"
-    cp "$(which bds).config" "${BDS_CONFIG}"
+    local default_bds_config
+    local job_bds_config
+
+    default_bds_config="$(which bds).config"
+    job_bds_config="${JOB_PATH}/input/bds.config"
+
+    # Check for custom bds.config
+    if [ ! -f "${JOB_PATH}/../bds.config" ]; then
+        default_bds_config="${JOB_PATH}/../bds.config"
+    fi
 
     # TODO: This won't work yet since the default bds.config contains
     # ~/.bds/clusterGeneric/* paths to the SLURM wrapper scripts.
     # The SLURM wrappers don't appear to come with the bds conda package (yet)
     # if [ "${SCHEDULER}" == "slurm" ]; then
-    #     sed -i 's/#system = "local"/system = "generic"/' ${BDS_CONFIG}
+    #     sed -i 's/#system = "local"/system = "generic"/' ${job_bds_config}
     # fi
 
-    if [ -f "${BDS_CONFIG}" ]; then
-        export RNASIK_BDS_CONFIG="${BDS_CONFIG}"
+    # special lower resource bds.config for yeast
+    if [[ "${REFERENCE_GENOME}" == *"Saccharomyces_cerevisiae"* ]] && [[ -f "${JOB_PATH}/../bds.yeast.config" ]]; then
+        echo "Using low resource yeast specific bds.config."
+        default_bds_config="${JOB_PATH}/../bds.yeast.config"
+    fi
+
+    cp -n "${default_bds_config}" "${job_bds_config}" || true
+
+    if [ -f "${job_bds_config}" ]; then
+        export RNASIK_BDS_CONFIG="${job_bds_config}"
     fi
 }
 
