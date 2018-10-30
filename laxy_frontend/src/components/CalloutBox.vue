@@ -1,15 +1,13 @@
 <template>
     <md-whiteframe md-elevation="8" class="pad-32" style="text-align: center">
-        <h2>Does <i>Laxy</i> need a new name ? Make your
-            suggestion
-            <md-icon class="arrow_l">arrow_forward</md-icon>
-            <a href="https://goo.gl/forms/002RglNIaCbll7uH2" target="_blank">here</a>
-            <md-icon class="arrow_r">arrow_back</md-icon>
-        </h2>
-        <hr>
-        <h2>Please report issues and suggestions on
-            <a href="https://github.com/MonashBioinformaticsPlatform/laxy/issues" target="_blank">Github</a>
-        </h2>
+        <slot>
+            <h2>Does <i>Laxy</i> need a new name ? Make your
+                suggestion
+                <md-icon class="arrow_l">arrow_forward</md-icon>
+                <a href="https://goo.gl/forms/002RglNIaCbll7uH2" target="_blank">here</a>
+                <md-icon class="arrow_r">arrow_back</md-icon>
+            </h2>
+        </slot>
     </md-whiteframe>
 </template>
 
@@ -21,7 +19,7 @@
         components: {},
         filters: {}
     })
-    export default class SurveyCallout extends Vue {
+    export default class CalloutBox extends Vue {
     }
 </script>
 

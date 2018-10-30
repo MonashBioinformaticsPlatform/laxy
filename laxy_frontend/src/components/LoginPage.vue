@@ -3,7 +3,7 @@
         <md-layout md-flex="25" md-flex-small="100" md-column>
             <md-card v-if="!is_authenticated" style="margin-top: 32px;">
 
-                <survey-callout></survey-callout>
+                <callout-box></callout-box>
 
                 <md-card-content>
                     <md-layout md-column>
@@ -90,9 +90,13 @@
     import {AUTHENTICATE_USER, SET_USER_PROFILE} from "../store";
     import {WebAPI} from "../web-api";
 
-    import SurveyCallout from './SurveyCallout';
+    import CalloutBox from './CalloutBox';
 
-    @Component({components: {SurveyCallout}})
+    @Component({
+        components: {
+            'callout-box': CalloutBox
+        }
+    })
     export default class LoginPage extends Vue {
         public login_form_username: string = '';
         public login_form_password: string = '';

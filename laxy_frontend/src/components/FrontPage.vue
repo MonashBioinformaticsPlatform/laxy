@@ -5,7 +5,7 @@
                        md-vertical-align="stretch" md-column>
                 <md-whiteframe md-elevation="2" class="pad-32">
 
-                    <survey-callout></survey-callout>
+                    <callout-box></callout-box>
 
                     <div class="pad-32">
                         <h1 class="md-display-2"><span class="logo-text">Laxy</span> &nbsp;&nbsp; <span
@@ -155,7 +155,7 @@
 
     import axios, {AxiosResponse} from "axios";
     import Vue, {ComponentOptions} from "vue";
-    import SurveyCallout from './SurveyCallout';
+    import CalloutBox from './CalloutBox';
 
     interface FrontPage extends Vue {
     }
@@ -163,7 +163,7 @@
     export default Vue.extend({
         components: {
             // 'input-files-form': InputFilesForm
-            'survey-callout': SurveyCallout,
+            'callout-box': CalloutBox,
         },
         props: {},
         data() {
