@@ -39,7 +39,7 @@
                                         <md-table-head>Pipeline</md-table-head>
                                         <md-table-head>Created</md-table-head>
                                         <md-table-head>Status</md-table-head>
-                                        <md-table-head>Action</md-table-head>
+                                        <md-table-head style="text-align: center">Action</md-table-head>
                                     </md-table-row>
                                 </md-table-header>
                                 <md-table-body>
@@ -69,11 +69,20 @@
                                             </span>
                                         </md-table-cell>
                                         <md-table-cell>
-                                            <md-toolbar class="md-dense md-transparent">
+                                            <md-toolbar class="md-dense md-transparent"
+                                                        style="margin-left: auto; margin-right: auto;">
+                                                <!-- TODO: Implement feature to re-run job with tweaked params:
+                                                           https://github.com/MonashBioinformaticsPlatform/laxy/issues/10
                                                 <md-button class="md-icon-button"
                                                            @click="cloneJob(job.id)">
                                                     <md-tooltip md-direction="top">Run again</md-tooltip>
                                                     <md-icon>content_copy</md-icon>
+                                                </md-button>
+                                                -->
+                                                <md-button class="md-icon-button"
+                                                           @click="routeTo('job', {jobId: job.id})">
+                                                    <md-tooltip md-direction="top">View job</md-tooltip>
+                                                    <md-icon>remove_red_eye</md-icon>
                                                 </md-button>
                                                 <md-button v-if="job.status === 'running'"
                                                            class="md-icon-button"

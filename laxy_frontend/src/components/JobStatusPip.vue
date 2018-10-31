@@ -25,11 +25,14 @@
         </md-card-header>
 
         <md-card-actions>
+            <!-- TODO: Implement feature to re-run job with tweaked params:
+                       https://github.com/MonashBioinformaticsPlatform/laxy/issues/10
             <md-button v-if="job.status !== 'running'"
                        @click="cloneJob(job.id)">
                 <md-icon>content_copy</md-icon>
                 Run again
             </md-button>
+            -->
             <md-button v-if="job.status === 'running'"
                        @click="askCancelJob(job.id)">
                 <md-icon>cancel</md-icon>
