@@ -64,7 +64,7 @@
                     <!-- smaller iconish boxes in here. eg simple status -->
                     <!-- -->
                     <md-layout md-flex="25" md-flex-medium="100">
-                        <job-status-pip class="fill-width" :job="job"></job-status-pip>
+                        <job-status-pip class="fill-width" :job="job" v-on:cancel="onAskCancelJob"></job-status-pip>
                     </md-layout>
                     <!-- -->
                     <md-layout md-flex="25" md-flex-medium="100">

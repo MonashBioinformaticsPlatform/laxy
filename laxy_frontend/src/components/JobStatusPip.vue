@@ -61,6 +61,10 @@
     export default class JobStatusPip extends JobStatusCard {
         getThemedStatusColor = getThemedStatusColor;
         cssGradient = cssGradient;
+
+        askCancelJob(job_id: string) {
+            this.$emit('cancel', job_id);
+        }
     }
 
 </script>
