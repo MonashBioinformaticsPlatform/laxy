@@ -136,6 +136,8 @@
             {id: "Homo_sapiens/Ensembl/GRCh37", organism: "Human"},
             {id: "Homo_sapiens/UCSC/hg19", organism: "Human"},
             {id: "Homo_sapiens/NCBI/build37.2", organism: "Human"},
+            {id: "Homo_sapiens/NCBI/GRCh38", organism: "Human"},
+            {id: "Homo_sapiens/UCSC/hg38", organism: "Human"},
             {id: "Mus_musculus/Ensembl/GRCm38", organism: "Mouse"},
             {id: "Mus_musculus/UCSC/mm10", organism: "Mouse"},
             {id: "Mus_musculus/NCBI/GRCm38", organism: "Mouse"},

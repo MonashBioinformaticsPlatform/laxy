@@ -106,6 +106,9 @@ REFERENCE_GENOME_MAPPINGS = {
     "Homo_sapiens/UCSC/hg19": "Homo_sapiens/UCSC/hg19",
     "Homo_sapiens/NCBI/build37.2": "Homo_sapiens/NCBI/build37.2",
 
+    "Homo_sapiens/NCBI/GRCh38": "Homo_sapiens/NCBI/GRCh38",
+    "Homo_sapiens/UCSC/hg38": "Homo_sapiens/UCSC/hg38",
+
     "Mus_musculus/UCSC/mm10": "Mus_musculus/UCSC/mm10",
     "Mus_musculus/Ensembl/GRCm38": "Mus_musculus/Ensembl/GRCm38",
     "Mus_musculus/NCBI/GRCm38": "Mus_musculus/NCBI/GRCm38",
@@ -1607,12 +1610,12 @@ class JobCreate(JSONView):
         pipeline_run_id = request.query_params.get('pipeline_run_id', None)
         if pipeline_run_id:
             try:
-                pipeline_run_obj = PipelineRun.objects.get(id=pipeline_run_id)
+                pipelinerun_obj = PipelineRun.objects.get(id=pipeline_run_id)
             except PipelineRun.DoesNotExist:
                 return HttpResponse(reason='pipeline_run %s does not exist'
                                            % pipeline_run_id,
                                     status=status.HTTP_400_BAD_REQUEST)
-            request.data['params'] = pipeline_run_obj.to_json()
+            request.data['params'] = pipelinerun_obj.to_json()
 
         if serializer.is_valid():
 
