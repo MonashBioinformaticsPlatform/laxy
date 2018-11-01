@@ -15,7 +15,7 @@ def _generate_secret_key_file(filepath=None):
         filepath = os.path.join(filepath, '.secret_key')
 
     secret_key = _generate_secret_key()
-    with open(filepath, 'w') as f:
+    with open(os.open(filepath, os.O_CREAT | os.O_WRONLY, 0o600), 'w') as f:
         f.write(secret_key)
 
     return secret_key

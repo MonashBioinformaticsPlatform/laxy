@@ -13,6 +13,7 @@ User = get_user_model()
 
 logger = logging.getLogger(__name__)
 
+
 def decode(encoded_token):
     """
     A wrapper around jwt.decode that uses the secret key defined in Django

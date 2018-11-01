@@ -442,7 +442,7 @@ class JobViewTest(TestCase):
         token = create_jwt_user_token('testuser')[0]
         client = APIClient(HTTP_CONTENT_TYPE='application/json')
         response = client.post(
-            reverse('jwt-verify-token'),
+            reverse('laxy_backend:jwt-verify-token'),
             data={'token': token},
             format='json')
         self.assertEqual(response.status_code, 200)
