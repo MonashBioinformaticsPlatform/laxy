@@ -13,7 +13,7 @@
 
             <md-dialog-actions>
                 <md-button class="md-primary"
-                           @click="cancelJobConfirmed(jobToCancel)">Yes, cancel it.
+                           @click="cancelJobConfirmed">Yes, cancel it.
                 </md-button>
                 <md-button class="md-primary"
                            @click="closeDialog('cancel_job_dialog')">Close
@@ -436,7 +436,7 @@
             this.openDialog("cancel_job_dialog");
         }
 
-        async cancelJobConfirmed(id: string) {
+        async cancelJobConfirmed() {
             try {
                 this.refreshing = true;
                 await WebAPI.cancelJob(this.jobId);
