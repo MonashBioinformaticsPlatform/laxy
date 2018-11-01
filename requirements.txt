@@ -39,7 +39,7 @@ django-storages==1.6.6
 djangorestframework==3.7.7
 djangorestframework-jwt==1.11.0
 docutils==0.14
-git+https://github.com/maykinmedia/drf_openapi.git@105-proxy-label-cannot-be-decoded#egg=drf_openapi
+git+https://github.com/pansapiens/drf_openapi.git@105-proxy-label-cannot-be-decoded#egg=drf_openapi
 enasearch==0.2.0
 ephem==3.7.6.0
 Fabric3==1.14.post1
