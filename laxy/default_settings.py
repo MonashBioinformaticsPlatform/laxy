@@ -70,6 +70,7 @@ default_env = PrefixedEnv(
     SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET=(str, ''),
     CORS_ORIGIN_WHITELIST=(list, []),
     CSRF_TRUSTED_ORIGINS=(list, []),
+    USE_SSL=(bool, False),
 )
 
 
@@ -119,6 +120,8 @@ def _cleanup_env_list(l):
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
+
+USE_SSL = env('USE_SSL')
 
 ADMIN_EMAIL = env('ADMIN_EMAIL')
 ADMIN_USERNAME = env('ADMIN_USERNAME')
@@ -269,12 +272,6 @@ CSRF_TRUSTED_ORIGINS = env('CSRF_TRUSTED_ORIGINS',
                            ],
                            transform=_cleanup_env_list)
 
-# TODO: These should probably be on in production, once HTTPS is enabled
-# Only send CSRF cookie on a secure HTTPS connection
-# CSRF_COOKIE_SECURE = True
-# Only send session cookie on a secure HTTPS connection
-# SESSION_COOKIE_SECURE = True
-
 CORS_ALLOW_CREDENTIALS = True
 
 if DEBUG:
@@ -286,6 +283,31 @@ if DEBUG:
     CORS_ORIGIN_WHITELIST += ['localhost:8002']
     # Applies to HTTPS only
     CSRF_TRUSTED_ORIGINS += ['localhost']
+
+if USE_SSL:
+    CORS_REPLACE_HTTPS_REFERER = True
+    HOST_SCHEME = "https://"
+    # Required so that request.build_absolute_uri works correctly when Django
+    # is behind a reverse proxy (eg nginx) providing HTTPS.
+    # Reverse proxy must send X-Forwarded-Host and X-Forwarded-Proto headers.
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    USE_X_FORWARDED_HOST = True
+    SECURE_SSL_REDIRECT = True
+    # Only send session cookie on a secure HTTPS connection
+    SESSION_COOKIE_SECURE = True
+    # Only send CSRF cookie on a secure HTTPS connection
+    CSRF_COOKIE_SECURE = True
+
+    # Stricter options
+    # SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    # SECURE_HSTS_SECONDS = 600  # ~10 min  # 1000000  # ~11 days
+    # SECURE_FRAME_DENY = True
+    #
+    # # https://docs.djangoproject.com/en/2.1/ref/middleware/#x-content-type-options-nosniff
+    # If True, the Content-Type is not correctly set for eg HTML reports, which currently rely on browser sniffing
+    # SECURE_CONTENT_TYPE_NOSNIFF = True
+    # # https://docs.djangoproject.com/en/2.1/ref/middleware/#x-content-type-options-nosniff
+    # SECURE_BROWSER_XSS_FILTER = True
 
 AUTHENTICATION_BACKENDS = (
     # 'social_core.backends.open_id.OpenIdAuth',   # not required ?

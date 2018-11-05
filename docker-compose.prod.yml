@@ -5,12 +5,13 @@ networks:
 
 volumes:
   static_assets:
+  certs:
   dbdata:
 
 services:
 
   django:
-    image: "${IMAGE_REPO-registry.gitlab.com/pansapiens/}laxy:latest"
+    image: "${IMAGE_REPO-registry.gitlab.com/pansapiens/laxy}/laxy:latest"
     # We must specify the .env file so that it gets sourced - otherwise every variable in .env would
     # need to be explicitly defined like: LAXY_DEBUG=${LAXY_DEBUG} in the environment section below.
     env_file:
@@ -19,17 +20,19 @@ services:
       - LAXY_DEBUG=no
       - LAXY_STATIC_ROOT=/usr/share/nginx/html/backend_static
       - LAXY_STATIC_URL=${LAXY_FRONTEND_URL-//laxy.io}/backend_static/
+      # Number of gunicorn workers
+      - WEB_CONCURRENCY=${WEB_CONCURRENCY-4}
     deploy:
       restart_policy:
         condition: any
     volumes:
       - static_assets:/usr/share/nginx/html
-# TODO: Make Django only accessible from the private Docker network, via
-#       'expose' rather than 'ports', reverse proxy via nginx config
-#   expose:
-#     - "8001:8001"
-    ports:
-      - "8001:8001"
+    # Internal Docker network only
+    expose:
+      - "8001"
+    # Publicly accessible
+    # ports:
+    #   - "8001:8001"
     networks:
       - private
     command: bash -c "sleep 10 &&
@@ -38,7 +41,7 @@ services:
                       python3 manage.py makemigrations --no-input &&
                       python3 manage.py migrate --no-input &&
                       python3 manage.py collectstatic --no-input &&
-                      gunicorn laxy.wsgi -b 0.0.0.0:8001"
+                      gunicorn laxy.wsgi -b 0.0.0.0:8001 --forwarded-allow-ips='*' --worker-class gevent"
 
   db:
     env_file:
@@ -66,7 +69,7 @@ services:
       - private
 
   celeryd:
-    image: "${IMAGE_REPO-registry.gitlab.com/pansapiens/}laxy:latest"
+    image: "${IMAGE_REPO-registry.gitlab.com/pansapiens/laxy}/laxy:latest"
     # command: bash -c "celery -A laxy worker -B -E -l info --broker=${LAXY_BROKER_URL}"
     env_file:
       - .env
@@ -79,7 +82,7 @@ services:
       - private
 
   flower:
-    image: "${IMAGE_REPO-registry.gitlab.com/pansapiens/}laxy:latest"
+    image: "${IMAGE_REPO-registry.gitlab.com/pansapiens/laxy}/laxy:latest"
     env_file:
       - .env
     environment:
@@ -98,9 +101,25 @@ services:
       restart_policy:
         condition: any
     ports:
-      # production
+      # we need port 80 so nginx can redirect to 443, also for Let's Encrypt http-01 challenge
       - "80:80"
+      - "443:443"
     networks:
       - private
     volumes:
        - static_assets:/usr/share/nginx/html:ro
+       - certs:/certs:ro
+       - ./nginx.conf:/etc/nginx/nginx.conf:ro
+
+  ssl-certs-cron:
+    image: "${IMAGE_REPO-registry.gitlab.com/pansapiens/laxy}/ssl-certs:latest"
+    environment:
+      # No quotes !
+      - DOMAINS=laxy.io api.laxy.io
+    # Run certificate renewel/creation on startup if missing. Then run crond in foreground forever.
+    command: sh -c "[ ! -f /certs/domain.key ] && /etc/periodic/daily/update-ssl-cert.sh; crond -l2 -f"
+    volumes:
+      # we need to write access to allow /usr/share/nginx/html creation of .well-known/acme-challenge for
+      # Let's Encrypt the http-01 challenge
+      - static_assets:/usr/share/nginx/html
+      - certs:/certs

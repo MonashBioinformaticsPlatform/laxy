@@ -8,12 +8,11 @@ services:
       - LAXY_DATABASE_URL=postgres://postgres:postgres@db:5432/postgres
       - LAXY_BROKER_URL=amqp://guest@rabbitmq
     command: bash -c "sleep 10 && python3 manage.py runserver 0.0.0.0:8001"
-#    ports:
-#      - "8001:8001"
+    expose:
+      - "8001"
     depends_on:
       - db
       - celeryd
-      - nginx
 
   db:
     image: postgres:10-alpine
@@ -73,17 +72,11 @@ services:
 
   nginx:
     image: nginx:1.15-alpine
-#    ports:
-#       # production
-#       - "80:80"
-#       # dev
-#       - "8002:80"
-#   networks
-#      - private
-#    volumes:
-#       - static:/usr/share/nginx/html:ro
-#    depends_on:
-#      - django
+    # Really, django depends on nginx, however because of the way nginx hostname resolution
+    # works during startup, the django service (and associated internal DNS name) must
+    # exist BEFORE nginx starts.
+    depends_on:
+      - django
 
 volumes:
   dbdata:

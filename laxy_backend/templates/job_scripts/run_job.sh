@@ -36,6 +36,11 @@ readonly SCHEDULER="{{ SCHEDULER }}"
 
 readonly BDS_SINGLE_NODE="{{ BDS_SINGLE_NODE }}"
 
+# Set these to empty strings to disallow insecure self-signed certificates
+# TODO: This should only be turned on during DEBUG
+readonly CURL_INSECURE="--insecure"
+readonly LAXYDL_INSECURE="--ignore-self-signed-ssl-certificate"
+
 ##
 # These memory settings are important when running BigDataScript in single-node
 # 'system=local' mode. When running in multi-node 'system=generic' (or 'system=slurm')
@@ -108,6 +113,7 @@ function send_event() {
     fi
 
     curl -X POST \
+         ${CURL_INSECURE} \
          -H "Content-Type: application/json" \
          -H @"${AUTH_HEADER_FILE}" \
          -o /dev/null \
@@ -159,8 +165,7 @@ function init_conda_env() {
         pip install --process-dependency-links -e "git+https://github.com/MonashBioinformaticsPlatform/laxy#egg=laxy_downloader&subdirectory=laxy_downloader"
 
         # Then install rnasik
-        ${CONDA_BASE}/bin/conda install --yes -n "${env_name}" \
-                     rnasik=${2}
+        ${CONDA_BASE}/bin/conda install --yes -n "${env_name}" rnasik=${2}
 
         # Environment takes a very long time to solve if qualimap is included initially
         ${CONDA_BASE}/bin/conda install --yes -n "${env_name}" qualimap
@@ -218,6 +223,7 @@ function register_files() {
     find_filetype "*StrandedCounts*.txt" "counts,degust" >>${JOB_PATH}/manifest.csv
 
     curl -X POST \
+      ${CURL_INSECURE} \
      -H "Content-Type: text/csv" \
      -H @"${AUTH_HEADER_FILE}" \
      --silent \
@@ -353,6 +359,7 @@ if [ "${JOB_INPUT_STAGED}" == "no" ]; then
 
     mkdir -p "${JOB_PATH}/../cache"
     laxydl download \
+           ${LAXYDL_INSECURE} \
            -vvv \
            --cache-path "${DOWNLOAD_CACHE_PATH}" \
            --no-progress \
@@ -444,6 +451,7 @@ register_files
 # leak in 'ps' etc.
 
 curl -X PATCH \
+     ${CURL_INSECURE} \
      -H "Content-Type: application/json" \
      -H @"${AUTH_HEADER_FILE}" \
      --silent \
