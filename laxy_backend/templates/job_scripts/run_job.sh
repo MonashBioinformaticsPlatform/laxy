@@ -56,7 +56,7 @@ if [ ${BDS_SINGLE_NODE} == "yes" ]; then
     fi
 else
     # system=generic or system=slurm in bds.config - BDS will run sbatch tasks
-    MEM=2000
+    MEM=4000
     CPUS=2
 fi
 
@@ -235,7 +235,7 @@ function setup_bds_config() {
     job_bds_config="${JOB_PATH}/input/bds.config"
 
     # Check for custom bds.config
-    if [ ! -f "${JOB_PATH}/../bds.config" ]; then
+    if [ -f "${JOB_PATH}/../bds.config" ]; then
         default_bds_config="${JOB_PATH}/../bds.config"
     fi
 
