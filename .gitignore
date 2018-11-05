@@ -81,6 +81,7 @@ ENV/
 # Any locally generated secret key file
 .secret_key
 .env
+.secret*
 
 # Javascript stuff
 *.js.map
