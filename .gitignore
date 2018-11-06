@@ -80,7 +80,8 @@ ENV/
 
 # Any locally generated secret key file
 .secret_key
-.env
+.env.*
+!.env.example
 .secret*
 
 # Javascript stuff
