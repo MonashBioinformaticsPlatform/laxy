@@ -27,6 +27,10 @@ readonly REFERENCE_BASE="${PWD}/../references/iGenomes"
 readonly DOWNLOAD_CACHE_PATH="${PWD}/../cache"
 readonly AUTH_HEADER_FILE="${JOB_PATH}/.private_request_headers"
 
+# These are applied via chmod to all files and directories in the run, upon completion
+readonly JOB_FILE_PERMS='ug+rw-s'
+readonly JOB_DIR_PERMS='ug+rwx-s'
+
 readonly SCHEDULER="{{ SCHEDULER }}"
 # readonly SCHEDULER="local"
 
@@ -288,6 +292,14 @@ function detect_pairs() {
     fi
 }
 
+function update_permissions() {
+    # This can be used to update the permission on files after job completion
+    # (eg if you want to automatically share files locally with a group of users on a compute resource).
+    chmod "${JOB_DIR_PERMS}" "${JOB_PATH}"
+    find "${JOB_PATH}" -type d -exec chmod "${JOB_DIR_PERMS}" {} \;
+    find "${JOB_PATH}" -type f -exec chmod "${JOB_FILE_PERMS}" {} \;
+}
+
 #function filter_ena_urls() {
 #    local urls
 #    urls=$(get_input_data_urls)
@@ -419,6 +431,7 @@ else
   send_event "JOB_PIPELINE_COMPLETED" '{"exit_code":'${EXIT_CODE}'}'
 fi
 
+update_permissions
 
 cd ${JOB_PATH}
 register_files
