@@ -96,7 +96,7 @@ class JobAdmin(Timestamped, VersionAdmin):
                     '_owner_email',
                     '_status')
     ordering = ('-created_time', '-completed_time', '-modified_time',)
-    search_fields = ('id', 'status', 'compute_resource', 'remote_id',)
+    search_fields = ('id', 'status', 'remote_id',)
     list_filter = ('status',)
     actions = ('trigger_file_ingestion',)
 
