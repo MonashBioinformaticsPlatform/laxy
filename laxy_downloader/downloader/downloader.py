@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import cgi
 import json
+import ssl
 import urllib
 from contextlib import closing
 from urllib.parse import urlparse, urlsplit, urlunsplit
@@ -449,7 +450,8 @@ def untar_from_url_fragment(cached, target_dir, url: str):
 async def async_notify_event(api_url: Union[str, None],
                              event: str,
                              extra: Union[Mapping, None] = None,
-                             auth_headers: Union[Mapping, None] = None):
+                             auth_headers: Union[Mapping, None] = None,
+                             verify_ssl_certificate: bool = True):
     if api_url is None:
         return
     if extra is None:
@@ -461,6 +463,15 @@ async def async_notify_event(api_url: Union[str, None],
     try:
         resp = await asks.post(api_url, json=data, headers=headers, retries=3, timeout=30)
         return resp
+    except ssl.SSLError as ex:
+        # asks doesn't yet support a (simple) way to ignore self-signed ssl certs, so we just fallback
+        # to the synchronous option in this case.
+        if not verify_ssl_certificate:
+            logger.warning(f"SSL CERTIFICATE_VERIFY_FAILED: {api_url}")
+            return notify_event(api_url, json=data, headers=headers,
+                                retries=3, timeout=30, verify=verify_ssl_certificate)
+        else:
+            logger.exception(ex)
     except BaseException as ex:
         logger.exception(ex)
 
@@ -474,7 +485,8 @@ async def async_notify_event(api_url: Union[str, None],
 def notify_event(api_url: Union[str, None],
                  event: str,
                  extra: Union[Mapping, None] = None,
-                 auth_headers: Union[Mapping, None] = None):
+                 auth_headers: Union[Mapping, None] = None,
+                 verify_ssl_certificate: bool = True):
     if api_url is None:
         return
     if extra is None:
@@ -483,5 +495,8 @@ def notify_event(api_url: Union[str, None],
         auth_headers = {}
     headers = merge_dicts({'Content-Type': 'application/json'}, auth_headers)
     data = {'event': event, 'extra': extra}
-    resp = requests.post(api_url, json=data, headers=headers, timeout=30)
-    return resp
+    try:
+        resp = requests.post(api_url, json=data, headers=headers, timeout=30, verify=verify_ssl_certificate)
+        return resp
+    except requests.exceptions.SSLError as ex:
+        logger.exception(ex)

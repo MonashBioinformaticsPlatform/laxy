@@ -83,6 +83,11 @@ def add_commandline_args(parser: argparse.ArgumentParser) -> argparse.ArgumentPa
     dl_parser.add_argument("--no-progress",
                            help="Don't show progress bar ...",
                            action="store_true")
+    dl_parser.add_argument("--ignore-self-signed-ssl-certificate",
+                           help="Ignore SSL certificate verification errors - useful for "
+                                "testing in development. UNSAFE in production (enables "
+                                "man-in-the-middle attacks).",
+                           action="store_true")
 
     # Add common options to the main parser and most subparsers
     for p in [parser, dl_parser, cache_parser]:
@@ -148,6 +153,8 @@ def _run_download_cli(args, rpc_secret):
     if args.event_notification_auth_file:
         api_auth_headers = _parse_auth_header_file(args.event_notification_auth_file)
 
+    verify_ssl_certificate = not args.ignore_self_signed_ssl_certificate
+
     if urls:
         if not args.no_aria2c:
             daemon = aria.get_daemon(secret=rpc_secret)
@@ -155,7 +162,8 @@ def _run_download_cli(args, rpc_secret):
             async def aria_dl_and_poll():
                 await async_notify_event(api_url,
                                          "INPUT_DATA_DOWNLOAD_STARTED",
-                                         auth_headers=api_auth_headers)
+                                         auth_headers=api_auth_headers,
+                                         verify_ssl_certificate=verify_ssl_certificate)
 
                 gids = aria.download_urls(urls,
                                           cache_path=args.cache_path,
@@ -176,7 +184,8 @@ def _run_download_cli(args, rpc_secret):
 
                 await async_notify_event(api_url,
                                          "INPUT_DATA_DOWNLOAD_FINISHED",
-                                         auth_headers=api_auth_headers)
+                                         auth_headers=api_auth_headers,
+                                         verify_ssl_certificate=verify_ssl_certificate)
 
                 aria.purge_results()
 
@@ -185,7 +194,8 @@ def _run_download_cli(args, rpc_secret):
             # trio.run(download, urls)
             notify_event(api_url,
                          "INPUT_DATA_DOWNLOAD_STARTED",
-                         auth_headers=api_auth_headers)
+                         auth_headers=api_auth_headers,
+                         verify_ssl_certificate=verify_ssl_certificate)
 
             download_concurrent(urls,
                                 args.cache_path,
@@ -193,7 +203,8 @@ def _run_download_cli(args, rpc_secret):
 
             notify_event(api_url,
                          "INPUT_DATA_DOWNLOAD_FINISHED",
-                         auth_headers=api_auth_headers)
+                         auth_headers=api_auth_headers,
+                         verify_ssl_certificate=verify_ssl_certificate)
 
         if args.destination_path is not None:
             for url in urls:
