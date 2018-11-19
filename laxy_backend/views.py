@@ -1695,6 +1695,7 @@ class JobCreate(JSONView):
                              environment={
                                  'DEBUG': sh_bool(
                                      getattr(settings, 'DEBUG', False)),
+                                 'IGNORE_SELF_SIGNED_CERTIFICATE': sh_bool(False),
                                  'JOB_ID': job_id,
                                  'JOB_COMPLETE_CALLBACK_URL':
                                      callback_url,

@@ -26,6 +26,7 @@ readonly CONDA_BASE="${JOB_PATH}/../miniconda3"
 readonly REFERENCE_BASE="${PWD}/../references/iGenomes"
 readonly DOWNLOAD_CACHE_PATH="${PWD}/../cache"
 readonly AUTH_HEADER_FILE="${JOB_PATH}/.private_request_headers"
+readonly IGNORE_SELF_SIGNED_CERTIFICATE="{{ IGNORE_SELF_SIGNED_CERTIFICATE }}"
 
 # These are applied via chmod to all files and directories in the run, upon completion
 readonly JOB_FILE_PERMS='ug+rw-s'
@@ -36,10 +37,13 @@ readonly SCHEDULER="{{ SCHEDULER }}"
 
 readonly BDS_SINGLE_NODE="{{ BDS_SINGLE_NODE }}"
 
-# Set these to empty strings to disallow insecure self-signed certificates
-# TODO: This should only be turned on during DEBUG
-readonly CURL_INSECURE="--insecure"
-readonly LAXYDL_INSECURE="--ignore-self-signed-ssl-certificate"
+if [ ${IGNORE_SELF_SIGNED_CERTIFICATE} == "yes" ]; then
+    readonly CURL_INSECURE="--insecure"
+    readonly LAXYDL_INSECURE="--ignore-self-signed-ssl-certificate"
+else
+    readonly CURL_INSECURE=""
+    readonly LAXYDL_INSECURE=""
+fi
 
 ##
 # These memory settings are important when running BigDataScript in single-node
