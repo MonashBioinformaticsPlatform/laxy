@@ -3,9 +3,11 @@
         <slot>
             <h2>Does <i>Laxy</i> need a new name ? Make your
                 suggestion
-                <md-icon class="arrow_l">arrow_forward</md-icon>
-                <a href="https://goo.gl/forms/002RglNIaCbll7uH2" target="_blank">here</a>
-                <md-icon class="arrow_r">arrow_back</md-icon>
+                <span class="nobreak">
+                    <md-icon class="arrow_l">arrow_forward</md-icon>
+                    <a href="https://goo.gl/forms/002RglNIaCbll7uH2" target="_blank">here</a>
+                    <md-icon class="arrow_r">arrow_back</md-icon>
+                </span>
             </h2>
         </slot>
     </md-whiteframe>
@@ -24,6 +26,10 @@
 </script>
 
 <style lang="css">
+    span.nobreak {
+        white-space: nowrap;
+    }
+
     .arrow_l {
         animation: wobble_horiz 1s ease-in-out infinite;
         margin-right: 10px;
