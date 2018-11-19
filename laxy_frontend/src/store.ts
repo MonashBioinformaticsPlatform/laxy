@@ -11,7 +11,7 @@ import Vuex from 'vuex';
 import axios, {AxiosResponse} from 'axios';
 import {ComputeJob, LaxyFile, Sample, SampleSet} from './model';
 import {WebAPI} from './web-api';
-import {vueAuth} from './auth';
+import {vueAuth, AuthOptions} from './auth';
 
 export const AUTHENTICATE_USER = 'authenticate_user';
 export const SET_USER_PROFILE = 'set_user_profile';
@@ -168,7 +168,18 @@ export const Store = new Vuex.Store({
                     if (payload.provider === 'google') {
                         const response = await vueAuth.authenticateSession(
                             payload.provider,
-                            {provider: 'google-oauth2'});
+                            {provider: 'google-oauth2'},
+                            {});
+                    }
+
+                    const providerOverrides: any = AuthOptions.providers[payload.provider];
+                    if (providerOverrides.name) {
+                        const response = await vueAuth.authenticateSession(
+                            providerOverrides.name,
+                            {
+                                provider: providerOverrides.provider,
+                            },
+                            providerOverrides);
                     }
                     await dispatch(FETCH_USER_PROFILE);
                 } catch (error) {

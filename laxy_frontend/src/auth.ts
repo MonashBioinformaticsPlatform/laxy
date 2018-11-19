@@ -62,6 +62,28 @@ export const AuthOptions: AuthenticateOptions = {
             // tokenType: 'Bearer',  // we use Authorization: Bearer my.jwt.blob for DRF tokens
             // url: `/api/login/social/jwt_user/google-oauth2/`,
         } as ProviderOptions,
+
+        // This is an example of a 'hosted-domain' auth provider on Google, using the hd={my.domain.edu} option.
+        // Unlike normal overrides above, the attribute name ('google_monash') isn't a default provider available in
+        // vue-authenticate (as specified in vue-authenticate/src/options.js).
+        // The 'name' and 'provider' attributes specify the actual vue-authenticate provider to use
+        google_monash: {
+            name: 'google',
+            provider: 'google-oauth2',
+
+            clientId: process.env.LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID || '',
+
+            redirectUri: `${trim(WebAPI.apiSettings.frontendUrl, '/')}/` ||
+                `http://${window.location.hostname}:${window.location.port}/`,
+
+            url: `/api/v1/auth/login/social/session/google-oauth2/`,
+
+            // This adds the optional query param hd=monash.edu to the initial Google OAuth2 request,
+            // restricting the domains displayed as options.
+            // https://developers.google.com/identity/protocols/OpenIDConnect#authenticationuriparameters
+            optionalUrlParams: ['hd'],
+            hd: 'monash.edu',
+        } as ProviderOptions,
     }
 };
 

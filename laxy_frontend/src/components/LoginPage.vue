@@ -15,7 +15,7 @@
                                            style="background-color: #4385F4;"
                                            type="submit"><img src="assets/btn_google_signin_dark_normal_web.png">
                                 </md-button>
-                                <md-button @click="login('google')"
+                                <md-button @click="login('google_monash')"
                                            class="md-raised md-primary login-button"
                                            style="background-color: #4385F4;"
                                            type="submit">Monash Login via Google
