@@ -90,7 +90,7 @@ const App = new Vue({
     store,
     data() {
         return {
-            showHeaderMessage: process.env.LAXY_ENV === 'dev',
+            showHeaderMessage: true,  // process.env.LAXY_ENV === 'dev',
         };
     },
     async created() {
