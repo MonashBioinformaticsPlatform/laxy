@@ -19,7 +19,7 @@
                         <md-table-cell md-numeric>
                             <!--<div class="push-right">-->
                             <md-button v-if="getDefaultViewMethod(file)"
-                                       class="md-icon-button"
+                                       class="md-icon-button push-right"
                                        @click="getDefaultViewMethod(file).method(file)">
                                 <md-tooltip md-direction="top">
                                     {{ getDefaultViewMethod(file).text }}
