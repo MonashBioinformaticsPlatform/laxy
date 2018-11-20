@@ -11,8 +11,18 @@
                     <md-table-row v-for="event in events" :key="event.id">
                         <md-table-cell>{{ event.timestamp | moment('Do MMMM YYYY, h:mm:ss a') }}
                         </md-table-cell>
-                        <md-table-cell>{{ event.event }} <span>{{ event.event }}<template
-                                v-if="event.extra.to">: {{ event.extra.to }}</template></span></md-table-cell>
+                        <md-table-cell>
+                            <template v-if="event.message">{{ event.message }}</template>
+                            <template v-else>{{ event.event }}</template>
+                            <span>
+                                <!--
+                                <template v-if="event.extra.from">: {{ event.extra.from }}</template>
+                                <template v-if="event.extra.to"> → {{ event.extra.to }}</template>
+                                -->
+                                <template v-if="event.extra.to === 'complete'">☺</template>
+                                <template v-if="event.extra.to === 'failed'">☹</template>
+                            </span>
+                        </md-table-cell>
                     </md-table-row>
                     <md-table-row v-if="events.length === 0">
                         <md-table-cell>No event logs</md-table-cell>

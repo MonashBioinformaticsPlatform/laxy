@@ -1946,6 +1946,34 @@ class EventLogCreate(JSONView):
         """
         Create a new EventLog.
 
+        These logs are intended to report events, but not trigger side effects.
+
+        Request body example:
+        ```json
+        {
+         "event": "JOB_PIPELINE_COMPLETED",
+         "message": "Job completed.",
+         "extra": {"exit_code": 0},
+         "content_type": "job",
+         "object_id": "2w3iIE9BLKrnwHBz1xUtl9"
+        }
+        ```
+
+        `event` is an 'enum' or 'tag' style string classifying the logged event - values
+        aren't currently enforced, but should generally be one of:
+
+        - `JOB_STATUS_CHANGED`
+        - `INPUT_DATA_DOWNLOAD_STARTED`
+        - `INPUT_DATA_DOWNLOAD_FINISHED`
+        - `JOB_PIPELINE_STARTING`
+        - `JOB_PIPELINE_FAILED`
+        - `JOB_PIPELINE_COMPLETED`
+
+        `message` is a short free-text string intended to be read by humans.
+
+        `extra` contains arbitrary metadata about the event - conventions in use
+        include numeric process `exit_code`, and job status changes `from` and `to`.
+
         <!--
         :param subject_obj: An optional Django model that is the 'subject' of
                             the event, assigned to EventLog.obj. Mostly used for
@@ -1982,6 +2010,8 @@ class JobEventLogCreate(EventLogCreate):
     def post(self, request: Request, job_id=None, version=None):
         """
         Create a new EventLog for the Job.
+        See <a href="#operation/v1_eventlog_create">/eventlog/</a> docs
+        (`content_type` and `object_id` are automatically set to the Job {job_id}).
 
         <!--
         :param request: The request object.

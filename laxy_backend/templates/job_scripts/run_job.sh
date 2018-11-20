@@ -101,7 +101,8 @@ function add_sik_config() {
 
 function send_event() {
     local event=${1:-"HEARTBEAT"}
-    local extra=${2:-"{}"}
+    local message=${2:-""}
+    local extra=${3:-"{}"}
     # escape double quotes since this is JSON nested inside JSON ?
     # extra=$(sed 's/"/\\"/g' <<< "${extra}")
 
@@ -126,7 +127,7 @@ function send_event() {
          --max-time 10 \
          --retry 8 \
          --retry-max-time 600 \
-         -d '{"event":"'"${event}"'","extra":'"${extra}"'}' \
+         -d '{"event":"'"${event}"'","message":"'"${message}"'","extra":'"${extra}"'}' \
          ${VERBOSITY} \
          "${JOB_EVENT_URL}" || true
 }
@@ -355,7 +356,7 @@ add_sik_config
 
 if [ "${JOB_INPUT_STAGED}" == "no" ]; then
 
-    # send_event "INPUT_DATA_DOWNLOAD_STARTED"
+    # send_event "INPUT_DATA_DOWNLOAD_STARTED" "Input data download started."
 
     readonly PARALLEL_DOWNLOADS=8
     # one URL per line
@@ -374,7 +375,7 @@ if [ "${JOB_INPUT_STAGED}" == "no" ]; then
            --pipeline-config "${JOB_PATH}/input/pipeline_config.json" \
            --destination-path "${JOB_PATH}/input"
 
-    # send_event "INPUT_DATA_DOWNLOAD_FINISHED"
+    # send_event "INPUT_DATA_DOWNLOAD_FINISHED" "Input data download completed."
 
 fi
 
@@ -389,7 +390,7 @@ env >job_env.out
 GENOME_FASTA="${REFERENCE_BASE}/${REFERENCE_GENOME}/Sequence/WholeGenomeFasta/genome.fa"
 GENOME_GTF="${REFERENCE_BASE}/${REFERENCE_GENOME}/Annotation/Genes/genes.gtf"
 
-send_event "JOB_PIPELINE_STARTING"
+send_event "JOB_PIPELINE_STARTING" "Pipeline starting."
 
 # Don't exit on error, since we want to capture exit code and do an HTTP
 # request with curl upon failure
@@ -437,9 +438,9 @@ EXIT_CODE=$?
 # considered a distinct event from the whole job completing (that will be
 # generated as a side effect of calling JOB_COMPLETE_CALLBACK_URL)
 if [ ${EXIT_CODE} -ne 0 ]; then
-  send_event "JOB_PIPELINE_FAILED" '{"exit_code":'${EXIT_CODE}'}'
+  send_event "JOB_PIPELINE_FAILED" "Pipeline failed." '{"exit_code":'${EXIT_CODE}'}'
 else
-  send_event "JOB_PIPELINE_COMPLETED" '{"exit_code":'${EXIT_CODE}'}'
+  send_event "JOB_PIPELINE_COMPLETED" "Pipeline completed." '{"exit_code":'${EXIT_CODE}'}'
 fi
 
 update_permissions

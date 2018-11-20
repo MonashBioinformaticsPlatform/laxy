@@ -62,8 +62,8 @@ def add_commandline_args(parser: argparse.ArgumentParser) -> argparse.ArgumentPa
                            help="Download natively without using the Aria2c daemon.",
                            action="store_true")
     dl_parser.add_argument("--queue-then-exit",
-                           help="Rather than block waiting for downloads to finish, exit after queuing. Aria2 daemon will"
-                                "continue downloading in the background.",
+                           help="Rather than block waiting for downloads to finish, exit after queuing."
+                                "Aria2 daemon will continue downloading in the background.",
                            action="store_true")
 
     dl_parser.add_argument("--copy-from-cache",
@@ -162,6 +162,7 @@ def _run_download_cli(args, rpc_secret):
             async def aria_dl_and_poll():
                 await async_notify_event(api_url,
                                          "INPUT_DATA_DOWNLOAD_STARTED",
+                                         message="Input data download started.",
                                          auth_headers=api_auth_headers,
                                          verify_ssl_certificate=verify_ssl_certificate)
 
@@ -184,6 +185,7 @@ def _run_download_cli(args, rpc_secret):
 
                 await async_notify_event(api_url,
                                          "INPUT_DATA_DOWNLOAD_FINISHED",
+                                         message="Input data download finished.",
                                          auth_headers=api_auth_headers,
                                          verify_ssl_certificate=verify_ssl_certificate)
 
@@ -194,6 +196,7 @@ def _run_download_cli(args, rpc_secret):
             # trio.run(download, urls)
             notify_event(api_url,
                          "INPUT_DATA_DOWNLOAD_STARTED",
+                         message="Input data download started.",
                          auth_headers=api_auth_headers,
                          verify_ssl_certificate=verify_ssl_certificate)
 
@@ -203,6 +206,7 @@ def _run_download_cli(args, rpc_secret):
 
             notify_event(api_url,
                          "INPUT_DATA_DOWNLOAD_FINISHED",
+                         message="Input data download finished.",
                          auth_headers=api_auth_headers,
                          verify_ssl_certificate=verify_ssl_certificate)
 

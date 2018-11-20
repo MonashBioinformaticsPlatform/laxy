@@ -199,6 +199,9 @@ class EventLog(UUIDModel):
                       related_name='event_logs')
     timestamp = DateTimeField(default=timezone.now, db_index=True)
     event = CharField(max_length=64)
+    message = CharField(max_length=256,
+                        blank=True,
+                        null=True)
     extra = JSONField(default=OrderedDict)
 
     content_type = ForeignKey(ContentType, null=True, on_delete=models.SET_NULL)
@@ -206,7 +209,7 @@ class EventLog(UUIDModel):
     obj = GenericForeignKey('content_type', 'object_id')
 
     @staticmethod
-    def log(event, user=None, extra=None, obj=None, timestamp=None):
+    def log(event, message='', user=None, extra=None, obj=None, timestamp=None):
         if extra is None:
             extra = {}
         content_type = None
@@ -220,6 +223,7 @@ class EventLog(UUIDModel):
         event = EventLog.objects.create(
             user=user,
             event=event,
+            message=message,
             extra=extra,
             content_type=content_type,
             object_id=object_id,
@@ -573,6 +577,7 @@ def job_status_changed_event_log(sender, instance,
         if instance.status != obj.status:
             EventLog.log(
                 'JOB_STATUS_CHANGED',
+                message=f"Job status changed: {obj.status} → {instance.status}",
                 user=instance.owner,
                 obj=obj,
                 extra=OrderedDict({'from': obj.status, 'to': instance.status}))
@@ -593,6 +598,7 @@ def new_job_event_log(sender, instance, created,
     if created:
         EventLog.log(
             'JOB_STATUS_CHANGED',
+            message="Job created.",
             user=instance.owner,
             obj=instance,
             extra={'from': None, 'to': instance.status})

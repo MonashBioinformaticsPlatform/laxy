@@ -449,6 +449,7 @@ def untar_from_url_fragment(cached, target_dir, url: str):
 
 async def async_notify_event(api_url: Union[str, None],
                              event: str,
+                             message: str = '',
                              extra: Union[Mapping, None] = None,
                              auth_headers: Union[Mapping, None] = None,
                              verify_ssl_certificate: bool = True):
@@ -459,7 +460,7 @@ async def async_notify_event(api_url: Union[str, None],
     if auth_headers is None:
         auth_headers = {}
     headers = merge_dicts({'Content-Type': 'application/json'}, auth_headers)
-    data = {'event': event, 'extra': extra}
+    data = {'event': event, 'message': message, 'extra': extra}
     try:
         resp = await asks.post(api_url, json=data, headers=headers, retries=3, timeout=30)
         return resp
@@ -468,7 +469,7 @@ async def async_notify_event(api_url: Union[str, None],
         # to the synchronous option in this case.
         if not verify_ssl_certificate:
             logger.warning(f"SSL CERTIFICATE_VERIFY_FAILED: {api_url}")
-            return notify_event(api_url, json=data, headers=headers,
+            return notify_event(api_url, message=message, json=data, headers=headers,
                                 retries=3, timeout=30, verify=verify_ssl_certificate)
         else:
             logger.exception(ex)
@@ -484,6 +485,7 @@ async def async_notify_event(api_url: Union[str, None],
                       on_giveup=lambda e: logger.debug(f"Event notification failed: {e.get('event', '')}"))
 def notify_event(api_url: Union[str, None],
                  event: str,
+                 message: str = '',
                  extra: Union[Mapping, None] = None,
                  auth_headers: Union[Mapping, None] = None,
                  verify_ssl_certificate: bool = True):
@@ -494,7 +496,7 @@ def notify_event(api_url: Union[str, None],
     if auth_headers is None:
         auth_headers = {}
     headers = merge_dicts({'Content-Type': 'application/json'}, auth_headers)
-    data = {'event': event, 'extra': extra}
+    data = {'event': event, 'message': message, 'extra': extra}
     try:
         resp = requests.post(api_url, json=data, headers=headers, timeout=30, verify=verify_ssl_certificate)
         return resp
