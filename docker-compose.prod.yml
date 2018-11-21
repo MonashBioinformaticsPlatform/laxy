@@ -115,7 +115,7 @@ services:
     image: "${IMAGE_REPO-registry.gitlab.com/pansapiens/laxy}/ssl-certs:latest"
     environment:
       # No quotes !
-      - DOMAINS=laxy.io api.laxy.io
+      - ACME_SSL_DOMAINS=${ACME_SSL_DOMAINS-laxy.io api.laxy.io}
     # Run certificate renewel/creation on startup if missing. Then run crond in foreground forever.
     command: sh -c "[ ! -f /certs/domain.key ] && /etc/periodic/daily/update-ssl-cert.sh; crond -l2 -f"
     volumes:

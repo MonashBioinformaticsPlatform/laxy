@@ -2,7 +2,7 @@
 # /etc/periodic/daily/update-ssl-cert.sh
 # Must be: chmod +x /etc/periodic/daily/update-ssl-cert.sh
 
-DOMAINS="${DOMAINS-laxy.io api.laxy.io dev.laxy.io dev-api.laxy.io}"
+ACME_SSL_DOMAINS="${ACME_SSL_DOMAINS-laxy.io api.laxy.io dev.laxy.io dev-api.laxy.io}"
 
 # acme-client docs: https://kristaps.bsd.lv/acme-client/acme-client.1.html
 # EXTRA_ARGS="-s -F" # -s = staging, -F = force renewal
@@ -27,4 +27,4 @@ fi
             -k /certs/domain.key \
             -Nnmev \
             $EXTRA_ARGS \
-            $DOMAINS
+            $ACME_SSL_DOMAINS

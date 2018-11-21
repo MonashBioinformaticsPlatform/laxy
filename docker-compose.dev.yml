@@ -84,7 +84,7 @@ services:
       context: ./docker/ssl-certs/
     environment:
       # No quotes !
-      - DOMAINS=dev.laxy.io dev-api.laxy.io
+      - ACME_SSL_DOMAINS=${ACME_SSL_DOMAINS-dev.laxy.io dev-api.laxy.io}
     # Run certificate renewel/creation on startup if missing. Then run crond in foreground forever.
     command: sh -c "[ ! -f /certs/domain.key ] && /etc/periodic/daily/update-ssl-cert.sh; crond -l2 -f"
     volumes:
