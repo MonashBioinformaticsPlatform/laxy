@@ -1968,6 +1968,7 @@ class EventLogCreate(JSONView):
         - `JOB_PIPELINE_STARTING`
         - `JOB_PIPELINE_FAILED`
         - `JOB_PIPELINE_COMPLETED`
+        - `JOB_INFO`
 
         `message` is a short free-text string intended to be read by humans.
 

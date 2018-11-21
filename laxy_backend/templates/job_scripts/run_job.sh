@@ -81,6 +81,8 @@ if [ "${SCHEDULER}" == "slurm" ]; then
 fi
 
 function add_sik_config() {
+   send_event "JOB_INFO" "Configuring RNAsik (sik.config)."
+
    # Find that ComputeResource specific sik.config, and if there is none, use the default.
    # Always copy it to the job input directory so preserve it.
     local SIK_CONFIG
@@ -133,6 +135,8 @@ function send_event() {
 }
 
 function install_miniconda() {
+    send_event "JOB_INFO" "Installing dependencies (conda env)."
+
     if [ ! -d "${CONDA_BASE}" ]; then
          wget --directory-prefix "${TMP}" -c "https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh"
          chmod +x "${TMP}"/Miniconda3-latest-Linux-x86_64.sh
@@ -143,8 +147,9 @@ function install_miniconda() {
 function init_conda_env() {
     # By convention, we name our Conda environments after {pipeline}-{version}
     # Each new pipeline version has it's own Conda env
-
     local env_name="${1}-${2}"
+
+    send_event "JOB_INFO" "Activating conda environment (${env_name})."
 
     if [ ! -d "${CONDA_BASE}/envs/${env_name}" ]; then
 
@@ -202,11 +207,13 @@ function get_reference_data_aws() {
 
 function get_igenome_aws() {
      local REF_ID=$1
+
+     send_event "JOB_INFO" "Getting reference genome (${REF_ID})."
+
      aws s3 --no-sign-request --region eu-west-1 sync \
          s3://ngi-igenomes/igenomes/${REF_ID}/Annotation/Genes/ ${REFERENCE_BASE}/${REF_ID}/Annotation/Genes/ --exclude "*" --include "genes.gtf"
-    aws s3 --no-sign-request --region eu-west-1 sync \
+     aws s3 --no-sign-request --region eu-west-1 sync \
         s3://ngi-igenomes/igenomes/${REF_ID}/Sequence/WholeGenomeFasta/ ${REFERENCE_BASE}/${REF_ID}/Sequence/WholeGenomeFasta/
-
 }
 
 function find_filetype() {
@@ -219,6 +226,8 @@ function find_filetype() {
 }
 
 function register_files() {
+    send_event "JOB_INFO" "Registering interesting output files."
+
     echo "checksum,filepath,type_tags" >${JOB_PATH}/manifest.csv
     find_filetype "*.bam" "bam,alignment" >>${JOB_PATH}/manifest.csv
     find_filetype "*.bai" "bai" >>${JOB_PATH}/manifest.csv
@@ -243,6 +252,8 @@ function register_files() {
 }
 
 function setup_bds_config() {
+    send_event "JOB_INFO" "Configuring BigDataScript (bds.config)."
+
     local default_bds_config
     local job_bds_config
 
@@ -304,6 +315,8 @@ function detect_pairs() {
 }
 
 function update_permissions() {
+    send_event "JOB_INFO" "Updating Unix file permissions for job outputs on compute node."
+
     # This can be used to update the permission on files after job completion
     # (eg if you want to automatically share files locally with a group of users on a compute resource).
     chmod "${JOB_DIR_PERMS}" "${JOB_PATH}"
