@@ -254,9 +254,10 @@ export const Store = new Vuex.Store({
                     throw error;
                 }
             },
-            async [FETCH_JOB]({commit, state}, job_id: string) {
+            async [FETCH_JOB]({commit, state}, params: any) {
+                const {job_id, access_token} = params;
                 try {
-                    const response = await WebAPI.getJob(job_id);
+                    const response = await WebAPI.getJob(job_id, access_token);
                     commit(SET_VIEWED_JOB, response.data);
                 } catch (error) {
                     throw error;

@@ -379,7 +379,7 @@
                 // const response = await WebAPI.getJob(this.jobId);
                 // this.job = response.data as ComputeJob;
 
-                await this.$store.dispatch(FETCH_JOB, this.jobId);
+                await this.$store.dispatch(FETCH_JOB, {job_id: this.jobId, access_token: this.$route.query.access_token});
 
                 let eventlog = null;
                 if (this.showTab == "eventlog") {

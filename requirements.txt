@@ -36,7 +36,7 @@ django-rest-framework-social-oauth2==1.1.0
 django-rest-swagger==2.1.2
 django-reversion==2.0.13
 django-storages==1.6.6
-djangorestframework==3.7.7
+djangorestframework==3.9.0
 djangorestframework-jwt==1.11.0
 docutils==0.14
 git+https://github.com/pansapiens/drf_openapi.git@105-proxy-label-cannot-be-decoded#egg=drf_openapi

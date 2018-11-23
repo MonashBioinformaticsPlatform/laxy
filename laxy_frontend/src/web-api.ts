@@ -19,13 +19,14 @@ export class WebAPI {
     /* Axios has this silly quirk where the Content-Type header is removed
        unless you have 'data'. So we add empty data.
      */
-    public static readonly axiosConfig: AxiosRequestConfig = {
+    public static axiosConfig: AxiosRequestConfig = {
         baseURL: WebAPI.baseUrl,
         withCredentials: true,
         xsrfHeaderName: 'X-CSRFToken',
         xsrfCookieName: 'csrftoken',
         headers: {'Content-Type': 'application/json'},
         data: {},
+        params: {},
     };
 
     public static fetcher = axios.create(WebAPI.axiosConfig);
@@ -61,6 +62,10 @@ export class WebAPI {
         }
     }
     */
+
+    public static setQueryParamAccessToken(access_token: string) {
+        WebAPI.axiosConfig.params.access_token = access_token;
+    }
 
     public static async getCsrfToken() {
         const token = WebAPI._getStoredCsrfToken();
@@ -147,10 +152,13 @@ export class WebAPI {
         }
     }
 
-    public static async getJob(job_id: string): Promise<AxiosResponse> {
+    public static async getJob(job_id: string, access_token?: string | undefined): Promise<AxiosResponse> {
         try {
-            return await this.fetcher.get(
-                `/api/v1/job/${job_id}/`) as AxiosResponse;
+            const url = `/api/v1/job/${job_id}/`;
+            if (access_token) {
+                WebAPI.setQueryParamAccessToken(access_token);
+            }
+            return await this.fetcher.get(url) as AxiosResponse;
         } catch (error) {
             throw error;
         }

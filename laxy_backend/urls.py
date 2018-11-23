@@ -127,16 +127,16 @@ api_urls = [
             # JobListView.as_view({'get': 'list'}),
             JobListView.as_view(),
             name='list_jobs'),
-    re_path(r'job/(?P<job_id>[a-zA-Z0-9\-_]+)/files/$',
+    re_path(r'job/(?P<uuid>[a-zA-Z0-9\-_]+)/files/$',
             JobFileBulkRegistration.as_view(),  # POST (csv, tsv)
             name='job_file_bulk'),
-    re_path(r'job/(?P<job_id>[a-zA-Z0-9\-_]+)/files/(?P<file_path>.*)$',
+    re_path(r'job/(?P<uuid>[a-zA-Z0-9\-_]+)/files/(?P<file_path>.*)$',
             JobFileView.as_view(),  # GET, PUT
             name='job_file'),
-    re_path(r'job/(?P<job_id>[a-zA-Z0-9\-_]+)/event/$',
+    re_path(r'job/(?P<uuid>[a-zA-Z0-9\-_]+)/event/$',
             JobEventLogCreate.as_view(),
             name='create_job_eventlog'),
-    re_path(r'job/(?P<job_id>[a-zA-Z0-9\-_]+)/$',
+    re_path(r'job/(?P<uuid>[a-zA-Z0-9\-_]+)/$',
             JobView.as_view(),
             name='job'),
 

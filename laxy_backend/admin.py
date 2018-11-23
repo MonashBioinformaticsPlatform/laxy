@@ -18,7 +18,9 @@ from .models import (Job,
                      FileSet,
                      SampleSet,
                      PipelineRun,
-                     EventLog, UserProfile)
+                     EventLog,
+                     UserProfile,
+                     AccessToken)
 
 from .models import URIValidator
 User = get_user_model()
@@ -253,6 +255,16 @@ class EventLogAdmin(admin.ModelAdmin):
                      'extra',)
 
 
+class AccessTokenAdmin(Timestamped, VersionAdmin):
+    list_display = ('uuid',
+                    'obj',
+                    'created_by',
+                    'expiry_time',
+                    'created')
+    ordering = ('-created_time', '-modified_time',)
+    search_fields = ('id', 'obj', 'created_by', 'expiry_time',)
+
+
 admin.site.register(User, LaxyUserAdmin)  # for our custom User model
 admin.site.register(UserProfile, UserProfileAdmin)
 admin.site.register(Job, JobAdmin)
@@ -262,3 +274,4 @@ admin.site.register(FileSet, FileSetAdmin)
 admin.site.register(SampleSet, SampleSetAdmin)
 admin.site.register(PipelineRun, PipelineRunAdmin)
 admin.site.register(EventLog, EventLogAdmin)
+admin.site.register(AccessToken, AccessTokenAdmin)

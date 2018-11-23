@@ -138,7 +138,11 @@ def unique(l):
 
 def multikeysort(items: Sequence[Mapping], columns: Sequence[str], reverse=False) -> Sequence[Mapping]:
     """
+    Takes a list of dictionaries and returns a list sorted by the value
+    associated with keys specified in 'columns'.
+
     Alternative is to just use pydash.sort_by instead ...
+    (https://pydash.readthedocs.io/en/latest/api.html#pydash.collections.sort_by)
 
     :param items:
     :type items:
@@ -146,8 +150,8 @@ def multikeysort(items: Sequence[Mapping], columns: Sequence[str], reverse=False
     :type columns:
     :param reverse:
     :type reverse:
-    :return:
-    :rtype:
+    :return: A sorted list.
+    :rtype: list of dicts
     """
     i = itemgetter
     comparers = [

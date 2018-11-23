@@ -14,6 +14,7 @@ import csv
 from pathlib import Path
 from urllib.parse import urlparse
 import base64
+from uuid import uuid4
 from io import StringIO, BytesIO
 
 import rows
@@ -1153,3 +1154,32 @@ class PipelineRun(Timestamped, UUIDModel):
         # TODO: Convert File UUIDs into URLs here (or internal 'api/v1/file/{file_id}' URLs) ?
         from .serializers import PipelineRunSerializer
         return json.dumps(PipelineRunSerializer(self).data)
+
+
+def _generate_access_token_string():
+    """
+    Generate a pseudo-random URL-safe string for use as an access token in a URL query parameter,
+    eg ?access_token=af4a9c52-1dd7-4c69-af70-5c364173214b
+
+    (The style of this string is intentionally different to the Base62-encoded UUID4's used as
+     object primary keys, so they can be easily differentiated by users and in debugging).
+
+    :return: A pseudo-random string.
+    :rtype: str
+    """
+    return str(uuid4())
+
+
+class AccessToken(Timestamped, UUIDModel):
+    token = CharField(db_index=True, max_length=64, blank=False, null=False,
+                      default=_generate_access_token_string)
+    expiry_time = DateTimeField(blank=True, null=True)
+    created_by = ForeignKey(User,
+                            blank=True,
+                            null=True,
+                            on_delete=models.CASCADE,
+                            related_name='access_tokens')
+
+    content_type = ForeignKey(ContentType, null=True, on_delete=models.SET_NULL)
+    object_id = CharField(db_index=True, null=True, max_length=24)
+    obj = GenericForeignKey('content_type', 'object_id')

@@ -1,4 +1,5 @@
 from io import StringIO, BytesIO
+from rest_framework.generics import GenericAPIView
 from typing import List, Union
 
 import csv
@@ -9,6 +10,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from django.http import HttpResponse
 from rest_framework import status
+from rest_framework.exceptions import NotAuthenticated, PermissionDenied, NotFound
 from rest_framework.views import APIView
 from rest_framework.schemas import SchemaGenerator
 from rest_framework.renderers import JSONRenderer, SchemaJSRenderer, CoreJSONRenderer
@@ -16,16 +18,20 @@ from rest_framework.parsers import JSONParser, BaseParser
 
 from drf_openapi.utils import view_config
 
+import logging
 
-class JSONView(APIView):
+logger = logging.getLogger(__name__)
+
+
+class JSONView(GenericAPIView):
+    lookup_url_kwarg = 'uuid'
+    # lookup_field = 'id' # same as default, 'pk'
+
     # renderer_classes = (JSONRenderer, SchemaJSRenderer, CoreJSONRenderer,)
     # renderer_classes = (CoreJSONRenderer,)
     renderer_classes = (JSONRenderer,)
     parser_classes = (JSONParser,)
     api_docs_visible_to = 'public'
-
-    class Meta:
-        model = None
 
     # def get(self, request):
     #     generator = SchemaGenerator()
@@ -33,32 +39,49 @@ class JSONView(APIView):
     #
     #     return Response(schema)
 
-    # TODO: This should be replaced by proper use of permission_classes
-    #       on views (eg with django-guardian).
-    def _check_owner(self, obj):
-        user = self.request.user
-        if user.is_superuser:
-            return obj
+    # DEPRECATED, in favor of using permission_classes on views (eg with django-guardian).
+    # def _check_owner(self, obj):
+    #     user = self.request.user
+    #     if user.is_superuser:
+    #         return obj
+    #
+    #     if hasattr(obj, 'owner'):
+    #         if user != obj.owner:
+    #             return None
+    #             # return HttpResponse(status=status.HTTP_403_FORBIDDEN,
+    #             #                     reason="Permission denied.")
+    #     return obj
 
-        if hasattr(obj, 'owner'):
-            if user != obj.owner:
-                return None
-                # return HttpResponse(status=status.HTTP_403_FORBIDDEN,
-                #                     reason="Permission denied.")
-        return obj
+    # DEPRECATED, in favor of self.get_object() from the parent class (GenericAPIView)
+    # def get_obj(self, uuid):
+    #     try:
+    #         # if we are using a native UUIDField on the model (rather than a
+    #         # CharField) we must first turn the UUID Base64 (or Base62) string
+    #         # into an actual uuid.UUID instance to do the query.
+    #         # uuid = Job.b64uuid_to_uuid(uuid)
+    #         queryset = self.get_queryset()
+    #         obj = queryset.get(id=uuid)
+    #         # return self._check_owner(obj)
+    #         return obj
+    #
+    #     except (queryset.model.DoesNotExist, ValueError):
+    #         return None
 
-    def get_obj(self, uuid):
-        try:
-            # if we are using a native UUIDField on the model (rather than a
-            # CharField) we must first turn the UUID Base64 (or Base62) string
-            # into an actual uuid.UUID instance to do the query.
-            # uuid = Job.b64uuid_to_uuid(uuid)
-            ModelClass = self.Meta.model
-            obj = ModelClass.objects.get(id=uuid)
-            return self._check_owner(obj)
+    def permission_denied(self, request, message=None):
+        """
+        If request is not permitted, determine what kind of exception to raise.
 
-        except (ModelClass.DoesNotExist, ValueError):
-            return None
+        Unlike the default DRF implementation, we don't raise PermissionDenied since
+        this is an information leak - an attacker could discover that a particular
+        object UUID exists based on 403 vs. 404 status code. By always returning 404,
+        they can't learn if the object exists or if they just don't have access.
+        """
+        if request.authenticators and not request.successful_authenticator:
+            raise NotAuthenticated()
+
+        logger.info(f"Permission denied (but sending 404 Not Found): {request.get_full_path()}")
+        # raise PermissionDenied(detail=message)
+        raise NotFound()
 
 
 class CSVTextParser(BaseParser):
@@ -128,11 +151,8 @@ class GetMixin:
         :rtype:
         -->
         """
-        obj = self.get_obj(uuid)
-        if obj is None:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-
-        serializer = self.Meta.serializer(obj)
+        obj = self.get_object()
+        serializer = self.get_serializer(instance=obj)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -153,18 +173,16 @@ class PatchMixin:
         :rtype:
         -->
         """
-        obj = self.get_obj(uuid)
-        if obj is None:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+        obj = self.get_object()
 
         if 'id' in request.data:
             return HttpResponse(status=status.HTTP_400_BAD_REQUEST,
                                 reason="id cannot be updated")
 
-        serializer = self.Meta.serializer(obj,
-                                          data=request.data,
-                                          context={'request': request},
-                                          partial=True)
+        serializer = self.get_serializer(instance=obj,
+                                         data=request.data,
+                                         context={'request': request},
+                                         partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(status=status.HTTP_204_NO_CONTENT)
@@ -192,19 +210,15 @@ class PutMixin:
         :rtype:
         -->
         """
-        if serializer_class is None:
-            serializer_class = self.Meta.serializer
 
-        obj = self.get_obj(uuid)
-        if obj is None:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+        obj = self.get_object()
 
         if 'id' in request.data:
             return HttpResponse(status=status.HTTP_400_BAD_REQUEST,
                                 reason="id cannot be updated")
 
-        serializer = serializer_class(obj, data=request.data,
-                                      context={'request': request})
+        serializer = self.get_serializer(instance=obj, data=request.data,
+                                         context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(status=status.HTTP_204_NO_CONTENT)
@@ -230,12 +244,8 @@ class DeleteMixin:
         :rtype:
         -->
         """
-        obj = self.get_obj(uuid)
-        if obj is None:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-
+        obj = self.get_object()
         obj.delete()
-
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -252,8 +262,8 @@ class PostMixin:
         -->
         """
 
-        serializer = self.Meta.serializer(data=request.data,
-                                          context={'request': request})
+        serializer = self.get_serializer(data=request.data,
+                                         context={'request': request})
         if serializer.is_valid():
             obj = serializer.save()
             # 200 status code since we include the resulting entity in the body
