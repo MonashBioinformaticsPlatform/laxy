@@ -18,6 +18,7 @@ Vue.config.performance = LAXY_ENV;
 Vue.config.silent = !LAXY_ENV;
 
 import Vuex from 'vuex';
+
 Vue.use(Vuex);
 
 import VueRouter, {RouterOptions} from 'vue-router';
@@ -31,6 +32,13 @@ Vue.use(VueAxios, axios);
 const VueMaterial = require('vue-material');
 // import VueMaterial from 'vue-material';
 Vue.use(VueMaterial);
+
+(Vue as any).material.registerTheme('default', {
+    primary: 'blue',
+    accent: 'pink',
+    warn: 'deep-orange',
+    background: 'white',
+});
 
 const VueMoment = require('vue-moment');  // for date formatting
 Vue.use(VueMoment);
