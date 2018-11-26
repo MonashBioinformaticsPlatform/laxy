@@ -201,6 +201,7 @@ INSTALLED_APPS = [
     'django_extensions',
     'django_celery_results',
     'django_celery_beat',
+    'django.db.migrations',  # enables viewing of migrations in /admin
     'django_object_actions',
     'rest_framework',
     'rest_framework.authtoken',

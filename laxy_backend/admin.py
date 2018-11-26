@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin
+from django.db.migrations.recorder import MigrationRecorder
 import django.forms
 from django.urls import reverse
 from django.contrib.humanize.templatetags import humanize
@@ -38,6 +39,12 @@ class Timestamped:
 
     def modified(self, obj):
         return humanize.naturaltime(obj.modified_time)
+
+
+class MigrationAdmin(admin.ModelAdmin):
+    ordering = ('-applied',)
+    list_display = ('app', 'name', 'applied')
+    readonly_fields = ('app', 'name', 'applied')
 
 
 class ProfileInline(admin.StackedInline):
@@ -264,6 +271,8 @@ class AccessTokenAdmin(Timestamped, VersionAdmin):
     ordering = ('-created_time', '-modified_time',)
     search_fields = ('id', 'obj', 'created_by', 'expiry_time',)
 
+
+admin.site.register(MigrationRecorder.Migration, MigrationAdmin)
 
 admin.site.register(User, LaxyUserAdmin)  # for our custom User model
 admin.site.register(UserProfile, UserProfileAdmin)
