@@ -6,7 +6,7 @@ ACME_SSL_DOMAINS="${ACME_SSL_DOMAINS-laxy.io api.laxy.io dev.laxy.io dev-api.lax
 
 # acme-client docs: https://kristaps.bsd.lv/acme-client/acme-client.1.html
 # EXTRA_ARGS="-s -F" # -s = staging, -F = force renewal
-EXTRA_ARGS="" # -s = staging, -F = force renewal
+ACME_EXTRA_ARGS="${ACME_EXTRA_ARGS- }" # -s = staging, -F = force renewal
 AGREEMENT_URL="https://letsencrypt.org/documents/LE-SA-v1.2-November-15-2017.pdf"
 
 mkdir -p /usr/share/nginx/html/.well-known/acme-challenge
@@ -26,5 +26,5 @@ fi
             -c /certs \
             -k /certs/domain.key \
             -Nnmev \
-            $EXTRA_ARGS \
+            $ACME_EXTRA_ARGS \
             $ACME_SSL_DOMAINS
