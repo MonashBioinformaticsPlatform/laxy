@@ -353,8 +353,8 @@ class JobSerializerRequest(JobSerializerBase):
         # output_files_data = validated_data.pop('output_files', [])
         compute_resource_id = validated_data.pop('compute_resource', None)
         job = models.Job.objects.create(**validated_data)
-        # user = self.context.get('request').user
-        # job.owner = user
+        user = self.context.get('request').user
+        job.owner = user
 
         if compute_resource_id:
             compute = models.ComputeResource.objects.get(id=compute_resource_id)
