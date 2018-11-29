@@ -1170,7 +1170,11 @@ def _generate_access_token_string():
     return str(uuid4())
 
 
+@reversion.register()
 class AccessToken(Timestamped, UUIDModel):
+
+    owner_field_name = 'created_by'
+
     token = CharField(db_index=True, max_length=64, blank=False, null=False,
                       default=_generate_access_token_string)
     expiry_time = DateTimeField(blank=True, null=True)

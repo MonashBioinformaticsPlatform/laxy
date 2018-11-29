@@ -32,7 +32,8 @@ from laxy_backend.views import (JobView, JobCreate,
                                 ENAQueryView, ENAFastqUrlQueryView, JobListView,
                                 EventLogCreate, EventLogListView, JobEventLogCreate,
                                 JobFileView, JobFileBulkRegistration, trigger_file_registration,
-                                SendFileToDegust, RemoteBrowseView)
+                                SendFileToDegust, RemoteBrowseView, AccessTokenCreate, AccessTokenListView,
+                                AccessTokenView, JobAccessTokenCreate)
 
 from laxy_backend.view_auth import (Login, Logout, PublicSocialSessionAuthView,
                                     CsrfCookieView, check_drf_token, UserProfileView)
@@ -136,6 +137,9 @@ api_urls = [
     re_path(r'job/(?P<uuid>[a-zA-Z0-9\-_]+)/event/$',
             JobEventLogCreate.as_view(),
             name='create_job_eventlog'),
+    re_path(r'job/(?P<job_id>[a-zA-Z0-9\-_]+)/accesstoken/$',
+            JobAccessTokenCreate.as_view(),
+            name='job_accesstoken'),
     re_path(r'job/(?P<uuid>[a-zA-Z0-9\-_]+)/$',
             JobView.as_view(),
             name='job'),
@@ -195,6 +199,17 @@ api_urls = [
     re_path(r'remote-browse/$',
             RemoteBrowseView.as_view(),
             name='remote-browse'),
+
+    re_path(r'accesstoken/$',
+            AccessTokenCreate.as_view(),
+            name='create_accesstoken'),
+    re_path(r'accesstoken/(?P<uuid>[a-zA-Z0-9\-_]+)/$',
+            AccessTokenView.as_view(),
+            name='accesstoken'),
+    re_path(r'accesstokens/$',
+            AccessTokenListView.as_view(),
+            name='list_accesstokens'),
+
 
     re_path(r'action/send-to/degust/(?P<file_id>[a-zA-Z0-9\-_]+)/$',
             SendFileToDegust.as_view(),

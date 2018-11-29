@@ -40,7 +40,7 @@ export function getThemedStatusColor(status: string) {
     return getThemeColor(color);
 }
 
-export function getThemeColor(colorClass: string, shade: number = 500) {
+export function getThemeColor(colorClass: string, shade: string | number = 500) {
     // colorClass = 'primary' | 'accent' | 'warn' | 'transparent'
     const material = (Vue as any).material;
     const namedColors = material.themes[material.currentTheme];
@@ -64,9 +64,33 @@ export function themeColors(shade: number = 500, whiteToBlack: boolean = true) {
     return hexValues;
 }
 
-export function cssGradient(color: string, angle: number = 140) {
-    return `background: ${color};
-                    background: linear-gradient(${angle}deg, ${color} 0%, rgba(0, 255, 255, 0) 10%);`;
+export function cssGradient(color: string, angle: number = 90) {
+    // return `background: ${color}; background: linear-gradient(${angle}deg, ${color} 0%, rgba(0, 255, 255, 0) 5%);`;
+    return `background: ${color}; background: linear-gradient(${angle}deg, ${color} 2%, rgba(0, 255, 255, 0) 2%);`;
+}
+
+/*
+ Use like:
+ <template>
+ <div :style="cssColorVars()">
+   <span class="someClass">bla</span>
+ </div>
+ </template>
+ <style scoped>
+   .someClass {
+     color: var(--accent);
+   }
+ </style>
+*/
+export function cssColorVars() {
+    return {
+        '--primary': `${getThemeColor('primary')}`,
+        '--accent': `${getThemeColor('accent')}`,
+        '--warn': `${getThemeColor('warn')}`,
+        '--primary-light': `${getThemeColor('primary', '100')}`,
+        '--accent-light': `${getThemeColor('accent', '100')}`,
+        '--warn-light': `${getThemeColor('warn', '100')}`,
+    }
 }
 
 export const palette: any = {

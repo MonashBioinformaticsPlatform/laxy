@@ -22,20 +22,33 @@
         </md-dialog>
 
         <md-layout md-gutter>
-            <md-layout md-flex="10" md-hide-medium>
+            <md-layout md-flex="15" md-hide-medium>
                 <md-list>
                     <nav class="vertical-sidebar-nav">
                         <md-list-item>
-                            <router-link :to="`/job/${jobId}`" exact>Summary</router-link>
+                            <router-link :to="`/job/${jobId}`" exact>
+                                <md-icon>dashboard</md-icon>
+                                <span>Summary</span></router-link>
                         </md-list-item>
                         <md-list-item>
-                            <router-link :to="`/job/${jobId}/input`">Input</router-link>
+                            <router-link :to="`/job/${jobId}/input`">
+                                <md-icon>folder_open</md-icon>
+                                <span>Input</span></router-link>
                         </md-list-item>
                         <md-list-item>
-                            <router-link :to="`/job/${jobId}/output`">Output</router-link>
+                            <router-link :to="`/job/${jobId}/output`">
+                                <md-icon>folder_open</md-icon>
+                                <span>Output</span></router-link>
                         </md-list-item>
                         <md-list-item>
-                            <router-link :to="`/job/${jobId}/eventlog`">Event Log</router-link>
+                            <router-link :to="`/job/${jobId}/eventlog`">
+                                <md-icon>view_list</md-icon>
+                                <span>Event Log</span></router-link>
+                        </md-list-item>
+                        <md-list-item>
+                            <router-link :to="`/job/${jobId}/sharing`">
+                                <md-icon>share</md-icon>
+                                <span>Sharing</span></router-link>
                         </md-list-item>
                     </nav>
                 </md-list>
@@ -56,11 +69,25 @@
                         <router-link tag="md-button" active-class="md-primary" :to="`/job/${jobId}/eventlog`">
                             Event Log
                         </router-link>
+                        <router-link tag="md-button" active-class="md-primary" :to="`/job/${jobId}/sharing`">
+                            Sharing
+                        </router-link>
                     </nav>
                 </md-toolbar>
             </md-layout>
             <md-layout v-if="job">
-                <md-layout id="top-panel" md-flex="90" :md-row="true">
+                <md-layout v-if="bannerSharingLink" md-flex="90">
+
+                    <md-button @click="$router.push(`/job/${jobId}/sharing`)"
+                               :style="cssColorVars" class="shadow shared-banner">
+                        <md-icon>link</md-icon>
+                        Shared via secret link{{ _formatExpiryString(bannerSharingLink.expiry_time, true) }}
+                    </md-button>
+
+                </md-layout>
+
+                <md-layout v-show="showTab === 'summary' || showTab == null"
+                           id="top-panel" md-flex="90" :md-row="true">
                     <!-- smaller iconish boxes in here. eg simple status -->
                     <!-- -->
                     <md-layout md-flex="25" md-flex-medium="100">
@@ -70,7 +97,7 @@
                     <md-layout md-flex="25" md-flex-medium="100">
                         <file-link-pip v-if="hasMultiQCReport"
                                        :url="fileUrlByTag('multiqc')"
-                                       style="background-color: #9fa8da">
+                                       :style="`background-color: ${cssColorVars['--primary-light']}`">
                             <span slot="title">MultiQC report</span>
                             <span slot="subtitle">Open in new tab</span>
                         </file-link-pip>
@@ -182,6 +209,107 @@
                             </md-layout>
                         </md-layout>
                     </transition>
+                    <transition name="fade">
+                        <md-layout v-show="showTab === 'sharing'" md-column-medium>
+                            <md-layout id="sharing-panel" md-column>
+                                <md-whiteframe v-if="sharingLinks && sharingLinks.length > 0" class="pad-32">
+                                    <h3>Sharing {{ sharingLinks.length | pluralize('Link') }}</h3>
+                                    <md-table>
+                                        <md-table-header>
+                                            <md-table-row>
+                                                <md-table-head>
+                                                    Link
+                                                </md-table-head>
+                                                <md-table-head>
+                                                    Expires
+                                                </md-table-head>
+                                                <md-table-head style="text-align: right;">
+                                                    Action
+                                                </md-table-head>
+                                            </md-table-row>
+                                        </md-table-header>
+                                        <md-table-body>
+                                            <md-table-row v-for="link in sharingLinks" :key="link.id">
+                                                <md-table-cell>
+                                                    <a v-if="!_linkIsExpired(link)"
+                                                       @click.prevent.stop="setClipboardFlash(_formatSharingLink(link), 'Copied link to clipboard !')"
+                                                       :id="link.id"
+                                                       :href="_formatSharingLink(link)">
+                                                        <md-icon>link</md-icon>
+                                                        {{ _formatSharingLink(link) | truncate }}
+                                                    </a>
+                                                    <span v-else>
+                                                    <md-icon>timer_off</md-icon>
+                                                        <span class="expired-link">
+                                                        {{ _formatSharingLink(link) | truncate }}
+                                                        </span>
+                                                    </span>
+                                                </md-table-cell>
+                                                <md-table-cell>
+                                                    <span :class="{ 'expired-link': _linkIsExpired(link) }">{{ _formatExpiryString(link.expiry_time) }}</span>
+                                                    <md-menu md-size="4" class="push-left">
+                                                        <md-button class="md-icon-button"
+                                                                   md-menu-trigger>
+                                                            <md-icon>arrow_drop_down</md-icon>
+                                                        </md-button>
+
+                                                        <md-menu-content>
+                                                                <span class="md-subheading"
+                                                                      style="font-weight: bold; padding-left: 16px">Change expiry to</span>
+                                                            <!--  -->
+                                                            <md-menu-item
+                                                                    v-for="expires_in in access_token_lifetime_options"
+                                                                    :key="expires_in"
+                                                                    @click="updateSharingLink(jobId, expires_in)">
+                                                                <span v-if="typeof expires_in == 'number'">
+                                                                    {{ expires_in | duration('seconds').humanize() }} from now
+                                                                </span>
+                                                                <span v-else>{{ expires_in }} expires</span>
+                                                            </md-menu-item>
+                                                        </md-menu-content>
+                                                    </md-menu>
+                                                </md-table-cell>
+                                                <md-table-cell md-numeric>
+                                                    <md-button v-if="!_linkIsExpired(link)"
+                                                               class="md-icon-button push-right"
+                                                               @click="setClipboardFlash(_formatSharingLink(link), 'Copied link to clipboard !')">
+                                                        <md-icon>file_copy</md-icon>
+                                                        <md-tooltip md-direction="top">Copy</md-tooltip>
+                                                    </md-button>
+                                                    <md-button class="md-icon-button"
+                                                               :class="{'push-right': _linkIsExpired(link)}"
+                                                               @click="deleteSharingLink(link.id)">
+                                                        <md-icon>delete</md-icon>
+                                                        <md-tooltip md-direction="top">Delete</md-tooltip>
+                                                    </md-button>
+                                                </md-table-cell>
+                                            </md-table-row>
+                                        </md-table-body>
+                                    </md-table>
+                                </md-whiteframe>
+                                <md-whiteframe class="pad-32" v-else>
+                                    <h3>Create secret public link</h3>
+                                    <md-input-container>
+                                        <label for="access_token_lifetime">Expires in</label>
+                                        <md-select name="access_token_lifetime"
+                                                   id="access_token_lifetime"
+                                                   v-model="sharing.lifetime">
+                                            <md-option v-for="expires_in in access_token_lifetime_options"
+                                                       :key="expires_in"
+                                                       :value="expires_in">
+                                                <span v-if="typeof expires_in == 'number'">
+                                                    {{ expires_in | duration('seconds').humanize() }}
+                                                </span>
+                                                <span v-else>{{ expires_in }}</span></md-option>
+                                        </md-select>
+                                    </md-input-container>
+                                    <md-button class="md-raised md-primary"
+                                               @click="updateSharingLink(jobId, sharing.lifetime)">Create
+                                    </md-button>
+                                </md-whiteframe>
+                            </md-layout>
+                        </md-layout>
+                    </transition>
                 </md-layout>
             </md-layout>
         </md-layout>
@@ -197,8 +325,14 @@
 
 <script lang="ts">
 
-    import * as _ from "lodash";
     import "es6-promise";
+
+    import filter from "lodash-es/filter";
+    import {Memoize} from "lodash-decorators";
+
+    const Clipboard = require('clipboard');
+
+    import * as moment from 'moment';
 
     import axios, {AxiosResponse} from "axios";
     import Vue, {ComponentOptions} from "vue";
@@ -229,7 +363,8 @@
         getStatusColor,
         themeColors,
         getThemeColor,
-        getThemedStatusColor
+        getThemedStatusColor,
+        cssColorVars
     } from "../palette";
 
     import {FETCH_FILESET, FETCH_JOB} from "../store";
@@ -255,7 +390,18 @@
         //       computed property derived from the store
         public jobId: string;
 
-        public showTab: "summary" | "input" | "output" | "eventlog";
+        public showTab: "summary" | "input" | "output" | "eventlog" | "sharing";
+
+        private _days = 24 * 60 * 60;  // seconds in a day
+        public access_token_lifetime_options: any[] = [
+            1 * this._days,
+            2 * this._days,
+            7 * this._days,
+            30 * this._days,
+            'Never (∞)']
+        public sharing: any = {lifetime: this.access_token_lifetime_options[3]};
+
+        public sharingLinks: any[] = [];
 
         public refreshing: boolean = false;
         public error_alert_message: string = "Everything is fine. 🐺";
@@ -268,8 +414,10 @@
         themeColors = themeColors;
         getThemeColor = getThemeColor;
         getThemedStatusColor = getThemedStatusColor;
-        // for lodash in templates
-        _ = _;
+
+        get cssColorVars() {
+            return cssColorVars();
+        }
 
         get files(): LaxyFile[] {
             return this.$store.getters.currentJobFiles;
@@ -310,6 +458,17 @@
             return fileListToTree(this.outputFiles || []);
         }
 
+        get bannerSharingLink(): string | null {
+            if (this.sharingLinks &&
+                this.sharingLinks.length > 0 &&
+                !this._linkIsExpired(this.sharingLinks[0])) {
+
+                return this.sharingLinks[0];
+            } else {
+                return null;
+            }
+        }
+
         // @Getter("currentInputFileset")
         // inputFileset: LaxyFileSet;
         //
@@ -321,6 +480,53 @@
             // this.job = _dummyJobList[0];
             // this.jobId = '5ozQUwFCJDoV0vWgmo4q6E';
             // this.refresh(null);
+        }
+
+        async setClipboard(text: string) {
+            return new Promise(function (resolve, reject) {
+                const tmp_button = document.createElement('button');
+                const clipboard = new Clipboard(tmp_button, {
+                    text: function () {
+                        return text
+                    },
+                    action: function () {
+                        return 'copy'
+                    },
+                    container: document.body
+                });
+                clipboard.on('success', function (e: Promise<string>) {
+                    clipboard.destroy();
+                    resolve(e);
+                });
+                clipboard.on('error', function (e: Promise<string>) {
+                    clipboard.destroy();
+                    reject(e);
+                });
+                tmp_button.click();
+            });
+        }
+
+        _formatSharingLink(link: any) {
+            const rel = `#/job/${link.object_id}/?access_token=${link.token}`;
+            return this._relToFullLink(rel);
+        }
+
+        _relToFullLink(rel_link: string) {
+            const tmp_a = document.createElement('a') as HTMLAnchorElement;
+            tmp_a.href = rel_link;
+            const abs_link = tmp_a.href;
+            return abs_link;
+        }
+
+        async setClipboardFlash(text: string, message: string, failMessage: string = "Failed to copy to clipboard :/") {
+            try {
+                const displayTime = (message.length * 20) + 500;
+                await this.setClipboard(text);
+                this.flashSnackBarMessage(message, displayTime);
+            } catch (error) {
+                const displayTime = (failMessage.length * 20) + 1000;
+                this.flashSnackBarMessage(failMessage, displayTime);
+            }
         }
 
         async mounted() {
@@ -368,7 +574,7 @@
         }
 
         filesByTag(tag: string): LaxyFile[] {
-            return _.filter(this.files, (f) => {
+            return filter(this.files, (f) => {
                 return f.type_tags.includes(tag);
             });
         }
@@ -379,7 +585,12 @@
                 // const response = await WebAPI.getJob(this.jobId);
                 // this.job = response.data as ComputeJob;
 
-                await this.$store.dispatch(FETCH_JOB, {job_id: this.jobId, access_token: this.$route.query.access_token});
+                this.getSharingLinks();
+
+                await this.$store.dispatch(FETCH_JOB, {
+                    job_id: this.jobId,
+                    access_token: this.$route.query.access_token
+                });
 
                 let eventlog = null;
                 if (this.showTab == "eventlog") {
@@ -459,6 +670,74 @@
             throw new NotImplementedError("Job cloning isn't yet implemented.");
         }
 
+        /*
+         NOTE: By using the WebAPI.*JobAccessToken methods, we only allow a single sharing link per-job to be created
+         (via the UI). The createAccessToken, getAccessTokens methods could be used instead to allow creation of
+         multiple tokens per-job.
+         */
+        async updateSharingLink(job_id: string, expires_in: number | string) {
+            let expiry_time = null;
+            if (typeof expires_in == 'string' && expires_in.includes('Never')) {
+                expiry_time = null;
+            } else {
+                let expiry: Date = new Date();
+                expiry.setSeconds(expires_in as number);
+                expiry_time = expiry.toISOString();
+            }
+            try {
+                const resp = await WebAPI.putJobAccessToken(this.jobId, expiry_time);
+                this.getSharingLinks();
+            } catch (error) {
+                console.log(error);
+            }
+        }
+
+        async getSharingLinks() {
+            try {
+                const resp = await WebAPI.getJobAccessToken(this.jobId);
+                this.sharingLinks = [];
+                const link = resp.data;
+                if (link) this.sharingLinks = [link];
+            } catch (error) {
+                console.log(error);
+            }
+            return [];
+        }
+
+        async deleteSharingLink(link_id: string) {
+            try {
+                const resp = await WebAPI.deleteAccessToken(link_id);
+                this.getSharingLinks();
+            } catch (error) {
+                console.log(error);
+            }
+        }
+
+        _formatExpiryString(expiry_time: Date | null, add_sentence_words?: boolean) {
+            if (expiry_time == null) {
+                if (add_sentence_words) {
+                    return ', never expires'
+                } else {
+                    return 'Never';
+                }
+            }
+            const m = moment(expiry_time);
+            let suffix = 'from now';
+            if (m.isBefore(Date.now())) {
+                suffix = 'ago';
+            }
+            let formatted = `${m.format("L, h:mm a")} (${m.fromNow(true)} ${suffix})`;
+            if (add_sentence_words) {
+                formatted = ` until ${formatted}`;
+            }
+            return formatted;
+        }
+
+        @Memoize((link: any) => link.id)
+        _linkIsExpired(link: any) {
+            return moment(link.expiry_time).isBefore(Date.now());
+        }
+
         showErrorDialog(message: string) {
             this.error_alert_message = message;
             this.openDialog("error_dialog");
@@ -482,6 +761,20 @@
 </script>
 
 <style scoped>
+    .shared-banner {
+        background-color: var(--accent-light);
+        width: 100%;
+        text-align: center;
+    }
+
+    .expired-link {
+        text-decoration: line-through;
+    }
+
+    .no-margin {
+        margin: 0 !important;
+    }
+
     .spin {
         animation: rotate 1s infinite linear;
     }

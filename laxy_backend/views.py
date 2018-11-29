@@ -2,12 +2,15 @@ import asyncio
 from collections import OrderedDict
 import coreapi
 import coreschema
+from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q
 from fnmatch import fnmatch
 import json_merge_patch
 import jsonpatch
 import logging
 import os
 import pydash
+from toolz import merge as merge_dicts
 import requests
 import rest_framework_jwt
 from celery import chain
@@ -19,7 +22,7 @@ from django.db import transaction
 from django.http import HttpResponse, StreamingHttpResponse
 from django.urls import reverse
 from django.utils.encoding import force_text
-from django_filters.rest_framework import DjangoFilterBackend
+from django_filters.rest_framework import DjangoFilterBackend, OrderingFilter
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from fs.errors import DirectoryExpected
@@ -50,7 +53,7 @@ from wsgiref.util import FileWrapper
 from drf_openapi.utils import view_config
 
 from laxy_backend.storage.http_remote_index import is_archive_link
-from .permissions import HasObjectAccessToken, IsOwner, IsSuperuser
+from .permissions import HasObjectAccessToken, IsOwner, IsSuperuser, is_owner
 from . import bcbio
 from . import ena
 from . import tasks
@@ -62,7 +65,8 @@ from .models import (Job,
                      FileSet,
                      SampleSet,
                      PipelineRun,
-                     EventLog)
+                     EventLog,
+                     AccessToken)
 from .serializers import (PatchSerializerResponse,
                           PutSerializerResponse,
                           JobSerializerResponse,
@@ -82,7 +86,8 @@ from .serializers import (PatchSerializerResponse,
                           JobFileSerializerCreateRequest,
                           InputOutputFilesResponse,
                           RedirectResponseSerializer,
-                          FileListing)
+                          FileListing,
+                          AccessTokenSerializer, JobAccessTokenRequestSerializer, JobAccessTokenResponseSerializer)
 from .util import sh_bool, laxy_sftp_url, generate_uuid, multikeysort
 from .storage import http_remote_index
 from .view_mixins import (JSONView, GetMixin, PatchMixin,
@@ -1820,6 +1825,173 @@ class JobEventLogCreate(EventLogCreate):
         return super(JobEventLogCreate, self).post(request,
                                                    version=version,
                                                    subject_obj=job)
+
+
+class AccessTokenView(JSONView, GetMixin, DeleteMixin):
+    queryset = AccessToken.objects.all()
+    serializer_class = AccessTokenSerializer
+    permission_classes = (IsOwner,)
+
+
+class AccessTokenListView(generics.ListAPIView):
+    """
+    List access tokens sorted by expiry time.
+
+    Query parameters:
+
+    * active - if set, show only non-expired tokens (eg `?active=1`)
+    * object_id - the ID of the object this access token gives permission to access
+    * content_type - the content type (eg "job") of the target object
+    * created_by - filter by user (available only to superusers)
+    """
+
+    lookup_field = 'id'
+    queryset = AccessToken.objects.all()
+    serializer_class = AccessTokenSerializer
+    filter_backends = (DjangoFilterBackend,)
+    filter_fields = ('created_by', 'content_type', 'object_id',)
+
+    permission_classes = (IsOwner,)
+
+    # FIXME: Filtering by ?content_type=job fails to return results
+    def get_queryset(self):
+        qs = self.queryset
+        active = self.request.query_params.get('active', None)
+        if active:
+            qs = qs.filter(Q(expiry_time__gt=datetime.now()) | Q(expiry_time=None))
+        if not self.request.user.is_superuser:
+            qs = qs.filter(created_by=self.request.user)
+
+        return qs.order_by('-expiry_time')
+
+
+class AccessTokenCreate(JSONView):
+    queryset = AccessToken.objects.all()
+    serializer_class = AccessTokenSerializer
+    permission_classes = (IsOwner,)
+
+    def _owns_target_object(self, user, serializer):
+        content_type = serializer.validated_data.get('content_type', 'job')
+        object_id = serializer.validated_data.get('object_id', None)
+        target_obj = ContentType.objects.get(
+            app_label='laxy_backend',
+            model=content_type
+        ).get_object_for_this_type(id=object_id)
+
+        return is_owner(user, target_obj)
+
+    def post(self, request: Request, version=None):
+        serializer = self.get_serializer(data=request.data,
+                                         context={'request': request})
+        if serializer.is_valid():
+            if not self._owns_target_object(request.user, serializer):
+                return Response(serializer.errors, status=status.HTTP_403_FORBIDDEN)
+
+            obj = serializer.save(created_by=request.user)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class JobAccessTokenCreate(JSONView, GetMixin):
+    """
+    This view can be used if we want just one token link per job which can be updated with a new expiry or deleted.
+    This simplifies the use of token links for users, at the cost of less flexibility.
+    """
+    lookup_url_kwarg = 'job_id'
+    queryset = AccessToken.objects.all()
+    serializer_class = JobAccessTokenRequestSerializer
+    permission_classes = (IsOwner,)
+
+    _job_ct = ContentType.objects.get(app_label='laxy_backend', model='job')
+
+    def _owns_target_object(self, user, obj_id):
+        target_obj = ContentType.objects.get(
+            app_label='laxy_backend',
+            model=self._job_ct
+        ).get_object_for_this_type(id=obj_id)
+
+        return is_owner(user, target_obj)
+
+    def get_queryset(self):
+        job_id = self.kwargs.get(self.lookup_url_kwarg, None)
+
+        if job_id is not None:
+            qs = self.queryset
+            if not self.request.user.is_superuser:
+                qs = qs.filter(created_by=self.request.user)
+
+            qs = (qs.filter(Q(object_id=job_id) | Q(content_type=self._job_ct))
+                  .order_by('created_time'))
+
+            return qs
+
+        return AccessToken.objects.none()
+
+    @view_config(response_serializer=JobAccessTokenResponseSerializer)
+    def get(self, request: Request, job_id: str, version=None):
+        """
+        Returns the (first created, non-hidden) AccessToken for this job.
+
+        <!--
+        :param request: The request object.
+        :type request:
+        :param uuid: The URL-encoded UUID.
+        :type uuid: str
+        :return: The response object.
+        :rtype:
+        -->
+        """
+        obj = self.get_queryset().first()
+        if obj:
+            serializer = self.response_serializer(obj)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @view_config(request_serializer=JobAccessTokenRequestSerializer,
+                 response_serializer=JobAccessTokenResponseSerializer)
+    def put(self, request: Request, job_id: str, version=None):
+        """
+        Create or update the access token for this Job.
+        This always updates the first created, non-hidden token.
+
+        (`content_type` and `object_id` will be ignored - these are always `'job'` and the value of `job_id` at
+        this endpoint).
+
+        <!--
+        :param request:
+        :type request:
+        :param job_id:
+        :type job_id:
+        :param version:
+        :type version:
+        :return:
+        :rtype:
+        -->
+        """
+        obj = self.get_queryset().first()
+
+        if obj:
+            serializer = self.request_serializer(obj, data=request.data,
+                                                 context={'request': request})
+        else:
+            data = dict(request.data)
+            data.update(object_id=job_id, content_type='job')
+            logger.info("data: %s", data)
+            serializer = self.request_serializer(data=data,
+                                                 context={'request': request})
+
+        if serializer.is_valid():
+            if not self._owns_target_object(request.user, job_id):
+                return Response(serializer.errors, status=status.HTTP_403_FORBIDDEN)
+
+            obj = serializer.save(created_by=request.user)
+
+            return Response(self.response_serializer(obj).data,
+                            status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 # TODO: This should really be POST, since it has side effects,

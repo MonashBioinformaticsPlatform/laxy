@@ -35,3 +35,9 @@ export function strToRegex(patterns: string[] | string): RegExp[] {
         return new RegExp(p);
     });
 }
+
+export function browserLocale() {
+    return navigator.languages
+        ? navigator.languages[0]
+        : (navigator.language || (navigator as any).userLanguage);
+}

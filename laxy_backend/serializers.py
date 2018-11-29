@@ -1,5 +1,7 @@
 import json
 from collections import OrderedDict
+
+from django.contrib.contenttypes.models import ContentType
 from pathlib import Path
 
 import pydash
@@ -17,6 +19,9 @@ from http.client import responses as response_code_messages
 from laxy_backend.models import SampleSet, PipelineRun, File, FileSet
 from laxy_backend.util import unique
 from . import models
+
+import logging
+logger = logging.getLogger(__name__)
 
 default_status_codes = (400, 401, 403, 404)
 
@@ -543,6 +548,7 @@ class SocialAuthLoginResponse(serializers.Serializer):
     last_name = serializers.CharField()
     email = serializers.CharField()
 
+
 class UserProfileResponse(serializers.Serializer):
     id = serializers.CharField(required=True)
     username = serializers.CharField(required=True)
@@ -557,3 +563,47 @@ class UserProfileResponse(serializers.Serializer):
     drf_token = serializers.CharField()
     jwt_authorization_header_prefix = serializers.CharField()
     drf_authorization_header_prefix = serializers.CharField()
+
+
+class AccessTokenSerializer(BaseModelSerializer):
+    content_type = serializers.CharField(required=True)
+    object_id = serializers.CharField(required=True)
+
+    class Meta:
+        model = models.AccessToken
+        fields = '__all__'
+        read_only_fields = ('id', 'created_by', 'token')
+        depth = 0
+        error_status_codes = status_codes()
+
+    def create(self, validated_data):
+        logger.info('validated_data: %s', validated_data)
+        target_id = validated_data['object_id']
+        target_content_type = validated_data['content_type']
+        target_obj = ContentType.objects.get(
+            app_label='laxy_backend',
+            model=target_content_type).get_object_for_this_type(
+            id=target_id)
+        del validated_data['content_type']
+        del validated_data['object_id']
+        obj = self.Meta.model.objects.create(**validated_data)
+        obj.created_by = getattr(self.context.get('request'), 'user', None)
+        obj.obj = target_obj
+        obj.save()
+        return obj
+
+
+class JobAccessTokenRequestSerializer(AccessTokenSerializer):
+    class Meta(AccessTokenSerializer.Meta):
+        fields = ('id', 'object_id', 'content_type',
+                  'token', 'created_by', 'expiry_time', 'created_time', 'modified_time',)
+        read_only_fields = ('id', 'created_by', 'token',)
+
+    object_id = serializers.CharField(required=False)
+    content_type = serializers.CharField(required=False)
+
+
+class JobAccessTokenResponseSerializer(JobAccessTokenRequestSerializer):
+    class Meta(JobAccessTokenRequestSerializer.Meta):
+        fields = ('id', 'object_id', 'token', 'created_by', 'expiry_time', 'created_time', 'modified_time',)
+        read_only_fields = ('id', 'object_id', 'created_by', 'token', 'object_id', 'content_type',)

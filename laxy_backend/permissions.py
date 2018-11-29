@@ -4,6 +4,7 @@ from rest_framework import permissions
 from .models import AccessToken, Job, File, FileSet
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -35,11 +36,17 @@ class IsSuperuser(permissions.BasePermission):
         return False
 
 
+def is_owner(user, obj):
+    owner_field_name = getattr(obj, 'owner_field_name', 'owner')
+    if ((hasattr(obj, owner_field_name) and user == getattr(obj, owner_field_name))
+            or user.is_superuser):
+        return True
+
+    return False
+
+
 class IsOwner(permissions.BasePermission):
 
     def has_object_permission(self, request, view, obj):
         user = request.user
-        if (hasattr(obj, 'owner') and user == obj.owner) or user.is_superuser:
-            return True
-
-        return False
+        return is_owner(user, obj)

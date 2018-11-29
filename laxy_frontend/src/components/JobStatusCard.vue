@@ -93,12 +93,15 @@
 </template>
 
 <script lang="ts">
-    import * as _ from "lodash";
     import "es6-promise";
 
     import axios, {AxiosResponse} from "axios";
     import Vue, {ComponentOptions} from "vue";
-    import {palette, getStatusColor, themeColors} from "../palette";
+    import {
+        palette,
+        getStatusColor,
+        themeColors,
+    } from "../palette";
 
     import Component from "vue-class-component";
     import {
@@ -121,6 +124,7 @@
     import {ComputeJob} from "../model";
     import {WebAPI} from "../web-api";
 
+
     @Component({filters: {}})
     export default class JobStatusCard extends Vue {
         @Prop({type: Object})
@@ -131,8 +135,6 @@
 
         getStatusColor = getStatusColor;
         themeColors = themeColors;
-        // for lodash in templates
-        _ = _;
 
         // http://werxltd.com/wp/2010/05/13/javascript-implementation-of-javas-string-hashcode-method/
         hashCode(s: string): number {

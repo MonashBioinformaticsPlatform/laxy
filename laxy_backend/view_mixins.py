@@ -1,5 +1,6 @@
 from io import StringIO, BytesIO
 from rest_framework.generics import GenericAPIView
+from rest_framework.serializers import BaseSerializer
 from typing import List, Union
 
 import csv
@@ -138,7 +139,7 @@ class RowsCSVTextParser(BaseParser):
 
 
 class GetMixin:
-    def get(self, request: Request, uuid: str) -> Response:
+    def get(self, request: Request, uuid: str) -> Union[Response, HttpResponse]:
         """
         Returns info about a model instance retrieved by UUID.
 
@@ -152,7 +153,10 @@ class GetMixin:
         -->
         """
         obj = self.get_object()
-        serializer = self.get_serializer(instance=obj)
+        if hasattr(self, 'response_serializer'):
+            serializer = self.response_serializer(obj)
+        else:
+            serializer = self.get_serializer(instance=obj)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -179,6 +183,8 @@ class PatchMixin:
             return HttpResponse(status=status.HTTP_400_BAD_REQUEST,
                                 reason="id cannot be updated")
 
+        # TODO: Support self.request_serializer and self.response_serializer here
+        #       Maybe override get_serializer in JSONView ?
         serializer = self.get_serializer(instance=obj,
                                          data=request.data,
                                          context={'request': request},
@@ -196,7 +202,7 @@ class PutMixin:
     def put(self,
             request: Request,
             uuid: str,
-            serializer_class=None) -> Union[Response, HttpResponse]:
+            serializer_class: Union[None, BaseSerializer] = None) -> Union[Response, HttpResponse]:
         """
         Replacing an existing resource.
         (Creating a new resource via specifying a UUID is not allowed)
@@ -206,6 +212,8 @@ class PutMixin:
         :type request:
         :param uuid:
         :type uuid:
+        :param serializer_class: Override default serializer_class (don't use the serializer from the base class)
+        :type serializer_class: None | rest_framework.serializers.BaseSerializer
         :return:
         :rtype:
         -->
@@ -217,8 +225,14 @@ class PutMixin:
             return HttpResponse(status=status.HTTP_400_BAD_REQUEST,
                                 reason="id cannot be updated")
 
-        serializer = self.get_serializer(instance=obj, data=request.data,
-                                         context={'request': request})
+        # TODO: Support self.request_serializer and self.response_serializer instead
+        #       of this serializer_class keyword arg
+        #       Maybe override get_serializer in JSONView ?
+        if serializer_class is None:
+            serializer_class = self.get_serializer_class()
+
+        serializer = serializer_class(instance=obj, data=request.data,
+                                      context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(status=status.HTTP_204_NO_CONTENT)
@@ -262,6 +276,8 @@ class PostMixin:
         -->
         """
 
+        # TODO: Support self.request_serializer and self.response_serializer overrides here (as per GetMixin)
+        #       Maybe override get_serializer in JSONView ?
         serializer = self.get_serializer(data=request.data,
                                          context={'request': request})
         if serializer.is_valid():

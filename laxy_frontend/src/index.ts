@@ -2,7 +2,6 @@ import 'file-loader?emitFile=false!../../.env';  // watch .env but DON'T output 
 // import 'file-loader?name=[name].[ext]!../index.html';
 import 'file-loader?name=[name].[ext]?[hash]&outputPath=assets/!../assets/favicon.ico';
 import 'vue-material/dist/vue-material.css';
-// import 'css/slider.css';
 
 import 'es6-promise';
 
@@ -10,6 +9,7 @@ const numeral = require('numeral');
 import axios, {AxiosResponse, AxiosRequestConfig} from 'axios';
 
 import Vue, {ComponentOptions} from 'vue';
+import Vue2Filters from 'vue2-filters';  // https://github.com/freearhey/vue2-filters
 
 const LAXY_ENV = process.env.LAXY_ENV === 'dev';
 Vue.config.productionTip = LAXY_ENV;
@@ -40,6 +40,11 @@ Vue.use(VueMaterial);
     background: 'white',
 });
 
+Vue.use(Vue2Filters);
+
+import {browserLocale} from './util';
+import * as moment from 'moment';
+moment.locale(browserLocale());
 const VueMoment = require('vue-moment');  // for date formatting
 Vue.use(VueMoment);
 
@@ -91,6 +96,10 @@ Vue.filter('deunderscore', function (value: string) {
 });
 
 Vue.filter('truncate', truncateString);
+
+// The vue-moment docs claim that package adds this filter, but it doesn't
+// seem to be the case. So, we add our own duration filter.
+Vue.filter('duration', moment.duration);
 
 const App = new Vue({
     el: '#app',

@@ -268,7 +268,7 @@ class AccessTokenAdmin(Timestamped, VersionAdmin):
                     'created_by',
                     'expiry_time',
                     'created')
-    ordering = ('-created_time', '-modified_time',)
+    ordering = ('-created_time', '-modified_time', '-expiry_time',)
     search_fields = ('id', 'obj', 'created_by', 'expiry_time',)
 
 

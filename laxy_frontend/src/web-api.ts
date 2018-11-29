@@ -261,4 +261,56 @@ export class WebAPI {
         }
     }
     */
+
+    public static async createAccessToken(job_id: string, expiry_time: string | null): Promise<AxiosResponse> {
+        try {
+            return await this.fetcher.post(`/api/v1/accesstoken/`,
+                {
+                    object_id: job_id,
+                    content_type: 'job',
+                    expiry_time: expiry_time
+                }) as AxiosResponse;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    public static async getAccessTokens(job_id: string, active: boolean): Promise<AxiosResponse> {
+        let url = `/api/v1/accesstokens/?object_id=${job_id}`;
+        if (active) {
+            url += '&active=1';
+        }
+        try {
+            return await this.fetcher.get(url) as AxiosResponse;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    public static async deleteAccessToken(token_id: string): Promise<AxiosResponse> {
+        try {
+            return await this.fetcher.delete(`/api/v1/accesstoken/${token_id}`) as AxiosResponse;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    public static async putJobAccessToken(job_id: string, expiry_time: string | null): Promise<AxiosResponse> {
+        try {
+            return await this.fetcher.put(`/api/v1/job/${job_id}/accesstoken/`,
+                {
+                    expiry_time: expiry_time
+                }) as AxiosResponse;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    public static async getJobAccessToken(job_id: string): Promise<AxiosResponse> {
+        try {
+            return await this.fetcher.get(`/api/v1/job/${job_id}/accesstoken/`) as AxiosResponse;
+        } catch (error) {
+            throw error;
+        }
+    }
 }

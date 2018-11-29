@@ -8,7 +8,7 @@
     "build:dev": "NODE_ENV=dev webpack",
     "build:prod": "NODE_ENV=production webpack",
     "watch": "NODE_ENV=dev NYAN=true webpack -d --watch --progress",
-    "dev": "webpack-dev-server -d --progress --watch --port 8002 --open --content-base ./ && python3 ../manage.py runserver 8001",
+    "dev": "npm run server && python3 ../manage.py runserver 8001",
     "django": "python3 ../manage.py runserver 8001",
     "test": "echo \"Error: no test specified\" && exit 1",
     "server": "NODE_ENV=dev NYAN=true webpack-dev-server -d --watch --port 8002 --open --content-base ./dist/"
@@ -26,6 +26,7 @@
   },
   "devDependencies": {
     "@types/axios": "^0.14.0",
+    "@types/clipboard": "^2.0.1",
     "@types/js-cookie": "^2.1.0",
     "@types/lodash": "^4.14.113",
     "@types/lodash-decorators": "^4.0.0",
@@ -56,12 +57,14 @@
   },
   "dependencies": {
     "axios": "^0.16.2",
+    "clipboard": "^2.0.4",
     "dotenv-webpack": "^1.5.7",
     "es6-promise": "^4.2.4",
     "js-cookie": "^2.2.0",
     "lodash": "^4.17.10",
     "lodash-decorators": "^6.0.0",
     "lodash-es": "^4.17.10",
+    "moment": "^2.22.2",
     "numeral": "^2.0.6",
     "pluralize": "^7.0.0",
     "vue": "^2.5.16",
@@ -73,6 +76,7 @@
     "vue-moment": "^2.2.0",
     "vue-property-decorator": "^6.0.0",
     "vue-router": "^3.0.1",
+    "vue2-filters": "^0.4.1",
     "vuex": "^3.0.1",
     "vuex-class": "^0.3.1"
   }
