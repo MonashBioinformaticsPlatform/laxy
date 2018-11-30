@@ -72,6 +72,7 @@ vi .env
 
 Initialize the database, create an admin user:
 ```bash
+# ./manage.py migrate contenttypes
 ./manage.py migrate
 ./manage.py makemigrations django_celery_results
 ./manage.py makemigrations sites
@@ -149,23 +150,23 @@ docker-compose down
 
 Migrate database in Docker container:
 ```bash
-docker container exec -it laxy_django_1  python manage.py migrate
+export LAXY_ENV=dev
 
 # or if the container isn't running:
-docker-compose -f docker-compose.yml -f docker-compose.dev.yml run django python manage.py migrate
+docker-compose -f docker-compose.yml -f docker-compose.${LAXY_ENV}.yml run django python manage.py migrate
 ```
 
 Dump fixtures (JSON formatted database records):
 ```bash
-docker container exec -it laxy_django_1  python manage.py dumpdata --indent 2
+docker-compose -f docker-compose.yml -f docker-compose.${LAXY_ENV}.yml run django python manage.py dumpdata --indent 2
 
 # Just the defined ComputeResource records:
-docker container exec -it laxy_django_1  python manage.py dumpdata \
+docker-compose -f docker-compose.yml -f docker-compose.${LAXY_ENV}.yml run django python manage.py dumpdata \
        laxy_backend.computeresource \
        --indent 2
 
 # Or a single model of interest, by primary key:
-docker container exec -it laxy_django_1  python manage.py dumpdata \
+docker-compose -f docker-compose.yml -f docker-compose.${LAXY_ENV}.yml run django python manage.py dumpdata \
        laxy_backend.sampleset \
        --pks 3lSCcJPlvkMq1oCO6hM4XL \
        --indent 2
@@ -195,12 +196,15 @@ DROP DATABASE test_laxy;
 In the Docker Compose setup the Postgres database lives in an attached volume container
 named `laxy_dbdata` (`dbdata`, as defined by `PGDATA` in `docker-compose.yml`).
 
-Assuming the Postgres (executable) container is `laxy_db_1` and it's data volume is `laxy_dbdata`,
+Assuming the Postgres service is called `db` and it's data volume is `dbdata`,
 we can export a tar archive of the database files like:
 
 ```bash
 DBTAR=postgres-dbdata-$(date +%s).tar
-docker run --rm --volumes-from laxy_db_1 -v $(pwd):/backup busybox tar cvf /backup/${DBTAR} /var/lib/postgresql/data/pgdata
+docker-compose run --no-deps --rm -v dbdata:/var/lib/postgresql/data/pgdata -v $(pwd):/backup db tar cvf /backup/${DBTAR} /var/lib/postgresql/data/pgdata
+
+# We can also do this with plain Docker, if we use the correct container name (eg laxy_db_1_*)
+# docker run --rm --volumes-from laxy_db_1 -v $(pwd):/backup busybox tar cvf /backup/${DBTAR} /var/lib/postgresql/data/pgdata
 ```
 
 We can copy this archive back into a new volume container (`database_copy`) like:
