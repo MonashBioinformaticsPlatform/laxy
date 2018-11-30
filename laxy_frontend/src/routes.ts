@@ -11,6 +11,7 @@ import SampleCart from './components/SampleCart.vue';
 import ENAFlow from './components/ENA/ENAFlow.vue';
 import JobList from './components/JobList.vue';
 import JobPage from './components/JobPage.vue';
+import PrivacyPolicy from "./docs/PrivacyPolicy.vue";
 
 async function requireAuth(to: any, from: any, next: Function) {
     // If profile isn't set, user MAY be authenticated (by existing an cookie/token) but
@@ -135,6 +136,11 @@ export const router = new VueRouter({
             component: JobPage,
             props: true,
             beforeEnter: requireAuth,
+        },
+        {
+            path: '/docs/privacy',
+            name: 'privacy',
+            component: PrivacyPolicy,
         },
     ],
     // mode: 'history',
