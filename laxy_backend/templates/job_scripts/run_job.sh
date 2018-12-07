@@ -37,7 +37,7 @@ readonly SCHEDULER="{{ SCHEDULER }}"
 
 readonly BDS_SINGLE_NODE="{{ BDS_SINGLE_NODE }}"
 
-if [ ${IGNORE_SELF_SIGNED_CERTIFICATE} == "yes" ]; then
+if [[ ${IGNORE_SELF_SIGNED_CERTIFICATE} == "yes" ]]; then
     readonly CURL_INSECURE="--insecure"
     readonly LAXYDL_INSECURE="--ignore-self-signed-ssl-certificate"
 else
@@ -52,7 +52,7 @@ fi
 # resources required to run the BDS workflow manager, not the tasks it launches (BDS
 # will [hopefully!] ask for appropriate resources in the sbatch jobs it launches).
 
-if [ ${BDS_SINGLE_NODE} == "yes" ]; then
+if [[ ${BDS_SINGLE_NODE} == "yes" ]]; then
     # system=local in bds.config - BDS will run each task as local process, not SLURM-aware
 
     # M3 (typically 24 core, ~256 Gb RAM nodes)
@@ -76,7 +76,7 @@ fi
 readonly SRUN_OPTIONS="--cpus-per-task=${CPUS} --mem=${MEM} -t 1-0:00 --ntasks-per-node=1 --ntasks=1 --job-name=laxy:${JOB_ID}"
 
 PREFIX_JOB_CMD=""
-if [ "${SCHEDULER}" == "slurm" ]; then
+if [[ "${SCHEDULER}" == "slurm" ]]; then
     PREFIX_JOB_CMD="srun ${SRUN_OPTIONS} "
 fi
 
@@ -88,7 +88,7 @@ function add_sik_config() {
     local SIK_CONFIG
 
     SIK_CONFIG="${JOB_PATH}/../sik.config"
-    if [ ! -f "${SIK_CONFIG}" ]; then
+    if [[ ! -f "${SIK_CONFIG}" ]]; then
         SIK_CONFIG="$(dirname RNAsik)/../opt/rnasik-${PIPELINE_VERSION}/configs/sik.config"
     fi
 
@@ -113,7 +113,7 @@ function send_event() {
     # NOTE: curl v7.55+ is required to use -H @filename
 
     VERBOSITY="--silent"
-    if [ "${DEBUG}" == "yes" ]; then
+    if [[ "${DEBUG}" == "yes" ]]; then
         # NOTE: verbose mode should NOT be used in production since it prints
         # full headers to stdout/stderr, including Authorization tokens.
         VERBOSITY="-vvv"
@@ -137,7 +137,7 @@ function send_event() {
 function install_miniconda() {
     send_event "JOB_INFO" "Installing dependencies (conda env)."
 
-    if [ ! -d "${CONDA_BASE}" ]; then
+    if [[ ! -d "${CONDA_BASE}" ]]; then
          wget --directory-prefix "${TMP}" -c "https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh"
          chmod +x "${TMP}"/Miniconda3-latest-Linux-x86_64.sh
          "${TMP}"/Miniconda3-latest-Linux-x86_64.sh -b -p "${CONDA_BASE}"
@@ -151,7 +151,7 @@ function init_conda_env() {
 
     send_event "JOB_INFO" "Activating conda environment (${env_name})."
 
-    if [ ! -d "${CONDA_BASE}/envs/${env_name}" ]; then
+    if [[ ! -d "${CONDA_BASE}/envs/${env_name}" ]]; then
 
         # Conda activate misbehaves if nounset and errexit are set
         # https://github.com/conda/conda/issues/3200
@@ -196,7 +196,7 @@ function get_reference_data_aws() {
     # TODO: Be smarter about what we pull in - eg only the reference required,
     #       not the whole lot. Assume reference is present if appropriate
     #       directory is there
-    if [ ! -d "${REFERENCE_BASE}" ]; then
+    if [[ ! -d "${REFERENCE_BASE}" ]]; then
         prev="${PWD}"
         mkdir -p "${REFERENCE_BASE}"
         cd "${REFERENCE_BASE}"
@@ -261,7 +261,7 @@ function setup_bds_config() {
     job_bds_config="${JOB_PATH}/input/bds.config"
 
     # Check for custom bds.config
-    if [ -f "${JOB_PATH}/../bds.config" ]; then
+    if [[ -f "${JOB_PATH}/../bds.config" ]]; then
         default_bds_config="${JOB_PATH}/../bds.config"
     fi
 
@@ -280,7 +280,7 @@ function setup_bds_config() {
 
     cp -n "${default_bds_config}" "${job_bds_config}" || true
 
-    if [ -f "${job_bds_config}" ]; then
+    if [[ -f "${job_bds_config}" ]]; then
         export RNASIK_BDS_CONFIG="${job_bds_config}"
     fi
 }
@@ -322,6 +322,30 @@ function update_permissions() {
     chmod "${JOB_DIR_PERMS}" "${JOB_PATH}"
     find "${JOB_PATH}" -type d -exec chmod "${JOB_DIR_PERMS}" {} \;
     find "${JOB_PATH}" -type f -exec chmod "${JOB_FILE_PERMS}" {} \;
+}
+
+function run_mash_screen() {
+    # This is additional 'pre-pipeline' step - might make sense integrating it as an option to RNAsik
+    # in the future.
+
+    #local _globstat_state=$(shopt -p globstar)
+    #shopt -s globstar
+
+    send_event "JOB_INFO" "Starting pre-pipeline Mash (organism/contamination) screen."
+
+    mash_reference_sketches="${REFERENCE_BASE}/../mash/refseq.genomes.k21s1000.msh"
+    local mash_reads=$(find "${JOB_PATH}/input" -name "*.fast[q,a].gz" | xargs)
+    local cmd="mash screen -w -p 8 ${mash_reference_sketches} ${mash_reads}"
+
+    if [[ "${SCHEDULER}" == "slurm" ]]; then
+        srun --mem 16G --cpus-per-task=8 --time=30 --qos=shortq --ntasks-per-node=1 --ntasks=1 --job-name=laxy:mash_${JOB_ID} \
+             --output="${JOB_PATH}/output/mash_screen.tab" --error="${JOB_PATH}/output/mash_screen.err" ${cmd}
+
+    else
+        eval ${cmd} | sort -gr >${JOB_PATH}/output/mash_screen.tab
+    fi
+
+    #eval "${_globstat_state}"
 }
 
 #function filter_ena_urls() {
@@ -367,7 +391,7 @@ add_sik_config
 #### Stage input data ###
 ####
 
-if [ "${JOB_INPUT_STAGED}" == "no" ]; then
+if [[ "${JOB_INPUT_STAGED}" == "no" ]]; then
 
     # send_event "INPUT_DATA_DOWNLOAD_STARTED" "Input data download started."
 
@@ -405,6 +429,8 @@ GENOME_GTF="${REFERENCE_BASE}/${REFERENCE_GENOME}/Annotation/Genes/genes.gtf"
 
 send_event "JOB_PIPELINE_STARTING" "Pipeline starting."
 
+run_mash_screen
+
 # Don't exit on error, since we want to capture exit code and do an HTTP
 # request with curl upon failure
 set +o errexit
@@ -414,7 +440,9 @@ PAIRIDS=""
 EXTN=".fastq.gz"
 detect_pairs
 
-if [ ! -z "PAIRIDS" ]; then
+send_event "JOB_INFO" "Starting RNAsik."
+
+if [[ ! -z "PAIRIDS" ]]; then
     ${PREFIX_JOB_CMD} \
        RNAsik \
            -configFile ${JOB_PATH}/input/sik.config \
@@ -450,7 +478,7 @@ EXIT_CODE=$?
 # run - so we signal when the 'pipeline' computation completed, but this is
 # considered a distinct event from the whole job completing (that will be
 # generated as a side effect of calling JOB_COMPLETE_CALLBACK_URL)
-if [ ${EXIT_CODE} -ne 0 ]; then
+if [[ ${EXIT_CODE} -ne 0 ]]; then
   send_event "JOB_PIPELINE_FAILED" "Pipeline failed." '{"exit_code":'${EXIT_CODE}'}'
 else
   send_event "JOB_PIPELINE_COMPLETED" "Pipeline completed." '{"exit_code":'${EXIT_CODE}'}'
@@ -483,6 +511,6 @@ curl -X PATCH \
      "${JOB_COMPLETE_CALLBACK_URL}"
 
 # Extra security: Remove the access token now that we don't need it anymore
-if [ ${DEBUG} != "yes" ]; then
+if [[ ${DEBUG} != "yes" ]]; then
   rm "${AUTH_HEADER_FILE}"
 fi
