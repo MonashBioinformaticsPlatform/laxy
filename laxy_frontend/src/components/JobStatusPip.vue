@@ -1,5 +1,5 @@
 <template>
-    <md-card :style="cssGradient(getThemedStatusColor(job.status))">
+    <md-card :style="cssStripe(getThemedStatusColor(job.status), 'left', 4)">
         <md-card-header>
             <md-card-header-text>
                 <div class="md-title">Job {{ job.status }}
@@ -49,7 +49,7 @@
     import '../../assets/outline-error_outline-24px.svg';
 
     import Component from "vue-class-component";
-    import {getThemedStatusColor, cssGradient} from "../palette";
+    import {getThemedStatusColor, cssStripe} from "../palette";
     import JobStatusCard from "./JobStatusCard.vue";
 
     @Component({
@@ -60,7 +60,7 @@
     })
     export default class JobStatusPip extends JobStatusCard {
         getThemedStatusColor = getThemedStatusColor;
-        cssGradient = cssGradient;
+        cssStripe = cssStripe;
 
         askCancelJob(job_id: string) {
             this.$emit('cancel', job_id);

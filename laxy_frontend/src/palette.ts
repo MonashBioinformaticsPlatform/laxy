@@ -66,7 +66,30 @@ export function themeColors(shade: number = 500, whiteToBlack: boolean = true) {
 
 export function cssGradient(color: string, angle: number = 90) {
     // return `background: ${color}; background: linear-gradient(${angle}deg, ${color} 0%, rgba(0, 255, 255, 0) 5%);`;
-    return `background: ${color}; background: linear-gradient(${angle}deg, ${color} 2%, rgba(0, 255, 255, 0) 2%);`;
+    return `background: ${color}; background: linear-gradient(${angle}deg, ${color} 8px, rgba(0, 255, 255, 0) 8px);`;
+}
+
+export function cssStripe(color: string,
+                          side: 'left' | 'right' | 'top' | 'bottom' = 'left',
+                          width: number = 8) {
+    let angle = 90;
+    switch (side) {
+        case 'left':
+            angle = 90;
+            break;
+        case 'right':
+            angle = 270;
+            break;
+        case 'top':
+            angle = 0;
+            break;
+        case 'bottom':
+            angle = 180;
+            break;
+        default:
+            angle = 90;
+    }
+    return `background: ${color}; background: linear-gradient(${angle}deg, ${color} ${width}px, rgba(0, 255, 255, 0) ${width}px);`;
 }
 
 /*
