@@ -1,4 +1,6 @@
 import VueRouter, {RouterOptions} from 'vue-router';
+// const multiguard = require('vue-router-multiguard');
+
 import {FETCH_USER_PROFILE, Store} from './store';
 
 import FrontPage from './components/FrontPage.vue';
@@ -12,22 +14,45 @@ import JobPage from './components/JobPage.vue';
 
 async function requireAuth(to: any, from: any, next: Function) {
     // If profile isn't set, user MAY be authenticated (by existing an cookie/token) but
-    // during a fresh page load where the Vuex stote is empty the initial request
+    // during a fresh page load where the Vuex store is empty the initial request
     // to grab the user profile may not be complete yet. We wait for the user profile request, when check
     // if we are actually authenticated and continue to requested route, or redirect to /login.
+    //
+    // If the incoming URL has an access_token in the query params, DON'T redirect to the login page,
+    // but still try grabbing the user profile in case they are logged in.
+
+    if (to.query.access_token != null) {
+        next();
+        return;
+    }
     if (Store.state.user_profile === null) {
         try {
             await Store.dispatch(FETCH_USER_PROFILE);
         } catch (error) {
             next('/login');
+            return;
         }
     }
     if (!Store.getters.is_authenticated) {
         next('/login');
+        return;
     } else {
         next();
+        return;
     }
 }
+
+/*
+async function preserveQueryParams(to: any, from: any, next: Function) {
+    // This preserves the query string when navigating between routes.
+    // Eg, when navigating within 'tabs' on the same job, ?access_token will be maintained.
+    if (from.query && JSON.stringify(from.query) !== JSON.stringify(to.query)) {
+        next({name: to.name, query: from.query, params: to.params});
+        // next();
+    }
+    next();
+}
+*/
 
 export const router = new VueRouter({
     routes: [

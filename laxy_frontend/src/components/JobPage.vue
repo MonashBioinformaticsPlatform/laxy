@@ -25,30 +25,12 @@
             <md-layout md-flex="15" md-hide-medium>
                 <md-list>
                     <nav class="vertical-sidebar-nav">
-                        <md-list-item>
-                            <router-link :to="`/job/${jobId}`" exact>
-                                <md-icon>dashboard</md-icon>
-                                <span>Summary</span></router-link>
-                        </md-list-item>
-                        <md-list-item>
-                            <router-link :to="`/job/${jobId}/input`">
-                                <md-icon>folder_open</md-icon>
-                                <span>Input</span></router-link>
-                        </md-list-item>
-                        <md-list-item>
-                            <router-link :to="`/job/${jobId}/output`">
-                                <md-icon>folder_open</md-icon>
-                                <span>Output</span></router-link>
-                        </md-list-item>
-                        <md-list-item>
-                            <router-link :to="`/job/${jobId}/eventlog`">
-                                <md-icon>view_list</md-icon>
-                                <span>Event Log</span></router-link>
-                        </md-list-item>
-                        <md-list-item>
-                            <router-link :to="`/job/${jobId}/sharing`">
-                                <md-icon>share</md-icon>
-                                <span>Sharing</span></router-link>
+                        <md-list-item v-for="tab in tabs" :key="tab.name">
+                            <router-link :to="{path: `/job/${jobId}${tab.path}`, query: persistQueryParams}" replace
+                                         :exact="tab.exact">
+                                <md-icon>{{ tab.icon }}</md-icon>
+                                <span>{{ tab.text }}</span>
+                            </router-link>
                         </md-list-item>
                     </nav>
                 </md-list>
@@ -57,20 +39,11 @@
             <md-layout md-hide-large-and-up md-flex-medium="100">
                 <md-toolbar class="md-transparent" style="width: 100%">
                     <nav style="width: 100%">
-                        <router-link tag="md-button" active-class="md-primary" :to="`/job/${jobId}`" exact>
-                            Summary
-                        </router-link>
-                        <router-link tag="md-button" active-class="md-primary" :to="`/job/${jobId}/input`">
-                            Input
-                        </router-link>
-                        <router-link tag="md-button" active-class="md-primary" :to="`/job/${jobId}/output`">
-                            Output
-                        </router-link>
-                        <router-link tag="md-button" active-class="md-primary" :to="`/job/${jobId}/eventlog`">
-                            Event Log
-                        </router-link>
-                        <router-link tag="md-button" active-class="md-primary" :to="`/job/${jobId}/sharing`">
-                            Sharing
+                        <router-link v-for="tab in tabs" :key="tab.name"
+                                     tag="md-button" active-class="md-primary"
+                                     :to="{path: `/job/${jobId}${tab.path}`, query: persistQueryParams}" replace
+                                     :exact="tab.exact">
+                            {{ tab.text }}
                         </router-link>
                     </nav>
                 </md-toolbar>
@@ -232,7 +205,6 @@
                                             <md-table-row v-for="link in sharingLinks" :key="link.id">
                                                 <md-table-cell>
                                                     <a v-if="!_linkIsExpired(link)"
-                                                       @click.prevent.stop="setClipboardFlash(_formatSharingLink(link), 'Copied link to clipboard !')"
                                                        :id="link.id"
                                                        :href="_formatSharingLink(link)">
                                                         <md-icon>link</md-icon>
@@ -391,6 +363,13 @@
         public jobId: string;
 
         public showTab: "summary" | "input" | "output" | "eventlog" | "sharing";
+        public tabs: any = [
+            {name: 'summary', path: '', text: 'Summary', icon: 'dashboard', exact: true},
+            {name: 'input', path: '/input', text: 'Input', icon: 'folder_open', exact: false},
+            {name: 'output', path: '/output', text: 'Output', icon: 'folder_open', exact: false},
+            {name: 'eventlog', path: '/eventlog', text: 'Event Log', icon: 'view_list', exact: false},
+            {name: 'sharing', path: '/sharing', text: 'Sharing', icon: 'share', exact: false},
+        ];
 
         private _days = 24 * 60 * 60;  // seconds in a day
         public access_token_lifetime_options: any[] = [
@@ -414,6 +393,13 @@
         themeColors = themeColors;
         getThemeColor = getThemeColor;
         getThemedStatusColor = getThemedStatusColor;
+
+        get persistQueryParams(): any {
+            if (this.$route.query.access_token) {
+                return this.$route.query;
+            }
+            return {};
+        }
 
         get cssColorVars() {
             return cssColorVars();

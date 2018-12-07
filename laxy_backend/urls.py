@@ -33,7 +33,7 @@ from laxy_backend.views import (JobView, JobCreate,
                                 EventLogCreate, EventLogListView, JobEventLogCreate,
                                 JobFileView, JobFileBulkRegistration, trigger_file_registration,
                                 SendFileToDegust, RemoteBrowseView, AccessTokenCreate, AccessTokenListView,
-                                AccessTokenView, JobAccessTokenCreate)
+                                AccessTokenView, JobAccessTokenView)
 
 from laxy_backend.view_auth import (Login, Logout, PublicSocialSessionAuthView,
                                     CsrfCookieView, check_drf_token, UserProfileView)
@@ -138,7 +138,7 @@ api_urls = [
             JobEventLogCreate.as_view(),
             name='create_job_eventlog'),
     re_path(r'job/(?P<job_id>[a-zA-Z0-9\-_]+)/accesstoken/$',
-            JobAccessTokenCreate.as_view(),
+            JobAccessTokenView.as_view(),
             name='job_accesstoken'),
     re_path(r'job/(?P<uuid>[a-zA-Z0-9\-_]+)/$',
             JobView.as_view(),

@@ -1092,7 +1092,7 @@ class SampleSet(Timestamped, UUIDModel):
             # for that user
 
             pair = OrderedDict(
-                {f'R{n+1}': file.strip() for n, file in enumerate(fields[1:])})
+                {f'R{n + 1}': file.strip() for n, file in enumerate(fields[1:])})
             samples[sample_name].append(pair)
             prev_sample_name = sample_name
 
@@ -1172,7 +1172,10 @@ def _generate_access_token_string():
 
 @reversion.register()
 class AccessToken(Timestamped, UUIDModel):
-
+    """
+    Intended to allow read-only access to the target object (obj / object_id) to
+    the bearer. Optional expiry time, if set.
+    """
     owner_field_name = 'created_by'
 
     token = CharField(db_index=True, max_length=64, blank=False, null=False,
@@ -1187,3 +1190,13 @@ class AccessToken(Timestamped, UUIDModel):
     content_type = ForeignKey(ContentType, null=True, on_delete=models.SET_NULL)
     object_id = CharField(db_index=True, null=True, max_length=24)
     obj = GenericForeignKey('content_type', 'object_id')
+
+    def is_valid(self, target_obj: Union[UUIDModel, str] = None):
+        if self.expiry_time is not None and (datetime.now() < self.expiry_time):
+            return False
+
+        if isinstance(target_obj, str):
+            return self.object_id == target_obj
+        if isinstance(target_obj, UUIDModel):
+            ct =  ContentType.objects.get_for_model(target_obj)
+            return self.object_id == target_obj.id and self.content_type == ct

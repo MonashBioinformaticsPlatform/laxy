@@ -53,7 +53,8 @@ from wsgiref.util import FileWrapper
 from drf_openapi.utils import view_config
 
 from laxy_backend.storage.http_remote_index import is_archive_link
-from .permissions import HasObjectAccessToken, IsOwner, IsSuperuser, is_owner
+from .permissions import HasObjectAccessToken, IsOwner, IsSuperuser, is_owner, \
+    HasAccessTokenForEventLogSubject, token_is_valid, FilesetHasAccessTokenForJob
 from . import bcbio
 from . import ena
 from . import tasks
@@ -987,6 +988,8 @@ class FileSetView(GetMixin,
     queryset = FileSet.objects.all()
     serializer_class = FileSetSerializer
 
+    permission_classes = (IsAuthenticated | FilesetHasAccessTokenForJob,)
+
     # permission_classes = (DjangoObjectPermissions,)
 
     @view_config(response_serializer=FileSetSerializer)
@@ -1003,6 +1006,7 @@ class FileSetView(GetMixin,
         :rtype: rest_framework.response.Response
         -->
         """
+
         return super(FileSetView, self).get(request, uuid)
 
     @view_config(request_serializer=FileSetSerializer,
@@ -1370,7 +1374,7 @@ class JobView(JSONView):
     queryset = Job.objects.all()
     serializer_class = JobSerializerResponse
 
-    permission_classes = (IsOwner | HasObjectAccessToken,)
+    permission_classes = (IsOwner | IsSuperuser | HasObjectAccessToken,)
 
     # permission_classes = (DjangoObjectPermissions,)
 
@@ -1723,16 +1727,25 @@ class EventLogListView(generics.ListAPIView):
     filter_backends = (DjangoFilterBackend,)
     filter_fields = ('user', 'object_id', 'event',)
 
-    # permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated | HasAccessTokenForEventLogSubject,)
 
     def get_queryset(self):
         if self.request.user.is_superuser:
             return (EventLog.objects
                     .order_by('-timestamp'))
         else:
-            return (EventLog.objects
-                    .filter(user=self.request.user)
-                    .order_by('-timestamp'))
+            # If access_token is provided in query string, check it is valid for the requested the Job (object_id)
+            # and if so return Events for the Job
+            token = self.request.query_params.get('access_token', None)
+            obj_id = self.request.query_params.get('object_id', None)
+            if token and obj_id and token_is_valid(token, obj_id):
+                return (EventLog.objects
+                        .filter(object_id=obj_id)
+                        .order_by('-timestamp'))
+            else:
+                return (EventLog.objects
+                        .filter(user=self.request.user)
+                        .order_by('-timestamp'))
 
 
 class EventLogCreate(JSONView):
@@ -1830,7 +1843,7 @@ class JobEventLogCreate(EventLogCreate):
 class AccessTokenView(JSONView, GetMixin, DeleteMixin):
     queryset = AccessToken.objects.all()
     serializer_class = AccessTokenSerializer
-    permission_classes = (IsOwner,)
+    permission_classes = (IsOwner | IsSuperuser,)
 
 
 class AccessTokenListView(generics.ListAPIView):
@@ -1851,16 +1864,15 @@ class AccessTokenListView(generics.ListAPIView):
     filter_backends = (DjangoFilterBackend,)
     filter_fields = ('created_by', 'content_type', 'object_id',)
 
-    permission_classes = (IsOwner,)
+    permission_classes = (IsOwner | IsSuperuser,)
 
     # FIXME: Filtering by ?content_type=job fails to return results
     def get_queryset(self):
         qs = self.queryset
         active = self.request.query_params.get('active', None)
+        # qs = qs.filter(created_by=self.request.user)  # handled by permission_classes
         if active:
             qs = qs.filter(Q(expiry_time__gt=datetime.now()) | Q(expiry_time=None))
-        if not self.request.user.is_superuser:
-            qs = qs.filter(created_by=self.request.user)
 
         return qs.order_by('-expiry_time')
 
@@ -1868,7 +1880,7 @@ class AccessTokenListView(generics.ListAPIView):
 class AccessTokenCreate(JSONView):
     queryset = AccessToken.objects.all()
     serializer_class = AccessTokenSerializer
-    permission_classes = (IsOwner,)
+    permission_classes = (IsOwner | IsSuperuser,)
 
     def _owns_target_object(self, user, serializer):
         content_type = serializer.validated_data.get('content_type', 'job')
@@ -1893,7 +1905,7 @@ class AccessTokenCreate(JSONView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class JobAccessTokenCreate(JSONView, GetMixin):
+class JobAccessTokenView(JSONView, GetMixin):
     """
     This view can be used if we want just one token link per job which can be updated with a new expiry or deleted.
     This simplifies the use of token links for users, at the cost of less flexibility.
@@ -1901,7 +1913,7 @@ class JobAccessTokenCreate(JSONView, GetMixin):
     lookup_url_kwarg = 'job_id'
     queryset = AccessToken.objects.all()
     serializer_class = JobAccessTokenRequestSerializer
-    permission_classes = (IsOwner,)
+    permission_classes = (IsOwner | IsSuperuser,)
 
     _job_ct = ContentType.objects.get(app_label='laxy_backend', model='job')
 
@@ -1917,11 +1929,9 @@ class JobAccessTokenCreate(JSONView, GetMixin):
         job_id = self.kwargs.get(self.lookup_url_kwarg, None)
 
         if job_id is not None:
-            qs = self.queryset
-            if not self.request.user.is_superuser:
-                qs = qs.filter(created_by=self.request.user)
-
-            qs = (qs.filter(Q(object_id=job_id) | Q(content_type=self._job_ct))
+            qs = (self.queryset
+                  .filter(created_by=self.request.user)  # still filter by user so superusers don't see every token in UI
+                  .filter(Q(object_id=job_id) & Q(content_type=self._job_ct))
                   .order_by('created_time'))
 
             return qs
