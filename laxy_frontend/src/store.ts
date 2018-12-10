@@ -45,7 +45,7 @@ export const Store = new Vuex.Store({
             pipelineParams: {
                 reference_genome: null,
                 description: '',
-                pipeline_version: '1.5.2',
+                pipeline_version: '1.5.3',
             },
             pipelineParams_valid: false,
             jobs: {total: 0, jobs: [] as ComputeJob[]} as JobsPage,

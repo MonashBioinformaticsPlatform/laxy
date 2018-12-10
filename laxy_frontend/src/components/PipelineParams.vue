@@ -105,6 +105,8 @@
     import {Sample, SampleSet} from "../model";
     import {WebAPI} from "../web-api";
 
+    import AVAILABLE_GENOMES from "../config/genomics/genomes";
+
     import {DummySampleList as _dummySampleList} from "../test-data";
     import {DummyPipelineConfig as _dummyPipelineConfig} from "../test-data";
 
@@ -132,28 +134,14 @@
         // public sampleset_id: string = "3NNIIOt8skAuS1w2ZfgOq";
         public selectedSamples: Array<Sample> = [];
 
-        public available_genomes: Array<ReferenceGenome> = [
-            {id: "Homo_sapiens/Ensembl/GRCh37", organism: "Human"},
-            {id: "Homo_sapiens/UCSC/hg19", organism: "Human"},
-            {id: "Homo_sapiens/NCBI/build37.2", organism: "Human"},
-            {id: "Homo_sapiens/NCBI/GRCh38", organism: "Human"},
-            {id: "Homo_sapiens/UCSC/hg38", organism: "Human"},
-            {id: "Mus_musculus/Ensembl/GRCm38", organism: "Mouse"},
-            {id: "Mus_musculus/UCSC/mm10", organism: "Mouse"},
-            {id: "Mus_musculus/NCBI/GRCm38", organism: "Mouse"},
-            {id: "Saccharomyces_cerevisiae/Ensembl/R64-1-1", organism: "Saccharomyces cerevisiae"},
-            // {id: "Saccharomyces_cerevisiae/UCSC/sacCer3", organism: "Saccharomyces cerevisiae"},
-            // {id: "Saccharomyces_cerevisiae/NCBI/build3.1", organism: "Saccharomyces cerevisiae"},
-            {id: "Caenorhabditis_elegans/Ensembl/WBcel235", organism: "Caenorhabditis elegans"},
-            {id: "Caenorhabditis_elegans/UCSC/ce10", organism: "Caenorhabditis elegans"},
-            {id: "Caenorhabditis_elegans/NCBI/WS195", organism: "Caenorhabditis elegans"},
-        ];
+        public available_genomes: Array<ReferenceGenome> = AVAILABLE_GENOMES;
+
         // public reference_genome: string = this.available_genomes[0].id;
         // public description: string = '';
 
         public reference_genome_valid: boolean = true;
 
-        public pipeline_versions = ['1.5.2'];
+        public pipeline_versions = ['1.5.3', '1.5.2'];
 
         public _samples: SampleSet;
         get samples(): SampleSet {
