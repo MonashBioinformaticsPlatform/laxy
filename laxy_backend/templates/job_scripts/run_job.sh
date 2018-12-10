@@ -172,7 +172,7 @@ function init_conda_env() {
         ${CONDA_BASE}/bin/conda install --yes -n "${env_name}" curl aria2 parallel jq awscli
         ${CONDA_BASE}/bin/pip install oneliner
 
-        pip install --process-dependency-links -e "git+https://github.com/MonashBioinformaticsPlatform/laxy#egg=laxy_downloader&subdirectory=laxy_downloader"
+        ${CONDA_BASE}/bin/pip install --process-dependency-links -e "git+https://github.com/MonashBioinformaticsPlatform/laxy#egg=laxy_downloader&subdirectory=laxy_downloader"
 
         # Then install rnasik
         ${CONDA_BASE}/bin/conda install --yes -n "${env_name}" rnasik=${2}
