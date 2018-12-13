@@ -34,8 +34,8 @@ services:
                       python3 manage.py collectstatic --no-input &&
                       python3 manage.py makemigrations --no-input &&
                       python3 manage.py migrate --no-input &&
-                      gunicorn laxy.wsgi -b 0.0.0.0:8001 --forwarded-allow-ips='*' --worker-class gevent"
-                      # python3 manage.py runserver 0.0.0.0:8001"
+                      python3 manage.py runserver 0.0.0.0:8001"
+                      # gunicorn laxy.wsgi -b 0.0.0.0:8001 --forwarded-allow-ips='*' --worker-class gevent"
                       # Insecure: This leaks the admin password (eg via ps -ef).
                       # python manage.py shell -c \"from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.filter(username='${LAXY_ADMIN_USERNAME}').count() or User.objects.create_superuser('${LAXY_ADMIN_USERNAME}', '${LAXY_ADMIN_EMAIL}', '${LAXY_ADMIN_PASSWORD}');\";"
 
