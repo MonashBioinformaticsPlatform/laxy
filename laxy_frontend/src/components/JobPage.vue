@@ -26,7 +26,8 @@
                 <md-list>
                     <nav class="vertical-sidebar-nav">
                         <md-list-item v-for="tab in tabs" :key="tab.name">
-                            <router-link :to="{path: `/job/${jobId}${tab.path}`, query: persistQueryParams}" replace
+                            <router-link v-if="tab.showWithoutAuth || isAuthenticated"
+                                         :to="{path: `/job/${jobId}${tab.path}`, query: persistQueryParams}" replace
                                          :exact="tab.exact">
                                 <md-icon>{{ tab.icon }}</md-icon>
                                 <span>{{ tab.text }}</span>
@@ -39,19 +40,23 @@
             <md-layout md-hide-large-and-up md-flex-medium="100">
                 <md-toolbar class="md-transparent" style="width: 100%">
                     <nav style="width: 100%">
-                        <router-link v-for="tab in tabs" :key="tab.name"
-                                     tag="md-button" active-class="md-primary"
-                                     :to="{path: `/job/${jobId}${tab.path}`, query: persistQueryParams}" replace
-                                     :exact="tab.exact">
-                            {{ tab.text }}
-                        </router-link>
+                        <template v-for="tab in tabs">
+                            <router-link :key="tab.name"
+                                         v-if="tab.showWithoutAuth || isAuthenticated"
+                                         tag="md-button" active-class="md-primary"
+                                         :to="{path: `/job/${jobId}${tab.path}`, query: persistQueryParams}" replace
+                                         :exact="tab.exact">
+                                {{ tab.text }}
+                            </router-link>
+                        </template>
                     </nav>
                 </md-toolbar>
             </md-layout>
             <md-layout v-if="job">
                 <md-layout v-if="bannerSharingLink" md-flex="90">
 
-                    <md-button @click="$router.push(`/job/${jobId}/sharing`)"
+                    <md-button @click="$router.push({path: `/job/${jobId}/sharing`, query: persistQueryParams})"
+                               :disabled="!isAuthenticated"
                                :style="cssColorVars" class="shadow shared-banner">
                         <md-icon>link</md-icon>
                         Shared via secret link{{ _formatExpiryString(bannerSharingLink.expiry_time, true) }}
@@ -184,7 +189,7 @@
                     </transition>
                     <transition name="fade">
                         <md-layout v-show="showTab === 'sharing'" md-column-medium>
-                            <md-layout id="sharing-panel" md-column>
+                            <md-layout v-if="isAuthenticated" id="sharing-panel" md-column>
                                 <md-whiteframe v-if="sharingLinks && sharingLinks.length > 0" class="pad-32">
                                     <h3>Sharing {{ sharingLinks.length | pluralize('Link') }}</h3>
                                     <md-table>
@@ -364,11 +369,18 @@
 
         public showTab: "summary" | "input" | "output" | "eventlog" | "sharing";
         public tabs: any = [
-            {name: 'summary', path: '', text: 'Summary', icon: 'dashboard', exact: true},
-            {name: 'input', path: '/input', text: 'Input', icon: 'folder_open', exact: false},
-            {name: 'output', path: '/output', text: 'Output', icon: 'folder_open', exact: false},
-            {name: 'eventlog', path: '/eventlog', text: 'Event Log', icon: 'view_list', exact: false},
-            {name: 'sharing', path: '/sharing', text: 'Sharing', icon: 'share', exact: false},
+            {name: 'summary', path: '', text: 'Summary', icon: 'dashboard', exact: true, showWithoutAuth: true},
+            {name: 'input', path: '/input', text: 'Input', icon: 'folder_open', exact: false, showWithoutAuth: true},
+            {name: 'output', path: '/output', text: 'Output', icon: 'folder_open', exact: false, showWithoutAuth: true},
+            {
+                name: 'eventlog',
+                path: '/eventlog',
+                text: 'Event Log',
+                icon: 'view_list',
+                exact: false,
+                showWithoutAuth: true
+            },
+            {name: 'sharing', path: '/sharing', text: 'Sharing', icon: 'share', exact: false, showWithoutAuth: false},
         ];
 
         private _days = 24 * 60 * 60;  // seconds in a day
@@ -442,6 +454,10 @@
         get outputFilesetTree(): TreeNode<LaxyFile> {
             if (!this.outputFiles) return EMPTY_TREE_ROOT;
             return fileListToTree(this.outputFiles || []);
+        }
+
+        get isAuthenticated() {
+            return this.$store.getters.is_authenticated;
         }
 
         get bannerSharingLink(): string | null {
@@ -750,6 +766,7 @@
     .shared-banner {
         background-color: var(--accent-light);
         width: 100%;
+        height: 36px;
         text-align: center;
     }
 

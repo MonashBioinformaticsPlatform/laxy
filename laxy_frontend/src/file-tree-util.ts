@@ -112,39 +112,45 @@ export function filterByFilename(files: LaxyFile[], query: string | null): LaxyF
     return filterBy(files, query, (f: LaxyFile) => f.name);
 }
 
-export function viewFile(file_id: string | LaxyFile, fileset: LaxyFileSet | null, job_id: string | null) {
+export function viewFile(file_id: string | LaxyFile,
+                         fileset: LaxyFileSet | null,
+                         job_id: string | null) {
     let file: LaxyFile | undefined;
     if (file_id instanceof String) {
         file = store.getters.fileById(file_id, fileset);
     } else {
         file = file_id as LaxyFile;
     }
+    const access_token = store.getters.jobAccessToken(job_id);
     if (file) {
         if (job_id) {
             const filepath = `${file.path}/${file.name}`;
-            window.open(WebAPI.viewJobFileByPathUrl(job_id, filepath));
+            window.open(WebAPI.viewJobFileByPathUrl(job_id, filepath, access_token));
         } else {
-            // window.open(WebAPI.viewFileByIdUrl(file.id, file.name), '_blank');
-            window.open(WebAPI.viewFileByIdUrl(file.id, file.name));
+            // window.open(WebAPI.viewFileByIdUrl(file.id, file.name, access_token), '_blank');
+            window.open(WebAPI.viewFileByIdUrl(file.id, file.name, access_token));
         }
     } else {
         console.error(`Invalid file_id: ${file_id}`);
     }
 }
 
-export function downloadFile(file_id: string | LaxyFile, fileset: LaxyFileSet | null, job_id: string | null) {
+export function downloadFile(file_id: string | LaxyFile,
+                             fileset: LaxyFileSet | null,
+                             job_id: string | null) {
     let file: LaxyFile | undefined;
     if (file_id instanceof String) {
         file = store.getters.fileById(file_id, fileset);
     } else {
         file = file_id as LaxyFile;
     }
+    const access_token = store.getters.jobAccessToken(job_id);
     if (file) {
         if (job_id) {
             const filepath = `${file.path}/${file.name}`;
-            window.open(WebAPI.downloadJobFileByPathUrl(job_id, filepath));
+            window.open(WebAPI.downloadJobFileByPathUrl(job_id, filepath, access_token));
         } else {
-            window.open(WebAPI.downloadFileByIdUrl(file.id, file.name));
+            window.open(WebAPI.downloadFileByIdUrl(file.id, file.name, access_token));
         }
     } else {
         console.error(`Invalid file_id: ${file_id}`);

@@ -25,6 +25,7 @@ export const SET_JOBS = 'set_jobs';
 export const SET_FILESET = 'set_fileset';
 export const SET_VIEWED_JOB = 'set_viewed_job';
 export const SET_API_URL = 'set_api_url';
+export const SET_JOB_ACCESS_TOKEN = 'set_job_access_token';
 
 export const FETCH_USER_PROFILE = 'fetch_user_profile';
 export const FETCH_JOBS = 'fetch_jobs';
@@ -51,6 +52,7 @@ export const Store = new Vuex.Store({
             jobs: {total: 0, jobs: [] as ComputeJob[]} as JobsPage,
             filesets: {} as { [key: string]: LaxyFileSet },
             currentViewedJob: {} as ComputeJob,
+            jobAccessTokens: {} as any,
             api_url: 'http://dev-api.laxy.io:8001',
         },
         getters: {
@@ -121,6 +123,11 @@ export const Store = new Vuex.Store({
                     return undefined;
                 };
             },
+            jobAccessToken: state => {
+                return (job_id: string) => {
+                    return state.jobAccessTokens[job_id] || null;
+                };
+            },
         },
         mutations: {
             [SET_API_URL](state, url: string) {
@@ -157,6 +164,10 @@ export const Store = new Vuex.Store({
             },
             [SET_VIEWED_JOB](state, job: ComputeJob) {
                 state.currentViewedJob = job;
+            },
+            [SET_JOB_ACCESS_TOKEN](state, params) {
+                const { job_id, token } = params;
+                Vue.set(state.jobAccessTokens, job_id, token);
             }
         },
         actions: {
@@ -237,7 +248,7 @@ export const Store = new Vuex.Store({
                     };
                     // ISO date strings to Javascipt Date objects
                     for (const key of ['created_time', 'modified_time', 'completed_time']) {
-                        update(jobs, key, function (d_str: string) {
+                        update(jobs, key, function(d_str: string) {
                             return new Date(d_str);
                         });
                     }
@@ -256,6 +267,7 @@ export const Store = new Vuex.Store({
             },
             async [FETCH_JOB]({commit, state}, params: any) {
                 const {job_id, access_token} = params;
+                if (access_token) commit(SET_JOB_ACCESS_TOKEN, {job_id: job_id, token: access_token});
                 try {
                     const response = await WebAPI.getJob(job_id, access_token);
                     commit(SET_VIEWED_JOB, response.data);

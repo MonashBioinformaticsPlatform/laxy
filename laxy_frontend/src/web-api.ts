@@ -1,9 +1,13 @@
-declare function require(path: string): any;
-
 import 'es6-promise';
 import axios, {AxiosResponse, AxiosRequestConfig} from 'axios';
 
 import * as Cookies from 'js-cookie';
+import {getDomain} from 'tldjs';
+
+import {browserLocale} from './util';
+import * as moment from 'moment';
+
+moment.locale(browserLocale());
 
 export class WebAPI {
 
@@ -65,6 +69,22 @@ export class WebAPI {
 
     public static setQueryParamAccessToken(access_token: string) {
         WebAPI.axiosConfig.params.access_token = access_token;
+    }
+
+    public static setAccessTokenCookie(obj_id: string, token: string, expiry?: Date) {
+        if (expiry == null) {
+            expiry = new Date(3000, 1, 1);
+        }
+        // TODO: use tldjs for this
+        const domain = getDomain(WebAPI.apiSettings.url);
+        // const domain = new URL(WebAPI.apiSettings.url).hostname;
+        Cookies.set(`access_token__${obj_id}`, token,
+            {
+                expires: expiry,
+                // domain: domain,
+                domain: '.laxy.io',
+                secure: true
+            });
     }
 
     public static async getCsrfToken() {
@@ -157,6 +177,7 @@ export class WebAPI {
             const url = `/api/v1/job/${job_id}/`;
             if (access_token) {
                 WebAPI.setQueryParamAccessToken(access_token);
+                WebAPI.setAccessTokenCookie(job_id, access_token);
             }
             return await this.fetcher.get(url) as AxiosResponse;
         } catch (error) {
@@ -202,15 +223,26 @@ export class WebAPI {
     }
 
     public static viewFileByIdUrl(file_id: string,
-                                  filename: string | null = null): string {
+                                  filename: string | null = null,
+                                  access_token?: string): string {
+
+        let url = `${this.baseUrl}/api/v1/file/${file_id}/`;
+
         if (filename) {
-            return `${this.baseUrl}/api/v1/file/${file_id}/content/${filename}`;
+            url = `${this.baseUrl}/api/v1/file/${file_id}/content/${filename}?access_token=${access_token}`;
         }
-        return `${this.baseUrl}/api/v1/file/${file_id}/`;
+        if (access_token) {
+            url += `?access_token=${access_token}`;
+        }
+        return url;
     }
 
     public static downloadFileByIdUrl(file_id: string,
-                                      filename: string | null = null): string {
+                                      filename: string | null = null,
+                                      access_token?: string): string {
+        if (access_token) {
+            WebAPI.setQueryParamAccessToken(access_token);
+        }
         if (filename) {
             return `${this.baseUrl}/api/v1/file/${file_id}/content/${filename}?download`;
         }
@@ -218,12 +250,21 @@ export class WebAPI {
     }
 
     public static viewJobFileByPathUrl(job_id: string,
-                                       filepath: string): string {
-        return `${this.baseUrl}/api/v1/job/${job_id}/files/${filepath}`;
+                                       filepath: string,
+                                       access_token?: string): string {
+        let url = `${this.baseUrl}/api/v1/job/${job_id}/files/${filepath}`;
+        if (access_token) {
+            url += `?access_token=${access_token}`;
+        }
+        return url;
     }
 
     public static downloadJobFileByPathUrl(job_id: string,
-                                           filepath: string): string {
+                                           filepath: string,
+                                           access_token?: string): string {
+        if (access_token) {
+            WebAPI.setQueryParamAccessToken(access_token);
+        }
         return `${this.baseUrl}/api/v1/job/${job_id}/files/${filepath}?download`;
     }
 
