@@ -179,6 +179,9 @@ function init_conda_env() {
 
         # Environment takes a very long time to solve if qualimap is included initially
         ${CONDA_BASE}/bin/conda install --yes -n "${env_name}" qualimap
+
+        # Add mash for contamination screening
+        ${CONDA_BASE}/bin/conda install --yes -n "${env_name}" mash
     fi
 
     # We shouldn't need to do this .. but it seems required for _some_ environments (ie M3)
