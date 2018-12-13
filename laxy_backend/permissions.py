@@ -8,26 +8,39 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+SAFE_METHODS = ('GET', 'HEAD', 'OPTIONS')
+
 
 def _get_content_types(*models):
     return [ContentType.objects.get_for_model(m) for m in models]
 
 
 def token_is_valid(token: str, obj_id: str):
-    return AccessToken.objects.filter(token=token,
-                                      object_id=obj_id,
-                                      # content_type__in=self.valid_content_types,
-                                      expiry_time__gt=datetime.now()).exists()
+    return (AccessToken.objects
+            .filter(token=token,
+                    # content_type__in=self.valid_content_types,
+                    object_id=obj_id)
+            .filter(Q(expiry_time__gt=datetime.now()) | Q(expiry_time=None))
+            .exists())
 
 
-class HasObjectAccessToken(permissions.BasePermission):
+class HasReadonlyObjectAccessToken(permissions.BasePermission):
     # We don't check content_type, but rely on uniqueness of object UUID primary keys
     # valid_content_types = _get_content_types(Job, File, FileSet)
 
     def has_object_permission(self, request, view, obj):
+        # These tokens are only ever for readonly access, so they are never valid
+        # for 'unsafe' HTTP methods
+        if request.method not in SAFE_METHODS:
+            return False
+
         token = request.query_params.get('access_token', None)
         if not token:
+            token = request.COOKIES.get(f'access_token__{obj.id}', None)
+
+        if not token:
             return False
+        logger.info(f'Is token valid ?: {token_is_valid(token, obj.id)}')
         return token_is_valid(token, obj.id)
 
 

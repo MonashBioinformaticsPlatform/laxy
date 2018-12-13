@@ -54,7 +54,7 @@ from wsgiref.util import FileWrapper
 from drf_openapi.utils import view_config
 
 from laxy_backend.storage.http_remote_index import is_archive_link
-from .permissions import HasObjectAccessToken, IsOwner, IsSuperuser, is_owner, \
+from .permissions import HasReadonlyObjectAccessToken, IsOwner, IsSuperuser, is_owner, \
     HasAccessTokenForEventLogSubject, token_is_valid, FilesetHasAccessTokenForJob
 from . import bcbio
 from . import ena
@@ -662,6 +662,7 @@ class FileView(StreamFileMixin,
                       JSONPatchRFC7386Parser,
                       JSONPatchRFC6902Parser)
 
+    permission_classes = (IsOwner | IsSuperuser | HasReadonlyObjectAccessToken,)
     # permission_classes = (DjangoObjectPermissions,)
 
     @view_config(response_serializer=FileSerializer)
@@ -849,6 +850,8 @@ class JobFileView(StreamFileMixin,
     queryset = Job.objects.all()
     serializer_class = FileSerializer
     parser_classes = (JSONParser,)
+
+    permission_classes = (IsOwner | IsSuperuser | HasReadonlyObjectAccessToken,)
 
     @view_config(response_serializer=FileSerializer)
     def get(self,
@@ -1510,7 +1513,7 @@ class JobView(JSONView):
     queryset = Job.objects.all()
     serializer_class = JobSerializerResponse
 
-    permission_classes = (IsOwner | IsSuperuser | HasObjectAccessToken,)
+    permission_classes = (IsOwner | IsSuperuser | HasReadonlyObjectAccessToken,)
 
     # permission_classes = (DjangoObjectPermissions,)
 
@@ -1979,7 +1982,7 @@ class JobEventLogCreate(EventLogCreate):
 class AccessTokenView(JSONView, GetMixin, DeleteMixin):
     queryset = AccessToken.objects.all()
     serializer_class = AccessTokenSerializer
-    permission_classes = (IsOwner | IsSuperuser,)
+    permission_classes = (IsAuthenticated & (IsOwner | IsSuperuser),)
 
 
 class AccessTokenListView(generics.ListAPIView):
@@ -2000,7 +2003,7 @@ class AccessTokenListView(generics.ListAPIView):
     filter_backends = (DjangoFilterBackend,)
     filter_fields = ('created_by', 'content_type', 'object_id',)
 
-    permission_classes = (IsOwner | IsSuperuser,)
+    permission_classes = (IsAuthenticated & (IsOwner | IsSuperuser),)
 
     # FIXME: Filtering by ?content_type=job fails to return results
     def get_queryset(self):
@@ -2016,7 +2019,7 @@ class AccessTokenListView(generics.ListAPIView):
 class AccessTokenCreate(JSONView):
     queryset = AccessToken.objects.all()
     serializer_class = AccessTokenSerializer
-    permission_classes = (IsOwner | IsSuperuser,)
+    permission_classes = (IsAuthenticated & (IsOwner | IsSuperuser),)
 
     def _owns_target_object(self, user, serializer):
         content_type = serializer.validated_data.get('content_type', 'job')
@@ -2049,7 +2052,7 @@ class JobAccessTokenView(JSONView, GetMixin):
     lookup_url_kwarg = 'job_id'
     queryset = AccessToken.objects.all()
     serializer_class = JobAccessTokenRequestSerializer
-    permission_classes = (IsOwner | IsSuperuser,)
+    permission_classes = (IsSuperuser, IsOwner, HasReadonlyObjectAccessToken,)
 
     _job_ct = ContentType.objects.get(app_label='laxy_backend', model='job')
 
@@ -2059,14 +2062,13 @@ class JobAccessTokenView(JSONView, GetMixin):
             model=self._job_ct
         ).get_object_for_this_type(id=obj_id)
 
-        return is_owner(user, target_obj)
+        return is_owner(user, target_obj) or self.request.user.is_superuser
 
     def get_queryset(self):
         job_id = self.kwargs.get(self.lookup_url_kwarg, None)
 
         if job_id is not None:
             qs = (self.queryset
-                  .filter(created_by=self.request.user)  # still filter by user so superusers don't see every token in UI
                   .filter(Q(object_id=job_id) & Q(content_type=self._job_ct))
                   .order_by('created_time'))
 
@@ -2116,6 +2118,13 @@ class JobAccessTokenView(JSONView, GetMixin):
         :rtype:
         -->
         """
+
+        # We must check that the requesting user own the target Job, since the IsOwner permission (on the class) in
+        # this context applies to the AccessToken, not the Job itself.
+        # This ensures users can't create an AccessToken for a Job they don't own !
+        if not self._owns_target_object(request.user, job_id):
+            return Response(status=status.HTTP_403_FORBIDDEN)
+
         obj = self.get_queryset().first()
 
         if obj:
@@ -2124,14 +2133,10 @@ class JobAccessTokenView(JSONView, GetMixin):
         else:
             data = dict(request.data)
             data.update(object_id=job_id, content_type='job')
-            logger.info("data: %s", data)
             serializer = self.request_serializer(data=data,
                                                  context={'request': request})
 
         if serializer.is_valid():
-            if not self._owns_target_object(request.user, job_id):
-                return Response(serializer.errors, status=status.HTTP_403_FORBIDDEN)
-
             obj = serializer.save(created_by=request.user)
 
             return Response(self.response_serializer(obj).data,

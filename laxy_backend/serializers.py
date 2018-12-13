@@ -577,7 +577,6 @@ class AccessTokenSerializer(BaseModelSerializer):
         error_status_codes = status_codes()
 
     def create(self, validated_data):
-        logger.info('validated_data: %s', validated_data)
         target_id = validated_data['object_id']
         target_content_type = validated_data['content_type']
         target_obj = ContentType.objects.get(
