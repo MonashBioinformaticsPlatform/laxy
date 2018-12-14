@@ -347,6 +347,28 @@ export class WebAPI {
         }
     }
 
+    /*
+     NOTE: By using the WebAPI.*JobAccessToken methods, we only allow a single sharing link per-job to be created
+     (via the UI). The createAccessToken, getAccessTokens methods could be used instead to allow creation of
+     multiple tokens per-job.
+     */
+    public static async updateSharingLink(job_id: string, expires_in: number | string) {
+        let expiry_time = null;
+        if (typeof expires_in === 'string' && expires_in.includes('Never')) {
+            expiry_time = null;
+        } else {
+            const expiry: Date = new Date();
+            expiry.setSeconds(expires_in as number);
+            expiry_time = expiry.toISOString();
+        }
+        try {
+            const resp = await WebAPI.putJobAccessToken(job_id, expiry_time);
+            return resp;
+        } catch (error) {
+            throw error;
+        }
+    }
+
     public static async getJobAccessToken(job_id: string): Promise<AxiosResponse> {
         try {
             return await this.fetcher.get(`/api/v1/job/${job_id}/accesstoken/`) as AxiosResponse;
@@ -354,4 +376,6 @@ export class WebAPI {
             throw error;
         }
     }
+
+
 }

@@ -192,77 +192,11 @@
                             <md-layout v-if="isAuthenticated" id="sharing-panel" md-column>
                                 <md-whiteframe v-if="sharingLinks && sharingLinks.length > 0" class="pad-32">
                                     <h3>Sharing {{ sharingLinks.length | pluralize('Link') }}</h3>
-                                    <md-table>
-                                        <md-table-header>
-                                            <md-table-row>
-                                                <md-table-head>
-                                                    Link
-                                                </md-table-head>
-                                                <md-table-head>
-                                                    Expires
-                                                </md-table-head>
-                                                <md-table-head style="text-align: right;">
-                                                    Action
-                                                </md-table-head>
-                                            </md-table-row>
-                                        </md-table-header>
-                                        <md-table-body>
-                                            <md-table-row v-for="link in sharingLinks" :key="link.id">
-                                                <md-table-cell>
-                                                    <a v-if="!_linkIsExpired(link)"
-                                                       :id="link.id"
-                                                       :href="_formatSharingLink(link)">
-                                                        <md-icon>link</md-icon>
-                                                        {{ _formatSharingLink(link) | truncate }}
-                                                    </a>
-                                                    <span v-else>
-                                                    <md-icon>timer_off</md-icon>
-                                                        <span class="expired-link">
-                                                        {{ _formatSharingLink(link) | truncate }}
-                                                        </span>
-                                                    </span>
-                                                </md-table-cell>
-                                                <md-table-cell>
-                                                    <span :class="{ 'expired-link': _linkIsExpired(link) }">{{ _formatExpiryString(link.expiry_time) }}</span>
-                                                    <md-menu md-size="4" class="push-left">
-                                                        <md-button class="md-icon-button"
-                                                                   md-menu-trigger>
-                                                            <md-icon>arrow_drop_down</md-icon>
-                                                        </md-button>
-
-                                                        <md-menu-content>
-                                                                <span class="md-subheading"
-                                                                      style="font-weight: bold; padding-left: 16px">Change expiry to</span>
-                                                            <!--  -->
-                                                            <md-menu-item
-                                                                    v-for="expires_in in access_token_lifetime_options"
-                                                                    :key="expires_in"
-                                                                    @click="updateSharingLink(jobId, expires_in)">
-                                                                <span v-if="typeof expires_in == 'number'">
-                                                                    {{ expires_in | duration('seconds').humanize() }} from now
-                                                                </span>
-                                                                <span v-else>{{ expires_in }} expires</span>
-                                                            </md-menu-item>
-                                                        </md-menu-content>
-                                                    </md-menu>
-                                                </md-table-cell>
-                                                <md-table-cell md-numeric>
-                                                    <md-button v-if="!_linkIsExpired(link)"
-                                                               class="md-icon-button push-right"
-                                                               @click="setClipboardFlash(_formatSharingLink(link), 'Copied link to clipboard !')">
-                                                        <md-icon>file_copy</md-icon>
-                                                        <md-tooltip md-direction="top">Copy</md-tooltip>
-                                                    </md-button>
-                                                    <md-button class="md-icon-button"
-                                                               :class="{'push-right': _linkIsExpired(link)}"
-                                                               @click="deleteSharingLink(link.id)">
-                                                        <md-icon>delete</md-icon>
-                                                        <md-tooltip md-direction="top">Delete</md-tooltip>
-                                                    </md-button>
-                                                </md-table-cell>
-                                            </md-table-row>
-                                        </md-table-body>
-                                    </md-table>
+                                    <sharing-link-list @flash-message="flashSnackBarEvent"
+                                                       @change-link="onChangeLinkEvent"
+                                                       @delete-link="onDeleteSharingLinkEvent"
+                                                       :job-id="jobId"
+                                                       :sharing-links="sharingLinks"></sharing-link-list>
                                 </md-whiteframe>
                                 <md-whiteframe class="pad-32" v-else>
                                     <h3>Create secret public link</h3>
@@ -350,9 +284,10 @@
     import FileLinkPip from "./FileLinkPip";
     import NestedFileList from "./NestedFileList";
     import {EMPTY_TREE_ROOT, fileListToTree, TreeNode} from "../file-tree-util";
+    import SharingLinkList from "./SharingLinkList";
 
     @Component({
-        components: {FileLinkPip, JobStatusPip, NestedFileList},
+        components: {SharingLinkList, FileLinkPip, JobStatusPip, NestedFileList},
         props: {
             jobId: {type: String, default: ""},
             showTab: {type: String, default: "summary"}
@@ -482,53 +417,6 @@
             // this.job = _dummyJobList[0];
             // this.jobId = '5ozQUwFCJDoV0vWgmo4q6E';
             // this.refresh(null);
-        }
-
-        async setClipboard(text: string) {
-            return new Promise(function (resolve, reject) {
-                const tmp_button = document.createElement('button');
-                const clipboard = new Clipboard(tmp_button, {
-                    text: function () {
-                        return text
-                    },
-                    action: function () {
-                        return 'copy'
-                    },
-                    container: document.body
-                });
-                clipboard.on('success', function (e: Promise<string>) {
-                    clipboard.destroy();
-                    resolve(e);
-                });
-                clipboard.on('error', function (e: Promise<string>) {
-                    clipboard.destroy();
-                    reject(e);
-                });
-                tmp_button.click();
-            });
-        }
-
-        _formatSharingLink(link: any) {
-            const rel = `#/job/${link.object_id}/?access_token=${link.token}`;
-            return this._relToFullLink(rel);
-        }
-
-        _relToFullLink(rel_link: string) {
-            const tmp_a = document.createElement('a') as HTMLAnchorElement;
-            tmp_a.href = rel_link;
-            const abs_link = tmp_a.href;
-            return abs_link;
-        }
-
-        async setClipboardFlash(text: string, message: string, failMessage: string = "Failed to copy to clipboard :/") {
-            try {
-                const displayTime = (message.length * 20) + 500;
-                await this.setClipboard(text);
-                this.flashSnackBarMessage(message, displayTime);
-            } catch (error) {
-                const displayTime = (failMessage.length * 20) + 1000;
-                this.flashSnackBarMessage(failMessage, displayTime);
-            }
         }
 
         async mounted() {
@@ -672,26 +560,17 @@
             throw new NotImplementedError("Job cloning isn't yet implemented.");
         }
 
-        /*
-         NOTE: By using the WebAPI.*JobAccessToken methods, we only allow a single sharing link per-job to be created
-         (via the UI). The createAccessToken, getAccessTokens methods could be used instead to allow creation of
-         multiple tokens per-job.
-         */
         async updateSharingLink(job_id: string, expires_in: number | string) {
-            let expiry_time = null;
-            if (typeof expires_in == 'string' && expires_in.includes('Never')) {
-                expiry_time = null;
-            } else {
-                let expiry: Date = new Date();
-                expiry.setSeconds(expires_in as number);
-                expiry_time = expiry.toISOString();
-            }
             try {
-                const resp = await WebAPI.putJobAccessToken(this.jobId, expiry_time);
+                await WebAPI.updateSharingLink(job_id, expires_in);
                 this.getSharingLinks();
             } catch (error) {
-                console.log(error);
+                throw error;
             }
+        }
+
+        async onChangeLinkEvent(params: any) {
+            await this.updateSharingLink(params.job_id, params.expires_in);
         }
 
         async getSharingLinks() {
@@ -706,7 +585,7 @@
             return [];
         }
 
-        async deleteSharingLink(link_id: string) {
+        async onDeleteSharingLinkEvent(link_id: string) {
             try {
                 const resp = await WebAPI.deleteAccessToken(link_id);
                 this.getSharingLinks();
@@ -757,6 +636,10 @@
             this.snackbar_message = msg;
             this.snackbar_duration = duration;
             (this.$refs.snackbar as any).open();
+        }
+
+        flashSnackBarEvent(params: any) {
+            this.flashSnackBarMessage(params.message, params.duration);
         }
     };
 
