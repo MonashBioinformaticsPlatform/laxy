@@ -113,13 +113,6 @@
                 </md-layout>
             </md-layout>
         </md-layout>
-        <md-snackbar md-position="bottom center" ref="snackbar"
-                     :md-duration="snackbar_duration">
-            <span>{{ snackbar_message }}</span>
-            <md-button class="md-accent" @click="$refs.snackbar.close()">
-                Dismiss
-            </md-button>
-        </md-snackbar>
     </div>
 </template>
 
@@ -155,6 +148,7 @@
     //import {AuthMixin} from "../index";
 
     import {DummyJobList as _dummyJobList} from "../test-data";
+    import {Snackbar} from "../snackbar";
 
     @Component({})
     export default class JobList extends Vue {// Mixins<AuthMixin>(AuthMixin) {
@@ -235,7 +229,7 @@
                 await this.$store.dispatch(FETCH_JOBS, this.pagination);
                 this.pagination.count = this.$store.state.jobs.total;
                 this.submitting = false;
-                if (successMessage) this.flashSnackBarMessage(successMessage, 500);
+                if (successMessage) Snackbar.flashMessage(successMessage, 500);
             } catch (error) {
                 console.log(error);
                 this.submitting = false;
@@ -255,7 +249,7 @@
                 this.submitting = true;
                 await WebAPI.cancelJob(id);
                 this.submitting = false;
-                this.flashSnackBarMessage(`Job ${id} cancelled.`);
+                Snackbar.flashMessage(`Job ${id} cancelled.`);
             } catch (error) {
                 console.log(error);
                 this.submitting = false;
@@ -275,12 +269,6 @@
 
         closeDialog(ref: string) {
             (this.$refs[ref] as MdDialog).close();
-        }
-
-        flashSnackBarMessage(msg: string, duration: number = 2000) {
-            this.snackbar_message = msg;
-            this.snackbar_duration = duration;
-            (this.$refs.snackbar as any).open();
         }
     };
 

@@ -109,6 +109,7 @@
 
     import {DummySampleList as _dummySampleList} from "../test-data";
     import {DummyPipelineConfig as _dummyPipelineConfig} from "../test-data";
+    import {Snackbar} from "../snackbar";
 
     @Component({
         components: {},
@@ -226,7 +227,7 @@
                     await WebAPI.fetcher.put(`/api/v1/pipelinerun/${this.pipelinerun_uuid}/`, data) as AxiosResponse;
                 }
                 this.submitting = false;
-                this.flashSnackBarMessage("Saved !");
+                Snackbar.flashMessage("Saved !");
             } catch (error) {
                 console.log(error);
                 this.submitting = false;
@@ -240,7 +241,7 @@
                 await this.save();
 
                 if (!this.validatePipelineParams()) {
-                    this.flashSnackBarMessage("Please select a reference genome.");
+                    Snackbar.flashMessage("Please select a reference genome.");
                     return;
                 }
 
@@ -250,7 +251,7 @@
                     response = await WebAPI.fetcher.post(
                         `/api/v1/job/?pipeline_run_id=${this.pipelinerun_uuid}`, {}) as AxiosResponse;
                     this.submitting = false;
-                    this.flashSnackBarMessage("Saved !");
+                    Snackbar.flashMessage("Saved !");
                     this.clearCart();
                     return response;
                 } catch (error) {
@@ -276,12 +277,6 @@
 
         closeDialog(ref: string) {
             (this.$refs[ref] as MdDialog).close();
-        }
-
-        flashSnackBarMessage(msg: string, duration: number = 2000) {
-            this.snackbar_message = msg;
-            this.snackbar_duration = duration;
-            (this.$refs.snackbar as any).open();
         }
 
         onSelect(rows: any) {

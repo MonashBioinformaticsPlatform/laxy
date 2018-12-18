@@ -154,6 +154,7 @@
     import {WebAPI} from "../web-api";
 
     import {DummySampleList as _dummySampleList} from "../test-data";
+    import {Snackbar} from "../snackbar";
 
     @Component({
         props: {},
@@ -237,7 +238,7 @@
                 this.submitting = true;
                 await this.$store.dispatch(SET_SAMPLES, this._samples);
                 this.submitting = false;
-                this.flashSnackBarMessage("Saved !");
+                Snackbar.flashMessage("Saved !");
             } catch (error) {
                 console.log(error);
                 this.submitting = false;
@@ -270,7 +271,7 @@
                 //     const response = await WebAPI.fetcher.patch(`/api/v1/sampleset/{this.samples.id}`, data) as AxiosResponse;
                 // }
                 this.submitting = false;
-                this.flashSnackBarMessage("Saved !");
+                Snackbar.flashMessage("Saved !");
                 // coerce JSON into a list of proper Sample objects, ensuring all properties are present
                 const _samples: Sample[] = _.map(response.data.samples, (s) => {
                     return new Sample(s)
@@ -322,12 +323,6 @@
 
         closeDialog(ref: string) {
             (this.$refs[ref] as MdDialog).close();
-        }
-
-        flashSnackBarMessage(msg: string, duration: number = 2000) {
-            this.snackbar_message = msg;
-            this.snackbar_duration = duration;
-            (this.$refs.snackbar as any).open();
         }
 
         populateSelectionList(sample_list: Array<Sample>) {

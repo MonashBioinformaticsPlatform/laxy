@@ -122,6 +122,7 @@
         simplifyFastqName,
         TreeNode
     } from "../../file-tree-util";
+    import {Snackbar} from "../../snackbar";
 
     interface DbAccession {
         accession: string;
@@ -243,7 +244,7 @@
             }
             this.$store.commit(ADD_SAMPLES, cart_samples);
             let count = this.selectedFiles.length;
-            this.flashSnackBarMessage(`Added ${count} ${pluralize("file", count)} to cart.`);
+            Snackbar.flashMessage(`Added ${count} ${pluralize("file", count)} to cart.`);
 
             //this.remove(this.selectedFiles);
             //this.selectedFiles = [];
@@ -320,12 +321,6 @@
 
         openDialog(ref: string) {
             (this.$refs[ref] as MdDialog).open();
-        }
-
-        flashSnackBarMessage(msg: string, duration: number = 2000) {
-            this.snackbar_message = msg;
-            this.snackbar_duration = duration;
-            (this.$refs.snackbar as any).open();
         }
     };
 

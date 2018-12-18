@@ -51,6 +51,7 @@
     import {ADD_SAMPLES} from "../../store";
     import {WebAPI} from "../../web-api";
     import CSVAboutBox from "./CSVAboutBox";
+    import {Snackbar} from "../../snackbar";
 
     @Component({
         components: {CSVAboutBox},
@@ -95,7 +96,7 @@
                 //     const response = await WebAPI.fetcher.patch(`/api/v1/sampleset/{this.samples.id}`, data) as AxiosResponse;
                 // }
                 this.submitting = false;
-                this.flashSnackBarMessage("Saved !");
+                Snackbar.flashMessage("Saved !");
                 // coerce JSON into a list of proper Sample objects, ensuring all properties are present
                 const _samples: Sample[] = map(response.data.samples, (s) => {
                     return new Sample(s)
@@ -108,12 +109,6 @@
                 this.openDialog("error_dialog");
                 throw error;
             }
-        }
-
-        flashSnackBarMessage(msg: string, duration: number = 2000) {
-            this.snackbar_message = msg;
-            this.snackbar_duration = duration;
-            (this.$refs.snackbar as any).open();
         }
 
         openDialog(ref: string) {

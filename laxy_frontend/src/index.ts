@@ -44,6 +44,7 @@ Vue.use(Vue2Filters);
 
 import {browserLocale} from './util';
 import * as moment from 'moment';
+
 moment.locale(browserLocale());
 const VueMoment = require('vue-moment');  // for date formatting
 Vue.use(VueMoment);
@@ -55,7 +56,13 @@ import {router} from './routes';
 // import VueMarkdown from 'vue-markdown';
 // Vue.component('vue-markdown', VueMarkdown);
 
-import {AUTHENTICATE_USER, FETCH_USER_PROFILE, SET_USER_PROFILE, Store as store} from './store';
+import {
+    AUTHENTICATE_USER,
+    FETCH_USER_PROFILE,
+    SET_GLOBAL_SNACKBAR,
+    SET_USER_PROFILE,
+    Store as store
+} from './store';
 import {truncateString} from './util';
 
 import InputDataForm from './components/InputFilesForm.vue';
@@ -77,6 +84,7 @@ Vue.component('job-page', JobPage);
 Vue.component('job-status-card', JobStatusCard);
 
 import SpinnerCubeGrid from './components/spinners/SpinnerCubeGrid.vue';
+import {Snackbar} from "./snackbar";
 
 Vue.component('spinner-cube-grid', SpinnerCubeGrid);
 
@@ -122,9 +130,17 @@ const App = new Vue({
 
         await this.$store.dispatch(FETCH_USER_PROFILE);
     },
+    mounted() {
+        const snackbar = (this.$refs.global_snackbar as any);
+        Snackbar.component = snackbar;
+        snackbar.$on('close', () => {
+            this.$store.commit(SET_GLOBAL_SNACKBAR, {message: '', duration: 2000});
+        });
+    },
     methods: {
         closeLoginDropdown() {
-            ((this.$refs as any).loginMenu as any).close();
+            const loginMenu = ((this.$refs as any).loginMenu as any);
+            if (loginMenu) loginMenu.close();
         },
         async logout(event: Event) {
             await WebAPI.logout();
@@ -154,6 +170,12 @@ const App = new Vue({
         },
         logged_in(): boolean {
             return !!this.$store.getters.is_authenticated;
+        },
+        snackbar_message(): string {
+            return this.$store.state.global_snackbar_message;
+        },
+        snackbar_duration(): number {
+            return this.$store.state.global_snackbar_duration;
         }
     }
 });

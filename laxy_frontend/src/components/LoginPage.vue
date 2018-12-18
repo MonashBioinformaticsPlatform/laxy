@@ -63,7 +63,7 @@
             </md-card>
             <md-card v-if="is_authenticated" style="margin-top: 32px;">
 
-                <survey-callout></survey-callout>
+                <callout-box></callout-box>
 
                 <md-card-content>
                     <md-layout md-column>
@@ -87,10 +87,11 @@
     import Vue from 'vue';
     import Component from "vue-class-component";
 
-    import {AUTHENTICATE_USER, SET_USER_PROFILE} from "../store";
+    import {AUTHENTICATE_USER, SET_GLOBAL_SNACKBAR, SET_USER_PROFILE} from "../store";
     import {WebAPI} from "../web-api";
 
     import CalloutBox from './CalloutBox';
+    import {Snackbar} from "../snackbar";
 
     @Component({
         components: {
@@ -130,8 +131,13 @@
             try {
                 await this.$store.dispatch(AUTHENTICATE_USER, providerData);
                 this.clearLoginForm();
+                this.routeTo('home');
             } catch (error) {
-                throw error;
+                if (error.message === 'Auth popup window closed') {
+                    Snackbar.flashMessage('Authentication cancelled');
+                } else {
+                    throw error;
+                }
             }
         }
 

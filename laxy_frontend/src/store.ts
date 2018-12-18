@@ -26,6 +26,7 @@ export const SET_FILESET = 'set_fileset';
 export const SET_VIEWED_JOB = 'set_viewed_job';
 export const SET_API_URL = 'set_api_url';
 export const SET_JOB_ACCESS_TOKEN = 'set_job_access_token';
+export const SET_GLOBAL_SNACKBAR = 'set_global_snackbar';
 
 export const FETCH_USER_PROFILE = 'fetch_user_profile';
 export const FETCH_JOBS = 'fetch_jobs';
@@ -42,7 +43,7 @@ export const Store = new Vuex.Store({
         strict: true,
         state: {
             user_profile: null as any,
-            samples: new SampleSet(),
+            samples: new SampleSet() as SampleSet,
             pipelineParams: {
                 reference_genome: null,
                 description: '',
@@ -54,6 +55,8 @@ export const Store = new Vuex.Store({
             currentViewedJob: {} as ComputeJob,
             jobAccessTokens: {} as any,
             api_url: 'http://dev-api.laxy.io:8001',
+            global_snackbar_message: '',
+            global_snackbar_duration: 2000,
         },
         getters: {
             is_authenticated: state => {
@@ -130,6 +133,10 @@ export const Store = new Vuex.Store({
             },
         },
         mutations: {
+            [SET_GLOBAL_SNACKBAR](state, params: any) {
+                state.global_snackbar_message = params.message || null;
+                state.global_snackbar_duration = params.duration || 2000;
+            },
             [SET_API_URL](state, url: string) {
                 state.api_url = url;
             },
@@ -276,5 +283,4 @@ export const Store = new Vuex.Store({
                 }
             },
         },
-    })
-;
+    });

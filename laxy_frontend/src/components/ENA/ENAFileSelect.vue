@@ -153,6 +153,7 @@
     import {WebAPI} from "../../web-api";
 
     import {ENADummySampleList as _dummysampleList} from "../../test-data";
+    import {Snackbar} from "../../snackbar";
 
     interface DbAccession {
         accession: string;
@@ -285,7 +286,7 @@
             }
             this.$store.commit(ADD_SAMPLES, cart_samples);
             let count = this.selectedSamples.length;
-            this.flashSnackBarMessage(`Added ${count} ${pluralize("sample", count)} to cart.`);
+            Snackbar.flashMessage(`Added ${count} ${pluralize("sample", count)} to cart.`);
 
             this.remove(this.selectedSamples);
             this.selectedSamples = [];
@@ -333,12 +334,6 @@
 
         openDialog(ref: string) {
             (this.$refs[ref] as MdDialog).open();
-        }
-
-        flashSnackBarMessage(msg: string, duration: number = 2000) {
-            this.snackbar_message = msg;
-            this.snackbar_duration = duration;
-            (this.$refs.snackbar as any).open();
         }
     };
 

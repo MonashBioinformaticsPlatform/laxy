@@ -285,6 +285,7 @@
     import NestedFileList from "./NestedFileList";
     import {EMPTY_TREE_ROOT, fileListToTree, TreeNode} from "../file-tree-util";
     import SharingLinkList from "./SharingLinkList";
+    import {Snackbar} from "../snackbar";
 
     @Component({
         components: {SharingLinkList, FileLinkPip, JobStatusPip, NestedFileList},
@@ -521,7 +522,7 @@
                 // }
 
                 this.refreshing = false;
-                if (successMessage) this.flashSnackBarMessage(successMessage, 500);
+                if (successMessage) Snackbar.flashMessage(successMessage, 500);
             } catch (error) {
                 console.log(error);
                 this.refreshing = false;
@@ -542,7 +543,7 @@
                 this.refreshing = true;
                 await WebAPI.cancelJob(this.jobId);
                 this.refreshing = false;
-                this.flashSnackBarMessage("Job cancelled.");
+                Snackbar.flashMessage("Job cancelled.");
             } catch (error) {
                 console.log(error);
                 this.refreshing = false;
@@ -632,14 +633,8 @@
             (this.$refs[ref] as MdDialog).close();
         }
 
-        flashSnackBarMessage(msg: string, duration: number = 2000) {
-            this.snackbar_message = msg;
-            this.snackbar_duration = duration;
-            (this.$refs.snackbar as any).open();
-        }
-
         flashSnackBarEvent(params: any) {
-            this.flashSnackBarMessage(params.message, params.duration);
+            Snackbar.flashMessage(params.message, params.duration);
         }
     };
 
