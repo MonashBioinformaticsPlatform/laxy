@@ -144,7 +144,7 @@
         @Prop({default: true, type: Boolean})
         public showAboutBox: boolean;
 
-        public url: string = "https://bioinformatics.erc.monash.edu/home/andrewperry/test/sample_data/";
+        public url: string = "";
         public initialUrl: string = "";  // the URL initially submitted to the form, for tracking navigation state
         public navigatedUrl: string = "";
         public previousUrl: string = "";
