@@ -251,6 +251,7 @@
                         `/api/v1/job/?pipeline_run_id=${this.pipelinerun_uuid}`, {}) as AxiosResponse;
                     this.submitting = false;
                     this.flashSnackBarMessage("Saved !");
+                    this.clearCart();
                     return response;
                 } catch (error) {
                     console.log(error);
@@ -263,6 +264,10 @@
                 console.error(error);
             }
             return null;
+        }
+
+        clearCart() {
+            this.$store.dispatch(SET_SAMPLES, new SampleSet());
         }
 
         openDialog(ref: string) {
