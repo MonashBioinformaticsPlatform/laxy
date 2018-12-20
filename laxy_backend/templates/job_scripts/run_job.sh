@@ -336,7 +336,12 @@ function run_mash_screen() {
 
     send_event "JOB_INFO" "Starting pre-pipeline Mash screen (detects organism/contamination)."
 
-    mash_reference_sketches="${REFERENCE_BASE}/../mash/refseq.genomes.k21s1000.msh"
+    local -r mash_db_base="${REFERENCE_BASE}/../mash"
+    local -r mash_reference_sketches="${mash_db_base}/refseq.genomes.k21s1000.msh"
+
+    mkdir -p "${mash_db_base}"
+    curl -L -o "${mash_reference_sketches}" -C - "https://gembox.cbcb.umd.edu/mash/refseq.genomes.k21s1000.msh" || true
+
     local mash_reads=$(find "${JOB_PATH}/input" -name "*.fast[q,a].gz" | xargs)
     local cmd="mash screen -w -p 8 ${mash_reference_sketches} ${mash_reads}"
 
