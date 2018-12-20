@@ -298,20 +298,20 @@ function get_input_data_urls() {
 function detect_pairs() {
     PAIRIDS=""
     EXTN=".fastq.gz"
-    if stat -t "${JOB_PATH}/input/*_R2_001.fastq.gz" >/dev/null 2>&1; then
+    if stat -t "${JOB_PATH}"/input/*_R2_001.fastq.gz >/dev/null 2>&1; then
       EXTN="_001.fastq.gz"
       PAIRIDS="_R1,_R2"
-    elif stat -t "${JOB_PATH}/input/*_R2.fastq.gz" >/dev/null 2>&1; then
+    elif stat -t "${JOB_PATH}"/input/*_R2.fastq.gz >/dev/null 2>&1; then
       EXTN=".fastq.gz"
       PAIRIDS="_R1,_R2"
-    elif stat -t "${JOB_PATH}/input/*_2.fastq.gz" >/dev/null 2>&1; then
+    elif stat -t "${JOB_PATH}"/input/*_2.fastq.gz >/dev/null 2>&1; then
       EXTN=".fastq.gz"
       PAIRIDS="_1,_2"
     # Very occasionally, we get FASTA format reads
-    elif stat -t "${JOB_PATH}/input/*_R2.fasta.gz" >/dev/null 2>&1; then
+    elif stat -t "${JOB_PATH}"/input/*_R2.fasta.gz >/dev/null 2>&1; then
       EXTN=".fasta.gz"
       PAIRIDS="_R1,_R2"
-    elif stat -t "${JOB_PATH}/input/*_2.fasta.gz" >/dev/null 2>&1; then
+    elif stat -t "${JOB_PATH}"/input/*_2.fasta.gz >/dev/null 2>&1; then
       EXTN=".fasta.gz"
       PAIRIDS="_1,_2"
     fi
@@ -334,7 +334,7 @@ function run_mash_screen() {
     #local _globstat_state=$(shopt -p globstar)
     #shopt -s globstar
 
-    send_event "JOB_INFO" "Starting pre-pipeline Mash (organism/contamination) screen."
+    send_event "JOB_INFO" "Starting pre-pipeline Mash screen (detects organism/contamination)."
 
     mash_reference_sketches="${REFERENCE_BASE}/../mash/refseq.genomes.k21s1000.msh"
     local mash_reads=$(find "${JOB_PATH}/input" -name "*.fast[q,a].gz" | xargs)
