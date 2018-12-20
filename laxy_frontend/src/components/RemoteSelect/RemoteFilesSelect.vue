@@ -223,6 +223,9 @@
             const cart_samples: Sample[] = [];
             const added_files: LaxyFile[] = [];
             for (let f of this.selectedFiles) {
+                if (f.name === '..') {
+                    continue;
+                }
                 if (added_files.includes(f)) continue;
                 const pair = findPair(f, this.selectedFiles);
 
