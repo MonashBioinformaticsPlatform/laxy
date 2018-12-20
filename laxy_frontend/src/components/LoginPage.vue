@@ -87,11 +87,16 @@
     import Vue from 'vue';
     import Component from "vue-class-component";
 
+    import {
+        Prop,
+    } from "vue-property-decorator";
+
     import {AUTHENTICATE_USER, SET_GLOBAL_SNACKBAR, SET_USER_PROFILE} from "../store";
     import {WebAPI} from "../web-api";
 
     import CalloutBox from './CalloutBox';
     import {Snackbar} from "../snackbar";
+
 
     @Component({
         components: {
@@ -99,6 +104,10 @@
         }
     })
     export default class LoginPage extends Vue {
+
+        @Prop({default: '/', type: String})
+        public redirectPath: string;
+
         public login_form_username: string = '';
         public login_form_password: string = '';
 
@@ -131,7 +140,7 @@
             try {
                 await this.$store.dispatch(AUTHENTICATE_USER, providerData);
                 this.clearLoginForm();
-                this.routeTo('home');
+                this.$router.push({path: this.redirectPath});
             } catch (error) {
                 if (error.message === 'Auth popup window closed') {
                     Snackbar.flashMessage('Authentication cancelled');
@@ -144,16 +153,12 @@
         public async logout(event: Event) {
             await WebAPI.logout();
             this.$store.commit(SET_USER_PROFILE, null);
-            this.routeTo('home');
+            this.$router.push({name: 'home'});
         }
 
         public clearLoginForm() {
             this.login_form_username = '';
             this.login_form_password = '';
-        }
-
-        public routeTo(name: string, params: any = {}) {
-            (this as any).$router.push({name: name, params: params});
         }
     }
 </script>

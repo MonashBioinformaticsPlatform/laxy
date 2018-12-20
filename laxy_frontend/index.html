@@ -218,9 +218,9 @@
             </div>
             <div v-show="!logged_in">
                 <!--<md-icon class="md-primary">account_circle</md-icon>-->
-                <router-link tag="md-button" :to="{name: 'login'}" class="md-raised md-primary" md-menu-trigger>Sign
-                    in
-                </router-link>
+                <router-link tag="md-button"
+                             :to="{name: 'login', params: {redirectPath: $router.currentRoute.path} }"
+                             class="md-raised md-primary" md-menu-trigger>Sign in</router-link>
             </div>
         </md-toolbar>
 
