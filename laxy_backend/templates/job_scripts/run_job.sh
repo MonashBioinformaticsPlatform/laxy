@@ -344,13 +344,17 @@ function run_mash_screen() {
 
     local mash_reads=$(find "${JOB_PATH}/input" -name "*.fast[q,a].gz" | xargs)
     local cmd="mash screen -w -p 8 ${mash_reference_sketches} ${mash_reads}"
+    local mash_outfile="${JOB_PATH}/output/mash_screen.tab"
 
     if [[ "${SCHEDULER}" == "slurm" ]]; then
         srun --mem 16G --cpus-per-task=8 --time=30 --qos=shortq --ntasks-per-node=1 --ntasks=1 --job-name=laxy:mash_${JOB_ID} \
-             --output="${JOB_PATH}/output/mash_screen.tab" --error="${JOB_PATH}/output/mash_screen.err" ${cmd}
-
+             --error="${JOB_PATH}/output/mash_screen.err" ${cmd} | sort -gr >"${mash_outfile}" && \
+               grep _ViralProj "${mash_outfile}" >${JOB_PATH}/output/mash_screen_virus.tab && \
+               grep -v _ViralProj "${mash_outfile}" >${JOB_PATH}/output/mash_screen_nonvirus.tab
     else
-        eval ${cmd} | sort -gr >${JOB_PATH}/output/mash_screen.tab
+        eval ${cmd} | sort -gr >"${mash_outfile}" && \
+        grep _ViralProj "${mash_outfile}" >${JOB_PATH}/output/mash_screen_virus.tab && \
+        grep -v _ViralProj "${mash_outfile}" >${JOB_PATH}/output/mash_screen_nonvirus.tab
     fi
 
     #eval "${_globstat_state}"
