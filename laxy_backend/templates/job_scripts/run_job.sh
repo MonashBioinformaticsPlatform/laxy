@@ -299,8 +299,8 @@ function detect_pairs() {
     PAIRIDS=""
     EXTN=".fastq.gz"
     if stat -t "${JOB_PATH}"/input/*_R2_001.fastq.gz >/dev/null 2>&1; then
-      EXTN="_001.fastq.gz"
-      PAIRIDS="_R1,_R2"
+      EXTN=".fastq.gz"
+      PAIRIDS="_R1_001,_R2_001"
     elif stat -t "${JOB_PATH}"/input/*_R2.fastq.gz >/dev/null 2>&1; then
       EXTN=".fastq.gz"
       PAIRIDS="_R1,_R2"
