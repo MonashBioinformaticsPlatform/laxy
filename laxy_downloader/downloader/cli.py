@@ -241,6 +241,10 @@ def _run_download_cli(args, rpc_secret):
 
 def main():
     parser = add_commandline_args(argparse.ArgumentParser())
+
+    if len(sys.argv) == 1:
+        parser.print_help()
+
     args = parser.parse_args()
 
     if args.quiet:
