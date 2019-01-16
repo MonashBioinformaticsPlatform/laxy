@@ -129,7 +129,7 @@ const available_genomes: ReferenceGenome[] = [
     // {'id': 'Saccharomyces_cerevisiae/NCBI/build2.1', 'organism': 'Saccharomyces cerevisiae'},
     {'id': 'Saccharomyces_cerevisiae/NCBI/build3.1', 'organism': 'Saccharomyces cerevisiae'},
     // {'id': 'Saccharomyces_cerevisiae/UCSC/sacCer2', 'organism': 'Saccharomyces cerevisiae'},
-    {'id': 'Saccharomyces_cerevisiae/UCSC/sacCer3', 'organism': 'Saccharomyces cerevisiae'},
+    // {'id': 'Saccharomyces_cerevisiae/UCSC/sacCer3', 'organism': 'Saccharomyces cerevisiae'},
     // {'id': 'Schizosaccharomyces_pombe/Ensembl/EF1', 'organism': 'Schizosaccharomyces pombe'},
     // {'id': 'Schizosaccharomyces_pombe/Ensembl/EF2', 'organism': 'Schizosaccharomyces pombe'},
     // {'id': 'Sorangium_cellulosum_So_ce_56/NCBI/2007-11-27', 'organism': 'Sorangium cellulosum So ce 56'},
