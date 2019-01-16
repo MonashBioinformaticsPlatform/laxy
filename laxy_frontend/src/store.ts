@@ -45,7 +45,7 @@ export const Store = new Vuex.Store({
             user_profile: null as any,
             samples: new SampleSet() as SampleSet,
             pipelineParams: {
-                reference_genome: null,
+                genome: null,
                 description: '',
                 pipeline_version: '1.5.3',
             },

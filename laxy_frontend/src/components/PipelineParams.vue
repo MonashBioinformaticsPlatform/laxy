@@ -161,12 +161,12 @@
         }
 
         get reference_genome() {
-            return this.$store.getters.pipelineParams.reference_genome;
+            return this.$store.getters.pipelineParams.genome;
         }
 
         set reference_genome(id: string) {
             let state = Object.assign({}, this.$store.state.pipelineParams);
-            state.reference_genome = id;
+            state.genome = id;
             this.$store.commit(SET_PIPELINE_PARAMS, state);
             this.validatePipelineParams();
         }
@@ -193,9 +193,7 @@
         prepareData() {
             let data = {
                 "sample_set": this.$store.state.samples.id,
-                "params": {
-                    "genome": this.reference_genome,
-                },
+                "params": this.$store.getters.pipelineParams,
                 "pipeline": "rnasik",
                 "description": this.description,
             };
