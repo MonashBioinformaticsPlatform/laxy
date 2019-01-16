@@ -213,8 +213,10 @@ We can copy this archive back into a new volume container (`database_copy`) like
 # DBTAR=postgres-dbdata-*.tar
 DBVOLNAME=database_copy
 # DBVOLNAME=laxy_dbdata
-docker volume create database_copy
+docker-compose stop db
+docker volume create ${DBVOLNAME}
 docker run --rm -v ${DBVOLNAME}:/var/lib/postgresql/data/pgdata  -v $(pwd):/backup busybox tar xvf /backup/${DBTAR}
+docker-compose start db
 ```
 
 To clone the volume 'directly' into a new volume, use the 
