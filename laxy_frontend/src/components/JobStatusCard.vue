@@ -60,6 +60,13 @@
                             {{ job.created_time| moment('from') }}
                         </md-table-cell>
                     </md-table-row>
+                    <md-table-row v-for="row in extraTableRows" :key="row[0]">
+                        <md-table-cell>{{ row[0] }}</md-table-cell>
+                        <md-table-cell>
+                            {{ row[1] }}
+                            <!-- <span v-html="row[1]"></span> -->
+                        </md-table-cell>
+                    </md-table-row>
                     <md-table-row v-if="job.completed_time">
                         <md-table-cell>Completed</md-table-cell>
                         <md-table-cell>
@@ -126,7 +133,6 @@
     import {ComputeJob} from "../model";
     import {WebAPI} from "../web-api";
 
-
     @Component({filters: {}})
     export default class JobStatusCard extends Vue {
         @Prop({type: Object})
@@ -134,6 +140,9 @@
 
         @Prop({default: true, type: Boolean})
         showCancelButton: boolean;
+
+        @Prop({default: () => [], type: Array})
+        public extraTableRows: string[][] | null;
 
         getStatusColor = getStatusColor;
         themeColors = themeColors;

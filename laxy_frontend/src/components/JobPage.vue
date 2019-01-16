@@ -93,6 +93,7 @@
                                    :md-row-large="true">
                             <job-status-card :job="job"
                                              :show-cancel-button="false"
+                                             :extra-table-rows="jobParamRows"
                                              v-on:cancel-job-clicked="onAskCancelJob"
                                              v-on:clone-job-clicked="cloneJob"></job-status-card>
                         </md-layout>
@@ -239,6 +240,7 @@
     import "es6-promise";
 
     import filter from "lodash-es/filter";
+    import find from "lodash-es/find";
     import {Memoize} from "lodash-decorators";
 
     const Clipboard = require('clipboard');
@@ -286,6 +288,7 @@
     import {EMPTY_TREE_ROOT, fileListToTree, TreeNode} from "../file-tree-util";
     import SharingLinkList from "./SharingLinkList";
     import {Snackbar} from "../snackbar";
+    import AVAILABLE_GENOMES from "../config/genomics/genomes";
 
     @Component({
         components: {SharingLinkList, FileLinkPip, JobStatusPip, NestedFileList},
@@ -462,6 +465,33 @@
 
         get hasMultiQCReport(): boolean {
             return this.hasFileTagged("multiqc");
+        }
+
+        // TODO: This may be better shifted to a dedicated JobParamsCard rather than including it as a row in
+        // the generic JobStatusCard
+        get genomeDescription(): string | null {
+            const genome_id = (this.job as ComputeJob).params.params.genome;
+            find(AVAILABLE_GENOMES, {id: genome_id});
+            const genome = find(AVAILABLE_GENOMES, {id: genome_id});
+            if (genome) {
+                let [organism, centre, build] = genome_id.split('/');
+                organism = organism.replace('_', ' ');
+                return `${build} (${organism})`;
+            }
+            return null;
+        }
+
+        get jobParamRows() {
+            let rows = [];
+            if (this.job && this.job.params && this.job.params.params) {
+                if (this.job.params.params.pipeline_version) {
+                    rows.push(['Pipeline', `${this.job.params.pipeline} ${this.job.params.params.pipeline_version}`]);
+                }
+            }
+            if (this.genomeDescription != null) {
+                rows.push(['Reference genome', this.genomeDescription]);
+            }
+            return rows;
         }
 
         filesByTag(tag: string): LaxyFile[] {
