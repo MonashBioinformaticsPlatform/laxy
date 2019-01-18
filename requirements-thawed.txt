@@ -1,7 +1,8 @@
 gunicorn
-gunicorn[gevent]
+# gunicorn[gevent]
+gevent
+greenlet
 redis
-
 requests
 backoff
 boto3
@@ -24,7 +25,7 @@ python-magic
 fs  # PyFilesystem
 
 # Base Django packages
-django>=2.0.10,<=2.2
+django==2.1.5
 django-reversion
 django-cors-headers
 django-extensions
@@ -33,7 +34,7 @@ django-object-actions
 django-cache-memoize
 social-auth-core>=3.0.0,<4.0.0
 social-auth-app-django>=3.0.0,<4.0.0
-rest-social-auth
+rest-social-auth>=1.5.0
 django-rest-framework-social-oauth2
 
 # The Bitbucket one
@@ -51,14 +52,16 @@ django-environ
 # django-tus
 
 # Authentication
+# Is django-allauth actually used ?
 django-allauth
 # django-auth-adfs
 # https://github.com/NIF-au/django-rapid-connect-demo
 
 # Django REST Framework, and some optional extra packages
-djangorestframework
+djangorestframework==3.9.1
 markdown
-django-filter
+django-filter>=2,<3
+# django-filter
 django-guardian
 coreapi
 djangorestframework-jwt
@@ -79,4 +82,4 @@ django-celery-beat
 
 # Postgres packages
 # sudo apt-get install postgresql postgresql-server-dev-all
-psycopg2
+psycopg2-binary
