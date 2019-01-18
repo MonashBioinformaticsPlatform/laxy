@@ -15,6 +15,13 @@
                                            style="background-color: #4385F4;"
                                            type="submit"><img src="assets/btn_google_signin_dark_normal_web.png">
                                 </md-button>
+                                <!--<md-layout>-->
+                                    <!--<div class="g-signin2" data-onsuccess="onGoogleLogin" data-theme="dark"-->
+                                         <!--data-width="300" data-height="64"></div>-->
+                                <!--</md-layout>-->
+                                <button class="googleSigninButton" id="googleSigninButton" ref="googleSigninButton">
+                                    <img src="assets/btn_google_signin_dark_normal_web.png">
+                                </button>
                                 <md-button @click="login('google_monash')"
                                            class="md-raised md-primary login-button"
                                            style="background-color: #4385F4;"
@@ -93,6 +100,7 @@
 
     import {AUTHENTICATE_USER, SET_GLOBAL_SNACKBAR, SET_USER_PROFILE} from "../store";
     import {WebAPI} from "../web-api";
+    import {AuthOptions} from '../auth';
 
     import CalloutBox from './CalloutBox';
     import {Snackbar} from "../snackbar";
@@ -125,8 +133,23 @@
             return get(this.$store.state.user_profile, 'username', 'anonymous')
         }
 
-        public async created() {
+        public initGoogleButton() {
+            gapi.load('auth2', () => {
+                // console.dir(gapi);
+                const auth2 = (gapi.auth2 as any).init({
+                    client_id: AuthOptions.providers.google.clientId,
+                    scope: 'profile email',
+                });
+                const signinButton = this.$refs['googleSigninButton'];
+                console.dir(signinButton);
+                auth2.attachClickHandler(signinButton,
+                    {scope: 'profile email'},
+                    this.onGoogleLogin, () => {}); // additionalParams, onSignIn, onSignInFailure);
+            });
+        }
 
+        public async created() {
+            this.initGoogleButton();
         }
 
         public async login(provider: string) {
@@ -160,6 +183,22 @@
             this.login_form_username = '';
             this.login_form_password = '';
         }
+
+        public onGoogleLogin(googleUser: any) {
+            // Useful data for your client-side scripts:
+            const profile = googleUser.getBasicProfile();
+            console.log("ID: " + profile.getId());  // Don't send this directly to your server!
+            console.log('Full Name: ' + profile.getName());
+            console.log('Given Name: ' + profile.getGivenName());
+            console.log('Family Name: ' + profile.getFamilyName());
+            console.log("Image URL: " + profile.getImageUrl());
+            console.log("Email: " + profile.getEmail());
+
+            // The ID token you need to pass to your backend:
+            const id_token = googleUser.getAuthResponse().id_token;
+            console.log("ID Token: " + id_token);
+        }
+
     }
 </script>
 

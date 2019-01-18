@@ -5,6 +5,7 @@ import {FETCH_USER_PROFILE, Store} from './store';
 
 import FrontPage from './components/FrontPage.vue';
 import LoginPage from './components/LoginPage.vue';
+import GoogleLogin from './components/GoogleLogin.vue';
 import RNASeqSetup from './components/RNASeqSetup.vue';
 import RemoteFilesSelect from './components/RemoteSelect/RemoteFilesSelect.vue';
 import SampleCart from './components/SampleCart.vue';

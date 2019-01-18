@@ -176,6 +176,9 @@ const App = new Vue({
         },
         snackbar_duration(): number {
             return this.$store.state.global_snackbar_duration;
-        }
+        },
+        GOOGLE_OAUTH_CLIENT_ID() {
+            return process.env.LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID;
+        },
     }
 });
