@@ -29,7 +29,8 @@
                         </md-boards>
 
                     </div>
-                    <md-layout>
+                    <md-layout md-align="start" md-column>
+
                         <router-link to="/rnaseq">
                             <md-card md-with-hover id="rnaseq">
                                 <md-card-header>
@@ -61,17 +62,19 @@
                                         </md-layout>
                                     </md-card-media>
                                     <br/>
-                                    <md-card-actions>
+                                    <!--<md-card-actions>-->
                                         <router-link tag="md-button"
-                                                     class="md-primary md-raised"
+                                                     class="md-primary md-raised fill-width"
                                                      to="/rnaseq">
                                             Run an RNA-Seq analysis
                                         </router-link>
-                                    </md-card-actions>
+                                    <!--</md-card-actions>-->
                                 </md-card-content>
                                 <md-ink-ripple></md-ink-ripple>
                             </md-card>
                         </router-link>
+
+
                         <md-card md-with-hover id="chipseq">
                             <md-card-header>
                                 <div class="md-title">ChIP-Seq</div>
@@ -102,17 +105,19 @@
                                     </md-layout>
                                 </md-card-media>
                                 <br/>
-                                <md-card-actions>
+                                <!--<md-card-actions>-->
                                     <router-link tag="md-button"
                                                  disabled="true"
-                                                 class="md-primary md-raised"
+                                                 class="md-primary md-raised fill-width"
                                                  to="chipseq">
                                         Coming soon ...
                                     </router-link>
-                                </md-card-actions>
+                                <!--</md-card-actions>-->
                             </md-card-content>
                             <md-ink-ripple></md-ink-ripple>
                         </md-card>
+
+
                         <md-card md-with-hover id="variants">
                             <md-card-header>
                                 <div class="md-title">Variant calls</div>
@@ -129,17 +134,18 @@
                                     </md-layout>
                                 </md-card-media>
                                 <br/>
-                                <md-card-actions>
+                                <!--<md-card-actions>-->
                                     <router-link tag="md-button"
                                                  disabled="true"
-                                                 class="md-primary md-raised"
+                                                 class="md-primary md-raised fill-width"
                                                  to="variants">
                                         Coming soon ...
                                     </router-link>
-                                </md-card-actions>
+                                <!--</md-card-actions>-->
                             </md-card-content>
                             <md-ink-ripple></md-ink-ripple>
                         </md-card>
+
                     </md-layout>
                 </md-whiteframe>
             </md-layout>
