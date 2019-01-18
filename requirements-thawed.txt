@@ -11,7 +11,7 @@ Fabric3
 BaseHash
 PyJWT
 pydash
-PyYAML
+pyyaml>=4.2b1
 toolz
 xxhash
 lxml
@@ -24,14 +24,15 @@ python-magic
 fs  # PyFilesystem
 
 # Base Django packages
-django
+django>=2.0.10,<=2.2
 django-reversion
 django-cors-headers
 django-extensions
 django-storages
 django-object-actions
 django-cache-memoize
-social-auth-app-django
+social-auth-core>=3.0.0,<4.0.0
+social-auth-app-django>=3.0.0,<4.0.0
 rest-social-auth
 django-rest-framework-social-oauth2
 
