@@ -341,7 +341,14 @@ SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.social_auth.social_details',
     'social_core.pipeline.social_auth.social_uid',
     'social_core.pipeline.social_auth.auth_allowed',
-    'social_core.pipeline.social_auth.social_user',
+
+    # 'social_core.pipeline.social_auth.social_user',
+    # An alternative `social_user` step - this pipeline step is only required if
+    # SOCIAL_AUTH_GOOGLE_OAUTH2_USE_UNIQUE_USER_ID was changed from False to True and you want to transparently
+    # migrate the uid fields on the UserSocialAuth records.
+    # 'social_core.pipeline.social_auth.social_user' is a better option for new installations without this requirement.
+    'laxy_backend.auth.pipeline_migration.social_user_uid_swap',
+
     'social_core.pipeline.user.get_username',
     # 'social_core.pipeline.mail.mail_validation',
     # 'social_core.pipeline.social_auth.associate_by_email',
@@ -350,7 +357,7 @@ SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.social_auth.load_extra_data',
     'social_core.pipeline.user.user_details',
     # custom function to get avatar for different services
-    'laxy_backend.view_auth.set_social_avatar',
+    'laxy_backend.auth.pipeline.set_social_avatar',
 )
 
 REST_FRAMEWORK = {

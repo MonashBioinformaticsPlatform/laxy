@@ -30,8 +30,12 @@ from laxy_backend.views import _get_or_create_drf_token
 from .serializers import LoginRequestSerializer, SocialAuthLoginRequest, SocialAuthLoginResponse, UserProfileResponse
 from .jwt_helpers import create_jwt_user_token, get_jwt_user_header_dict
 
+import logging
+logger = logging.getLogger(__name__)
+
 # from .models import User
 from django.contrib.auth import get_user_model
+
 User = get_user_model()
 
 
@@ -44,18 +48,7 @@ def create_or_get_userprofile(user: User) -> UserProfile:
         return user.profile
 
 
-def ensure_user_profile_exists(func):
-    def wrapper(*args, **kwargs):
-        user = kwargs.get('user', None)
-        if user:
-            create_or_get_userprofile(user)
-
-        func(*args, **kwargs)
-
-    return wrapper
-
-
-def gravatar_url(email: str, style: str='retro', size: int=64) -> str:
+def gravatar_url(email: str, style: str = 'retro', size: int = 64) -> str:
     """
     Return the URL for a Gravatar profile picture based on an email address.
 
@@ -254,22 +247,6 @@ class PublicSocialSessionAuthView(SocialSessionAuthView):
         -->
         """
         return super(PublicSocialSessionAuthView, self).post(request, *args, **kwargs)
-
-
-@ensure_user_profile_exists
-def set_social_avatar(backend, strategy, details, response, user=None, *args, **kwargs):
-    url = None
-    if backend.name == 'twitter':
-        url = response.get('profile_image_url', '').replace('_normal', '')
-    if backend.name == 'google-oauth2':
-        url = response.get('image', {}).get('url', None)
-    if url:
-        user.profile.image_url = url
-        user.save()
-    else:
-        user.profile.image_url = gravatar_url(user.email)
-        user.save()
-
 
 #
 # This version of the view is required if we want to override the csrf_required decorator on the parent's method
