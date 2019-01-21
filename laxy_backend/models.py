@@ -644,7 +644,7 @@ class File(Timestamped, UUIDModel):
                          on_delete=models.SET_NULL)
 
     type_tags = ArrayField(models.CharField(max_length=255),
-                           default=[],
+                           default=list,
                            null=True,
                            blank=True)
 
