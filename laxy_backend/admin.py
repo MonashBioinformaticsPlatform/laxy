@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin
 from django.db.migrations.recorder import MigrationRecorder
@@ -7,6 +8,7 @@ from django.urls import reverse
 from django.contrib.humanize.templatetags import humanize
 from django.template.defaultfilters import truncatechars
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 from reversion.admin import VersionAdmin
 
 from django_object_actions import (DjangoObjectActions,
@@ -133,9 +135,10 @@ class JobAdmin(Timestamped, VersionAdmin):
         )
 
     def _owner_email(self, obj):
+        ct = ContentType.objects.get_for_model(obj.owner)
+        user_url = reverse('admin:%s_%s_change' % (ct.app_label, ct.model), args=(obj.owner.id,))
         if obj.owner:
-            return obj.owner.email
-
+            return format_html('<a href="{}">{} ({})</a>', user_url, obj.owner.email, obj.owner.id)
         return ''
 
     @takes_instance_or_queryset
