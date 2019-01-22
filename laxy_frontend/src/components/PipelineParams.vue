@@ -13,12 +13,26 @@
                     <md-input v-model="description" placeholder="Description of pipeline run ..."></md-input>
                 </md-input-container>
                 <md-input-container>
+                    <label for="genome_organism">Species</label>
+                    <md-select name="genome_organism"
+                               id="genome_organism"
+                               :required="true"
+                               v-model="selected_genome_organism"
+                                @change="onOrganismChange">
+                        <md-option v-for="organism in genome_organism_list"
+                                   :key="organism"
+                                   :value="organism">
+                            {{ organism }}
+                        </md-option>
+                    </md-select>
+                </md-input-container>
+                <md-input-container>
                     <label for="genome">Reference genome</label>
                     <md-select name="genome"
                                id="genome"
                                :required="true"
                                v-model="reference_genome">
-                        <md-option v-for="genome in available_genomes"
+                        <md-option v-for="genome in genomes_for_organism(selected_genome_organism)"
                                    :key="genome.id"
                                    :value="genome.id">
                             {{ get_genome_description(genome) }}
@@ -81,6 +95,7 @@
 <script lang="ts">
     import cloneDeep from "lodash-es/cloneDeep";
     import map from "lodash-es/map";
+    import {Memoize} from "lodash-decorators";
 
     import "es6-promise";
 
@@ -142,6 +157,8 @@
 
         public reference_genome_valid: boolean = true;
 
+        public selected_genome_organism: string = `${AVAILABLE_GENOMES[0].organism}`;
+
         public pipeline_versions = ['1.5.3', '1.5.2'];
 
         public _samples: SampleSet;
@@ -181,9 +198,37 @@
             this.$store.commit(SET_PIPELINE_PARAMS, state);
         }
 
+        get genome_organism_list(): string[] {
+            let organisms = new Set();
+            for (let g of this.available_genomes) {
+                organisms.add(g.organism);
+            }
+            return Array.from(organisms.values());
+        }
+
+        @Memoize
+        genomes_for_organism(organism: string): ReferenceGenome[] {
+            const genomes: ReferenceGenome[] = [];
+            for (let g of this.available_genomes) {
+                if (g.organism === organism) {
+                    genomes.push(g);
+                }
+            }
+            return genomes;
+        }
+
         get_genome_description(reference: ReferenceGenome): string {
             const [org, centre, build] = reference.id.split('/');
-            return `${build} [${centre}] (${reference.organism})`;
+            // return `${build} [${centre}] (${reference.organism})`;
+            let desc = `${build} [${centre}]`;
+            if (reference.recommended) {
+                desc = `${desc} (recommended)`
+            }
+            return desc;
+        }
+
+        onOrganismChange(e: any) {
+            this.reference_genome = this.genomes_for_organism(this.selected_genome_organism)[0].id;
         }
 
         created() {
