@@ -105,7 +105,7 @@ const available_genomes: ReferenceGenome[] = [
     // {'id': 'Pan_troglodytes/UCSC/panTro3', 'organism': 'Pan troglodytes'},
     // {'id': 'Pan_troglodytes/UCSC/panTro4', 'organism': 'Pan troglodytes'},
 
-    {'id': 'PhiX/Illumina/RTA', 'organism': 'PhiX'},
+    // {'id': 'PhiX/Illumina/RTA', 'organism': 'PhiX'},
     // {'id': 'PhiX/NCBI/1993-04-28', 'organism': 'PhiX'},
 
     // {'id': 'Pseudomonas_aeruginosa_PAO1/NCBI/2000-09-13', 'organism': 'Pseudomonas aeruginosa PAO1'},
