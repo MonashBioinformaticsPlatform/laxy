@@ -16,6 +16,8 @@ from datetime import timedelta
 import tempfile
 from django.core.exceptions import ImproperlyConfigured
 import environ
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
 
 from laxy.utils import get_secret_key
 
@@ -71,6 +73,8 @@ default_env = PrefixedEnv(
     CORS_ORIGIN_WHITELIST=(list, []),
     CSRF_TRUSTED_ORIGINS=(list, []),
     USE_SSL=(bool, False),
+    SENTRY_KEY=(str, ''),
+    SENTRY_PROJECT=(str, ''),
 )
 
 
@@ -120,6 +124,15 @@ def _cleanup_env_list(l):
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
+
+SENTRY_KEY = env('SENTRY_KEY')
+SENTRY_PROJECT = env('SENTRY_PROJECT')
+USE_SENTRY = bool(SENTRY_KEY and SENTRY_PROJECT)
+if USE_SENTRY:
+    sentry_sdk.init(
+        dsn=f"https://{SENTRY_KEY}@sentry.io/{SENTRY_PROJECT}",
+        integrations=[DjangoIntegration()]
+    )
 
 USE_SSL = env('USE_SSL')
 

@@ -23,6 +23,7 @@ attrdict
 robobrowser
 python-magic
 fs  # PyFilesystem
+sentry-sdk==0.6.8
 
 # Base Django packages
 django==2.1.5
