@@ -53,7 +53,7 @@
     "vue-mixin-decorator": "^1.0.0",
     "vue-template-compiler": "^2.5.16",
     "webpack": "^3.11.0",
-    "webpack-dev-server": ">=3.1.11",
+    "webpack-dev-server": "^2.11.2",
     "webpack-shell-plugin": "^0.5.0"
   },
   "dependencies": {
