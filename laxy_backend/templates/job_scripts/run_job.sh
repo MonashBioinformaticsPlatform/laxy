@@ -454,37 +454,54 @@ detect_pairs
 
 send_event "JOB_INFO" "Starting RNAsik."
 
-if [[ ! -z "PAIRIDS" ]]; then
-    ${PREFIX_JOB_CMD} \
-       RNAsik \
-           -configFile ${JOB_PATH}/input/sik.config \
-           -align star \
-           -fastaRef ${GENOME_FASTA} \
-           -fqDir ../input \
-           -counts \
-           -gtfFile ${GENOME_GTF} \
-           -all \
-           -extn ${EXTN} \
-           >>job.out 2>>job.err
-else
-    ${PREFIX_JOB_CMD} \
-       RNAsik \
-           -configFile ${JOB_PATH}/input/sik.config \
-           -align star \
-           -fastaRef ${GENOME_FASTA} \
-           -fqDir ../input \
-           -counts \
-           -gtfFile ${GENOME_GTF} \
-           -all \
-           -paired \
-           -extn ${EXTN} \
-           -pairIds ${PAIRIDS} \
-           >>job.out 2>>job.err
-fi
+EXIT_CODE=99
+RETRY_COUNT=0
+MAX_RETRIES=3
+RETRY_DELAY=10
+# Since BDS pipelines (in theory) can be just restarted and continue after a failure,
+# this while loop might make things more robust in the face of temporary failures
+# (eg transient SLURM queue submission errors)
+while [[ "${EXIT_CODE}" -ne 0 ]] && [[ ${RETRY_COUNT} -le ${MAX_RETRIES} ]]; do
 
-# Capture the exit code of the important process, to be returned
-# in the curl request below
-EXIT_CODE=$?
+    if [[ ${RETRY_COUNT} -gt 0 ]]; then
+        send_event "JOB_INFO" "Restarting RNAsik after (temporary?) failure (retry $RETRY_COUNT)."
+        sleep ${RETRY_DELAY}
+    fi
+
+    if [[ ! -z "PAIRIDS" ]]; then
+        ${PREFIX_JOB_CMD} \
+           RNAsik \
+               -configFile ${JOB_PATH}/input/sik.config \
+               -align star \
+               -fastaRef ${GENOME_FASTA} \
+               -fqDir ../input \
+               -counts \
+               -gtfFile ${GENOME_GTF} \
+               -all \
+               -extn ${EXTN} \
+               >>job.out 2>>job.err
+    else
+        ${PREFIX_JOB_CMD} \
+           RNAsik \
+               -configFile ${JOB_PATH}/input/sik.config \
+               -align star \
+               -fastaRef ${GENOME_FASTA} \
+               -fqDir ../input \
+               -counts \
+               -gtfFile ${GENOME_GTF} \
+               -all \
+               -paired \
+               -extn ${EXTN} \
+               -pairIds ${PAIRIDS} \
+               >>job.out 2>>job.err
+    fi
+
+    # Capture the exit code of the important process, to be returned
+    # in the curl request below
+    EXIT_CODE=$?
+
+    RETRY_COUNT=$((RETRY_COUNT+1))
+done
 
 # Some job scripts might have things that occur after the main pipeline
 # run - so we signal when the 'pipeline' computation completed, but this is
