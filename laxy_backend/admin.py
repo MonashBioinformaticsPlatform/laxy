@@ -135,9 +135,9 @@ class JobAdmin(Timestamped, VersionAdmin):
         )
 
     def _owner_email(self, obj):
-        ct = ContentType.objects.get_for_model(obj.owner)
-        user_url = reverse('admin:%s_%s_change' % (ct.app_label, ct.model), args=(obj.owner.id,))
         if obj.owner:
+            ct = ContentType.objects.get_for_model(obj.owner)
+            user_url = reverse('admin:%s_%s_change' % (ct.app_label, ct.model), args=(obj.owner.id,))
             return format_html('<a href="{}">{} ({})</a>', user_url, obj.owner.email, obj.owner.id)
         return ''
 
