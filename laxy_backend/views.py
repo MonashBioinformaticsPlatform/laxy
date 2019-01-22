@@ -519,11 +519,10 @@ class StreamFileMixin(JSONView):
             return Response(status=status.HTTP_404_NOT_FOUND)
 
         renderer = StreamingFileDownloadRenderer()
-        # TODO: For local file:// URLs, django.http.response.FileResponse
-        #       will probably preform better
+        # TODO: For local file:// URLs, django.http.response.FileResponse will probably preform better
         response = StreamingHttpResponse(
             renderer.render(obj.file),
-            content_type=StreamingFileDownloadRenderer.media_type)
+            content_type=renderer.media_type)
 
         # A filename can optionally be specified in the URL, so that
         # wget will 'just work' without requiring the --content-disposition

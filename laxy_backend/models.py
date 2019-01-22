@@ -1,9 +1,3 @@
-# from __future__ import (absolute_import, division,
-#                         print_function, unicode_literals)
-
-# from builtins import (ascii, bytes, chr, dict, filter, hex, input,
-#                       int, map, next, oct, open, pow, range, round,
-#                       str, super, zip)
 from django.core.handlers.wsgi import WSGIRequest
 from typing import List, Union
 from collections import OrderedDict, Sequence
@@ -803,7 +797,7 @@ class File(Timestamped, UUIDModel):
             if '.' in url.netloc:
                 raise NotImplementedError(
                     "ComputeResource UUID appears invalid.")
-            # netloc not hostname, since hostname forces lowercase
+            # use netloc not hostname, since hostname forces lowercase
             compute_id = url.netloc
             try:
                 compute = ComputeResource.objects.get(id=compute_id)
@@ -824,14 +818,15 @@ class File(Timestamped, UUIDModel):
             storage = storage_class(host=host, params=params)
             file_path = str(Path(base_dir) / Path(url.path).relative_to('/'))
 
-            # 'SFTPStorageFile' file-like object has no 'name', so we add it
             filelike = storage.open(file_path)
-            setattr(filelike, 'name', self.name)
+            # setattr(filelike, 'name', self.name)
             return filelike
 
-        # TODO: This needs to be carefully reworked or removed. Too much
-        #       scope for reading arbitrary files on the server.
+        # TODO: This needs to be carefully reworked or removed. The intention would be to refer to a mountpoint
+        #       relative to the Laxy backend server filesystem (eg an NFS mount), however there is scope for
+        #       reading arbitrary files on the server if implemented incorrectly.
         elif scheme == 'file':
+            # raise NotImplementedError('file:// URLs are currently not supported')
             return storage_class(location='/').open(self.full_path)
         else:
             response = request_with_retries(
