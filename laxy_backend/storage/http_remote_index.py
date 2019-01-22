@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 from typing import List, Tuple, Pattern, Union, Dict
 from collections import defaultdict
 import urllib
@@ -155,10 +156,10 @@ def get_tar_file_manifest(
         index_suffix='.manifest-md5',
         checksum_type='md5') -> List[Dict[str, str]]:
     """
-    Given a URL to a tar archive , fetch the corresponding .manifest-md5
-    and return a list of checksum, filename pairs.
-    :param tar_url: The URL to the tar file (eg https://example.com/data.tar or
-                    https://example.com/data.tar.gz)
+    Given a URL to a tar archive or .tar.manifest-md5 file, fetch the corresponding
+    .manifest-md5 and return a list of (checksum, filename) pairs.
+    :param tar_url: The URL to the tar file or .tar.manifest-md5 (eg https://example.com/data.tar,
+                    https://example.com/data.tar.gz or https://example.com/data.tar.manifest-md5)
     :type tar_url: str
     :param index_suffix: The suffix to add to the URL path to find the manifest
                          file.
@@ -172,7 +173,11 @@ def get_tar_file_manifest(
         murl = murl.geturl()
         return murl
 
-    manifest_url = _discover_manifest_url(tar_url)
+    fn = Path(urlparse(tar_url).path).name
+    if fn.endswith('.manifest-md5'):
+        manifest_url = tar_url
+    else:
+        manifest_url = _discover_manifest_url(tar_url)
 
     try:
         # req = requests.get(manifest_url)

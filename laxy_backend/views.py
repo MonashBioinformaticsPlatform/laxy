@@ -2343,9 +2343,15 @@ class RemoteBrowseView(JSONView):
 
         listing = []
         scheme = urlparse(url).scheme
-        if is_archive_link(url):
+        fn = Path(urlparse(url).path).name
+        if is_archive_link(url) or fn.endswith('.manifest-md5'):
             try:
                 archive_files = http_remote_index.get_tar_file_manifest(url)
+
+                # Remove .manifest-md5 if present
+                u = urlparse(url)
+                url = u._replace(path=u.path.rstrip('.manifest-md5')).geturl()
+
                 for f in archive_files:
                     filepath = f['filepath']
                     listing.append(dict(name=filepath,
