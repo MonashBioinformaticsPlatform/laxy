@@ -1,5 +1,6 @@
 from typing import List
 
+import xmlrpc
 from pyaria2 import PyAria2, AriaServerSettings
 
 from .downloader import (logger,
@@ -72,7 +73,10 @@ def downloads_finished(download_ids):
     aria = get_daemon()
     statuses = []
     for gid in download_ids:
-        statuses.append(aria.tellStatus(gid))
+        try:
+            statuses.append(aria.tellStatus(gid))
+        except xmlrpc.client.Fault as ex:
+            logger.error(ex.faultString)
 
     if not statuses:
         return False
