@@ -183,6 +183,7 @@ REFERENCE_GENOME_MAPPINGS = {
 
     "Glycine_max/Ensembl/Gm01": "Glycine_max/Ensembl/Gm01",
 
+    "Homo_sapiens/Ensembl/GRCh38": "Homo_sapiens/Ensembl/GRCh38",
     "Homo_sapiens/Ensembl/GRCh37": "Homo_sapiens/Ensembl/GRCh37",
     "Homo_sapiens/NCBI/GRCh38": "Homo_sapiens/NCBI/GRCh38",
     "Homo_sapiens/NCBI/GRCh38Decoy": "Homo_sapiens/NCBI/GRCh38Decoy",
@@ -1031,7 +1032,7 @@ class JobFileBulkRegistration(JSONView):
     serializer_class = JobSerializerResponse
     parser_classes = (JSONParser, RowsCSVTextParser,)
 
-    # permission_classes = (DjangoObjectPermissions,)
+    permission_classes = (IsOwner | IsSuperuser,)
 
     @view_config(request_serializer=JobFileSerializerCreateRequest,
                  response_serializer=JobSerializerResponse)
@@ -1724,8 +1725,7 @@ class JobCreate(JSONView):
             # callback_auth_header = 'Authorization: Token %s' % token.key
 
             # JWT access token for user (expiring by default, so better)
-            callback_auth_header = get_jwt_user_header_str(
-                request.user.username)
+            callback_auth_header = get_jwt_user_header_str(request.user.username)
 
             # TODO: Maybe use the mappings in templates/genomes.json
             #       Maybe do all genome_id to path resolution in run_job.sh

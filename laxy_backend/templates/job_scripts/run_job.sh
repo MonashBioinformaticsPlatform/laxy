@@ -208,10 +208,42 @@ function get_reference_data_aws() {
     fi
 }
 
+function get_ensembl_grch38() {
+     local fasta="${REFERENCE_BASE}/${REF_ID}/Sequence/WholeGenomeFasta/genome.fa"
+     local gtf="${REFERENCE_BASE}/${REF_ID}/Annotation/Genes/genes.gtf"
+     local fasta_checksum="6ee1ec578b2b6495eb7da26885d0a496"
+     local gtf_checksum="cfe6daf315889981b6c22789127232ef"
+
+     mkdir -p "${REFERENCE_BASE}/${REF_ID}/Sequence/WholeGenomeFasta"
+     mkdir -p "${REFERENCE_BASE}/${REF_ID}/Annotation/Genes"
+
+     if [[ ! -f "${fasta}" ]]; then
+         curl ftp://ftp.ensembl.org/pub/release-95/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna_sm.primary_assembly.fa.gz \
+              --silent --retry 10 | gunzip -c > "${fasta}"
+         checksum=$(md5sum "${fasta}" | cut -f 1 -d ' ')
+         if [[ "${checksum}" != "${fasta_checksum}" ]]; then
+             exit -1
+         fi
+     fi
+     if [[ ! -f "${gtf}" ]]; then
+         curl ftp://ftp.ensembl.org/pub/release-95/gtf/homo_sapiens/Homo_sapiens.GRCh38.95.gtf.gz \
+              --silent --retry 10 | gunzip -c > "${gtf}"
+         checksum=$(md5sum "${gtf}" | cut -f 1 -d ' ')
+         if [[ "${checksum}" != "${gtf_checksum}" ]]; then
+             exit -1
+         fi
+     fi
+}
+
 function get_igenome_aws() {
      local REF_ID=$1
 
      send_event "JOB_INFO" "Getting reference genome (${REF_ID})."
+
+     if [[ "${REF_ID}" == "Homo_sapiens/Ensembl/GRCh38" ]]; then
+         get_ensembl_grch38
+         return 0
+     fi
 
      aws s3 --no-sign-request --region eu-west-1 sync \
          s3://ngi-igenomes/igenomes/${REF_ID}/Annotation/Genes/ ${REFERENCE_BASE}/${REF_ID}/Annotation/Genes/ --exclude "*" --include "genes.gtf"
@@ -468,7 +500,7 @@ while [[ "${EXIT_CODE}" -ne 0 ]] && [[ ${RETRY_COUNT} -le ${MAX_RETRIES} ]]; do
         sleep ${RETRY_DELAY}
     fi
 
-    if [[ ! -z "PAIRIDS" ]]; then
+    if [[ ! -z "${PAIRIDS}" ]]; then
         ${PREFIX_JOB_CMD} \
            RNAsik \
                -configFile ${JOB_PATH}/input/sik.config \

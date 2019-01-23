@@ -33,6 +33,9 @@ services:
 
   rabbitmq:
     image: rabbitmq:3-alpine
+    hostname: "rabbitmq"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
 #   expose:
 #     - "5672"
 #     - "15672"
@@ -80,3 +83,4 @@ services:
 
 volumes:
   dbdata:
+  rabbitmq_data:
