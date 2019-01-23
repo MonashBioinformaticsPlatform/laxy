@@ -41,9 +41,9 @@ Dependencies:
 # Create a Python virtual environment, install package dependencies
 python3.6 -m venv venv
 source venv/bin/activate
-python3.6 install -U -r requirements.txt
+pip install -U -r requirements.txt
 # For development
-python3.6 install -U -r requirements-dev.txt
+pip install -U -r requirements-dev.txt
 ```
 
 Run tests:
