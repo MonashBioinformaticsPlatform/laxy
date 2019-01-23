@@ -482,7 +482,7 @@ while [[ "${EXIT_CODE}" -ne 0 ]] && [[ ${RETRY_COUNT} -le ${MAX_RETRIES} ]]; do
         sleep ${RETRY_DELAY}
     fi
 
-    if [[ ! -z "PAIRIDS" ]]; then
+    if [[ ! -z "${PAIRIDS}" ]]; then
         ${PREFIX_JOB_CMD} \
            RNAsik \
                -configFile ${JOB_PATH}/input/sik.config \
