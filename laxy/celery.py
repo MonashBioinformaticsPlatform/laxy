@@ -12,8 +12,8 @@ from django.conf import settings
 import sentry_sdk
 from sentry_sdk.integrations.celery import CeleryIntegration
 
-if getattr(settings, 'USE_SENTRY', False):
-    sentry_sdk.init(integrations=[CeleryIntegration()])
+if getattr(settings, 'SENTRY_DSN', False):
+    sentry_sdk.init(dsn=settings.SENTRY_DSN, integrations=[CeleryIntegration()])
 
 app = Celery('laxy')
 
