@@ -183,6 +183,7 @@ REFERENCE_GENOME_MAPPINGS = {
 
     "Glycine_max/Ensembl/Gm01": "Glycine_max/Ensembl/Gm01",
 
+    "Homo_sapiens/Ensembl/GRCh38": "Homo_sapiens/Ensembl/GRCh38",
     "Homo_sapiens/Ensembl/GRCh37": "Homo_sapiens/Ensembl/GRCh37",
     "Homo_sapiens/NCBI/GRCh38": "Homo_sapiens/NCBI/GRCh38",
     "Homo_sapiens/NCBI/GRCh38Decoy": "Homo_sapiens/NCBI/GRCh38Decoy",

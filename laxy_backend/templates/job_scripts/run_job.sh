@@ -213,6 +213,20 @@ function get_igenome_aws() {
 
      send_event "JOB_INFO" "Getting reference genome (${REF_ID})."
 
+     if [[ "${REF_ID}" -eq "Homo_sapiens/Ensembl/GRCh38" ]]; then
+         if [[ ! -f ${REFERENCE_BASE}/${REF_ID}/Sequence/WholeGenomeFasta/genome.fa ]]; then
+             mkdir -p ${REFERENCE_BASE}/${REF_ID}/Sequence/WholeGenomeFasta
+             curl ftp://ftp.ensembl.org/pub/release-95/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna_sm.primary_assembly.fa.gz \
+                  --retry 10 | gunzip -c > ${REFERENCE_BASE}/${REF_ID}/Sequence/WholeGenomeFasta/genome.fa
+         fi
+         if [[ ! -f ${REFERENCE_BASE}/${REF_ID}/Annotation/Genes/genes.gtf ]]; then
+             mkdir -p ${REFERENCE_BASE}/${REF_ID}/Annotation/Genes
+             curl ftp://ftp.ensembl.org/pub/release-95/gtf/homo_sapiens/Homo_sapiens.GRCh38.95.gtf.gz \
+                  --retry 10 | gunzip -c > ${REFERENCE_BASE}/${REF_ID}/Annotation/Genes/genes.gtf
+         fi
+         return 0
+     fi
+
      aws s3 --no-sign-request --region eu-west-1 sync \
          s3://ngi-igenomes/igenomes/${REF_ID}/Annotation/Genes/ ${REFERENCE_BASE}/${REF_ID}/Annotation/Genes/ --exclude "*" --include "genes.gtf"
      aws s3 --no-sign-request --region eu-west-1 sync \
