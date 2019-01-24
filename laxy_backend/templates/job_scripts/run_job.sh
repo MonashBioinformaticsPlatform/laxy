@@ -272,6 +272,8 @@ function get_igenome_aws() {
          s3://ngi-igenomes/igenomes/${REF_ID}/Annotation/Genes/ ${REFERENCE_BASE}/${REF_ID}/Annotation/Genes/ --exclude "*" --include "genes.gtf"
      aws s3 --no-sign-request --region eu-west-1 sync \
         s3://ngi-igenomes/igenomes/${REF_ID}/Sequence/WholeGenomeFasta/ ${REFERENCE_BASE}/${REF_ID}/Sequence/WholeGenomeFasta/
+     aws s3 --no-sign-request --region eu-west-1 sync \
+        s3://ngi-igenomes/igenomes/${REF_ID}/Sequence/STARIndex/ ${REFERENCE_BASE}/${REF_ID}/Sequence/STARIndex/
 }
 
 function find_filetype() {
@@ -369,6 +371,19 @@ function detect_pairs() {
     elif stat -t "${JOB_PATH}"/input/*_2.fasta.gz >/dev/null 2>&1; then
       EXTN=".fasta.gz"
       PAIRIDS="_1,_2"
+    fi
+
+    if [[ -z "${PAIRIDS}" ]]; then
+        send_event "JOB_INFO" "(Looks like unpaired reads)"
+    else
+        send_event "JOB_INFO" "(Looks like paired end data [${PAIRIDS}]) 👍"
+    fi
+}
+
+function set_genome_index_arg() {
+    GENOME_INDEX_ARG=""
+    if [[ -d "${REFERENCE_BASE}/${REFERENCE_GENOME}/Sequence/STARIndex" ]]; then
+        GENOME_INDEX_ARG="-genomeIdx ${REFERENCE_BASE}/${REFERENCE_GENOME}/Sequence/STARIndex"
     fi
 }
 
@@ -509,6 +524,8 @@ PAIRIDS=""
 EXTN=".fastq.gz"
 detect_pairs
 
+set_genome_index_arg
+
 send_event "JOB_INFO" "Starting RNAsik."
 
 EXIT_CODE=99
@@ -531,18 +548,20 @@ while [[ "${EXIT_CODE}" -ne 0 ]] && [[ ${RETRY_COUNT} -le ${MAX_RETRIES} ]]; do
                -configFile ${JOB_PATH}/input/sik.config \
                -align star \
                -fastaRef ${GENOME_FASTA} \
+               ${GENOME_INDEX_ARG} \
                -fqDir ../input \
                -counts \
                -gtfFile ${GENOME_GTF} \
                -all \
                -extn ${EXTN} \
-               >>job.out 2>>job.err
+               >>rnasik.out 2>>rnasik.err
     else
         ${PREFIX_JOB_CMD} \
            RNAsik \
                -configFile ${JOB_PATH}/input/sik.config \
                -align star \
                -fastaRef ${GENOME_FASTA} \
+               ${GENOME_INDEX_ARG} \
                -fqDir ../input \
                -counts \
                -gtfFile ${GENOME_GTF} \
@@ -550,7 +569,7 @@ while [[ "${EXIT_CODE}" -ne 0 ]] && [[ ${RETRY_COUNT} -le ${MAX_RETRIES} ]]; do
                -paired \
                -extn ${EXTN} \
                -pairIds ${PAIRIDS} \
-               >>job.out 2>>job.err
+               >>rnasik.out 2>>rnasik.err
     fi
 
     # Capture the exit code of the important process, to be returned
