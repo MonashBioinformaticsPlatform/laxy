@@ -404,30 +404,42 @@ function run_mash_screen() {
     #local _globstat_state=$(shopt -p globstar)
     #shopt -s globstar
 
-    send_event "JOB_INFO" "Starting pre-pipeline Mash screen (detects organism/contamination)."
+    send_event "JOB_INFO" "Starting Mash screen (detects organism/contamination)."
 
     local -r mash_db_base="${REFERENCE_BASE}/../mash"
     local -r mash_reference_sketches="${mash_db_base}/refseq.genomes.k21s1000.msh"
 
     mkdir -p "${mash_db_base}"
-    curl -L -o "${mash_reference_sketches}" -C - "https://gembox.cbcb.umd.edu/mash/refseq.genomes.k21s1000.msh" || true
+    if [[ ! -f "${mash_reference_sketches}/refseq.genomes.k21s1000.msh" ]]; then
+        curl -L -o "${mash_reference_sketches}" -C - "https://gembox.cbcb.umd.edu/mash/refseq.genomes.k21s1000.msh" || true
+    fi
 
     local mash_reads=$(find "${JOB_PATH}/input" -name "*.fast[q,a].gz" | xargs)
     local cmd="mash screen -w -p 8 ${mash_reference_sketches} ${mash_reads}"
     local mash_outfile="${JOB_PATH}/output/mash_screen.tab"
 
     if [[ "${SCHEDULER}" == "slurm" ]]; then
-        srun --mem 16G --cpus-per-task=8 --time=30 --qos=shortq --ntasks-per-node=1 --ntasks=1 --job-name=laxy:mash_${JOB_ID} \
-             --error="${JOB_PATH}/output/mash_screen.err" ${cmd} | sort -gr >"${mash_outfile}" && \
-               grep _ViralProj "${mash_outfile}" >${JOB_PATH}/output/mash_screen_virus.tab && \
-               grep -v _ViralProj "${mash_outfile}" >${JOB_PATH}/output/mash_screen_nonvirus.tab
+        cat >"${JOB_PATH}/input/run_mash.sh" <<EOM
+#!/bin/bash
+#SBATCH --mem 16G
+#SBATCH --cpus-per-task=8
+#SBATCH --time=30
+#SBATCH --qos=shortq
+#SBATCH --ntasks-per-node=1
+#SBATCH --ntasks=1
+#SBATCH --job-name="laxy:mash_${JOB_ID}"
+#SBATCH --error="${JOB_PATH}/output/mash_screen.err"
+
+${cmd} | sort -gr >${mash_outfile} && \
+grep _ViralProj ${mash_outfile} >${JOB_PATH}/output/mash_screen_virus.tab && \
+grep -v _ViralProj ${mash_outfile} >${JOB_PATH}/output/mash_screen_nonvirus.tab
+EOM
+        sbatch "${JOB_PATH}/input/run_mash.sh"
     else
         eval ${cmd} | sort -gr >"${mash_outfile}" && \
-        grep _ViralProj "${mash_outfile}" >${JOB_PATH}/output/mash_screen_virus.tab && \
-        grep -v _ViralProj "${mash_outfile}" >${JOB_PATH}/output/mash_screen_nonvirus.tab
+        grep _ViralProj "${mash_outfile}" >"${JOB_PATH}/output/mash_screen_virus.tab" && \
+        grep -v _ViralProj "${mash_outfile}" >"${JOB_PATH}/output/mash_screen_nonvirus.tab"
     fi
-
-    #eval "${_globstat_state}"
 }
 
 #function filter_ena_urls() {
