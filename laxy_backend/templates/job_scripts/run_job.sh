@@ -165,6 +165,8 @@ function init_conda_env() {
     # By convention, we name our Conda environments after {pipeline}-{version}
     # Each new pipeline version has it's own Conda env
     local env_name="${1}-${2}"
+    local conda="${CONDA_BASE}/bin/conda"
+    local pip="${CONDA_BASE}/bin/pip"
 
     send_event "JOB_INFO" "Activating conda environment (${env_name})."
 
@@ -174,31 +176,29 @@ function init_conda_env() {
         # https://github.com/conda/conda/issues/3200
         set +o nounset
         # First we update conda itself
-        ${CONDA_BASE}/bin/conda update --yes -n base conda
+        "${conda}" update --yes -n base conda
 
         # Add required channels
-        ${CONDA_BASE}/bin/conda config --add channels serine/label/dev \
+        "${conda}" config --add channels serine/label/dev \
                                        --add channels serine \
                                        --add channels bioconda \
                                        --add channels conda-forge
 
         # Create a base environment
-        ${CONDA_BASE}/bin/conda create --yes -m -n "${env_name}"
+        "${conda}" create --yes -m -n "${env_name}"
 
         # Install an up-to-date curl and GNU parallel
-        ${CONDA_BASE}/bin/conda install --yes -n "${env_name}" curl aria2 parallel jq awscli
-        ${CONDA_BASE}/bin/pip install oneliner
-
-        ${CONDA_BASE}/bin/pip install --process-dependency-links "git+https://github.com/MonashBioinformaticsPlatform/laxy#egg=laxy_downloader&subdirectory=laxy_downloader"
+        "${conda}" install --yes -n "${env_name}" curl aria2 parallel jq awscli
+        "${pip}" install oneliner
 
         # Then install rnasik
-        ${CONDA_BASE}/bin/conda install --yes -n "${env_name}" rnasik=${2}
+        "${conda}" install --yes -n "${env_name}" rnasik=${2}
 
         # Environment takes a very long time to solve if qualimap is included initially
-        ${CONDA_BASE}/bin/conda install --yes -n "${env_name}" qualimap
+        "${conda}" install --yes -n "${env_name}" qualimap
 
         # Add mash for contamination screening
-        ${CONDA_BASE}/bin/conda install --yes -n "${env_name}" mash
+        "${conda}" install --yes -n "${env_name}" mash
     fi
 
     # We shouldn't need to do this .. but it seems required for _some_ environments (ie M3)
@@ -207,9 +207,15 @@ function init_conda_env() {
     # shellcheck disable=SC1090
     source "${CONDA_BASE}/bin/activate" "${CONDA_BASE}/envs/${env_name}"
 
-    ${CONDA_BASE}/bin/conda env export >"${JOB_PATH}/input/conda_environment.yml"
+    "${conda}" env export >"${JOB_PATH}/input/conda_environment.yml"
 
     set -o nounset
+}
+
+function update_laxydl() {
+     # Requires conda environment to be activated first
+     local pip="${CONDA_BASE}/bin/pip"
+    "${pip}" install -U --process-dependency-links "git+https://github.com/MonashBioinformaticsPlatform/laxy#egg=laxy_downloader&subdirectory=laxy_downloader"
 }
 
 function get_reference_data_aws() {
@@ -438,6 +444,8 @@ install_miniconda
 
 # We import the environment early to ensure we have a recent version of curl (>=7.55)
 init_conda_env "rnasik" "${PIPELINE_VERSION}"
+
+update_laxydl
 
 # get_reference_data_aws
 get_igenome_aws "${REFERENCE_GENOME}"
