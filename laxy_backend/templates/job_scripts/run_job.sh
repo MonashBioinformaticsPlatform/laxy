@@ -285,10 +285,24 @@ function find_filetype() {
     find . -name "${pattern}" -type f -exec bash -c 'fn="$1"; echo -e "md5:$(md5sum "$fn" | sed -e "s/  */,/g"),\"'"${tags}"'\""' _ {} \;
 }
 
+# TODO: This has become complex enough that it probably should be a Python script for file registration,
+#  (pulled into the Conda environment, just like laxydl)
 function register_files() {
     send_event "JOB_INFO" "Registering interesting output files."
 
     echo "checksum,filepath,type_tags" >${JOB_PATH}/manifest.csv
+    # First, add every file we don't intend to tag to the manifest.
+    find . -type f \
+           ! -name "*.bam" \
+           ! -name "*.bai" \
+           ! -name "*.fastq.gz" \
+           ! -name "multiqc_report.html" \
+           ! -name "RNAsik.bds.*.html" \
+           ! -name "*StrandedCounts*.txt" \
+           -exec bash -c 'fn="$1"; echo -e "md5:$(md5sum "$fn" | sed -e "s/  */,/g"),\"'""'\""' _ {} \; \
+           >>${JOB_PATH}/manifest.csv
+
+    # Not find and tag specific files/filetypes
     find_filetype "*.bam" "bam,alignment" >>${JOB_PATH}/manifest.csv
     find_filetype "*.bai" "bai" >>${JOB_PATH}/manifest.csv
     find_filetype "*.fastq.gz" "fastq" >>${JOB_PATH}/manifest.csv
