@@ -134,6 +134,23 @@ function send_event() {
          "${JOB_EVENT_URL}" || true
 }
 
+function send_job_finished() {
+    local exit_code=$1
+    curl -X PATCH \
+         ${CURL_INSECURE} \
+         -H "Content-Type: application/json" \
+         -H @"${AUTH_HEADER_FILE}" \
+         --silent \
+         -o /dev/null \
+         -w "%{http_code}" \
+         --connect-timeout 10 \
+         --max-time 10 \
+         --retry 8 \
+         --retry-max-time 600 \
+         -d '{"exit_code":'${exit_code}'}' \
+         "${JOB_COMPLETE_CALLBACK_URL}"
+}
+
 function install_miniconda() {
     send_event "JOB_INFO" "Installing dependencies (conda env)."
 
@@ -454,7 +471,7 @@ if [[ "${JOB_INPUT_STAGED}" == "no" ]]; then
            --event-notification-url "${JOB_EVENT_URL}" \
            --event-notification-auth-file "${AUTH_HEADER_FILE}" \
            --pipeline-config "${JOB_PATH}/input/pipeline_config.json" \
-           --destination-path "${JOB_PATH}/input"
+           --destination-path "${JOB_PATH}/input" || send_job_finshed $?
 
     # send_event "INPUT_DATA_DOWNLOAD_FINISHED" "Input data download completed."
 
@@ -547,29 +564,16 @@ fi
 
 update_permissions
 
-cd ${JOB_PATH}
+cd "${JOB_PATH}"
 register_files
 
 ####
 #### Notify service we are done
 ####
 
-# Authorization header is stored in a file so it doesn't
-# leak in 'ps' etc.
+# Authorization header passed to curl is stored in a @file so it doesn't leak in 'ps' etc.
 
-curl -X PATCH \
-     ${CURL_INSECURE} \
-     -H "Content-Type: application/json" \
-     -H @"${AUTH_HEADER_FILE}" \
-     --silent \
-     -o /dev/null \
-     -w "%{http_code}" \
-     --connect-timeout 10 \
-     --max-time 10 \
-     --retry 8 \
-     --retry-max-time 600 \
-     -d '{"exit_code":'${EXIT_CODE}'}' \
-     "${JOB_COMPLETE_CALLBACK_URL}"
+send_job_finshed "${EXIT_CODE}"
 
 # Extra security: Remove the access token now that we don't need it anymore
 if [[ ${DEBUG} != "yes" ]]; then
