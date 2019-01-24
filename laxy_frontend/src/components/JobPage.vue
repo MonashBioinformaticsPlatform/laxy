@@ -150,32 +150,40 @@
                     <transition name="fade">
                         <md-layout v-show="showTab === 'input'" md-column-medium>
                             <md-layout id="input-files-panel">
-                                <nested-file-list id="input-files-card"
+                                <nested-file-list v-if="job && inputFilesetTree.children.length"
+                                                  id="input-files-card"
                                                   class="fill-width"
                                                   ref="input"
-                                                  v-if="job && job.status !== 'running'"
                                                   title="Input files"
                                                   root-path-name="input"
                                                   :fileTree="inputFilesetTree"
                                                   :job-id="jobId"
                                                   :hide-search="false"
                                                   @refresh-error="showErrorDialog"></nested-file-list>
+                                <md-layout v-else
+                                          md-align="center">
+                                    No files (yet).
+                                </md-layout>
                             </md-layout>
                         </md-layout>
                     </transition>
                     <transition name="fade">
                         <md-layout v-show="showTab === 'output'" md-column-medium>
                             <md-layout id="output-files-panel">
-                                <nested-file-list id="output-files-card"
+                                <nested-file-list v-if="job && outputFilesetTree.children.length"
+                                                  id="output-files-card"
                                                   class="fill-width"
                                                   ref="output"
-                                                  v-if="job && job.status !== 'running'"
                                                   title="Output files"
                                                   root-path-name="output"
                                                   :fileTree="outputFilesetTree"
                                                   :job-id="jobId"
                                                   :hide-search="false"
                                                   @refresh-error="showErrorDialog"></nested-file-list>
+                                <md-layout v-else
+                                           md-align="center">
+                                    No files (yet).
+                                </md-layout>
                             </md-layout>
                         </md-layout>
                     </transition>
