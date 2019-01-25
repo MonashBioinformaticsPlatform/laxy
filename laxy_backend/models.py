@@ -39,6 +39,9 @@ from .util import (generate_uuid,
                    generate_secret_key,
                    find_filename_and_size_from_url)
 
+import logging
+logger = logging.getLogger(__name__)
+
 if 'postgres' not in settings.DATABASES['default']['ENGINE']:
     from jsonfield import JSONField
 else:
@@ -531,8 +534,9 @@ class Job(Timestamped, UUIDModel):
                 out_files.append(f_obj)
 
             else:
-                raise ValueError("File paths for a Job must begin with input/ "
-                                 "or output/")
+                logger.debug(f"Not adding file {f_obj.full_path} ({f_obj.id}) "
+                             f"- File paths for a Job must begin with input/ or output/")
+                # raise ValueError("File paths for a Job must begin with input/ or output/")
 
         return in_files, out_files
 
