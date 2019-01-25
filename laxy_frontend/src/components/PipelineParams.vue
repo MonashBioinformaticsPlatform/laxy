@@ -261,7 +261,7 @@
                 await this.$store.dispatch(SET_SAMPLES, this._samples);
 
                 const data = this.prepareData();
-                console.log(data);
+                // console.log(data);
 
                 if (this.pipelinerun_uuid == null) {
                     const response = await WebAPI.fetcher.post("/api/v1/pipelinerun/", data) as AxiosResponse;

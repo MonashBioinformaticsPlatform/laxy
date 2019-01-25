@@ -219,7 +219,7 @@
         }
 
         addToCart() {
-            console.log(this.selectedFiles);
+            // console.log(this.selectedFiles);
             const cart_samples: Sample[] = [];
             const added_files: LaxyFile[] = [];
             for (let f of this.selectedFiles) {
@@ -314,7 +314,7 @@
                 }
                 this.listing.push(f);
             }
-            console.log(data['archives']);
+            // console.log(data['archives']);
         }
 
         showErrorDialog(message: string) {
