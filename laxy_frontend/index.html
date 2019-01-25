@@ -270,7 +270,7 @@
         <router-view class="main-router-content"></router-view>
 
         <md-snackbar md-position="bottom center" ref="global_snackbar"
-                     :md-duration="2000">
+                     :md-duration="snackbar_duration">
             <span>{{ snackbar_message }}</span>
             <md-button class="md-accent" @click="$refs.global_snackbar.close()">
                 Dismiss
