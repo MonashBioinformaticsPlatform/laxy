@@ -1,6 +1,6 @@
 <template>
     <!-- eg multiqc report link -->
-    <md-card @click.native="openLinkInTab(url)">
+    <md-card>
         <md-card-header>
             <md-card-header-text>
                 <div class="md-title">
@@ -54,5 +54,4 @@
             window.open(url);
         }
     }
-
 </script>
