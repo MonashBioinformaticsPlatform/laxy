@@ -183,6 +183,7 @@ export function findPair(file: any, files: any[], getName: Function | null = nul
     }
     const fn = truncateFastqFilename(getName(file));
     for (const f of files) {
+        if (f === null) continue;
         const other = truncateFastqFilename(getName(f));
         if (fn.slice(0, -1) === other.slice(0, -1) &&
             (parseInt(fn.slice(-1), 10) + parseInt(other.slice(-1), 10)) === 3) {
