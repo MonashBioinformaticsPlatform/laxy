@@ -1027,6 +1027,7 @@ class JobFileView(StreamFileMixin,
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+# TODO: This endpoint should properly set owner, location etc
 class JobFileBulkRegistration(JSONView):
     queryset = Job.objects.all()
     serializer_class = JobSerializerResponse
