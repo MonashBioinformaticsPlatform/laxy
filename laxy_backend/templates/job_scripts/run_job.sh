@@ -282,7 +282,7 @@ function find_filetype() {
     # eg, fastq,bam,bam.sorted
     local tags=$2
     # checksum,filepath,type_tags
-    find . -name "${pattern}" -type f -exec bash -c 'fn="$1"; echo -e "md5:$(md5sum "$fn" | sed -e "s/  */,/g"),\"'"${tags}"'\""' _ {} \;
+    find . -name "${pattern}" -type f -exec bash -c 'fn="$1"; echo -e "md5:$(md5sum "$fn" | sed -e "s/  */,\"/g")\",\"'"${tags}"'\""' _ {} \;
 }
 
 # TODO: This has become complex enough that it probably should be a Python script for file registration,
@@ -293,13 +293,16 @@ function register_files() {
     echo "checksum,filepath,type_tags" >${JOB_PATH}/manifest.csv
     # First, add every file we don't intend to tag to the manifest.
     find . -type f \
+           ! -name "manifest.csv" \
+           ! -name "job.pid" \
+           ! -name ".private_request_headers" \
            ! -name "*.bam" \
            ! -name "*.bai" \
            ! -name "*.fastq.gz" \
            ! -name "multiqc_report.html" \
            ! -name "RNAsik.bds.*.html" \
            ! -name "*StrandedCounts*.txt" \
-           -exec bash -c 'fn="$1"; echo -e "md5:$(md5sum "$fn" | sed -e "s/  */,/g"),\"'""'\""' _ {} \; \
+           -exec bash -c 'fn="$1"; echo -e "md5:$(md5sum "$fn" | sed -e "s/  */,\"/g")\",\"'""'\""' _ {} \; \
            >>${JOB_PATH}/manifest.csv
 
     # Not find and tag specific files/filetypes
@@ -520,7 +523,7 @@ if [[ "${JOB_INPUT_STAGED}" == "no" ]]; then
            --event-notification-url "${JOB_EVENT_URL}" \
            --event-notification-auth-file "${AUTH_HEADER_FILE}" \
            --pipeline-config "${JOB_PATH}/input/pipeline_config.json" \
-           --destination-path "${JOB_PATH}/input" || send_job_finshed $?
+           --destination-path "${JOB_PATH}/input" || send_job_finished $?
 
     # send_event "INPUT_DATA_DOWNLOAD_FINISHED" "Input data download completed."
 
@@ -626,7 +629,7 @@ register_files
 
 # Authorization header passed to curl is stored in a @file so it doesn't leak in 'ps' etc.
 
-send_job_finshed "${EXIT_CODE}"
+send_job_finished "${EXIT_CODE}"
 
 # Extra security: Remove the access token now that we don't need it anymore
 if [[ ${DEBUG} != "yes" ]]; then
