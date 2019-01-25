@@ -75,7 +75,8 @@
                     <md-layout md-flex="25" md-flex-medium="100">
                         <file-link-pip v-if="hasMultiQCReport"
                                        :url="fileUrlByTag('multiqc')"
-                                       :style="`background-color: ${cssColorVars['--primary-light']}`">
+                                       :style="`background-color: ${cssColorVars['--primary-light']}`"
+                                       class="fill-width">
                             <span slot="title">MultiQC report</span>
                             <span slot="subtitle">Open in new tab</span>
                         </file-link-pip>
@@ -161,7 +162,7 @@
                                                   :hide-search="false"
                                                   @refresh-error="showErrorDialog"></nested-file-list>
                                 <md-layout v-else
-                                          md-align="center">
+                                           md-align="center">
                                     No files (yet).
                                 </md-layout>
                             </md-layout>
@@ -434,11 +435,11 @@
         async mounted() {
             await this.refresh(null);
 
-            if (this.job && (this.job.status === "running" || this.job.status === "created")) {
-                this._refreshPollerId = setInterval(() => {
-                    this.refresh(null);
-                }, 10000);  // ms
-            }
+            //if (this.job && (this.job.status === "running" || this.job.status === "created")) {
+            this._refreshPollerId = setInterval(() => {
+                this.refresh(null);
+            }, 10000);  // ms
+            //}
         }
 
         beforeDestroy() {
@@ -516,6 +517,11 @@
 
                 this.getSharingLinks();
 
+                let original_status = null;
+                if (this.job != null) {
+                    original_status = this.job.status;
+                }
+
                 await this.$store.dispatch(FETCH_JOB, {
                     job_id: this.jobId,
                     access_token: this.$route.query.access_token
@@ -536,7 +542,8 @@
                 if (this.job) {
                     const fetches = [];
                     for (let fsid of [this.job.input_fileset_id, this.job.output_fileset_id]) {
-                        if (fsid && !this.$store.state.filesets[fsid]) {
+                        if (fsid &&
+                            (!this.$store.state.filesets[fsid] || this.$store.state.filesets[fsid].files.length === 0)) {
                             fetches.push(this.$store.dispatch(FETCH_FILESET, fsid));
                         }
                     }
