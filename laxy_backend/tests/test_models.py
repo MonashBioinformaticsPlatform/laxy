@@ -158,6 +158,14 @@ class FileSetModelTest(TestCase):
         self.file_a.save()
         self.file_b.save()
 
+        # Unsaved Files have no primary key (until saved)
+        self.file_c_unsaved = File(owner=self.user,
+                                   name="file_c",
+                                   location="file:///tmp/file_c")
+        self.file_d_unsaved = File(owner=self.user,
+                                   name="file_d",
+                                   location="file:///tmp/file_d")
+
         self.fileset = FileSet(name='test-fileset-1', owner=self.user)
 
     def tearDown(self):
@@ -202,10 +210,15 @@ class FileSetModelTest(TestCase):
 
         # The delete flag removes the associated File record
         fileset.add([file_a, file_b])
-        self.fileset.remove(file_a, delete=True)
+        fileset.remove(file_a, delete=True)
         with self.assertRaises(ObjectDoesNotExist):
             db_file_a = File.objects.get(id=file_a.id)
+        # No exception, file_b should still exist
         db_file_b = File.objects.get(id=file_b.id)
+
+        fileset.add([self.file_c_unsaved, self.file_d_unsaved])
+        self.assertIn(self.file_c_unsaved, list(fileset.files.all()))
+        self.assertIn(self.file_d_unsaved, list(fileset.files.all()))
 
 
 class SampleSetTest(TestCase):
