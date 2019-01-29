@@ -347,7 +347,7 @@
         public snackbar_message: string = "Everything is fine. ☃";
         public snackbar_duration: number = 2000;
 
-        private _refreshPollerId: number | null = null;
+        private refreshPollerId: number | null = null;
 
         getStatusColor = getStatusColor;
         themeColors = themeColors;
@@ -436,14 +436,14 @@
             await this.refresh(null);
 
             //if (this.job && (this.job.status === "running" || this.job.status === "created")) {
-            this._refreshPollerId = setInterval(() => {
+            this.refreshPollerId = setInterval(() => {
                 this.refresh(null);
             }, 10000);  // ms
             //}
         }
 
         beforeDestroy() {
-            if (this._refreshPollerId != null) clearInterval(this._refreshPollerId);
+            if (this.refreshPollerId != null) clearInterval(this.refreshPollerId);
         }
 
         openFileByPath(filepath: string) {
