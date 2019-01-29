@@ -2346,10 +2346,10 @@ class RemoteBrowseView(JSONView):
         :rtype:
         -->
         """
-        url = request.query_params.get('url', None)
+        url = request.query_params.get('url', '').strip()
         fileglob = request.query_params.get('fileglob', '*')
 
-        if url is None:
+        if url == '':
             return HttpResponse(status=status.HTTP_400_BAD_REQUEST,
                                 reason="url query parameter is required.")
 
@@ -2358,7 +2358,12 @@ class RemoteBrowseView(JSONView):
         #     return any([fn.endswith(ext) for ext in archive_extensions])
 
         listing = []
+
         scheme = urlparse(url).scheme
+        if scheme not in ['ftp', 'http', 'https']:
+            return HttpResponse(status=status.HTTP_400_BAD_REQUEST,
+                                reason=f"Unsupported scheme: {scheme}://")
+
         fn = Path(urlparse(url).path).name
         if is_archive_link(url) or fn.endswith('.manifest-md5'):
             try:
