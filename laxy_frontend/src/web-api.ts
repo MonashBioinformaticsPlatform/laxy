@@ -113,6 +113,14 @@ export class WebAPI {
         }
     }
 
+    public static async ping(): Promise<AxiosResponse> {
+        try {
+            return await this.fetcher.get(`/api/v1/ping/`) as AxiosResponse;
+        } catch (error) {
+            throw error;
+        }
+    }
+
     public static async login(user: string, pass: string): Promise<AxiosResponse> {
         try {
             return await this.fetcher.post(`/api/v1/auth/login/`,

@@ -176,7 +176,7 @@ def check_drf_token(request, format=None):
 
 class CsrfCookieView(APIView):
     """
-    This view exists simply to provide the CSRF token, both as a JSON response
+    This view exists to provide the CSRF token, both as a JSON response
     `{"csrftoken": "theTok3nC00kie"}`, and set as a cookie.
 
     It is intended to be used in situations where a web frontend (eg single page app)

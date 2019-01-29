@@ -33,7 +33,7 @@ from laxy_backend.views import (JobView, JobCreate,
                                 EventLogCreate, EventLogListView, JobEventLogCreate,
                                 JobFileView, JobFileBulkRegistration, trigger_file_registration,
                                 SendFileToDegust, RemoteBrowseView, AccessTokenCreate, AccessTokenListView,
-                                AccessTokenView, JobAccessTokenView)
+                                AccessTokenView, JobAccessTokenView, PingView)
 
 from laxy_backend.view_auth import (Login, Logout, PublicSocialSessionAuthView,
                                     CsrfCookieView, check_drf_token, UserProfileView)
@@ -94,6 +94,8 @@ api_urls = [
     # path('compute-resource/',
     #     ComputeResourceCreate.as_view(),
     #     name='compute_resource'),
+
+    re_path(r'ping/$', PingView.as_view(), name='ping'),
 
     # This seems to fail with 405 error if it is included too low in the list - some route pattern clash ?
     re_path(r'user/profile/$', UserProfileView.as_view(),

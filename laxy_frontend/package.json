@@ -4,14 +4,14 @@
   "description": "",
   "main": "dist/bundle.js",
   "scripts": {
-    "build": "NODE_ENV=production webpack",
-    "build:dev": "NODE_ENV=dev webpack",
-    "build:prod": "NODE_ENV=production webpack",
-    "watch": "NODE_ENV=dev NYAN=true webpack -d --watch --progress",
+    "build": "NODE_ENV=production GIT_COMMIT=$(git log -1 --format=%h) webpack",
+    "build:dev": "NODE_ENV=dev GIT_COMMIT=$(git log -1 --format=%h) webpack",
+    "build:prod": "NODE_ENV=production GIT_COMMIT=$(git log -1 --format=%h) webpack",
+    "watch": "NODE_ENV=dev NYAN=true GIT_COMMIT=$(git log -1 --format=%h) webpack -d --watch --progress",
     "dev": "npm run server && python3 ../manage.py runserver 8001",
     "django": "python3 ../manage.py runserver 8001",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "server": "NODE_ENV=dev NYAN=true webpack-dev-server -d --watch --port 8002 --open --content-base ./dist/"
+    "server": "NODE_ENV=dev NYAN=true GIT_COMMIT=$(git log -1 --format=%h) webpack-dev-server -d --watch --port 8002 --open --content-base ./dist/"
   },
   "author": "Andrew Perry <Andrew.Perry@monash.edu>",
   "license": "Apache",
@@ -41,6 +41,7 @@
     "css-loader": "^0.28.11",
     "extract-text-webpack-plugin": "^3.0.2",
     "file-loader": "^0.11.2",
+    "html-webpack-plugin": "^3.2.0",
     "node-sass": "^4.10.0",
     "npm": "^6.5.0",
     "nyan-progress-webpack-plugin": "^1.2.0",

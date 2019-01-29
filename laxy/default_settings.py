@@ -14,6 +14,7 @@ import logging
 import os
 from datetime import timedelta
 import tempfile
+import subprocess
 from django.core.exceptions import ImproperlyConfigured
 import environ
 import sentry_sdk
@@ -53,6 +54,7 @@ environ.Env.read_env(envfile())
 default_env = PrefixedEnv(
     APP_ENV_PREFIX,
     DEBUG=(bool, False),
+    VERSION=(str, ''),
     ADMIN_EMAIL=(str, None),
     ADMIN_USERNAME=(str, None),
     AWS_ACCESS_KEY_ID=(str, None),
@@ -130,6 +132,22 @@ if SENTRY_DSN:
         dsn=SENTRY_DSN,
         integrations=[DjangoIntegration()]
     )
+
+
+def get_git_commit():
+    try:
+        git_commit = subprocess.check_output(['git', 'log', '-1', '--format=%h']).strip().decode('utf-8')
+    except:
+        git_commit = None
+    return git_commit
+
+
+# Take LAXY_VERSION from env vars, if set, else try to get the git commit, else 'unspecified'
+VERSION = env('VERSION')
+if not VERSION:
+    VERSION = get_git_commit()
+if not VERSION:
+    VERSION = 'unspecified'
 
 USE_SSL = env('USE_SSL')
 

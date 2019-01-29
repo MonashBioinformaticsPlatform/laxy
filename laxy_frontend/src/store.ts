@@ -13,6 +13,8 @@ import {ComputeJob, LaxyFile, Sample, SampleSet} from './model';
 import {WebAPI} from './web-api';
 import {vueAuth, AuthOptions} from './auth';
 
+export const SET_ONLINE_STATUS = 'set_online_status';
+export const SET_BACKEND_VERSION = 'set_backend_version';
 export const AUTHENTICATE_USER = 'authenticate_user';
 export const SET_USER_PROFILE = 'set_user_profile';
 export const ADD_SAMPLES = 'add_samples';
@@ -28,6 +30,7 @@ export const SET_API_URL = 'set_api_url';
 export const SET_JOB_ACCESS_TOKEN = 'set_job_access_token';
 export const SET_GLOBAL_SNACKBAR = 'set_global_snackbar';
 
+export const PING_BACKEND = 'ping_backend';
 export const FETCH_USER_PROFILE = 'fetch_user_profile';
 export const FETCH_JOBS = 'fetch_jobs';
 export const FETCH_FILESET = 'fetch_fileset';
@@ -42,6 +45,8 @@ Vue.use(Vuex);
 export const Store = new Vuex.Store({
         strict: true,
         state: {
+            online: false,
+            backend_version: 'unknown',
             user_profile: null as any,
             samples: new SampleSet() as SampleSet,
             pipelineParams: {
@@ -133,6 +138,12 @@ export const Store = new Vuex.Store({
             },
         },
         mutations: {
+            [SET_ONLINE_STATUS](state, connected: boolean) {
+                state.online = connected;
+            },
+            [SET_BACKEND_VERSION](state, version: string) {
+                state.backend_version = version;
+            },
             [SET_GLOBAL_SNACKBAR](state, params: any) {
                 state.global_snackbar_message = params.message || null;
                 state.global_snackbar_duration = params.duration || 2000;
@@ -178,6 +189,17 @@ export const Store = new Vuex.Store({
             }
         },
         actions: {
+            async [PING_BACKEND]({commit, state}) {
+                try {
+                    const response = await WebAPI.ping();
+                    commit(SET_ONLINE_STATUS, response.data.status === 'online');
+                    commit(SET_BACKEND_VERSION, response.data.version);
+                } catch (error) {
+                    commit(SET_ONLINE_STATUS, false);
+                    commit(SET_BACKEND_VERSION, 'unknown');
+                    throw error;
+                }
+            },
             async [AUTHENTICATE_USER]({commit, state, dispatch}, payload: any) {
                 try {
                     if (payload.provider === 'laxy') {

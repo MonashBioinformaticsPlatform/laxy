@@ -129,6 +129,11 @@ class PutSerializerResponse(serializers.Serializer):
         error_status_codes = status_codes(*default_status_codes, 204)
 
 
+class PingResponseSerializer(serializers.Serializer):
+    status = serializers.CharField(max_length=255, required=False)
+    version = serializers.CharField(max_length=255, required=False)
+
+
 class FileSerializer(BaseModelSerializer):
     name = serializers.CharField(max_length=255, required=False)
     path = serializers.CharField(max_length=4096, required=False)

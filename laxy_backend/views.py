@@ -20,7 +20,7 @@ from datetime import datetime
 from django.conf import settings
 from django.contrib.admin.views.decorators import user_passes_test
 from django.db import transaction
-from django.http import HttpResponse, StreamingHttpResponse
+from django.http import HttpResponse, StreamingHttpResponse, JsonResponse
 from django.urls import reverse
 from django.utils.encoding import force_text
 from django_filters.rest_framework import DjangoFilterBackend, OrderingFilter
@@ -89,7 +89,8 @@ from .serializers import (PatchSerializerResponse,
                           InputOutputFilesResponse,
                           RedirectResponseSerializer,
                           FileListing,
-                          AccessTokenSerializer, JobAccessTokenRequestSerializer, JobAccessTokenResponseSerializer)
+                          AccessTokenSerializer, JobAccessTokenRequestSerializer, JobAccessTokenResponseSerializer,
+                          PingResponseSerializer)
 from .util import sh_bool, laxy_sftp_url, generate_uuid, multikeysort
 from .storage import http_remote_index
 from .view_mixins import (JSONView, GetMixin, PatchMixin,
@@ -265,6 +266,7 @@ REFERENCE_GENOME_MAPPINGS = {
     "Zea_mays/Ensembl/AGPv3": "Zea_mays/Ensembl/AGPv3",
 }
 
+
 def get_content_type(request: Request) -> str:
     """
     Returns the simple Content-Type (MIME type/media type) for an HTTP Request
@@ -276,6 +278,19 @@ def get_content_type(request: Request) -> str:
     :rtype: str
     """
     return request.content_type.split(';')[0].strip()
+
+
+class PingView(APIView):
+    renderer_classes = (JSONRenderer,)
+    permission_classes = (AllowAny,)
+
+    @view_config(response_serializer=PingResponseSerializer)
+    def get(self, request, version=None):
+        """
+        Used by clients to poll if the backend is online.
+        """
+        app_version = getattr(settings, 'VERSION', 'unspecified')
+        return JsonResponse(PingResponseSerializer({'version': app_version, 'status': 'online'}).data)
 
 
 # TODO: Strangley, Swagger/CoreAPI only show the 'name' for the query parameter

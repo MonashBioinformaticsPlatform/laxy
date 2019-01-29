@@ -3,6 +3,7 @@ const webpack = require('webpack');
 const WebpackShellPlugin = require('webpack-shell-plugin');
 const Dotenv = require('dotenv-webpack');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
 const NyanProgressPlugin = require('nyan-progress-webpack-plugin');
 
 const plugins = [
@@ -13,9 +14,16 @@ const plugins = [
         silent: false, // hide any errors
     }),
     // copy index.html to dist
-    new CopyWebpackPlugin([{
-        from: './index.html'
-    }]),
+    // new CopyWebpackPlugin([{
+    //     from: './index.html'
+    // }]),
+    new HtmlWebpackPlugin({
+        title: 'Laxy',
+        filename: 'index.html',
+        template: 'index.html',
+        // favicon: 'assets/favicon.ico',
+        hash: true,
+  })
 ];
 
 /*
@@ -31,7 +39,7 @@ module.exports = {
     entry: "./src/index.ts",
     output: {
         path: path.resolve(__dirname, './dist'),
-        filename: "bundle.js"
+        filename: process.env.NODE_ENV === 'production' ? "bundle.[hash].js": "bundle.js",
     },
     module: {
         rules: [
@@ -104,6 +112,7 @@ module.exports.plugins = (module.exports.plugins || []).concat([
             LAXY_FRONTEND_API_URL: JSON.stringify(process.env.LAXY_FRONTEND_API_URL) || JSON.stringify('http://localhost:8001'),
             LAXY_FRONTEND_URL: JSON.stringify(process.env.LAXY_FRONTEND_URL) || JSON.stringify('http://localhost:8002'),
             LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID: JSON.stringify(process.env.LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID) || JSON.stringify(''),
+            LAXY_VERSION: JSON.stringify(process.env.GIT_COMMIT) || JSON.stringify('unspecified'),
         }
     }),
 ]);

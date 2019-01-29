@@ -59,6 +59,7 @@ import {router} from './routes';
 import {
     AUTHENTICATE_USER,
     FETCH_USER_PROFILE,
+    PING_BACKEND,
     SET_GLOBAL_SNACKBAR,
     SET_USER_PROFILE,
     Store as store
@@ -116,6 +117,8 @@ const App = new Vue({
     data() {
         return {
             showHeaderMessage: true,  // process.env.LAXY_ENV === 'dev',
+            appVersion: process.env.LAXY_VERSION,
+            pingPollerId: -1,
         };
     },
     async created() {
@@ -136,6 +139,14 @@ const App = new Vue({
         snackbar.$on('close', () => {
             this.$store.commit(SET_GLOBAL_SNACKBAR, {message: '', duration: 2000});
         });
+
+        this.$store.dispatch(PING_BACKEND);
+        this.pingPollerId = setInterval(() => {
+                this.$store.dispatch(PING_BACKEND);
+                }, 30000);  // ms
+    },
+    beforeDestroy() {
+        if (this.pingPollerId !== -1) clearInterval(this.pingPollerId);
     },
     methods: {
         closeLoginDropdown() {
@@ -162,6 +173,12 @@ const App = new Vue({
         },
     },
     computed: {
+        online(): boolean {
+            return this.$store.state.online;
+        },
+        backendVersion(): string {
+            return this.$store.state.backend_version;
+        },
         sample_cart_count(): number {
             return this.$store.getters.sample_cart_count;
         },

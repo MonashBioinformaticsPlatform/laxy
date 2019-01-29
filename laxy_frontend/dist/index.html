@@ -212,6 +212,7 @@
                                 <md-menu-item @selected="logout">Logout
                                 </md-menu-item>
                             </div>
+                            Version: {{ appVersion }}
                         </div>
                     </md-menu-content>
                 </md-menu>
@@ -270,7 +271,7 @@
         <router-view class="main-router-content"></router-view>
 
         <md-snackbar md-position="bottom center" ref="global_snackbar"
-                     :md-duration="2000">
+                     :md-duration="snackbar_duration">
             <span>{{ snackbar_message }}</span>
             <md-button class="md-accent" @click="$refs.global_snackbar.close()">
                 Dismiss
@@ -279,6 +280,7 @@
 
     </div>
 </div>
-<script src="bundle.js"></script>
-</body>
+<!-- Hashed cache-busting version added automatically by webpack -->
+<!-- <script src="bundle.js" type="text/javascript"></script> -->
+<script type="text/javascript" src="bundle.41ac4c399dc5a7c8f0bd.js?41ac4c399dc5a7c8f0bd"></script></body>
 </html>
