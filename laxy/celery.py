@@ -13,7 +13,9 @@ import sentry_sdk
 from sentry_sdk.integrations.celery import CeleryIntegration
 
 if getattr(settings, 'SENTRY_DSN', False):
-    sentry_sdk.init(dsn=settings.SENTRY_DSN, integrations=[CeleryIntegration()])
+    sentry_sdk.init(dsn=settings.SENTRY_DSN,
+                    release=settings.VERSION,
+                    integrations=[CeleryIntegration()])
 
 app = Celery('laxy')
 

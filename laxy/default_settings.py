@@ -123,17 +123,6 @@ def _cleanup_env_list(l):
     return [i.replace('"', '').replace("'", '').strip() for i in l]
 
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env('DEBUG')
-
-SENTRY_DSN = env('SENTRY_DSN')
-if SENTRY_DSN:
-    sentry_sdk.init(
-        dsn=SENTRY_DSN,
-        integrations=[DjangoIntegration()]
-    )
-
-
 def get_git_commit():
     try:
         git_commit = subprocess.check_output(['git', 'log', '-1', '--format=%h']).strip().decode('utf-8')
@@ -142,12 +131,23 @@ def get_git_commit():
     return git_commit
 
 
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = env('DEBUG')
+
 # Take LAXY_VERSION from env vars, if set, else try to get the git commit, else 'unspecified'
 VERSION = env('VERSION')
 if not VERSION:
     VERSION = get_git_commit()
 if not VERSION:
     VERSION = 'unspecified'
+
+SENTRY_DSN = env('SENTRY_DSN')
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        release=VERSION,
+        integrations=[DjangoIntegration()]
+    )
 
 USE_SSL = env('USE_SSL')
 
