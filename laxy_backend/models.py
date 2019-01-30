@@ -912,6 +912,12 @@ class FileSet(Timestamped, UUIDModel):
             # each file, including pre_save/post_save hooks.
             self.files.add(*files, bulk=False)
 
+            self.modified_time = datetime.now()
+
+            for job in self.jobs():
+                job.modified_time = datetime.now()
+                job.save()
+
     @transaction.atomic
     def remove(self, files: Union[File, List[File]], delete=False):
         """
@@ -941,6 +947,12 @@ class FileSet(Timestamped, UUIDModel):
             if delete:
                 [f.delete() for f in files]
 
+            self.modified_time = datetime.now()
+
+            for job in self.jobs():
+                job.modified_time = datetime.now()
+                job.save()
+
     def get_files(self) -> QuerySet:
         """
         Return all the File objects associated with this FileSet.
@@ -961,6 +973,9 @@ class FileSet(Timestamped, UUIDModel):
         fpath = Path(file_path).parent
         f = self.get_files().filter(name=fname, path=fpath).first()
         return f
+
+    def jobs(self):
+        return self.jobs_as_input.all().union(self.jobs_as_output.all()).all()
 
 
 @reversion.register()
