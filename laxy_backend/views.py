@@ -95,7 +95,7 @@ from .util import sh_bool, laxy_sftp_url, generate_uuid, multikeysort
 from .storage import http_remote_index
 from .view_mixins import (JSONView, GetMixin, PatchMixin,
                           DeleteMixin, PostMixin, CSVTextParser,
-                          PutMixin, RowsCSVTextParser)
+                          PutMixin, RowsCSVTextParser, etag_headers)
 
 # from .models import User
 from django.contrib.auth import get_user_model
@@ -681,6 +681,7 @@ class FileView(StreamFileMixin,
     # permission_classes = (DjangoObjectPermissions,)
 
     @view_config(response_serializer=FileSerializer)
+    @etag_headers
     def get(self, request: Request, uuid=None, filename=None, version=None):
         """
         Returns info about a file or downloads the content.
@@ -869,6 +870,7 @@ class JobFileView(StreamFileMixin,
     permission_classes = (IsOwner | IsSuperuser | HasReadonlyObjectAccessToken,)
 
     @view_config(response_serializer=FileSerializer)
+    @etag_headers
     def get(self,
             request: Request,
             uuid: str,
@@ -1148,6 +1150,7 @@ class FileSetView(GetMixin,
     # permission_classes = (DjangoObjectPermissions,)
 
     @view_config(response_serializer=FileSetSerializer)
+    @etag_headers
     def get(self, request: Request, uuid, version=None):
         """
         Returns info about a FileSet, specified by UUID.
@@ -1313,6 +1316,7 @@ class SampleSetView(GetMixin,
     # permission_classes = (DjangoObjectPermissions,)
 
     @view_config(response_serializer=SampleSetSerializer)
+    @etag_headers
     def get(self, request: Request, uuid, version=None):
         """
         Returns info about a FileSet, specified by UUID.
@@ -1481,6 +1485,7 @@ class PipelineRunView(GetMixin,
     # permission_classes = (DjangoObjectPermissions,)
 
     @view_config(response_serializer=PipelineRunSerializer)
+    @etag_headers
     def get(self, request: Request, uuid, version=None):
         """
         Returns info about a PipelineRun, specified by UUID.
@@ -1534,6 +1539,7 @@ class JobView(JSONView):
     # permission_classes = (DjangoObjectPermissions,)
 
     @view_config(response_serializer=JobSerializerResponse)
+    @etag_headers
     def get(self, request: Request, uuid, version=None):
         """
         Returns info about a Job, specified by Job ID (UUID).

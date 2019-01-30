@@ -2,6 +2,7 @@ from io import StringIO, BytesIO
 from rest_framework.generics import GenericAPIView
 from rest_framework.serializers import BaseSerializer
 from typing import List, Union
+import functools
 
 import csv
 import json
@@ -22,6 +23,28 @@ from drf_openapi.utils import view_config
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def etag_headers(method):
+    """
+    A decorator that adds `ETag` and `Last-Modified` headers to `.get` method responses if not already present.
+    Intended to be use with Timestamped models (or any object with a modified_time field).
+    """
+    @functools.wraps(method)
+    def add_etag_headers_to_response(*args, **kwargs):
+        response = method(*args, **kwargs)
+        if len(args) > 0:
+            obj = args[0].get_object()
+            if hasattr(obj, 'modified_time'):
+                if response.get('Last-Modified', None) is None:
+                    response['Last-Modified'] = obj.modified_time.strftime(
+                        "%a, %d %b %Y %H:%M:%S GMT")
+                if response.get('ETag', None) is None:
+                    # NGINX strips out 'strong' ETags by default, so we use a weak (W/) ETag
+                    response['ETag'] = f'W/"{obj.modified_time.isoformat()}"'
+        return response
+
+    return add_etag_headers_to_response
 
 
 class JSONView(GenericAPIView):
