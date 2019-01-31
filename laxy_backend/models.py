@@ -32,12 +32,13 @@ from django.utils import timezone
 import reversion
 from rest_framework.authtoken.models import Token
 
-from laxy_backend.util import unique
 from .tasks import orchestration
 from .cfncluster import generate_cluster_stack_name
-from .util import (generate_uuid,
+from .util import (unique,
+                   generate_uuid,
                    generate_secret_key,
-                   find_filename_and_size_from_url)
+                   find_filename_and_size_from_url,
+                   laxy_sftp_url)
 
 import logging
 logger = logging.getLogger(__name__)
@@ -521,6 +522,8 @@ class Job(Timestamped, UUIDModel):
                     f_obj = f.create(f.validated_data)
 
                 f_obj.owner = self.owner
+                location_base = laxy_sftp_url(self)
+                f_obj.location = f'{location_base}/{f_obj.path}/{f_obj.name}'
                 if save:
                     f_obj = f.save()
 
