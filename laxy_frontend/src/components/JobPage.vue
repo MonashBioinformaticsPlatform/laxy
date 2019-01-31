@@ -314,6 +314,8 @@
         // TODO: Put file list / job record in Vuex, make this a read only
         //       computed property derived from the store
         public jobId: string;
+        public output_fileset_id?: string | null;
+        public input_fileset_id?: string | null;
 
         public showTab: "summary" | "input" | "output" | "eventlog" | "sharing";
         public tabs: any = [
@@ -375,11 +377,9 @@
         }
 
         get inputFiles(): LaxyFile[] | null {
-            if (this.job) {
-                const fsid = this.job.input_fileset_id;
-                if (this.$store.state.filesets[fsid]) {
-                    return this.$store.state.filesets[fsid].files;
-                }
+            const fsid = this.input_fileset_id;
+            if (fsid && this.$store.state.filesets[fsid]) {
+                return this.$store.state.filesets[fsid].files;
             }
             return null;
         }
@@ -390,11 +390,9 @@
         }
 
         get outputFiles(): LaxyFile[] | null {
-            if (this.job) {
-                const fsid = this.job.output_fileset_id;
-                if (this.$store.state.filesets[fsid]) {
-                    return this.$store.state.filesets[fsid].files;
-                }
+            const fsid = this.output_fileset_id;
+            if (fsid && this.$store.state.filesets[fsid]) {
+                return this.$store.state.filesets[fsid].files;
             }
             return null;
         }
@@ -526,6 +524,11 @@
                     job_id: this.jobId,
                     access_token: this.$route.query.access_token
                 });
+                this.job = this.$store.state.currentViewedJob;
+                if (this.job) {
+                    this.input_fileset_id = this.job.input_fileset_id;
+                    this.output_fileset_id = this.job.output_fileset_id;
+                }
 
                 let eventlog = null;
                 if (this.showTab == "eventlog") {
@@ -536,14 +539,11 @@
                 }
                 if (eventlog) await eventlog.refresh();
 
-                this.job = this.$store.state.currentViewedJob;
-
                 // do web requests if filesets not yet populated
-                if (this.job) {
+                if (this.job && this.job.status != original_status) {
                     const fetches = [];
-                    for (let fsid of [this.job.input_fileset_id, this.job.output_fileset_id]) {
-                        if (fsid &&
-                            (!this.$store.state.filesets[fsid] || this.$store.state.filesets[fsid].files.length === 0)) {
+                    for (let fsid of [this.input_fileset_id, this.output_fileset_id]) {
+                        if (fsid) {
                             fetches.push(this.$store.dispatch(FETCH_FILESET, fsid));
                         }
                     }
