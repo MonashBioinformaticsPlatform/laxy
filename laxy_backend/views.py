@@ -58,7 +58,11 @@ from .permissions import HasReadonlyObjectAccessToken, IsOwner, IsSuperuser, is_
     HasAccessTokenForEventLogSubject, token_is_valid, FilesetHasAccessTokenForJob
 from . import bcbio
 from . import ena
-from . import tasks
+from .tasks.job import (start_job,
+                        index_remote_files,
+                        _index_remote_files_task_err_handler,
+                        set_job_status)
+
 from .jwt_helpers import (get_jwt_user_header_dict,
                           get_jwt_user_header_str)
 from .models import (Job,
@@ -1610,24 +1614,26 @@ class JobView(JSONView):
                 else:
                     serializer.validated_data.update(status=Job.STATUS_FAILED)
 
-            serializer.save()
-
-            job = Job.objects.get(id=uuid)
-            new_status = job.status
+            new_status = serializer.validated_data.get('status')
 
             if (new_status != original_status and
                     (new_status == Job.STATUS_COMPLETE or
                      new_status == Job.STATUS_FAILED)):
-                task_data = dict(job_id=uuid)
-                result = tasks.index_remote_files.apply_async(
-                    args=(task_data,))
-                # link_error=self._task_err_handler.s(job_id))
 
-            if (job.done and
-                    job.compute_resource and
-                    job.compute_resource.disposable and
-                    not job.compute_resource.running_jobs()):
-                job.compute_resource.dispose()
+                # We don't update the status yet - an async task will do this after file indexing is complete
+                serializer.save(status=original_status)
+                # job = Job.objects.get(id=uuid)
+
+                task_data = dict(job_id=uuid, status=new_status)
+                # result = =index_remote_files.apply_async(
+                #     args=(task_data,))
+                # link_error=self._task_err_handler.s(job_id))
+                result = chain(index_remote_files.s(task_data),
+                               set_job_status.s()).apply_async(
+                    link_error=_index_remote_files_task_err_handler.s(job_id=job.id))
+            else:
+                serializer.save()
+                # job = Job.objects.get(id=uuid)
 
             return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -1807,11 +1813,11 @@ class JobCreate(JSONView):
             # TESTING: Start cluster, run job, (pre-existing data), stop cluster
             # tasks.run_job_chain(task_data)
 
-            result = tasks.start_job.apply_async(
+            result = start_job.apply_async(
                 args=(task_data,),
                 link_error=self._task_err_handler.s(job_id))
             # Non-async for testing
-            # result = tasks.start_job(task_data)
+            # result = start_job(task_data)
 
             # result = chain(# tasks.stage_job_config.s(task_data),
             #                # tasks.stage_input_files.s(),
@@ -2178,7 +2184,7 @@ def trigger_file_registration(request, job_id, version=None):
         return HttpResponse(status=404, reason=f"Job {job_id} doesn't exist.")
 
     task_data = dict(job_id=job_id)
-    result = tasks.index_remote_files.apply_async(
+    result = index_remote_files.apply_async(
         args=(task_data,))
     return Response(data={'task_id': result.id},
                     content_type='application/json',
