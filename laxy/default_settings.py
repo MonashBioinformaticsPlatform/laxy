@@ -54,6 +54,7 @@ environ.Env.read_env(envfile())
 default_env = PrefixedEnv(
     APP_ENV_PREFIX,
     DEBUG=(bool, False),
+    SECRET_KEY=(str, None),
     VERSION=(str, ''),
     ADMIN_EMAIL=(str, None),
     ADMIN_USERNAME=(str, None),
@@ -169,15 +170,11 @@ ALLOWED_HOSTS = env('ALLOWED_HOSTS')
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.11/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-# SECRET_KEY = 'it0!1vg87mhmvos$e#+9^2g4z6my1=np5^cnxr6#+**54hi(q%'
-
+# SECURITY WARNING: keep the secret key used in production secret !
 try:
     SECRET_KEY = env('SECRET_KEY')
 except ImproperlyConfigured:
     SECRET_KEY = get_secret_key()
-
-# SECRET_KEY = get_secret_key()
 
 # Database
 # https://docs.djangoproject.com/en/1.11/ref/settings/#databases
