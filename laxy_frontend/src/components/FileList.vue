@@ -18,7 +18,11 @@
                         </md-table-cell>
                         <md-table-cell md-numeric>
                             <!--<div class="push-right">-->
-                            <md-button v-if="getDefaultViewMethod(file)"
+                            <md-spinner v-if="actionRunning[file.id]"
+                                        :md-size="20"
+                                        class="push-right"
+                                        md-indeterminate></md-spinner>
+                            <md-button v-else-if="getDefaultViewMethod(file)"
                                        class="md-icon-button push-right"
                                        @click="getDefaultViewMethod(file).method(file)">
                                 <md-tooltip md-direction="top">
@@ -32,7 +36,7 @@
                                 <!-- empty placeholder button to preserve layout -->
                                 <md-icon></md-icon>
                             </md-button>
-                            <md-menu md-size="4">
+                            <md-menu v-if="!actionRunning[file.id]" md-size="4">
                                 <md-button class="md-icon-button push-right" md-menu-trigger>
                                     <md-icon>arrow_drop_down</md-icon>
                                 </md-button>
@@ -107,6 +111,7 @@
     } from "../file-tree-util";
 
     import {DummyFileSet as _dummyFileSet} from "../test-data";
+    import {Snackbar} from "../snackbar";
 
     @Component({
         filters: {},
@@ -162,6 +167,8 @@
         public searchQuery: string = '';
         public searching: boolean = false;
 
+        public actionRunning: any = {};
+
         get fileset(): any {
             // this appears reactive. reading directl
             return this.$store.getters.fileset(this.filesetId);
@@ -195,7 +202,7 @@
             {
                 text: "Open in Degust",
                 icon: "dashboard",
-                tags: ["counts", "degust"],
+                tags: ["degust"],
                 method: async (file: LaxyFile) => {
                     // This won't work clientside due to CSRF tokens and Cross-Origin rules
                     // (Degust could provide a proper API and get friendly with
@@ -216,6 +223,8 @@
                     // return the resulting '?code=' URL from Degust back
                     // to the client to open a new tab.
                     // Sadly needs popup whitelisting by the user.
+                    this.actionRunning[file.id] = true;
+                    Snackbar.flashMessage("Please wait - sometimes sending counts to Degust takes time.", 5000);
                     const url = `/api/v1/action/send-to/degust/${file.id}/`;
                     const resp = await WebAPI.fetcher.post(url);
                     if (resp.data.status == 200) {
@@ -224,6 +233,7 @@
                         console.error(`Failed sending to Degust`);
                         console.log(resp);
                     }
+                    this.actionRunning[file.id] = false;
                 }
             },
         ];

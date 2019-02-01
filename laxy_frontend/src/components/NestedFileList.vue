@@ -95,7 +95,11 @@
                                 <md-table-cell v-if="!hideActions"
                                                @click.native="getProp(node.meta, 'onclick', (n) => {})(node)"
                                                md-numeric>
-                                    <md-button v-if="getDefaultViewMethod(node.obj)"
+                                    <md-spinner v-if="actionRunning[node.obj.id]"
+                                                :md-size="20"
+                                                class="push-right"
+                                                md-indeterminate></md-spinner>
+                                    <md-button v-else-if="getDefaultViewMethod(node.obj)"
                                                class="md-icon-button push-right"
                                                @click="getDefaultViewMethod(node.obj).method(node.obj)">
                                         <md-tooltip md-direction="top">
@@ -109,7 +113,7 @@
                                         <!-- empty placeholder button to preserve layout -->
                                         <md-icon></md-icon>
                                     </md-button>
-                                    <md-menu md-size="4">
+                                    <md-menu v-if="!actionRunning[node.obj.id]" md-size="4">
                                         <md-button class="md-icon-button push-right" md-menu-trigger>
                                             <md-icon>arrow_drop_down</md-icon>
                                         </md-button>
@@ -213,6 +217,7 @@
     } from "../file-tree-util";
 
     import {DummyFileSet as _dummyFileSet} from "../test-data";
+    import {Snackbar} from "../snackbar";
 
     @Component({
         filters: {},
@@ -269,6 +274,8 @@
 
         public searchQuery: string = "";
         public searching: boolean = false;
+
+        public actionRunning: any = {};
 
         // for templates
         getProp = lodashGet;
@@ -465,6 +472,8 @@
                     // return the resulting '?code=' URL from Degust back
                     // to the client to open a new tab.
                     // Sadly needs popup whitelisting by the user.
+                    this.actionRunning[file.id] = true;
+                    Snackbar.flashMessage("Please wait - sometimes sending counts to Degust takes time.", 5000);
                     const url = `/api/v1/action/send-to/degust/${file.id}/`;
                     const resp = await WebAPI.fetcher.post(url);
                     if (resp.data.status == 200) {
@@ -473,6 +482,7 @@
                         console.error(`Failed sending to Degust`);
                         console.log(resp);
                     }
+                    this.actionRunning[file.id] = false;
                 }
             },
         ];
