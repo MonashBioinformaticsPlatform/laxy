@@ -103,6 +103,7 @@
                         <md-layout md-flex-medium="100"
                                    v-show="showTab === 'summary' || showTab == null" md-column>
                             <file-list v-if="job != null && job.status !== 'running'"
+                                       class="shadow"
                                        ref="report-files"
                                        title="Reports"
                                        :fileset-id="job.output_fileset_id"
@@ -365,6 +366,14 @@
 
         get cssColorVars() {
             return cssColorVars();
+        }
+
+        // Use like:
+        // :style="`background-color: ${paletteColor('yellow', '50')};`"
+        get paletteColor(): any {
+            return (color: string, shade: string | number) => {
+                return palette[color][shade];
+            }
         }
 
         get files(): LaxyFile[] {
