@@ -1881,6 +1881,13 @@ class JobListView(generics.ListAPIView):
     #     return Response(serializer.data)
 
 
+class BigPageNumberPagination(PageNumberPagination):
+    page_size = 100
+    page_query_param = 'page'
+    page_size_query_param = 'page_size'
+    max_page_size = 1000
+
+
 class EventLogListView(generics.ListAPIView):
     """
     To list all events for a particular job, use:
@@ -1892,6 +1899,7 @@ class EventLogListView(generics.ListAPIView):
     serializer_class = EventLogSerializer
     filter_backends = (DjangoFilterBackend,)
     filter_fields = ('user', 'object_id', 'event',)
+    pagination_class = BigPageNumberPagination
 
     permission_classes = (IsAuthenticated | HasAccessTokenForEventLogSubject,)
 
