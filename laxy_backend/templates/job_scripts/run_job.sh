@@ -311,7 +311,9 @@ function register_files() {
     find_filetype "*.fastq.gz" "fastq" >>${JOB_PATH}/manifest.csv
     find_filetype "multiqc_report.html" "multiqc,html,report" >>${JOB_PATH}/manifest.csv
     find_filetype "RNAsik.bds.*.html" "bds,logs,html,report" >>${JOB_PATH}/manifest.csv
-    find_filetype "*StrandedCounts*.txt" "counts,degust" >>${JOB_PATH}/manifest.csv
+    find_filetype "*Counts-withNames-proteinCoding.txt" "counts,degust" >>${JOB_PATH}/manifest.csv
+    find_filetype "*Counts.txt" "counts" >>${JOB_PATH}/manifest.csv
+    find_filetype "*Counts-withNames.txt" "counts" >>${JOB_PATH}/manifest.csv
 
     curl -X POST \
       ${CURL_INSECURE} \
