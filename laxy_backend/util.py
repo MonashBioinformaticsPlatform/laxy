@@ -185,6 +185,9 @@ def laxy_sftp_url(job, path: str = None) -> str:
     :return: The internal laxy+sftp:// URL
     :rtype: str
     """
+    if job.compute_resource is None:
+        raise ValueError("Job has no compute_resource defined. "
+                         "Cannot generate laxy+sftp:// URL since it requires a compute_resource ID.")
 
     url = f'laxy+sftp://{job.compute_resource.id}/{job.id}'
 
