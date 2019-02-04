@@ -522,8 +522,9 @@ class Job(Timestamped, UUIDModel):
                     f_obj = f.create(f.validated_data)
 
                 f_obj.owner = self.owner
-                location_base = laxy_sftp_url(self)
-                f_obj.location = f'{location_base}/{f_obj.path}/{f_obj.name}'
+                if not f_obj.location and self.compute_resource is not None:
+                    location_base = laxy_sftp_url(self)
+                    f_obj.location = f'{location_base}/{f_obj.path}/{f_obj.name}'
                 if save:
                     f_obj = f.save()
 
