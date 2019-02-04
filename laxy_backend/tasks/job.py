@@ -212,8 +212,14 @@ def index_remote_files(self, task_data=None, **kwargs):
     job_id = task_data.get('job_id')
     job = Job.objects.get(id=job_id)
     clobber = task_data.get('clobber', False)
-    master_ip = job.compute_resource.host
-    gateway = job.compute_resource.gateway_server
+
+    compute_resource = job.compute_resource
+    if compute_resource is not None:
+        master_ip = compute_resource.host
+        gateway = compute_resource.gateway_server
+    else:
+        logger.info(f"Not indexing files for {job_id}, no compute_resource.")
+        return task_data
 
     eventlog = EventLog(event='JOB_INFO',
                         message='Indexing all files (backend task)',

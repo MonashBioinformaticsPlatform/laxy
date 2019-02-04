@@ -28,6 +28,12 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 
 
+def get_tmp_dir():
+    dir = os.path.join(tempfile.gettempdir(), util.generate_uuid())
+    os.makedirs(dir, exist_ok=True)
+    return dir
+
+
 def _create_user_and_login(username='testuser',
                            password='testpass',
                            is_superuser=True):
@@ -356,6 +362,14 @@ class JobViewTest(TestCase):
         self.admin_user = admin_user
         self.admin_authenticated_client = authenticated_client
 
+        self.compute = ComputeResource(owner=self.admin_user,
+                                       host='127.0.0.1',
+                                       disposable=False,
+                                       status=ComputeResource.STATUS_ONLINE,
+                                       name='default',
+                                       extra={'base_dir': get_tmp_dir()})
+        self.compute.save()
+
         self.admin_job = Job(owner=admin_user,
                              params='{"bla":"foo"}')
         self.admin_job.save()
@@ -368,6 +382,11 @@ class JobViewTest(TestCase):
         self.user_job = Job(owner=user,
                             params='{"bing":"bang"}')
         self.user_job.save()
+
+        self.job_with_compute = Job(owner=user,
+                            params='{"bing":"bang"}',
+                            compute_resource=self.compute)
+        self.job_with_compute.save()
 
     def tearDown(self):
         self.admin_job.delete()
@@ -550,10 +569,10 @@ class JobViewTest(TestCase):
 
         # client = APIClient(HTTP_CONTENT_TYPE='text/csv')
         # client.force_authenticate(self.user.username)
-        url = reverse('laxy_backend:job_file_bulk', args=[self.user_job.uuid()])
+        url = reverse('laxy_backend:job_file_bulk', args=[self.job_with_compute.id])
         response = client.post(url, data=csv, content_type='text/csv; charset=utf-8')
         self.assertEqual(response.status_code, 200)
-        job = Job.objects.get(id=self.user_job.id)
+        job = Job.objects.get(id=self.job_with_compute.id)
         self.assertEqual(job.input_files.files.count(), 3)
         self.assertEqual(job.output_files.files.count(), 2)
         self.assertListEqual(sorted([c.checksum for c in job.input_files.get_files()]),
@@ -583,10 +602,10 @@ class JobViewTest(TestCase):
 
         # client = APIClient(HTTP_CONTENT_TYPE='text/csv')
         # client.force_authenticate(self.user.username)
-        url = reverse('laxy_backend:job_file_bulk', args=[self.user_job.uuid()])
+        url = reverse('laxy_backend:job_file_bulk', args=[self.job_with_compute.id])
         response = client.post(url, data=csv, content_type='text/csv; charset=utf-8')
         self.assertEqual(response.status_code, 200)
-        job = Job.objects.get(id=self.user_job.id)
+        job = Job.objects.get(id=self.job_with_compute.id)
         self.assertEqual(job.input_files.files.count(), 1)
         self.assertEqual(job.output_files.files.count(), 0)
         self.assertListEqual([c.location for c in job.input_files.get_files()],
