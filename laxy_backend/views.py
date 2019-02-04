@@ -6,8 +6,6 @@ import coreschema
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from fnmatch import fnmatch
-import json_merge_patch
-import jsonpatch
 import logging
 import os
 import pydash
@@ -95,11 +93,15 @@ from .serializers import (PatchSerializerResponse,
                           FileListing,
                           AccessTokenSerializer, JobAccessTokenRequestSerializer, JobAccessTokenResponseSerializer,
                           PingResponseSerializer)
-from .util import sh_bool, laxy_sftp_url, generate_uuid, multikeysort
+from .util import (sh_bool,
+                   laxy_sftp_url,
+                   generate_uuid,
+                   multikeysort,
+                   get_content_type)
 from .storage import http_remote_index
 from .view_mixins import (JSONView, GetMixin, PatchMixin,
                           DeleteMixin, PostMixin, CSVTextParser,
-                          PutMixin, RowsCSVTextParser, etag_headers)
+                          PutMixin, RowsCSVTextParser, etag_headers, JSONPatchMixin)
 
 # from .models import User
 from django.contrib.auth import get_user_model
@@ -269,19 +271,6 @@ REFERENCE_GENOME_MAPPINGS = {
     "Zea_mays/Ensembl/AGPv2": "Zea_mays/Ensembl/AGPv2",
     "Zea_mays/Ensembl/AGPv3": "Zea_mays/Ensembl/AGPv3",
 }
-
-
-def get_content_type(request: Request) -> str:
-    """
-    Returns the simple Content-Type (MIME type/media type) for an HTTP Request
-    object.
-
-    :param request: The request.
-    :type request: Request
-    :return: The content type, eg text/html or application/json
-    :rtype: str
-    """
-    return request.content_type.split(';')[0].strip()
 
 
 class PingView(APIView):
@@ -674,6 +663,7 @@ class FileView(StreamFileMixin,
                DeleteMixin,
                PatchMixin,
                PutMixin,
+               JSONPatchMixin,
                JSONView):
     queryset = File.objects.all()
     serializer_class = FileSerializer
@@ -682,6 +672,7 @@ class FileView(StreamFileMixin,
                       JSONPatchRFC6902Parser)
 
     permission_classes = (IsOwner | IsSuperuser | HasReadonlyObjectAccessToken,)
+
     # permission_classes = (DjangoObjectPermissions,)
 
     @view_config(response_serializer=FileSerializer)
@@ -755,46 +746,6 @@ class FileView(StreamFileMixin,
                     status=status.HTTP_503_SERVICE_UNAVAILABLE,
                     reason="paramiko.ssh_exception.AuthenticationException")
 
-    def _try_json_patch(self, request, uuid):
-        content_type = get_content_type(request)
-        if content_type in ['application/merge-patch+json',
-                            'application/json-patch+json']:
-            obj = self.get_object()
-            if obj is None:
-                return Response(status=status.HTTP_404_NOT_FOUND)
-
-            if 'id' in request.data:
-                return HttpResponse(status=status.HTTP_400_BAD_REQUEST,
-                                    reason="id cannot be updated")
-
-            metadata = request.data.get('metadata', None)
-            if metadata is not None:
-                if isinstance(metadata, list):
-                    patch = [OrderedDict(op) for op in metadata]
-                else:
-                    patch = OrderedDict(metadata)
-
-                # https://tools.ietf.org/html/rfc7386
-                if content_type == 'application/merge-patch+json':
-                    request.data['metadata'] = json_merge_patch.merge(
-                        OrderedDict(obj.metadata),
-                        patch)
-                # https://tools.ietf.org/html/rfc6902
-                if content_type == 'application/json-patch+json':
-                    request.data['metadata'] = jsonpatch.apply_patch(
-                        OrderedDict(obj.metadata),
-                        patch)
-
-            serializer = self.get_serializer(instance=obj,
-                                             data=request.data,
-                                             context={'request': request},
-                                             partial=True)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(status=status.HTTP_204_NO_CONTENT)
-
-        return None
-
     @view_config(request_serializer=FileSerializer,
                  response_serializer=PatchSerializerResponse)
     def patch(self, request, uuid=None, version=None):
@@ -838,7 +789,7 @@ class FileView(StreamFileMixin,
         -->
         """
 
-        resp = self._try_json_patch(request, uuid)
+        resp = self._try_json_patch(request)
         if resp is not None:
             return resp
 

@@ -1,3 +1,7 @@
+from collections import OrderedDict
+
+import json_merge_patch
+import jsonpatch
 from io import StringIO, BytesIO
 from rest_framework.generics import GenericAPIView
 from rest_framework.serializers import BaseSerializer
@@ -22,6 +26,8 @@ from drf_openapi.utils import view_config
 
 import logging
 
+from .util import get_content_type
+
 logger = logging.getLogger(__name__)
 
 
@@ -30,6 +36,7 @@ def etag_headers(method):
     A decorator that adds `ETag` and `Last-Modified` headers to `.get` method responses if not already present.
     Intended to be use with Timestamped models (or any object with a modified_time field).
     """
+
     @functools.wraps(method)
     def add_etag_headers_to_response(*args, **kwargs):
         response = method(*args, **kwargs)
@@ -263,6 +270,94 @@ class PutMixin:
 
         return Response(serializer.errors,
                         status=status.HTTP_400_BAD_REQUEST)
+
+
+# TODO: This would be cleaner as a decorator to a patch method, similar to @etag_headers
+class JSONPatchMixin:
+    def _try_json_patch(self, request, field='metadata'):
+        """
+        Partial update of the 'metadata' field on an object.
+
+        If the header `Content-Type: application/merge-patch+json` is set,
+        the `metadata` field is patched as per the specification in
+        [RFC 7386](https://tools.ietf.org/html/rfc7386). eg, if the existing
+        metadata was:
+
+        ```json
+        {"metadata": {"tags": ["A"], "name": "seqs.fastq.gz", "path": "/tmp"}}
+        ```
+
+        The patch in a request:
+
+        ```json
+        {"metadata": {"tags": ["B", "C"], "path": null}}
+        ```
+
+        Would change it to:
+
+        ```json
+        {"metadata": {"tags": ["B", "C"], "name": "seqs.fastq.gz"}}
+        ```
+
+        If `Content-Type: application/json-patch+json` is set, `metadata`
+        should be an array of mutation operations to apply as per
+        [RFC 6902](https://tools.ietf.org/html/rfc6902).
+
+        <!--
+        :param request:
+        :type request:
+        :return:
+        :rtype:
+        -->
+        """
+        content_type = get_content_type(request)
+        if content_type in ['application/merge-patch+json',
+                            'application/json-patch+json']:
+            obj = self.get_object()
+            if obj is None:
+                return Response(status=status.HTTP_404_NOT_FOUND)
+
+            if 'id' in request.data:
+                return HttpResponse(status=status.HTTP_400_BAD_REQUEST,
+                                    reason="id cannot be updated")
+
+            if not hasattr(obj, field):
+                return HttpResponse(status=status.HTTP_400_BAD_REQUEST,
+                                    reason=f"Invalid field for this object type: {field}")
+
+            metadata = request.data.get(field, None)
+            if metadata is not None:
+                if isinstance(metadata, list):
+                    patch = [OrderedDict(op) for op in metadata]
+                else:
+                    patch = OrderedDict(metadata)
+
+                # https://tools.ietf.org/html/rfc7386
+                if content_type == 'application/merge-patch+json':
+                    request.data[field] = json_merge_patch.merge(
+                        OrderedDict(getattr(obj, field)),
+                        patch)
+                # https://tools.ietf.org/html/rfc6902
+                if content_type == 'application/json-patch+json':
+                    request.data[field] = jsonpatch.apply_patch(
+                        OrderedDict(getattr(obj, field)),
+                        patch)
+
+            logger.debug(f"_try_json_patch - patched {field}: {request.data}")
+            if hasattr(self, 'request_serializer'):
+
+                serializer_method = self.request_serializer
+            else:
+                serializer_method = self.get_serializer
+            serializer = serializer_method(instance=obj,
+                                           data=request.data,
+                                           context={'request': request},
+                                           partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(status=status.HTTP_204_NO_CONTENT)
+
+        return None
 
 
 class DeleteMixin:

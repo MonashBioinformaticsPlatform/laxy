@@ -17,6 +17,8 @@ from urllib.parse import urlparse
 from django.urls import reverse
 from django.utils.http import urlencode
 
+from rest_framework.request import Request
+
 
 def sh_bool(boolean):
     """
@@ -190,3 +192,16 @@ def laxy_sftp_url(job, path: str = None) -> str:
         url = f'{url}/{path}'
 
     return url
+
+
+def get_content_type(request: Request) -> str:
+    """
+    Returns the simple Content-Type (MIME type/media type) for an HTTP Request
+    object.
+
+    :param request: The request.
+    :type request: Request
+    :return: The content type, eg text/html or application/json
+    :rtype: str
+    """
+    return request.content_type.split(';')[0].strip()
