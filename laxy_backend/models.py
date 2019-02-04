@@ -872,7 +872,7 @@ class FileSet(Timestamped, UUIDModel):
     A set of files. Might be used to represent a directory.
 
     name - The set name (eg directory name)
-    files - The files in this FileSet.
+    files - The files in this FileSet (RelatedManager from File)
     """
 
     name = CharField(max_length=2048)
@@ -891,7 +891,7 @@ class FileSet(Timestamped, UUIDModel):
     # filesets = ArrayField(CharField(max_length=22), blank=True, default=list)
 
     @transaction.atomic
-    def add(self, files: Union[File, List[File]]):
+    def add(self, files: Union[File, List[File]], save=True):
         """
         Add a File or Files to the FileSet. Takes a single File object,
         or a list of Files. Files passed to the method are always saved
@@ -922,8 +922,11 @@ class FileSet(Timestamped, UUIDModel):
                 job.modified_time = datetime.now()
                 job.save()
 
+            if save:
+                self.save()
+
     @transaction.atomic
-    def remove(self, files: Union[File, List[File]], delete=False):
+    def remove(self, files: Union[File, List[File]], save=True, delete=False):
         """
         Remove a File or Files to the FileSet. Takes a File object or a list
         of Files.
@@ -956,6 +959,9 @@ class FileSet(Timestamped, UUIDModel):
             for job in self.jobs():
                 job.modified_time = datetime.now()
                 job.save()
+
+            if save:
+                self.save()
 
     def get_files(self) -> QuerySet:
         """
