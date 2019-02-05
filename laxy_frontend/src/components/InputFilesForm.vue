@@ -1,41 +1,42 @@
 <template>
     <div>
         <md-layout md-gutter>
-
-            <md-layout md-column>
+            <md-layout md-flex="100"
+                       md-column>
                 <h3>Input data</h3>
                 <form novalidate @submit.stop.prevent="submit">
-
-                    <md-input-container>
-                        <label for="data_source">Select a data source</label>
-                        <md-select name="data_source" id="data_source"
-                                   v-model="selected_source">
-                            <md-option v-for="(source, i) in sources"
-                                       :key="source.type"
-                                       :value="source.type">{{ source.text }}
-                            </md-option>
-                        </md-select>
-                    </md-input-container>
+                    <md-layout>
+                        <md-layout>
+                            <md-input-container>
+                                <label for="data_source">Select a data source</label>
+                                <md-select name="data_source" id="data_source"
+                                           v-model="selected_source">
+                                    <md-option v-for="(source, i) in sources"
+                                               :key="source.type"
+                                               :value="source.type">{{ source.text }}
+                                    </md-option>
+                                </md-select>
+                            </md-input-container>
+                        </md-layout>
+                        <md-layout md-flex="5" md-vertical-align="center">
+                            <md-button id="helpButton"
+                                       @click="openDialog('helpPopup')"
+                                       class="push-right md-icon-button md-raised md-dense">
+                                <md-icon style="color: #bdbdbd;">help</md-icon>
+                            </md-button>
+                        </md-layout>
+                    </md-layout>
 
                     <div id="ena_form" v-if="selected_source == 'ENA'">
-                        <md-whiteframe md-elevation="5" class="pad-16 fill-vertical">
-                            <ENASearchAboutBox ref="aboutENA"></ENASearchAboutBox>
-                            <!--
-                            <md-button @click="hideAboutBox"
-                                       class="md-fab md-mini md-dense md-clean md-fab-top-right">
-                                <md-icon>close</md-icon>
-                            </md-button>
-                            -->
-                        </md-whiteframe>
                         <ena-file-select :show-about-box="false" :show-buttons="true" ref="enaSearch">
                         </ena-file-select>
                     </div>
 
                     <div id="url_form" v-if="selected_source == 'URL'">
-                        <remote-files-select :show-about-box="true" :show-buttons="true"></remote-files-select>
+                        <remote-files-select :show-about-box="false" :show-buttons="true"></remote-files-select>
                     </div>
                     <div id="csv_form" v-if="selected_source == 'CSV'">
-                        <CSVSampleListUpload></CSVSampleListUpload>
+                        <CSVSampleListUpload :show-about-box="false"></CSVSampleListUpload>
                     </div>
                     <div id="cloudstor_form" v-if="selected_source == 'CLOUDSTOR'">
                         <md-whiteframe md-elevation="5" class="pad-16 fill-vertical">
@@ -94,63 +95,29 @@
                             <p>Host: <code>{{ sftp_upload_host }}</code></p>
                             <p>Path: <code>{{ sftp_upload_path }}</code></p>
 
-                            This password expires in {{ password_valid_days
-                            }} days (upload before {{ password_expiry | moment("dddd, MMMM Do YYYY, h:mm:ss a") }}).
+                            This password expires in {{ password_valid_days }}
+                            days (upload before {{ password_expiry | moment("dddd, MMMM Do YYYY, h:mm:ss a") }}).
                         </div>
                         <hr>
                     </div>
                     <br/>
                 </form>
             </md-layout>
-            <!--
-    <md-layout md-column style="padding: 16px;">
-        <md-whiteframe md-elevation="5" class="pad-16 fill-vertical">
 
-            <div v-if="selected_source == 'ENA'">
-                <ENASearchAboutBox></ENASearchAboutBox>
-            </div>
-            <div v-if="selected_source == 'SRA'">
-                The <a href="https://www.ncbi.nlm.nih.gov/sra">Sequence Read Archive (SRA)</a> at NCBI
-                stores publicly available raw sequencing data from high-throughput sequencing platforms.
-                <br/><br/>
-                Example accessions: <code v-for="i in _.range(78, 85)">SRR9500{{i}}<span v-if="i < 84">, </span></code>
-            </div>
-            <div v-if="selected_source == 'URL'">
-                If your raw read FASTQ data exists at a particular URL, you can paste it here.
-                Valid protocols are <code>http://</code>, <code>https://</code> or <code>ftp://</code>.
+            <md-dialog md-open-from="#helpButton" md-close-to="#helpButton"
+                       id="helpPopup" ref="helpPopup">
+                <md-dialog-title>Input data source help</md-dialog-title>
 
-                You files can be in an index directory or a single tar archive, eg:
+                <md-dialog-content>
+                    <ENASearchAboutBox v-if="selected_source == 'ENA'" ref="aboutENA"></ENASearchAboutBox>
+                    <RemoteFileSelectAboutBox v-if="selected_source == 'URL'"></RemoteFileSelectAboutBox>
+                    <CSVAboutBox v-if="selected_source == 'CSV'"></CSVAboutBox>
+                </md-dialog-content>
 
-                <a href="http://bioinformatics.erc.monash.edu/~andrewperry/laxy/test1/">
-                    http://bioinformatics.erc.monash.edu/~andrewperry/laxy/test1/</a>
-
-                or
-
-                <a href="http://bioinformatics.erc.monash.edu/~andrewperry/laxy/test2/my_fastqs.tar">
-                    http://bioinformatics.erc.monash.edu/~andrewperry/laxy/test2/my_fastqs.tar</a>
-            </div>
-            <div v-if="selected_source == 'CLOUDSTOR'">
-                Paste a link to a shared <a href="https://cloudstor.aarnet.edu.au/plus/index.php/apps/files/">CloudStor</a>
-                folder here (eg <code>https://cloudstor.aarnet.edu.au/plus/index.php/s/RaNd0MlooK1NgID</code>)
-                and the password if required.
-            </div>
-            <div v-if="selected_source == 'SFTP_UPLOAD'">
-                <p>
-                    FASTQ data can be uploaded to our secure server for analysis.
-                    When you enter a dataset name and press <em>"Generate"</em>, a
-                    username and temporary password will be created for you on the
-                    <em>{{ sftp_upload_host }}</em> server.
-                    You can use these to upload your data via SFTP.
-                </p>
-                <p>
-                    <em>Please note that raw data uploaded is deleted after two weeks.</em>
-                </p>
-
-            </div>
-        </md-whiteframe>
-    </md-layout>
-                    -->
-
+                <md-dialog-actions>
+                    <md-button class="md-primary" @click="closeDialog('helpPopup')">Close</md-button>
+                </md-dialog-actions>
+            </md-dialog>
         </md-layout>
     </div>
 </template>
@@ -166,14 +133,21 @@
     import ENAFileSelect from "./ENA/ENAFileSelect";
     import ENASearchAboutBox from "./ENA/ENASearchAboutBox";
     import RemoteFilesSelect from "./RemoteSelect/RemoteFilesSelect";
+    import RemoteFileSelectAboutBox from "./RemoteSelect/RemoteFileSelectAboutBox";
     import CSVSampleListUpload from "./CSVSampleListUpload/CSVSampleListUpload";
+    import CSVAboutBox from "./CSVSampleListUpload/CSVAboutBox";
 
     interface DbAccession {
         accession: string;
     }
 
     @Component({
-        components: {CSVSampleListUpload, RemoteFilesSelect, ENASearchAboutBox, 'ena-file-select': ENAFileSelect},
+        components: {
+            ENASearchAboutBox, 'ena-file-select': ENAFileSelect,
+            RemoteFilesSelect, RemoteFileSelectAboutBox,
+            CSVSampleListUpload,
+            CSVAboutBox,
+        },
         props: {}
     })
     export default class InputFilesForm extends Vue {
@@ -256,6 +230,16 @@
             );
         }
 
+        openDialog(refName: string) {
+            // console.log('Opened: ' + refName);
+            ((this.$refs as any)[refName] as any).open();
+        }
+
+        closeDialog(refName: string) {
+            // console.log('Closed: ' + refName);
+            ((this.$refs as any)[refName] as any).close();
+        }
+
         @Watch('selected_source')
         onDataSourceChanged(newVal: string, oldVal: string) {
             this.$emit('dataSourceChanged');
@@ -278,5 +262,7 @@
 </script>
 
 <style>
-    /* CSS to apply to this component */
+    #helpPopup > div.md-dialog {
+        width: 90%;
+    }
 </style>

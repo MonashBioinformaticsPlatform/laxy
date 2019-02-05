@@ -1,7 +1,5 @@
 <template>
-    <md-boards :md-controls="true" :md-swipeable="true">
-        <md-board id="slide1">
-            <vue-markdown>
+<vue-markdown>
                 <!-- @formatter:off -->
 **Example CSV format (Sample name, R1, R2):**
 
@@ -13,21 +11,14 @@ SampleB,ftp://bla2_R1_001.fastq.gz,ftp://bla2_R2_001.fastq.gz
 SampleC,ftp://foo2_lane4_1.fastq.gz,ftp://foo2_lane4_2.fastq.gz
 SampleC,ftp://foo2_lane5_1.fastq.gz,ftp://foo2_lane5_2.fastq.gz
 ```
-<!-- @formatter:on -->
-            </vue-markdown>
-        </md-board>
-        <md-board id="slide2">
-            <vue-markdown>
-                <!-- @formatter:off -->
+
 **CSV format details**
 
 * Each row represents a single biological replicate (sample + condition + biological replicate).
 * Rows with identical sample names are considered technical replicates and may be merged for analysis.
 * For single-end data, omit the R2 file column.
                 <!-- @formatter:on -->
-            </vue-markdown>
-        </md-board>
-    </md-boards>
+</vue-markdown>
 </template>
 
 <script lang="ts">
