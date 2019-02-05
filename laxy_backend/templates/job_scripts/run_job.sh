@@ -276,13 +276,96 @@ function get_igenome_aws() {
         s3://ngi-igenomes/igenomes/${REF_ID}/Sequence/STARIndex/ ${REFERENCE_BASE}/${REF_ID}/Sequence/STARIndex/
 }
 
-function find_filetype() {
-    # eg, *.fastq.gz or *.bam
-    local pattern=$1
-    # eg, fastq,bam,bam.sorted
-    local tags=$2
-    # checksum,filepath,type_tags
-    find . -name "${pattern}" -type f -exec bash -c 'fn="$1"; echo -e "md5:$(md5sum "$fn" | sed -e "s/  */,\"/g")\",\"'"${tags}"'\""' _ {} \;
+function add_to_manifest() {
+    # Call like:
+    # add_to_manifest "." "*.bam" "bam,alignment" '{"some":"extradata"}'
+
+    # Writes manifest.csv with lines like:
+    # checksum,filepath,type_tags,metadata
+    # "md5:c0a248f159f700a340361e07421e3e62","output/sikRun/bamFiles/SRR5963435_ss_sorted_mdups.bam","bam,alignment",{"metadata":"datadata"}
+    #" md5:eb8c7a1382f1ef0cf984749a42e136bc","output/sikRun/bamFiles/SRR5963441_ss_sorted_mdups.bam","bam,alignment",{"metadata":"datadata"}
+
+    python3 -c '#
+import os, sys, stat
+from fnmatch import fnmatch
+import hashlib
+import re
+import json
+
+job_path = os.environ.get("JOB_PATH", ".")
+manifest_file = os.path.join(job_path, "manifest.csv")
+
+# exclude_files = [".private_request_headers", "manifest.csv", "job.pid"]
+
+base_path = "."
+glob_pattern = sys.argv[1]  # "*.bam"
+tags = sys.argv[2]          # "html,report,multiqc"
+if len(sys.argv) >= 4 and sys.argv[3]:
+    metadata = sys.argv[3]      # {"some_file": "extra_data"}
+else:
+    metadata = "{}"
+
+metadata = json.dumps(json.loads(metadata))
+
+def lstrip_dotslash(path):
+  return re.sub("^%s" % "./", "", path)
+
+existing_paths = []
+if os.path.exists(manifest_file):
+  with open(manifest_file, "r") as fh:
+    for l in fh:
+      s = l.split(",")
+      existing_paths.append(s[1].strip("\""))
+
+def find(base_path, f):
+  for path in base_path:
+    for root, dirs, files in os.walk(path):
+      for fi in files:
+        if f(os.path.join(root, fi)):
+          yield os.path.join(root, fi)
+      for di in dirs:
+        if f(os.path.join(root, di)):
+          yield os.path.join(root, fi)
+
+def get_md5(file_path, blocksize=512):
+  md5 = hashlib.md5()
+  with open(file_path, "rb") as f:
+    while True:
+      chunk = f.read(blocksize)
+      if not chunk:
+        break
+      md5.update(chunk)
+  return md5.hexdigest()
+
+def md5sum(file_path, md5sum_executable="/usr/bin/md5sum"):
+  out = subprocess.check_output([md5sum_executable, file_path])
+  checksum = out.split()[0]
+  if len(checksum) == 32:
+    return checksum
+  else:
+    raise ValueError("md5sum failed: %s", out)
+
+write_header = not os.path.exists(manifest_file)
+
+with open(manifest_file, "a") as fh:
+  if write_header:
+    fh.write("checksum,filepath,type_tags,metadata\n")
+
+  for hit in find([base_path], lambda fn: fnmatch(fn, glob_pattern)):
+    abspath = lstrip_dotslash(hit)
+    # if abspath in exclude_files:
+    #   continue
+    # if not (abspath.startswith("output") or abspath.startswith("input")):
+    #   continue
+    if abspath in existing_paths:
+      continue
+    if not os.path.exists(abspath):
+      continue
+    checksum = f"md5:{get_md5(abspath)}"
+    fh.write(f"\"{checksum}\",\"{abspath}\",\"{tags}\",{metadata}\n")
+    existing_paths.append(abspath)
+
+' "$1" "$2" "${3:-}"
 }
 
 # TODO: This has become complex enough that it probably should be a Python script for file registration,
@@ -290,30 +373,18 @@ function find_filetype() {
 function register_files() {
     send_event "JOB_INFO" "Registering interesting output files."
 
-    echo "checksum,filepath,type_tags" >${JOB_PATH}/manifest.csv
-    # First, add every file we don't intend to tag to the manifest.
-    find . -type f \
-           ! -name "manifest.csv" \
-           ! -name "job.pid" \
-           ! -name ".private_request_headers" \
-           ! -name "*.bam" \
-           ! -name "*.bai" \
-           ! -name "*.fastq.gz" \
-           ! -name "multiqc_report.html" \
-           ! -name "RNAsik.bds.*.html" \
-           ! -name "*StrandedCounts*.txt" \
-           -exec bash -c 'fn="$1"; echo -e "md5:$(md5sum "$fn" | sed -e "s/  */,\"/g")\",\"'""'\""' _ {} \; \
-           >>${JOB_PATH}/manifest.csv
-
     # Not find and tag specific files/filetypes
-    find_filetype "*.bam" "bam,alignment" >>${JOB_PATH}/manifest.csv
-    find_filetype "*.bai" "bai" >>${JOB_PATH}/manifest.csv
-    find_filetype "*.fastq.gz" "fastq" >>${JOB_PATH}/manifest.csv
-    find_filetype "multiqc_report.html" "multiqc,html,report" >>${JOB_PATH}/manifest.csv
-    find_filetype "RNAsik.bds.*.html" "bds,logs,html,report" >>${JOB_PATH}/manifest.csv
-    find_filetype "*Counts-withNames-proteinCoding.txt" "counts,degust" >>${JOB_PATH}/manifest.csv
-    find_filetype "*Counts.txt" "counts" >>${JOB_PATH}/manifest.csv
-    find_filetype "*Counts-withNames.txt" "counts" >>${JOB_PATH}/manifest.csv
+    add_to_manifest "*.bam" "bam,alignment"
+    add_to_manifest "*.bai" "bai"
+    add_to_manifest "*.fastq.gz" "fastq"
+    add_to_manifest "**/multiqc_report.html" "multiqc,html,report"
+    add_to_manifest "**/RNAsik.bds.*.html" "bds,logs,html,report"
+    add_to_manifest "**/*_fastqc.html" "fastqc,html,report"
+    add_to_manifest "**/*Counts-withNames-proteinCoding.txt" "counts,degust"
+    add_to_manifest "**/*Counts.txt" "counts"
+    add_to_manifest "**/*Counts-withNames.txt" "counts"
+    add_to_manifest "input/**" ""
+    add_to_manifest "output/**" ""
 
     curl -X POST \
       ${CURL_INSECURE} \
