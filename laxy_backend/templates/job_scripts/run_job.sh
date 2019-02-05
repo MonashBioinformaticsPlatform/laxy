@@ -380,9 +380,9 @@ function register_files() {
     add_to_manifest "**/multiqc_report.html" "multiqc,html,report"
     add_to_manifest "**/RNAsik.bds.*.html" "bds,logs,html,report"
     add_to_manifest "**/*_fastqc.html" "fastqc,html,report"
-    add_to_manifest "**/*Counts-withNames-proteinCoding.txt" "counts,degust"
-    add_to_manifest "**/*Counts.txt" "counts"
-    add_to_manifest "**/*Counts-withNames.txt" "counts"
+    add_to_manifest "**/*StrandedCounts-withNames-proteinCoding.txt" "counts,degust"
+    add_to_manifest "**/*StrandedCounts.txt" "counts"
+    add_to_manifest "**/*StrandedCounts-withNames.txt" "counts"
     add_to_manifest "input/**" ""
     add_to_manifest "output/**" ""
 
