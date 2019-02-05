@@ -14,7 +14,7 @@
             <!--<p>Select your analysis: RNAseq, ChIPSeq</p>-->
             <!--</md-step>-->
             <md-step md-label="Describe samples" md-message="Specify conditions, pair ends"
-                     :md-continue="describeSamples_stepComplete"
+                     :md-continue="dataSource_stepComplete"
                      :md-disabled="!dataSource_stepComplete"
                      @exitstep="onExitStep('describeSamples')"
                      ref="describeSamples">
@@ -54,7 +54,7 @@
             return this.$store.getters.sample_cart_count > 0;
         }
 
-        describeSamples_stepComplete: boolean = true;
+        describeSamples_stepComplete: boolean = false;
 
         get pipelineSettings_stepComplete(): boolean {
             return this.$store.state.pipelineParams_valid;
@@ -89,6 +89,7 @@
             }
             else if (stepName === 'describeSamples') {
                  (this.$refs['describeSamples_sampleCart'] as any).save();
+                 this.describeSamples_stepComplete = true;
                  this.scrollToTop();
             }
             else if (stepName === 'pipelineSettings') {
