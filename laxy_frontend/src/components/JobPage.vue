@@ -52,8 +52,8 @@
                     </nav>
                 </md-toolbar>
             </md-layout>
-            <md-layout v-if="job">
-                <md-layout v-if="bannerSharingLink" md-flex="90">
+            <md-layout v-if="job" md-gutter="16">
+                <md-layout v-if="bannerSharingLink" md-flex="100">
 
                     <md-button @click="$router.push({path: `/job/${jobId}/sharing`, query: persistQueryParams})"
                                :disabled="!isAuthenticated"
@@ -65,7 +65,7 @@
                 </md-layout>
 
                 <md-layout v-show="showTab === 'summary' || showTab == null"
-                           id="top-panel" md-flex="90" :md-row="true">
+                           id="top-panel" md-flex="100" :md-row="true" md-gutter="16">
                     <!-- smaller iconish boxes in here. eg simple status -->
                     <!-- -->
                     <md-layout md-flex="25" md-flex-medium="100">
@@ -87,7 +87,7 @@
                     <!-- pipeline type and version -->
 
                 </md-layout>
-                <md-layout id="main-panel" md-flex="90">
+                <md-layout id="main-panel" md-flex="100" md-gutter="16">
                     <transition name="fade">
                         <md-layout md-flex="40" md-flex-medium="100"
                                    v-show="showTab === 'summary' || showTab == null" :md-column-medium="true"
