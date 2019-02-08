@@ -59,7 +59,8 @@ from . import ena
 from .tasks.job import (start_job,
                         index_remote_files,
                         _index_remote_files_task_err_handler,
-                        set_job_status)
+                        set_job_status,
+                        kill_remote_job)
 
 from .jwt_helpers import (get_jwt_user_header_dict,
                           get_jwt_user_header_str)
@@ -1564,6 +1565,9 @@ class JobView(JSONView):
                     serializer.validated_data.update(status=Job.STATUS_COMPLETE)
                 else:
                     serializer.validated_data.update(status=Job.STATUS_FAILED)
+
+            if job_status == Job.STATUS_CANCELLED:
+                kill_remote_job.apply_async(args=(dict(job_id=uuid),))
 
             new_status = serializer.validated_data.get('status')
 

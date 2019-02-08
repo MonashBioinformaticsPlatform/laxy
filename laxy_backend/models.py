@@ -41,6 +41,7 @@ from .util import (unique,
                    laxy_sftp_url)
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 if 'postgres' not in settings.DATABASES['default']['ENGINE']:
@@ -256,6 +257,7 @@ class ComputeResource(Timestamped, UUIDModel):
                               (STATUS_TERMINATING, 'terminating'),
                               (STATUS_DECOMMISSIONED, 'decommissioned'),
                               )
+
     owner = ForeignKey(User,
                        blank=True,
                        null=True,
@@ -265,23 +267,25 @@ class ComputeResource(Timestamped, UUIDModel):
                        choices=COMPUTE_STATUS_CHOICES,
                        default=STATUS_CREATED)
 
-    # type = CharField(max_length=255, blank=True)
-    '''
-    The host `type` is used for logic around how the host is used 
-    (deployment, job submission, decommissioning).
-    eg, values might be 'cfncluster', 'ssh' or 'slurm'.
-    
-    WIP: This was historically only ever 'cfncluster' in the original prototype.
-    We will re-enable it when it actually has a use.
-    Maybe this could be better expressed as a set of tags, or a name
-    corresponding to a host management utility class (plugable) for each 
-    type of host.
-    '''
-
     host = CharField(max_length=255, blank=True, null=True)
     gateway_server = CharField(max_length=255, blank=True, null=True)
     disposable = BooleanField(default=True)
     name = CharField(max_length=128, blank=True, null=True)
+
+    # QUEUE_TYPE_LOCAL = 'local'  # a regular process (via the shell) on a compute node
+    # QUEUE_TYPE_SLURM = 'slurm'  # submit the job to a slurm queue on the compute node
+    #
+    # QUEUE_TYPE_CHOICES = ((QUEUE_TYPE_LOCAL, 'local'),
+    #                       (QUEUE_TYPE_SLURM, 'slurm'),
+    #                       )
+    # queue_type = CharField(max_length=64,
+    #                        choices=QUEUE_TYPE_CHOICES,
+    #                        default=QUEUE_TYPE_LOCAL)
+    '''
+    The host `queue_type` is used for logic around how the host is used 
+    (job submission, monitoring and cancellation).
+    eg, values might be 'local' or 'slurm'.
+    '''
 
     # This contains resource type specific data, eg it may contain
     # ssh keys, queue type
@@ -341,6 +345,15 @@ class ComputeResource(Timestamped, UUIDModel):
             return self.host.split(':').pop()
         else:
             return None
+
+    @property
+    def queue_type(self):
+        return self.extra.get('queue_type', None)
+
+    @queue_type.setter
+    def queue_type(self, queue_type: str):
+        self.extra['queue_type'] = queue_type
+        self.save()
 
 
 @reversion.register()
@@ -1222,5 +1235,5 @@ class AccessToken(Timestamped, UUIDModel):
         if isinstance(target_obj, str):
             return self.object_id == target_obj
         if isinstance(target_obj, UUIDModel):
-            ct =  ContentType.objects.get_for_model(target_obj)
+            ct = ContentType.objects.get_for_model(target_obj)
             return self.object_id == target_obj.id and self.content_type == ct

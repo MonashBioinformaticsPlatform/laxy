@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+#SBATCH --cpus-per-task=2
+#SBATCH --mem=4000
 set -o nounset
 set -o pipefail
 set -o xtrace
@@ -78,6 +80,10 @@ readonly SRUN_OPTIONS="--cpus-per-task=${CPUS} --mem=${MEM} -t 1-0:00 --ntasks-p
 PREFIX_JOB_CMD=""
 if [[ "${SCHEDULER}" == "slurm" ]]; then
     PREFIX_JOB_CMD="srun ${SRUN_OPTIONS} "
+fi
+
+if [[ "${SCHEDULER}" == "local" ]]; then
+    echo $$ >>"${JOB_PATH}/job.pids"
 fi
 
 function add_sik_config() {
@@ -295,7 +301,7 @@ import json
 job_path = os.environ.get("JOB_PATH", ".")
 manifest_file = os.path.join(job_path, "manifest.csv")
 
-# exclude_files = [".private_request_headers", "manifest.csv", "job.pid"]
+# exclude_files = [".private_request_headers", "manifest.csv", "job.pids", "slurm.jids"]
 
 base_path = "."
 glob_pattern = sys.argv[1]  # "*.bam"
@@ -382,7 +388,7 @@ function register_files() {
     add_to_manifest "**/*_fastqc.html" "fastqc,html,report"
     add_to_manifest "**/*StrandedCounts-withNames-proteinCoding.txt" "counts,degust"
     add_to_manifest "**/*StrandedCounts.txt" "counts"
-    add_to_manifest "**/*StrandedCounts-withNames.txt" "counts"
+    add_to_manifest "**/*StrandedCounts-withNames.txt" "counts,degust"
     add_to_manifest "input/**" ""
     add_to_manifest "output/**" ""
 
@@ -524,7 +530,7 @@ ${cmd} | sort -gr >${mash_outfile} && \
 grep _ViralProj ${mash_outfile} >${JOB_PATH}/output/mash_screen_virus.tab && \
 grep -v _ViralProj ${mash_outfile} >${JOB_PATH}/output/mash_screen_nonvirus.tab
 EOM
-        sbatch "${JOB_PATH}/input/run_mash.sh"
+        sbatch --parsable "${JOB_PATH}/input/run_mash.sh" >>"${JOB_PATH}/slurm.jids"
     else
         eval ${cmd} | sort -gr >"${mash_outfile}" && \
         grep _ViralProj "${mash_outfile}" >"${JOB_PATH}/output/mash_screen_virus.tab" && \

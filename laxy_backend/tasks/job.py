@@ -88,10 +88,13 @@ def start_job(self, task_data=None, **kwargs):
 
     job_script_template_vars = dict(environment)
     job_script_template_vars['JOB_AUTH_HEADER'] = job_auth_header
-    job_script = render_to_string('job_scripts/run_job.sh',
+    job_script = BytesIO(render_to_string('job_scripts/run_job.sh',
                                   context=job_script_template_vars)
+                         .encode('utf-8'))
+    kill_script = BytesIO(render_to_string('job_scripts/kill_job.sh',
+                                  context=job_script_template_vars)
+                          .encode('utf-8'))
     curl_headers = BytesIO(b"%s\n" % job_auth_header.encode('utf-8'))
-    job_script = BytesIO(job_script.encode('utf-8'))
     config_json = BytesIO(json.dumps(job.params).encode('utf-8'))
 
     remote_id = None
@@ -107,10 +110,14 @@ def start_job(self, task_data=None, **kwargs):
             input_dir = join(working_dir, 'input')
             output_dir = join(working_dir, 'output')
             job_script_path = join(input_dir, 'run_job.sh')
+            kill_script_path = join(working_dir, 'kill_job.sh')
             for d in [working_dir, input_dir, output_dir]:
                 result = run(f'mkdir -p {d} && chmod 700 {d}')
             result = put(job_script,
                          job_script_path,
+                         mode=0o700)
+            result = put(kill_script,
+                         kill_script_path,
                          mode=0o700)
             result = put(curl_headers,
                          join(working_dir, '.private_request_headers'),
@@ -119,13 +126,21 @@ def start_job(self, task_data=None, **kwargs):
                          join(input_dir, 'pipeline_config.json'),
                          mode=0o600)
             with cd(working_dir):
-                with shell_env(**environment):
-                    result = run(f"nohup bash -l -c '"
-                                 f"{job_script_path} & "
-                                 f"echo $! >job.pid"
-                                 f"' >output/run_job.out")
-                with shell_env(**environment):
-                    remote_id = run(str("cat job.pid"))
+                    with shell_env(**environment):
+                        if job.compute_resource.queue_type == 'slurm':
+                            result = run(f"sbatch --parsable "
+                                         f'--job-name="laxy:{job_id}" '
+                                         f"--output output/run_job.out "
+                                         f"{job_script_path} "
+                                         f" >>slurm.jids")
+                            remote_id = run(str("head -1 slurm.jids"))
+                        # if job.compute_resource.queue_type == 'local':
+                        else:
+                            result = run(f"nohup bash -l -c '"
+                                         f"{job_script_path} & "
+                                         f"echo $! >>job.pids"
+                                         f"' >output/run_job.out")
+                            remote_id = run(str("head -1 job.pids"))
 
         succeeded = result.succeeded
     except BaseException as e:
@@ -384,6 +399,8 @@ def poll_jobs(self, task_data=None, **kwargs):
         poll_job_ps.apply_async(args=(dict(job_id=job.id),))
 
 
+# TODO: Instead of calling 'ps' or 'squeue' directly,
+# use the `kill_job.sh check` functionality
 @shared_task(bind=True, track_started=True)
 def poll_job_ps(self, task_data=None, **kwargs):
     from ..models import Job
@@ -423,6 +440,53 @@ def poll_job_ps(self, task_data=None, **kwargs):
         job.save()
 
         index_remote_files.apply_async(args=(dict(job_id=job_id),))
+
+    task_data.update(result=result)
+
+    return task_data
+
+
+@shared_task(bind=True, track_started=True)
+def kill_remote_job(self, task_data=None, **kwargs):
+    from ..models import Job
+
+    _init_fabric_env()
+
+    environment = task_data.get('environment', {})
+    job_id = task_data.get('job_id')
+    job = Job.objects.get(id=job_id)
+    master_ip = job.compute_resource.host
+    gateway = job.compute_resource.gateway_server
+    queue_type = job.compute_resource.queue_type
+    private_key = job.compute_resource.private_key
+    remote_username = job.compute_resource.extra.get('username', None)
+
+    base_dir = job.compute_resource.extra.get('base_dir', '/tmp/')
+    working_dir = os.path.join(base_dir, job_id)
+    kill_script_path = join(working_dir, 'kill_job.sh')
+
+    message = "No message."
+    try:
+        with fabsettings(gateway=gateway,
+                         host_string=master_ip,
+                         user=remote_username,
+                         key=private_key):
+            with cd(working_dir):
+                with shell_env(**environment):
+                    # if queue_type == 'slurm':
+                    #     result = run(f"scancel {job.remote_id}")
+                    # else:
+                    #     result = run(f"kill {job.remote_id}")
+
+                    result = run(f"{kill_script_path} kill")
+                    job_killed = result.succeeded
+
+    except BaseException as e:
+        if hasattr(e, 'message'):
+            message = e.message
+
+        self.update_state(state=states.FAILURE, meta=message)
+        raise e
 
     task_data.update(result=result)
 
