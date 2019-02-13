@@ -1727,6 +1727,38 @@ class JobCreate(JSONView):
                 return HttpResponse(reason='Unknown reference genome',
                                     status=status.HTTP_400_BAD_REQUEST)
 
+            slurm_account = job.compute_resource.extra.get('slurm_account', None)
+
+            environment = {
+                'DEBUG': sh_bool(
+                    getattr(settings, 'DEBUG', False)),
+                'IGNORE_SELF_SIGNED_CERTIFICATE': sh_bool(False),
+                'JOB_ID': job_id,
+                'JOB_COMPLETE_CALLBACK_URL':
+                    callback_url,
+                'JOB_EVENT_URL': job_event_url,
+                'JOB_FILE_REGISTRATION_URL': job_file_bulk_url,
+                'JOB_INPUT_STAGED': sh_bool(False),
+                'REFERENCE_GENOME': shlex.quote(reference_genome_id),
+                'PIPELINE_VERSION': shlex.quote(pipeline_version),
+
+                # TODO: these should come from the ComputeResource
+                'SCHEDULER': 'slurm',
+
+                # TODO: This is very pipeline+ComputeResource specific
+                #       This should come from something like ComputeResource.pipeline_overrides -
+                #       a set of 'pipeline specific overrides' that when pipeline name and optionally
+                #       version (or other parameters) match, the pipeline_overrides params override any
+                #       default here.
+                #       eg ComputeResource.pipeline_overrides =
+                #          [{'name': 'rnasik', 'version': '1.5.1',
+                #           'overrides': {'BDS_SINGLE_NODE': True}}]
+                'BDS_SINGLE_NODE': sh_bool(False)
+            }
+
+            if slurm_account:
+                environment['SLURM_ACCOUNT'] = slurm_account
+
             task_data = dict(job_id=job_id,
                              clobber=False,
                              # this is job.params
@@ -1737,33 +1769,7 @@ class JobCreate(JSONView):
                              # since we don't want it to leak into the shell env
                              # or any output of the run_job.sh script.
                              job_auth_header=callback_auth_header,
-
-                             environment={
-                                 'DEBUG': sh_bool(
-                                     getattr(settings, 'DEBUG', False)),
-                                 'IGNORE_SELF_SIGNED_CERTIFICATE': sh_bool(False),
-                                 'JOB_ID': job_id,
-                                 'JOB_COMPLETE_CALLBACK_URL':
-                                     callback_url,
-                                 'JOB_EVENT_URL': job_event_url,
-                                 'JOB_FILE_REGISTRATION_URL': job_file_bulk_url,
-                                 'JOB_INPUT_STAGED': sh_bool(False),
-                                 'REFERENCE_GENOME': shlex.quote(reference_genome_id),
-                                 'PIPELINE_VERSION': shlex.quote(pipeline_version),
-
-                                 # TODO: these should come from the ComputeResource
-                                 'SCHEDULER': 'slurm',
-
-                                 # TODO: This is very pipeline+ComputeResource specific
-                                 #       This should come from something like ComputeResource.pipeline_overrides -
-                                 #       a set of 'pipeline specific overrides' that when pipeline name and optionally
-                                 #       version (or other parameters) match, the pipeline_overrides params override any
-                                 #       default here.
-                                 #       eg ComputeResource.pipeline_overrides =
-                                 #          [{'name': 'rnasik', 'version': '1.5.1',
-                                 #           'overrides': {'BDS_SINGLE_NODE': True}}]
-                                 'BDS_SINGLE_NODE': sh_bool(False),
-                             })
+                             environment=environment)
 
             # TESTING: Start cluster, run job, (pre-existing data), stop cluster
             # tasks.run_job_chain(task_data)

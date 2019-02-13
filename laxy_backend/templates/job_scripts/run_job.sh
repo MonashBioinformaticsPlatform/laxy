@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 #SBATCH --cpus-per-task=2
 #SBATCH --mem=4000
+{% if SLURM_ACCOUNT %}
+#SBATCH --account={{ SLURM_ACCOUNT }}
+{% endif %}
 set -o nounset
 set -o pipefail
 set -o xtrace
@@ -34,6 +37,7 @@ readonly IGNORE_SELF_SIGNED_CERTIFICATE="{{ IGNORE_SELF_SIGNED_CERTIFICATE }}"
 readonly JOB_FILE_PERMS='ug+rw-s'
 readonly JOB_DIR_PERMS='ug+rwx-s'
 
+export SLURM_ACCOUNT="{{ SLURM_ACCOUNT }}"
 readonly SCHEDULER="{{ SCHEDULER }}"
 # readonly SCHEDULER="local"
 
@@ -75,7 +79,15 @@ else
     CPUS=2
 fi
 
-readonly SRUN_OPTIONS="--cpus-per-task=${CPUS} --mem=${MEM} -t 1-0:00 --ntasks-per-node=1 --ntasks=1 --job-name=laxy:${JOB_ID}"
+readonly SRUN_OPTIONS="--cpus-per-task=${CPUS} \
+                       --mem=${MEM} \
+                       -t 1-0:00 \
+                       --ntasks-per-node=1 \
+                       --ntasks=1 \
+                       {% if SLURM_ACCOUNT %}
+                       --account=${SLURM_ACCOUNT} \
+                       {% endif %}
+                       --job-name=laxy:${JOB_ID}"
 
 PREFIX_JOB_CMD=""
 if [[ "${SCHEDULER}" == "slurm" ]]; then
@@ -525,6 +537,9 @@ function run_mash_screen() {
 #SBATCH --ntasks=1
 #SBATCH --job-name="laxy:mash_${JOB_ID}"
 #SBATCH --error="${JOB_PATH}/output/mash_screen.err"
+{% if SLURM_ACCOUNT %}
+#SBATCH --account={{ SLURM_ACCOUNT }}
+{% endif %}
 
 ${cmd} | sort -gr >${mash_outfile} && \
 grep _ViralProj ${mash_outfile} >${JOB_PATH}/output/mash_screen_virus.tab && \
