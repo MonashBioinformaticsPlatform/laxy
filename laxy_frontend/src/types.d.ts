@@ -37,6 +37,7 @@ declare interface ILaxyFile {
     fileset: string | null;
     metadata: any;
     type_tags: string[];
+    deleted: boolean;
     // fullPath: string;
 }
 

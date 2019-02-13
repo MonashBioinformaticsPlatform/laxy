@@ -14,7 +14,7 @@ from reversion.admin import VersionAdmin
 from django_object_actions import (DjangoObjectActions,
                                    takes_instance_or_queryset)
 
-from laxy_backend import tasks
+from laxy_backend.tasks import job as job_tasks
 from .models import (Job,
                      ComputeResource,
                      File,
@@ -109,7 +109,7 @@ class JobAdmin(Timestamped, VersionAdmin):
     ordering = ('-created_time', '-completed_time', '-modified_time',)
     search_fields = ('id', 'status', 'remote_id',)
     list_filter = ('status',)
-    actions = ('trigger_file_ingestion',)
+    actions = ('trigger_file_ingestion', 'expire_job',)
 
     color_mappings = {
         Job.STATUS_FAILED: 'red',
@@ -146,7 +146,7 @@ class JobAdmin(Timestamped, VersionAdmin):
         failed = []
         for obj in queryset:
             task_data = dict(job_id=obj.id)
-            result = tasks.index_remote_files.apply_async(args=(task_data,))
+            result = job_tasks.index_remote_files.apply_async(args=(task_data,))
             if result.failed():
                 failed.append(obj.id)
         if not failed:
@@ -156,6 +156,22 @@ class JobAdmin(Timestamped, VersionAdmin):
                               ','.join(failed))
 
     trigger_file_ingestion.short_description = "Ingest files"
+
+    @takes_instance_or_queryset
+    def expire_job(self, request, queryset):
+        failed = []
+        for obj in queryset:
+            task_data = dict(job_id=obj.id)
+            result = job_tasks.expire_old_job.apply_async(args=(task_data,))
+            if result.failed():
+                failed.append(obj.id)
+        if not failed:
+            self.message_user(request, f"Expiring job: {obj.id}")
+        else:
+            self.message_user(request, "Errors trying to expire %s" %
+                              ','.join(failed))
+
+    expire_job.short_description = "Expire job (delete large files)"
 
 
 def do_nothing_validator(value):

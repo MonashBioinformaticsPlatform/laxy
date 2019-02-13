@@ -48,6 +48,8 @@ export class ComputeJob extends UUIDModel {
     public created_time: Date | null;
     public modified_time: Date | null;
     public completed_time: Date | null;
+    public expiry_time: Date | null;
+    public expired: boolean;
     public compute_resource: string;
     public exit_code: number | null;
     public remote_id: string;
@@ -68,4 +70,5 @@ export class LaxyFile {
     public fileset: string | null;
     public metadata: any;
     public type_tags: string[];
+    public deleted: boolean;
 }

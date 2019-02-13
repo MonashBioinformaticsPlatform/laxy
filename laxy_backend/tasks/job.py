@@ -1,7 +1,8 @@
-from celery.result import AsyncResult
-from django.contrib.contenttypes.models import ContentType
+import fnmatch
+from django.db import transaction
+from typing import Sequence
+from datetime import datetime, timedelta
 from pathlib import Path
-
 import logging
 import os
 from os.path import join, expanduser
@@ -13,6 +14,9 @@ from io import BytesIO
 from copy import copy
 from contextlib import closing
 from django.conf import settings
+
+from celery.result import AsyncResult
+from django.contrib.contenttypes.models import ContentType
 from django.template.loader import get_template, render_to_string
 from celery.utils.log import get_task_logger
 from celery import shared_task
@@ -89,10 +93,10 @@ def start_job(self, task_data=None, **kwargs):
     job_script_template_vars = dict(environment)
     job_script_template_vars['JOB_AUTH_HEADER'] = job_auth_header
     job_script = BytesIO(render_to_string('job_scripts/run_job.sh',
-                                  context=job_script_template_vars)
+                                          context=job_script_template_vars)
                          .encode('utf-8'))
     kill_script = BytesIO(render_to_string('job_scripts/kill_job.sh',
-                                  context=job_script_template_vars)
+                                           context=job_script_template_vars)
                           .encode('utf-8'))
     curl_headers = BytesIO(b"%s\n" % job_auth_header.encode('utf-8'))
     config_json = BytesIO(json.dumps(job.params).encode('utf-8'))
@@ -126,21 +130,21 @@ def start_job(self, task_data=None, **kwargs):
                          join(input_dir, 'pipeline_config.json'),
                          mode=0o600)
             with cd(working_dir):
-                    with shell_env(**environment):
-                        if job.compute_resource.queue_type == 'slurm':
-                            result = run(f"sbatch --parsable "
-                                         f'--job-name="laxy:{job_id}" '
-                                         f"--output output/run_job.out "
-                                         f"{job_script_path} "
-                                         f" >>slurm.jids")
-                            remote_id = run(str("head -1 slurm.jids"))
-                        # if job.compute_resource.queue_type == 'local':
-                        else:
-                            result = run(f"nohup bash -l -c '"
-                                         f"{job_script_path} & "
-                                         f"echo $! >>job.pids"
-                                         f"' >output/run_job.out")
-                            remote_id = run(str("head -1 job.pids"))
+                with shell_env(**environment):
+                    if job.compute_resource.queue_type == 'slurm':
+                        result = run(f"sbatch --parsable "
+                                     f'--job-name="laxy:{job_id}" '
+                                     f"--output output/run_job.out "
+                                     f"{job_script_path} "
+                                     f" >>slurm.jids")
+                        remote_id = run(str("head -1 slurm.jids"))
+                    # if job.compute_resource.queue_type == 'local':
+                    else:
+                        result = run(f"nohup bash -l -c '"
+                                     f"{job_script_path} & "
+                                     f"echo $! >>job.pids"
+                                     f"' >output/run_job.out")
+                        remote_id = run(str("head -1 job.pids"))
 
         succeeded = result.succeeded
     except BaseException as e:
@@ -220,7 +224,6 @@ def set_job_status(self, task_data=None, **kwargs):
 
 @shared_task(bind=True, track_started=True)
 def index_remote_files(self, task_data=None, **kwargs):
-
     if task_data is None:
         raise InvalidTaskError("task_data is None")
 
@@ -236,12 +239,7 @@ def index_remote_files(self, task_data=None, **kwargs):
         logger.info(f"Not indexing files for {job_id}, no compute_resource.")
         return task_data
 
-    eventlog = EventLog(event='JOB_INFO',
-                        message='Indexing all files (backend task)',
-                        user=job.owner,
-                        object_id=job.id,
-                        content_type=ContentType.objects.get_for_model(job))
-    eventlog.save()
+    job.log_event('JOB_INFO', 'Indexing all files (backend task)')
 
     environment = task_data.get('environment', {})
     # environment.update(JOB_ID=job_id)
@@ -375,14 +373,10 @@ def _index_remote_files_task_err_handler(self, uuid, job_id=None):
     job.status = Job.STATUS_FAILED
     job.save()
 
-    eventlog = EventLog(event='JOB_FINALIZE_ERROR',
-                        extra={'task_id': uuid,
-                               # 'exception': exc,
-                               'traceback': result.traceback},
-                        user=job.owner,
-                        object_id=job.id,
-                        content_type=ContentType.objects.get_for_model(job))
-    eventlog.save()
+    eventlog = job.log_event('JOB_FINALIZE_ERROR', '',
+                             extra={'task_id': uuid,
+                                    # 'exception': exc,
+                                    'traceback': result.traceback})
     message = f'Failed to index files and finalize job status (EventLog ID: {eventlog.id})'
     eventlog.message = message
     eventlog.save()
@@ -491,3 +485,139 @@ def kill_remote_job(self, task_data=None, **kwargs):
     task_data.update(result=result)
 
     return task_data
+
+
+# TODO: This function is very pipeline specific (RNAsik) - we need to refactor
+#       to take the pipeline into account (eg based on name in Job.params.params.pipeline)
+#       The various variables/rules for this function could also be declarative and
+#       stored on a new PipelineConfig object.
+def file_should_be_deleted(ff: File, max_size=200):
+    """
+    Returns True if a File meets the criteria to be deleted (eg based on size, age, filename, type_tags).
+
+    :param ff: The File instance.
+    :type ff: File
+    :param max_size: Max file size in MB (megibytes)
+    :type max_size: int
+    :return: True if File should be deleted
+    :rtype: bool
+    """
+    extension = Path(ff.name).suffix
+    MB = 1024 * 1024
+    whitelisted_extensions = ['.txt', '.html', '.log']
+    whitelisted_paths = ['**/sikRun/multiqc_data/**', '**/sikRun/fastqcReport/**']
+    whitelisted_type_tags = ['report', 'counts', 'degust']
+    always_delete_extenstions = ['.bam', '.bai']
+    always_delete_paths = ['**/sikRun/refFiles/**']
+
+    if extension in always_delete_extenstions:
+        return True
+
+    has_always_delete_path = any([fnmatch.filter([ff.full_path], pattern)
+                                  for pattern in always_delete_paths])
+    if has_always_delete_path:
+        return True
+
+    is_large_file = (ff.size / MB) > max_size
+
+    has_whitelisted_path = any([fnmatch.filter([ff.full_path], pattern)
+                                for pattern in whitelisted_paths])
+    has_whitelisted_tag = any([tag in whitelisted_type_tags
+                               for tag in ff.type_tags])
+    return ((not ff.deleted) and
+            is_large_file and
+            (extension not in whitelisted_extensions) and
+            (not has_whitelisted_tag) and
+            (not has_whitelisted_path))
+
+
+@shared_task(bind=True, track_started=True)
+def expire_old_job(self, task_data=None, **kwargs):
+    from ..models import Job, File
+    _init_fabric_env()
+
+    seconds_in_day = 60 * 60 * 24
+    ttl = 30 * seconds_in_day
+    MB = 1024 * 1024
+
+    environment = task_data.get('environment', {})
+    job_id = task_data.get('job_id')
+    job = Job.objects.get(id=job_id)
+    master_ip = job.compute_resource.host
+    gateway = job.compute_resource.gateway_server
+    private_key = job.compute_resource.private_key
+    remote_username = job.compute_resource.extra.get('username', None)
+
+    base_dir = job.compute_resource.extra.get('base_dir', '/tmp/')
+    working_dir = os.path.join(base_dir, job_id)
+
+    # def _delete_file(f):
+    #     # Just an example of an alternative using fabric ...
+    #     # fabsettings and shell_env should be outside this function
+    #     # rather than initiating ssh connection for every call
+    #     with fabsettings(gateway=gateway,
+    #                      host_string=master_ip,
+    #                      user=remote_username,
+    #                      key=private_key,
+    #                      # key_filename=expanduser("~/.ssh/id_rsa"),
+    #                      ):
+    #         with shell_env(**environment):
+    #             run(f"rm {f._abs_path_on_compute()}")
+
+    # We could also use 'find' via fabric to remove files based on mtime/ctime/size ... however
+    # we would need to lookup each File record based on path and update f.deleted_time
+    # ttl_mins = ttl / 60
+    # Find large files based on filesystem mtime
+    # file_paths = run(f"find {working_dir} -type f -size +{max_size}M -mtime {ttl_mins}").splitlines()
+    # Delete large files based on filesystem mtime
+    # deleted_paths = run(f"find {working_dir} -type f -size +{max_size}M -mtime {ttl_mins} -delete").splitlines()
+
+    # Use modified_time instead ?
+    old_files = job.get_files().filter(created_time__lt=datetime.now() - timedelta(seconds=ttl)).all()
+    try:
+        count = 0
+        for f in old_files:
+            try:
+                if file_should_be_deleted(f):
+                    logger.info(f"Deleting {job.id} {f.full_path} ({f.size / MB:.1f}MB)")
+                    f.delete_file()
+                    # _delete_file_fabric(f)
+                    f.deleted_time = datetime.now()
+                    f.save()
+                    count += 1
+            except FileNotFoundError as ex:
+                logger.info(f"File is missing on backend storage: {job.id} {f.full_path} - marking as expired")
+                f.deleted_time = datetime.now()
+                f.save()
+                pass
+
+        job.expired = True
+        job.save()
+        result = {"deleted_count": count}
+
+        try:
+            job.log_event('JOB_INFO', 'Job expired, some files may be unavailable.')
+        except BaseException:
+            # EventLogs are nice but optional, if this fails just forge ahead
+            pass
+
+    except BaseException as e:
+        if hasattr(e, 'message'):
+            message = e.message
+
+        self.update_state(state=states.FAILURE, meta=message)
+        raise e
+
+    task_data.update(result=result)
+
+    return task_data
+
+
+@shared_task(bind=True, track_started=True)
+def expire_old_jobs(self, task_data=None, *kwargs):
+    expiring_jobs = Job.objects.filter(
+        expired=False, expiry_time__lte=datetime.now()).exclude(
+        expiry_time__isnull=True).order_by('-expiry_time')
+    for job in expiring_jobs:
+        logging.info(f"Expiring job: {job.id}")
+        expire_old_job.s(task_data=dict(job_id=job.id)).apply_async()

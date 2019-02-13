@@ -14,9 +14,9 @@
                     <md-table-row v-for="file in files" :key="file.id">
                         <md-table-cell>
                             <div class="no-line-break"><i class="md-caption">{{ file.path | truncate }}</i></div>
-                            <div class="no-line-break">{{ file.name | truncate }}</div>
+                            <div class="no-line-break" :class="{ strikethrough: file.deleted }">{{ file.name | truncate }}</div>
                         </md-table-cell>
-                        <md-table-cell md-numeric>
+                        <md-table-cell md-numeric v-if="!file.deleted">
                             <!--<div class="push-right">-->
                             <md-spinner v-if="actionRunning[file.id]"
                                         :md-size="20"
@@ -53,6 +53,14 @@
                                 </md-menu-content>
                             </md-menu>
                             <!--</div>-->
+                        </md-table-cell>
+                        <md-table-cell v-else="file.deleted">
+                            <md-button class="md-icon-button push-right">
+                                <md-tooltip md-direction="left">
+                                    File has expired and is no longer available.
+                                </md-tooltip>
+                                <md-icon style="color: #bdbdbd;">info</md-icon>
+                            </md-button>
                         </md-table-cell>
                     </md-table-row>
                     <md-table-row v-if="files.length === 0">
@@ -309,4 +317,8 @@
     /*.md-table-card {*/
     /*width: 100%;*/
     /*}*/
+
+    .strikethrough {
+        text-decoration-line: line-through;
+    }
 </style>

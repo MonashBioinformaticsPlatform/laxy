@@ -21,6 +21,21 @@
             </md-dialog-actions>
         </md-dialog>
 
+        <ExpiryDialog ref="expiryInfoDialog" :job="job"></ExpiryDialog>
+
+        <md-toolbar v-if="job && jobExpiresSoon && showTopBanner"
+                    @click.native.stop="openDialog('expiryInfoDialog')"
+                    class="shadow"
+                    :class="{'md-warn': jobExpiresSoon && !job.expired, 'md-transparent': !jobExpiresSoon, 'md-accent': job.expired}">
+            <span style="flex: 1"></span>
+            <h4 v-if="!job.expired">Job expires {{ jobExpiresSoon ? 'in less than 7 days': '' }} on &nbsp;{{
+                job.expiry_time }}</h4>
+            <h4 v-if="job.expired">Job has expired - large files are no longer available</h4>
+            <span style="flex: 1"></span>
+            <md-button class="md-icon-button" @click.stop="() => { showTopBanner = false }">
+                <md-icon>close</md-icon>
+            </md-button>
+        </md-toolbar>
         <md-layout md-gutter>
             <md-layout md-flex="15" md-hide-medium>
                 <md-list>
@@ -53,23 +68,12 @@
                 </md-toolbar>
             </md-layout>
             <md-layout v-if="job" md-gutter="16">
-                <md-layout v-if="bannerSharingLink" md-flex="100">
-
-                    <md-button @click="$router.push({path: `/job/${jobId}/sharing`, query: persistQueryParams})"
-                               :disabled="!isAuthenticated"
-                               :style="cssColorVars" class="shadow shared-banner">
-                        <md-icon>link</md-icon>
-                        Shared via secret link{{ _formatExpiryString(bannerSharingLink.expiry_time, true) }}
-                    </md-button>
-
-                </md-layout>
-
                 <md-layout v-show="showTab === 'summary' || showTab == null"
                            id="top-panel" md-flex="100" :md-row="true" md-gutter="16">
 
                     <md-layout v-if="valentines" md-flex="100">
                         <generic-pip
-                                @click="openLinkInTab('https://giphy.com/gifs/love-animaniacs-crush-gfvxlwRKH1y5q')"
+                                @click="openLinkInTab('https://media.giphy.com/media/gfvxlwRKH1y5q/giphy.gif')"
                                 :style="`background-color: ${cssColorVars['--accent-light']}`"
                                 class="fill-width"
                                 stripeColor="accent" icon="favorite" buttonIcon="" buttonText="">
@@ -84,14 +88,45 @@
                         <job-status-pip class="fill-width" :job="job" v-on:cancel="onAskCancelJob"></job-status-pip>
                     </md-layout>
                     <!-- -->
-                    <md-layout md-flex="25" md-flex-medium="100">
-                        <file-link-pip v-if="hasMultiQCReport"
-                                       :url="fileUrlByTag('multiqc')"
-                                       :style="`background-color: ${cssColorVars['--primary-light']}`"
-                                       class="fill-width">
+                    <md-layout v-if="hasMultiQCReport" md-flex="25" md-flex-medium="100">
+                        <generic-pip @click="openLinkInTab(fileUrlByTag('multiqc'))"
+                                     :style="`background-color: ${cssColorVars['--primary-light']}`"
+                                     class="fill-width"
+                                     stripeColor="primary" icon="list" buttonIcon="" buttonText="">
                             <span slot="title">MultiQC report</span>
                             <span slot="subtitle">Open in new tab</span>
-                        </file-link-pip>
+                        </generic-pip>
+                    </md-layout>
+
+                    <md-layout v-if="bannerSharingLink"
+                               md-flex="25" md-flex-medium="100">
+                        <generic-pip class="fill-width"
+                                     @click="$router.push({path: `/job/${jobId}/sharing`, query: persistQueryParams})"
+                                     stripeColor="warn" icon="share" buttonIcon="" buttonText="">
+                            <span slot="title">Shared via secret link</span>
+                            <span slot="subtitle">This job is accessible by anyone with the secret
+                                link<strong>{{ _formatExpiryString(bannerSharingLink.expiry_time, true) }}</strong>.
+                            </span>
+                        </generic-pip>
+                    </md-layout>
+
+                    <md-layout v-if="job && job.expiry_time && job.status !== 'running' && job.status !== 'created'"
+                               md-flex="25" md-flex-medium="100">
+                        <generic-pip class="fill-width"
+                                     @click="openDialog('expiryInfoDialog')"
+                                     :cardClass="jobExpiresSoon ? (job.expired ? 'accent': 'warn') : ''"
+                                     :cardStripe="jobExpiresSoon ? '': 'warn'"
+                                     :icon="jobExpiresSoon ? 'warning': ''" buttonIcon="" buttonText="">
+                            <template v-if="!job.expired">
+                                <span slot="title">Job expiry {{ jobExpiresSoon ? 'in less than 7 days': '' }}</span>
+                                <span slot="subtitle">Large files associated with this job will be deleted on<br/>
+                                <strong>{{ job.expiry_time | moment('DD-MMM-YYYY (HH:mm UTCZ)') }}</strong></span>
+                            </template>
+                            <template v-else>
+                                <span slot="title">Job has expired.</span>
+                                <span slot="subtitle">Large files associated with this job are no longer available</span>
+                            </template>
+                        </generic-pip>
                     </md-layout>
 
                     <!-- input and output file total sizes in pip card -->
@@ -310,11 +345,12 @@
     import {EMPTY_TREE_ROOT, fileListToTree, TreeNode} from "../file-tree-util";
     import SharingLinkList from "./SharingLinkList";
     import {Snackbar} from "../snackbar";
+    import ExpiryDialog from "./Dialogs/ExpiryDialog.vue";
     import AVAILABLE_GENOMES from "../config/genomics/genomes";
     import GenericPip from "./GenericPip.vue";
 
     @Component({
-        components: {SharingLinkList, FileLinkPip, JobStatusPip, NestedFileList, GenericPip},
+        components: {GenericPip, SharingLinkList, FileLinkPip, JobStatusPip, NestedFileList, ExpiryDialog},
         props: {
             jobId: {type: String, default: ""},
             showTab: {type: String, default: "summary"}
@@ -357,6 +393,8 @@
         public sharing: any = {lifetime: this.access_token_lifetime_options[3]};
 
         public sharingLinks: any[] = [];
+
+        public showTopBanner: boolean = true;
 
         public refreshing: boolean = false;
         public error_alert_message: string = "Everything is fine. 🐺";
@@ -685,6 +723,20 @@
         @Memoize((link: any) => link.id)
         _linkIsExpired(link: any) {
             return moment(link.expiry_time).isBefore(Date.now());
+        }
+
+        get jobExpiresDaysFromNow(): number {
+            // const expiry_time = new Date(this.job.expiry_time);
+            if (this.job) {
+                const expiry_time = moment(this.job.expiry_time || undefined);
+                const now = moment();
+                return expiry_time.diff(now, 'days') as number;
+            }
+            return Infinity;
+        }
+
+        get jobExpiresSoon(): boolean {
+            return this.jobExpiresDaysFromNow <= 7;
         }
 
         openLinkInTab(url: string) {

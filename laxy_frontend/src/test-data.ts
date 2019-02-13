@@ -281,6 +281,8 @@ export const DummyJobList: ComputeJob[] = [
         'compute_resource': 'rML9cZ45bs4PdNanqdArU',
         'created_time': new Date('2018-04-24T05:00:10.757888Z'),
         'modified_time': new Date('2018-04-24T05:00:11.985785Z'),
+        'expiry_time': new Date('2018-05-24T05:00:11.985785Z'),
+        'expired': false,
         'secret': 'txKZkVWhD7chpPofZet19pTPugKazZ5vx2INVjGZPf34BHRFYkwzlOTs' +
         '8DLGaOQ3oSRtQIKUun7T3zecgD3PAeTP2kW3DQA5NkQefPgzZK9gJk3ocd6E41oVMkP' +
         'Ydi8WtkGzpK2CgrA96EK3fnTVjmxwSZswv9VqDPCaKRw5XzcINvAIWVgVkk3HLDPhihF' +
@@ -427,6 +429,8 @@ export const DummyJobList: ComputeJob[] = [
         'compute_resource': 'rML9cZ45bs4PdNanqdArU',
         'created_time': new Date('2018-05-02T07:21:01.966905Z'),
         'modified_time': new Date('2018-05-02T07:21:41.496303Z'),
+        'expiry_time': new Date('2018-05-24T05:00:11.985785Z'),
+        'expired': false,
         'secret': 'zltTOkOVjuA9wfPrAtw1oVYxioe9R06mxqzzeQ0whlea2Pvn9QUUbn8TGFmjn' +
         'sOSetj8DDcbrALpEy2OB4qKHX0Hi6ShQwcXI6DXd3SMgWgZZaozgfqlxKBpkVeIa8xiuZRUz' +
         'exMMkEMTE26pBGHJrLSB7qNSIvr4YcO6124nfwKLW31U1F4UNedGZ5Yq1TbAIkN5xii7R6DX' +
@@ -452,7 +456,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': 'md5:5dc000d353c3159772cd569efaeca41c',
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': ['bam', 'alignment'],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4xmDTGPfuQfoV5MhWduDu0',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -462,7 +466,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': 'md5:cb6af0cd8d49f248c62a45500a40700b',
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': ['bai'],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '12sREqaoL9WVW7Z8hkaaWe',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -472,7 +476,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': 'md5:7671aad1c1a69fea7dd0f0b135aa5a22',
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': ['bai'],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4ACDncmnXezOHusleYDKCB',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -482,7 +486,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': 'md5:8b9e5a7ecc9161707712a8d7bfb56faa',
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': ['bam', 'alignment'],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2q9k7R2znyNtKVccDX5n9g',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -492,7 +496,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': 'md5:6908603dc260a931d4e867897594658b',
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': ['multiqc', 'html', 'report'],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4RBxbQsXi4yDcDJQwE2Jzn',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -502,7 +506,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': 'md5:dcaaaf46ae8f3c691d5bc5bd53225415',
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': ['bds', 'logs', 'html', 'report'],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'AUa8AYvWc6nOPkRpXZVC9',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -512,7 +516,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': 'md5:166d2ada33d594cfe70590bbca33fbe9',
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': ['counts', 'degust'],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4OyibJ6GqYPaOZu54RuZ3n',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -522,7 +526,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': 'md5:03749e9c9f1182607c1793b0bc649b91',
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': ['counts', 'degust'],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'oSqbAX6Ny3kA4PQYC9V4o',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -532,7 +536,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': 'md5:01d638a1563d632cd29e86108b957f2b',
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': ['counts', 'degust'],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '76nJHXsFIOUo1SCmAl3E1e',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -542,7 +546,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': 'md5:f12293f1e0633d00461357d795f93c04',
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': ['counts', 'degust'],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'eGJICyvldGFJyMKk0kAoa',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -552,7 +556,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2vNlUR2GS8ipeovF3Xod3T',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -562,7 +566,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1nCOIqghRKkdcAIaYtzGS5',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -572,7 +576,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': 'md5:5eb50449274b01754962afd89cf31adf',
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': ['counts', 'degust'],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2UQTPOx3bQxeKHQeET2fOo',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -582,7 +586,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2xPAvJWURuKNFejpfTJeG1',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -592,7 +596,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1kDzP1Ln3ZyqZaqLn3cP7d',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -602,7 +606,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5ZPJQQdzoxGBejMamX0GAK',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -612,7 +616,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6MeAlIL8ajqcyUp9A044i',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -622,7 +626,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'ljz7cC9aSUTx3AfeANv2p',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -632,7 +636,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3yTUOmXcml5YfflrycDGK4',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -642,7 +646,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'nU2q4Z4VQ4sEFF2zHx8Zc',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -652,7 +656,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5JfWWWVVrFOZIyYjZCwAX8',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -662,7 +666,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3Q5BecePfEGL5U4pXioJf3',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -672,7 +676,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3KswSs2Jwr1iqAq8tCHJX0',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -682,7 +686,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '83OiRwlFppg8qAuzUpy3A',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -692,7 +696,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2tgDb5Lgn7FawcyHbGyqYs',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -702,7 +706,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4ChO7HQKbtTiWwrK29Ya9s',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -712,7 +716,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '45awoQR5vA1JibEKdJHU5Y',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -722,7 +726,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'btMkh76DCT0Bhj8gTSdxn',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -732,7 +736,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4VZWZQ5r0HHV31zFYlKlq2',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -742,7 +746,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1V7PLFUvKzltFTzu5LlV6l',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -752,7 +756,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3Wz5hk6o6CZekaUnve2OzI',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -762,7 +766,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4e9o0R9ciOJpIWmqXv8Op0',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -772,7 +776,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3pccTfhxwnxebqczrVz7ze',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -782,7 +786,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'KRH7JJ5ZtUrpnO6u75Y6r',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -792,7 +796,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6kbD3ElzyEyyRU1ZVSb4C3',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -802,7 +806,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '7FEOqMB92uVTgAQ97wnV0P',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -812,7 +816,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '34HZFotcBeIj7mf4nUCoaL',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -822,7 +826,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2NCkxMNKVg5L8IqNqU9Jbw',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -832,7 +836,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4qfrJCzUm0i4U3uTVVeQ10',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -842,7 +846,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5Ew1cOkuO8tsG37MD1OAtu',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -852,7 +856,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '69HjXgBID5sByaVvUbZFmm',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -862,7 +866,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1myCdDhJQg0A6AWKLfFhzp',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -872,7 +876,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2tAP0otmkWVdecbIls2wuV',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -882,7 +886,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4hsvIGhHAg5qUX6yOhhGYM',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -892,7 +896,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4HOeEJ90RaB166otcKe6Gy',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -902,7 +906,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5N8cgyPtTXqHVqlHiYMHgO',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -912,7 +916,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1S0qlbJcZHxYwZQyqdrWWl',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -922,7 +926,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1h9olMAOnyGW6bPHDGfGyV',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -932,7 +936,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'rmFAR0Yt7l0uQPLskNql7',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -942,7 +946,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1PFOldy15Uq8G4CmBoXduc',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -952,7 +956,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5ftaHoZhrOpAcC6rAaer3H',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -962,7 +966,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6qbx0pb1NkM98p8E991tfu',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -972,7 +976,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3hZEpWqUdnpNXrJs3tGz5d',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -982,7 +986,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3V4vRCTVRC4bOx9KS3BggP',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -992,7 +996,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '7ASbYuBS1g8aKDFoCbaMMz',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1002,7 +1006,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4H6YfzRDzxb9h6AJHqt6Ac',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1012,7 +1016,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2eMwikZzgA4El3EOfsMPW',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1022,7 +1026,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2jCw1WCJoechAlD4PYmujR',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1032,7 +1036,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '7crDCtKNX2y6M2dNBAdPWb',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1042,7 +1046,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2CxQgeLAhoDt0a6YBIYRbp',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1052,7 +1056,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '75AKC8edWeLcnzRYrpqcal',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1062,7 +1066,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '21hypFaR5rJURi0jtEHLxL',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1072,7 +1076,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '71zQ6zjlXqknvRQjkb1jaT',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1082,7 +1086,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3Sg76gGBmnmtotC6f8j3GE',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1092,7 +1096,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5hW7ATGeev6qZQa5XGPDvd',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1102,7 +1106,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '61NHaiQQ0bX0oVWXfsdeg2',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1112,7 +1116,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '29izjeKBLAYT2EGwnXKO0g',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1122,7 +1126,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4wLidNr9B8rrv5LbZ5NhHL',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1132,7 +1136,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'E3DLkHUjtbJsfwBMdr5Td',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1142,7 +1146,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1WXmO0UVTt1QQzKs3U0iiG',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1152,7 +1156,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '24pfybtAgerYnsTHt4ymZl',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1162,7 +1166,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '39qmOln4tTms1e27Mpj5sW',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1172,7 +1176,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6bCE9R3OeMER1Vb4qvRz7Q',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1182,7 +1186,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '49vS5D6FTWKtlRAxoO0UPi',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1192,7 +1196,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2j4n8sI7covFFStbgDDlhl',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1202,7 +1206,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'PYRK5QylfFNQxXS2D0pAL',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1212,7 +1216,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5yds05FhPu9UJimW4Kha8w',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1222,7 +1226,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1z01FEM4l9lf3PAXaE05Cl',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1232,7 +1236,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '50iEacT947GNSwoF0X8bmA',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1242,7 +1246,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4ybdemOMyEeazZ5DyHcSbz',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1252,7 +1256,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'GpTJupeFEAmUnAwHV4UZU',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1262,7 +1266,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'aDqdew1wxpjzGePAkFxQJ',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1272,7 +1276,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1Qb5dmCf3YOZJ4O0JxHHwM',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1282,7 +1286,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5QIfwgzFbNYEUXrpWdKIz2',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1292,7 +1296,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5nlB0dhkleDApKvECGehYk',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1302,7 +1306,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5OQ8TosStZh4qtKDarNmPM',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1312,7 +1316,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2RMF9k5TF1UvozY4OPWBOd',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1322,7 +1326,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4tnDDMbGSOf4mfNMt5peeD',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1332,7 +1336,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'SFh70AoHrFwWrEJmiCt3e',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1342,7 +1346,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5W4cPvWObYKV38cH0pYeNu',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1352,7 +1356,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4aREusrD1Zx4IROY2PBXnf',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1362,7 +1366,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4WIyiKqNv188PRJsBhDbui',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1372,7 +1376,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5IK6z8pnY2ZSix0DVsf3Nr',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1382,7 +1386,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6DQOVL7mBENs9AAahboG4t',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1392,7 +1396,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'nofjkmiMEHUCNYrAWTYw4',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1402,7 +1406,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4WBCndaDwt1dgsBKhco5aQ',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1412,7 +1416,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1aoHjf0jhJE1ZAj5witrRr',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1422,7 +1426,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6EHfRFOftgp0DvCrY3d2HI',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1432,7 +1436,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '7KJPaFFYKu6qsMrWEGsa48',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1442,7 +1446,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2zXh1ZKfDQdspPna3DoD8J',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1452,7 +1456,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'psXXu5nAR6F3tAko0BRJw',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1462,7 +1466,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1giqIDOOJiyQIioO0ypjCt',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1472,7 +1476,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3CGHJqMsjIJqfRjKode9V5',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1482,7 +1486,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6ktQLHmDTMCFPuFhKgBVv6',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1492,7 +1496,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6VaTvjGLegWqMY0713glHZ',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1502,7 +1506,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '51fGbwV10XEt0OsTCtXIka',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1512,7 +1516,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '598W1k9ry2GKb5GOGQO54n',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1522,7 +1526,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4VGuawuB4WPbPOXKcFAgSb',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1532,7 +1536,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5fRFNG3K5Nsm5bvtqvlmk5',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1542,7 +1546,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '108qXswUxhKkPvE75PVXQH',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1552,7 +1556,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '39LZ3QHvxvRoktpPkXTeh9',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1562,7 +1566,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6iEan95PlAwkfkHghPLuky',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1572,7 +1576,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3fXaIfKVa2nL0NqTk2VHA4',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1582,7 +1586,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1MUQHrMfTVd70ZY80VKg2D',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1592,7 +1596,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3Z54xQgcreu8rGjQaX4PUW',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1602,7 +1606,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2q42VqI13Zu42xOLUSI5dY',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1612,7 +1616,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6jKbSxpgN6AXflFNBSK48w',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1622,7 +1626,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '7SIUbcyVCo9kXoxQc2NV0z',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1632,7 +1636,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5YeMKOu0jYhqqzFwGe07qr',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1642,7 +1646,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3SwBXWpvEQB6mcN6AHKA6u',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1652,7 +1656,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5IiBdUxgnk8Qst5hU3cI29',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1662,7 +1666,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6nDnIwnHVVeEARPSCipWPA',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1672,7 +1676,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5rjvwERAsrE9KI0l3Nlvr2',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1682,7 +1686,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3LrXPSwS8pxm0MlSVP3d49',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1692,7 +1696,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'rNE94TjL7FnvUjZQzPDd2',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1702,7 +1706,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2FQwoaAoBixV4KgC4fb29o',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1712,7 +1716,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2pyif99V6rhcPjo4U5RyTa',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1722,7 +1726,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6FrEyq0gojVnGwH5th5QQq',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1732,7 +1736,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2lkwziDiACeVTlqj53sAWQ',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1742,7 +1746,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2u4oVMe3yBGwpBxzxr7sbc',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1752,7 +1756,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'O53yzidVXzfQCPrA1XtSd',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1762,7 +1766,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '48PVq81hIC7d8YUyB1zGUp',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1772,7 +1776,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'XFQqNf4dKJvI2IYMIMYOq',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1782,7 +1786,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4OpTLdnFpjnapf8QsYrBfT',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1792,7 +1796,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1p48LkCYrRvtrnC0GhtiW2',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1802,7 +1806,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '28BV5eRMDViBliVvvKnjQ9',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1812,7 +1816,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1ZGPk3qw0IdfKErBXwt4vY',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1822,7 +1826,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1JNF9bF7XrebHoT4IL2WM5',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1832,7 +1836,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '7HEVVpzghu6v8wb8VVq3fj',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1842,7 +1846,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '202UGv1iFiX3bQ7wZ8TVEa',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1852,7 +1856,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5c9B2stXB09gNxCiUvosI0',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1862,7 +1866,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1sAX44aKJpIFSQAufd7Awn',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1872,7 +1876,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '21uXYemJH4dBAJqRXhClad',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1882,7 +1886,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1ftRKrlj6qHVqMUfJO1PQB',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1892,7 +1896,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4f8UwZ39RfwkkwbYYW0xy7',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1902,7 +1906,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6WC2StUKZ7bdgTjAZpZpo4',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1912,7 +1916,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4LpVsb8CIAhtjwbKK6VXap',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1922,7 +1926,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '7dwN6o2tM7UXh1P0tPsGKb',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1932,7 +1936,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2w9Ga1mVuHfbcP12O4bF2i',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1942,7 +1946,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3VXBZU7Ay1Uut5xJS5XmGC',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1952,7 +1956,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'CtOkU0Cz5SbZUeyIT3u1c',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1962,7 +1966,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '7Dtwz9nrHiOU38RrSUFH4l',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1972,7 +1976,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1n1uzP0kG1Bhu3Ei01nWSc',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1982,7 +1986,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '12jwZ90pL4qKR1VCGW6TOC',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -1992,7 +1996,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'gv9XEmwypV1MWsvEL5MrS',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2002,7 +2006,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'RidB1htunhLXp0YLA99Cc',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2012,7 +2016,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'RrekMxdbzD2nZ700tGC4q',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2022,7 +2026,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6nEbkSrmJ0xCYATnQ6E91v',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2032,7 +2036,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3xpiXhmJwRXwMFJro2twwY',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2042,7 +2046,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1Lio28C4jmIXQlwx5YtOvO',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2052,7 +2056,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5vDP22THyJFBa1CDhzv3ri',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2062,7 +2066,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1zNVQvF9Y7JrzHI4XFapl0',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2072,7 +2076,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1E8ZghUOPOhH0rLicdEy1r',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2082,7 +2086,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3XEKMt5s3jrgQhATUb5Pbd',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2092,7 +2096,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2lCvAbPwfH8RgO4YQTwkHW',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2102,7 +2106,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'fs8zkHJvK6o0Uo5NBugLj',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2112,7 +2116,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6lL6CRN0ciOzTPa2ftJx1J',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2122,7 +2126,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1O7OhYg4NLBAUIG2CvrohE',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2132,7 +2136,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4h2H2FfYi0jImiydrvaHZG',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2142,7 +2146,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '57nVFgPLsaEqdjdIa2Oykm',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2152,7 +2156,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2zUoTftkOEp0i0WfBZ0W96',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2162,7 +2166,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6j0kLKrbJH5PMiXi5rDXzS',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2172,7 +2176,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1VfOQiQY94T0oPinRYaHNC',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2182,7 +2186,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '7egtlsEqtflhOB1IlLD5f4',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2192,7 +2196,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2KpA9A4PvsbsvFJm9C0L1d',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2202,7 +2206,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5E5cmPkmdKLQImsmgjzHA8',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2212,7 +2216,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5OIk9kgaxBpH07NH51vFuO',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2222,7 +2226,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4u1K00cP9ZUXiANBmn2LOV',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2232,7 +2236,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'ONPpcRDqIUonIO03zRmkZ',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2242,7 +2246,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '56nLL4fVECY4LwEAeHdOaa',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2252,7 +2256,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'h2URGWhOijj4eRCIT6iro',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2262,7 +2266,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1eKVCLNgPVbg8t3JlaunBC',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2272,7 +2276,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6KAoKWjSLkUqe9HKIoeeGD',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2282,7 +2286,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3B8qF1DNtVUciNZlVo2E4D',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2292,7 +2296,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4yZrHrWfTtYDfzLNmwpffc',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2302,7 +2306,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4sX8LcVQqyhhrl5EjJrbHS',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2312,7 +2316,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4WndyRD8TuzABAu3Q9J2pz',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2322,7 +2326,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'MToXdlltPRRuxBQbcMVF4',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2332,7 +2336,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5IxexhyLSkmdPAhf93z41y',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2342,7 +2346,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'wbWdvrgbgNhnPbKUPFphf',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2352,7 +2356,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2qIzsLRlitn0kk2b3bVQtB',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2362,7 +2366,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '72b15UNsXw6WPYfkt8lA1u',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2372,7 +2376,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1PcA7bI16u7j0lYi4VcTZ0',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2382,7 +2386,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6kvazVuW88P9HtkpeqVsr',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2392,7 +2396,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5ETf0DnjjPeTiSbtRHQ7Fp',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2402,7 +2406,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'O4gMBQ6Hfr32gDHoRL9KL',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2412,7 +2416,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2z8dVRDPs8kz9Fw6rOfaB5',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2422,7 +2426,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '77vXjckechWAkQ2q2dPwgm',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2432,7 +2436,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3yDpSSH4O1wHumthXe3dxH',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2442,7 +2446,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'mdA9lFnLtLKblKh992vWv',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2452,7 +2456,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4ZNnjjSbtjFngJYr7smyxM',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2462,7 +2466,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2PUl6z2xoQf3bC9OjzT2ap',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2472,7 +2476,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'eG8VR83QD1dHOqOOxgc0o',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2482,7 +2486,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4wPiivFHGinA4csyBM09y8',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2492,7 +2496,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'XLT2J2TQ3xToHtnVDtNhp',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2502,7 +2506,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4qSBWsmFp4hcUvWUXhif0L',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2512,7 +2516,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5SiEe3lddSyQhfO2tLbBHB',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2522,7 +2526,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1FIPUXPU7nZYIbKeSWyLiO',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2532,7 +2536,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '44H0fuuD9wyaOCf3E2Bjmb',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2542,7 +2546,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'wvzcFyXB1TE8YESGybuwV',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2552,7 +2556,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4GhQLuoX3R9tc9CtJHgOn6',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2562,7 +2566,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5Oszc8B1RSZlsWl3xsQo5Z',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2572,7 +2576,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6kcJvUQKEtwXuodmz2BM64',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2582,7 +2586,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '51XkoiuNIQguNx1lyyKK0f',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2592,7 +2596,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '14PO83Yn2YbEshPZ3ANiI1',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2602,7 +2606,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6fu0a12I44uTT88UGdM0in',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2612,7 +2616,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'oR8Nna8KO4TNLil5dyXas',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2622,7 +2626,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6DDBGD2wcyuEXOKlKaRKMb',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2632,7 +2636,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5VGzwUjwZmQJRfjlrSU8PJ',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2642,7 +2646,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4LfXZiYVhSKUFq9COBghci',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2652,7 +2656,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6jWIgCs02j3RapynLnAVhs',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2662,7 +2666,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1wvWWvE3Crz8fg0N8U09U4',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2672,7 +2676,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6fOskSz2Nqi8lGPPZIqo6t',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2682,7 +2686,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4jzpnZLIfmd0PzOExdlcys',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2692,7 +2696,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '7KHWkkE3zvYtPvvznutwS5',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2702,7 +2706,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6G3uG09z8SBylErTxjCZdp',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2712,7 +2716,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5nWyIuNzbEcojBN35ol7cI',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2722,7 +2726,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1q1cY1mYRs3R8E0dijIPXi',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2732,7 +2736,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '7TmDjafACKxxa3yMYAx96u',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2742,7 +2746,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5zfpUfoVfyPvdpL6O9hcy5',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2752,7 +2756,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6jHAMQWaQnrYJ9jDKjCxzo',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2762,7 +2766,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3VLizHWyR2Tk76hFNVqQmJ',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2772,7 +2776,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1QUbGR4BhDqvwFDaZZhMZ1',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2782,7 +2786,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '51yjXvVjlpKcnEEznzZWna',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2792,7 +2796,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6qdq1hlPSs25c44uFF2z48',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2802,7 +2806,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1cvXGFZSXV71KHmo1tjBge',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2812,7 +2816,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4YE3GAD8DoQxEWQDPOy2LI',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2822,7 +2826,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '9F3Q1XHz6VkQYMxQPbILD',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2832,7 +2836,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'Hk9nwJkV4vrrP9ZKP3Txd',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2842,7 +2846,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6yzfrUjT4bTCxBUCaa15TV',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2852,7 +2856,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'ogbtsG13fop2VnfzGL1tF',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2862,7 +2866,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1RSSgUTcBytxqc2S7fCYKf',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2872,7 +2876,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4F4mzXCkVZeApSQeNsIbdK',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2882,7 +2886,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3vVLaYo9HF1vGTmVjBFAjm',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2892,7 +2896,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5W2TFRXj4KztYEd2xsuAPM',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2902,7 +2906,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2PotbhY3LwSfe1sDdhbbJ3',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2912,7 +2916,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '24DRt6UG0JT3qv0DLqufYh',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2922,7 +2926,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '51STqBICEnT2iMH4IjekS8',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2932,7 +2936,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3YFsLppkOvh9kvpoSaMOVg',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2942,7 +2946,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3pG4SPVSFEu7gWSWVhFNIy',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2952,7 +2956,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3Tqiz1y2qn8DFdJK9FbPNQ',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2962,7 +2966,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4rTy031KVyBoUfdokG6B1K',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2972,7 +2976,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '51h12fpdHh645htKPIGcpK',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2982,7 +2986,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'RpSn8zBtyM4SRGutHsU6l',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -2992,7 +2996,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3KgqDwhIvtAkI4gKLu5pY2',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3002,7 +3006,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'xzeKOVEuxcbqh2CU8pkUD',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3012,7 +3016,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6STMFJM5dcsh26QWYsIZmi',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3022,7 +3026,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4pYVW2bMTxqlnnIz0VN2Sk',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3032,7 +3036,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1Xfna0TrECTfWCU4PnsW7K',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3042,7 +3046,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1QUTvg8s7gi3GcTKwIXcBk',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3052,7 +3056,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '17cqatHjU2OnBxcmKaUc1L',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3062,7 +3066,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '11UMLu2rB5slUIrkH41W5z',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3072,7 +3076,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '42tsbbIt58hB4ZV5kLLzEM',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3082,7 +3086,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5AZW3sE8YeBuE0QRtqtGSM',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3092,7 +3096,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6ZbGJRBZUDSNjXJ60SkgWN',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3102,7 +3106,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1uvlyHBFGkd2s2H3PeLZGx',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3112,7 +3116,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '679uGtBQ7Tc8KEQn0i8jVr',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3122,7 +3126,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '646y2EfmYBJLlntfnMDjCW',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3132,7 +3136,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4Ejpq5PtS8MPwLDU4eJEh6',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3142,7 +3146,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5sa19cXOAPWuvXThxgOv09',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3152,7 +3156,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4SZF1Mj1QmNeq9wIe69rJ',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3162,7 +3166,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6rgSD1Nh7i6jZwoE5v2xwi',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3172,7 +3176,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3ztCcU4KMvfXELmae6xyqY',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3182,7 +3186,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '73UDv8oEfUFxAHg2g1ghN4',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3192,7 +3196,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '7ObZ0ESleK88ZFsMfcKCng',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3202,7 +3206,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5DeTPX0RhvLWtmhD4dSZrC',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3212,7 +3216,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'zz6iq0bsfYQ4PEuYmwkVA',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3222,7 +3226,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4EYYwk3Ye00kPIe6WafAa6',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3232,7 +3236,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3EUuEZ3yh2pSfjCrzXAJ0u',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3242,7 +3246,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6W1Nzn64nfc28ZmA9PsmD9',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3252,7 +3256,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'nWct4EvrOnursYbqok6ca',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3262,7 +3266,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1LWI837pZHcVNLSmz5kTWZ',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3272,7 +3276,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2wlk3Hu4M2vb0wd6ur9LAs',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3282,7 +3286,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4fTt56NiOoscySN6v2aUME',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3292,7 +3296,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5VAIPx0QiqUVv3TB3WWYNW',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3302,7 +3306,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4bxBcTaPwbGq7u9jusCKYs',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3312,7 +3316,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1KKg6IqmyAtR8yexOuHEfX',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3322,7 +3326,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2vtQbvWA5fD9AkS3lA81Sq',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3332,7 +3336,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1FKdZgyLWsPeq9M07LDYYF',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3342,7 +3346,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5Nb55wWnj2E9hzmrYxQ0rY',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3352,7 +3356,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2WQ0yuzEY5J2vCVdRUVV2a',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3362,7 +3366,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5yU3xxlFK0B2pY9ec6nSVE',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3372,7 +3376,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '23YL1ZJgAxQChJ8k9eAsuo',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3382,7 +3386,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'aQprBzd9WJgZnDwaCYNg4',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3392,7 +3396,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6Ps2SffKBFmAdoEWnAyB3m',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3402,7 +3406,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5JzUZaUE2iWJVDlnBLex0K',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3412,7 +3416,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2oJDm2szmYBqU36PVQiZgQ',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3422,7 +3426,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3z7gsWwz56VVmUYefsBWaL',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3432,7 +3436,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3bDLQ1wEbTr2eCr3ExqjnR',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3442,7 +3446,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1mGaIvmlVzq2ugEdmtUgbH',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3452,7 +3456,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '33aESVCFLm7EzKkgP8sMSp',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3462,7 +3466,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1yUaVRhyISjZbL0ZbiQksn',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3472,7 +3476,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5LovWymrRKCPlNgm9C9RLk',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3482,7 +3486,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1Yw0qaKyLYExI7qLn50Zwf',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3492,7 +3496,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '7Ig02BQXdTLD5qpUlCjcXU',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3502,7 +3506,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '7WgLiMwGIPUjFBcON0hJii',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3512,7 +3516,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4mYSKzROUAUONAVmNAd6wE',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3522,7 +3526,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5kRNJs5aHdtP3RhkY9bVKq',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3532,7 +3536,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '7gHfu3flUq8B5p9R1Lpq75',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3542,7 +3546,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '102MPcwDIXEaT7lXrFgMyk',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3552,7 +3556,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '7fZoJ2sTZrmdSo1SdnUuC0',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3562,7 +3566,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5N6p0b1gRtAeArC3PzXRK2',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3572,7 +3576,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4VdheG7LeYg4vjWMIF82Gt',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3582,7 +3586,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1mv5xulx52FFmGqz1jm237',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3592,7 +3596,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6KpvRE9U5QDPXkasrn2hlO',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3602,7 +3606,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'wndjCLVwv7FgoTDDrw1b4',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3612,7 +3616,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'RkRKWyfUyRWYQp5uaOVwF',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3622,7 +3626,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '550kWk9u3ppK6DrmNeBBbk',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3632,7 +3636,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1N98ncUbZcVQ86fSt5IrRa',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3642,7 +3646,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'OqqQV6TtSJkekqCBeghVa',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3652,7 +3656,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6JYJ4Ixns6GnQeTwNkvSb0',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3662,7 +3666,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2ZbXyAxYd23pdqhhEGLZOv',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3672,7 +3676,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '49I04Qw9WNz1EnyVSPEL2d',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3682,7 +3686,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '62lYIjOKrkwHLW0XoDMl3P',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3692,7 +3696,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6mcNaOcRUkXLWasX6V1L5p',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3702,7 +3706,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6cMVv4n5uaAXZbcmrusceI',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3712,7 +3716,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6ksCyuuY3tdDMAri3pSPum',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3722,7 +3726,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'xTYFE1hD0jJ62CFNai9al',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3732,7 +3736,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '39clb0N8fWg7l2f0zuCPiT',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3742,7 +3746,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5Mg642cRMn8upoFYbbvzkl',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3752,7 +3756,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1e4AKS7GR6C4NuVA1abDnn',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3762,7 +3766,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6V8gCzmkV4ucil5AMJtqNW',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3772,7 +3776,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3tGdAtaQJrFzTImsdtIDDi',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3782,7 +3786,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6emMzBnUw2LOYM3OzdZ3zV',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3792,7 +3796,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1FADUAuQ3ECDjxcGpdyDgR',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3802,7 +3806,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3K1vHgWvkyPDxY6WNm94Hf',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3812,7 +3816,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'ljN6yMEKqtDQNWg8IZ61f',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3822,7 +3826,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '16oU5rS1HeZ2i5afssO1AZ',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3832,7 +3836,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2Rw4WGYz85FPHi3lNfJxvP',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3842,7 +3846,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3XdM8u3yTfyyTi3UGNNANS',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3852,7 +3856,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4rI3sbeFhyXeB3nqFIy72K',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3862,7 +3866,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2f61UQ58Uo7yMq4GReCXwv',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3872,7 +3876,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'xIAKpPMz3LZfWlofuaBgH',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3882,7 +3886,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4ayHYTf748mVI6mnQ3lhXL',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3892,7 +3896,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3Tf1rBN6fVZsl1gwe5wK2y',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3902,7 +3906,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'sAo6i0KJSHZFcvkuAGZQM',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3912,7 +3916,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5XtP254hy9AM6biESWlvqr',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3922,7 +3926,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'MmatP1nExN2M1L0MMGlQD',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3932,7 +3936,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4bWhRoTmqvo4mjt4b1kIQt',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3942,7 +3946,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6VPV402f43GBFXyITm89UR',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3952,7 +3956,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6NW3a0Oo6d48rvrM7tHdDo',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3962,7 +3966,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1oQMwTxNCJEo6LcNiAURoH',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3972,7 +3976,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2g59NDAaXW3MHFgx8PJXjN',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3982,7 +3986,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4PN3zOjl2R5sXjphyBxRMh',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -3992,7 +3996,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1ggdiqw3mWM6jsQaqUdOiT',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4002,7 +4006,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '7KcpwDaMQm6XAsECfaVuz3',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4012,7 +4016,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4p2Kz8rMifEP3BZ3tGXNi2',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4022,7 +4026,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '155uaBA87Yb4qoJuC1AXrI',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4032,7 +4036,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'ldw9MojOWtzXWYuomefp4',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4042,7 +4046,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6tiEJpMQlwRTKEopoqR0FU',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4052,7 +4056,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3pyIK8M0fviLAQa07dzAUJ',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4062,7 +4066,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'TlN3u3Cd474Ett8Ye9OOd',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4072,7 +4076,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6vEKppS7ifIRvviCfCrF7Q',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4082,7 +4086,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4fBkOUBqf1py1xKFr8PtHL',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4092,7 +4096,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4xQrgVCx4TIpzqT57d0Rfi',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4102,7 +4106,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6Y01ZK8ycLRE0T2kzYDZh5',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4112,7 +4116,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'BWjc9CI9OaS1YeR1QT0MR',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4122,7 +4126,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6YrYuU43mSP1nY1Oio4dRn',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4132,7 +4136,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1MxcaMrQWBvp3k0FMCeS4p',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4142,7 +4146,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2dq3HMIB0OGHz6MPnheoLB',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4152,7 +4156,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4Rs9OFB2sHhkPklUxIofqM',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4162,7 +4166,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '20BRhMm0dh33OxAf8WeOKV',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4172,7 +4176,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6D1uNbVJHB67V74wkXVOcu',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4182,7 +4186,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '7Ad10dgKYTsQ9R17emti7l',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4192,7 +4196,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '7UH215jvmDQzX73m4oSJCq',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4202,7 +4206,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6xQRVz45TDVwpFykYIAnoi',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4212,7 +4216,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5SLXWWORCFMk11CC2GFgMg',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4222,7 +4226,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '7SWJTKJXBSKu7BUH856iCd',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4232,7 +4236,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '238zR8LEnqBNF3RMNcU0jK',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4242,7 +4246,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1fskFildwY1ZukUz4sWVK6',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4252,7 +4256,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '338pvhtwA6XFlvJe9vHGbl',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4262,7 +4266,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1A2FZ9xFI0TAK3eh9pfOJt',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4272,7 +4276,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2EIJPstxGz4fYgkkbqU5MB',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4282,7 +4286,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '7WM2PVSAZ3Eyah0SDYcdA3',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4292,7 +4296,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '67CMIrIjiWHIX5eHwo1uzO',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4302,7 +4306,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3MYFNVMCyOW9yp880UoBLk',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4312,7 +4316,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4dZe5HtQ4U0qlmbahWImK5',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4322,7 +4326,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2TXFWaiyFDS78lVI16Lmhh',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4332,7 +4336,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3GTckEUA1dV2X5tzO2U1Lr',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4342,7 +4346,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'W5CKl61WxPjoQz9h0avUa',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4352,7 +4356,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4ftEc2btLmV5Vp5Pr2swHP',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4362,7 +4366,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '7hS1K0VpV6S9YENilx54p5',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4372,7 +4376,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6gEHYMSjIfCo7SX31fZFJB',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4382,7 +4386,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '51fZFdcRVmz2pGyu1nxFDD',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4392,7 +4396,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6GDX8DodhNWUaHjQjl5uz7',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4402,7 +4406,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '69qIw00WPPEuKq5YJf8vlz',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4412,7 +4416,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3LnssjC6T2KjE0cH2hC1w1',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4422,7 +4426,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '50N9X2x94RUf5oO89T7cNy',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4432,7 +4436,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '23RU9t6zQrunJO24LE9Yjy',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4442,7 +4446,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5e2yV3tFotmTJv2iaVucA2',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4452,7 +4456,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '67x7SKrLIAu1RnYJUel5cP',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4462,7 +4466,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4ac7OG8yvyrEldbcG2OE8K',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4472,7 +4476,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4iUujPk8mxIoYej61hPUf',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4482,7 +4486,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '30mwjBGOffHhCvU21jaMOy',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4492,7 +4496,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '5xYmwIS3Bsa6YqqV28Mso6',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4502,7 +4506,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '4ob3UFnIWHXWN91XHJth7V',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4512,7 +4516,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '29j5Tcy1IyFk9z1a1CIn4Y',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4522,7 +4526,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '48faj47vG2PSGE2PdpJl9E',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4532,7 +4536,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'dClhCdhtFGbXO1m4T5JoH',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4542,7 +4546,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '7Juh3cdvBlRLs8khGwZkvU',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4552,7 +4556,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1bBjv2S1NLfKfwKcjxMY7i',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4562,7 +4566,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2uUp20aLTPoL7KpYpyrCvF',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4572,7 +4576,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'aTQxOeh9SJZ06LFGvQ26g',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4582,7 +4586,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '1CiQCUCkrCoLHBaqz5raRb',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4592,7 +4596,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '6P55YzMm36dNbDrNbT5HEb',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4602,7 +4606,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': 'eRQ8LCrbCRFfO4KBgAV4V',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4612,7 +4616,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '2KQDMytgsfI6X6cPXaSZ3X',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4622,7 +4626,7 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     } as LaxyFile, {
         'id': '3YJPMRKP9VABBaH2eTxHoN',
         'owner': '51f6boKqYKhlm9S0CoCFOt',
@@ -4632,6 +4636,6 @@ export const DummyFileSet: LaxyFileSet = {
         'checksum': null,
         'fileset': '2a5rRC13IqBZLXva9CnMkS',
         'type_tags': [],
-        'metadata': {}
+        'metadata': {}, 'deleted': false,
     }]
 };

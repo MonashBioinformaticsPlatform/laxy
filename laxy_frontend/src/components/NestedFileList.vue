@@ -73,26 +73,26 @@
                             </md-table-cell>
                         </md-table-row>
                         <md-table-row v-for="node in currentLevelNodes" :md-item="node.obj" :key="node.id"
-                                      :md-selection="node.obj && selectableTypes.includes(node.meta.type) && !isInCart(node.obj)"
+                                      :md-selection="node.obj && selectableTypes.includes(node.meta.type) && !shouldDisableCheckbox(node.obj)"
                                       @selected="onSelectedRow(node.obj)"
                                       @deselected="onDeselectedRow(node.obj)">
                             <template v-if="node.meta.type === 'file'">
                                 <!-- when in cart, insert a disabled checkbox
                                      (since :md-selection="false"  _removes_ the checkbox) -->
-                                <md-table-cell v-if="isInCart(node.obj)"
+                                <md-table-cell v-if="shouldDisableCheckbox(node.obj)"
                                                class="md-table-selection">
                                     <md-checkbox disabled></md-checkbox>
                                 </md-table-cell>
 
                                 <md-table-cell @click.native="getProp(node.meta, 'onclick', (n) => {})(node)">
-                                    <div class="no-line-break">
+                                    <div class="no-line-break" :class="{ strikethrough: node.obj.deleted }">
                                         <md-icon v-if="node.meta.tags && node.meta.tags.includes('archive')">
                                             folder_special
                                         </md-icon>
                                         {{ node.obj.name | truncate }}
                                     </div>
                                 </md-table-cell>
-                                <md-table-cell v-if="!hideActions"
+                                <md-table-cell v-if="!hideActions && !node.obj.deleted"
                                                @click.native="getProp(node.meta, 'onclick', (n) => {})(node)"
                                                md-numeric>
                                     <md-spinner v-if="actionRunning[node.obj.id]"
@@ -130,6 +130,16 @@
                                             </md-menu-item>
                                         </md-menu-content>
                                     </md-menu>
+                                </md-table-cell>
+                                <md-table-cell v-else-if="node.obj.deleted === true">
+                                    <md-button class="md-icon-button push-right">
+                                        <md-tooltip md-direction="left">
+                                            File has expired and is no longer available.
+                                        </md-tooltip>
+                                        <md-icon style="color: #bdbdbd;">info</md-icon>
+                                    </md-button>
+                                </md-table-cell>
+                                <md-table-cell v-else>
                                 </md-table-cell>
                             </template>
                             <template v-else-if="node.meta.type === 'directory'">
@@ -423,6 +433,10 @@
             return false;
         }
 
+        public shouldDisableCheckbox(file: LaxyFile) {
+            return this.isInCart(file) || file.deleted === true;
+        }
+
         private viewMethods: ViewMethod[] = [
             {
                 text: "Open in new tab",
@@ -526,4 +540,8 @@
     /*.md-table-card {*/
     /*width: 100%;*/
     /*}*/
+
+    .strikethrough {
+        text-decoration-line: line-through;
+    }
 </style>

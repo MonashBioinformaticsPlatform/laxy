@@ -60,6 +60,21 @@
                             {{ job.created_time| moment('from') }}
                         </md-table-cell>
                     </md-table-row>
+                    <md-table-row v-if="job && job.expiry_time">
+                        <md-table-cell>Large files expire on
+                            <md-button id="expiryInfoButton"
+                                       @click="openDialog('expiryInfoDialog')"
+                                       class="md-icon-button md-dense">
+                                <md-icon style="color: #bdbdbd;">info</md-icon>
+                            </md-button>
+                        </md-table-cell>
+                        <md-table-cell>
+                            <md-tooltip md-direction="top">{{ job.expiry_time }}
+                            </md-tooltip>
+                            {{ job.expiry_time| moment('DD-MMM-YYYY') }} ({{ job.expiry_time| moment('from') }} from
+                            now)
+                        </md-table-cell>
+                    </md-table-row>
                     <md-table-row v-for="row in extraTableRows" :key="row[0]">
                         <md-table-cell>{{ row[0] }}</md-table-cell>
                         <md-table-cell>
@@ -98,13 +113,14 @@
             </md-button>
         </md-card-actions>
 
+        <ExpiryDialog ref="expiryInfoDialog" :job="job"></ExpiryDialog>
+
     </md-card>
 </template>
 
 <script lang="ts">
     import "es6-promise";
 
-    import axios, {AxiosResponse} from "axios";
     import Vue, {ComponentOptions} from "vue";
     import {
         palette,
@@ -122,18 +138,12 @@
         Watch
     } from "vue-property-decorator";
 
-    import {
-        State,
-        Getter,
-        Action,
-        Mutation,
-        namespace
-    } from "vuex-class";
-
     import {ComputeJob} from "../model";
-    import {WebAPI} from "../web-api";
+    import ExpiryDialog from "./Dialogs/ExpiryDialog.vue";
 
-    @Component({filters: {}})
+    @Component({
+        components: {ExpiryDialog},
+        filters: {}})
     export default class JobStatusCard extends Vue {
         @Prop({type: Object})
         public job: ComputeJob | null;
@@ -165,6 +175,16 @@
 
         cloneJob(id: string) {
             this.$emit("clone-job-clicked", id);
+        }
+
+        openDialog(refName: string) {
+            // console.log('Opened: ' + refName);
+            ((this.$refs as any)[refName] as any).open();
+        }
+
+        closeDialog(refName: string) {
+            // console.log('Closed: ' + refName);
+            ((this.$refs as any)[refName] as any).close();
         }
     };
 

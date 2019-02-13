@@ -156,6 +156,7 @@ class FileSerializer(BaseModelSerializer):
                   'checksum',
                   'fileset',
                   'type_tags',
+                  'deleted',
                   'metadata')
         read_only_fields = ('id', 'owner',)
         error_status_codes = status_codes()

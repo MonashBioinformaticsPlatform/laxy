@@ -1,6 +1,8 @@
 <template>
     <!-- eg multiqc report link -->
-    <md-card>
+    <md-card md-with-hover
+            @click.native.stop="openLinkInTab(url)"
+            :style="cssStripe(getThemeColor('primary'), 'left', 4)">
         <md-card-header>
             <md-card-header-text>
                 <div class="md-title">
@@ -17,7 +19,7 @@
         </md-card-header>
 
         <md-card-actions>
-            <md-button @click="openLinkInTab(url)">
+            <md-button @click.stop="openLinkInTab(url)">
                 <md-icon>remove_red_eye</md-icon>
                 View
             </md-button>
@@ -37,8 +39,7 @@
         Provide,
         Watch
     } from "vue-property-decorator";
-    import {getThemedStatusColor, cssGradient} from "../palette";
-    import JobStatusCard from "./JobStatusCard.vue";
+    import {getThemeColor, cssStripe} from "../palette";
 
     @Component({
         filters: {},
@@ -49,6 +50,9 @@
 
         @Prop({type: String, default: 'view_list'})
         public icon: string;
+
+        getThemeColor = getThemeColor;
+        cssStripe = cssStripe;
 
         openLinkInTab(url: string) {
             window.open(url);

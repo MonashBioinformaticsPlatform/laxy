@@ -15,7 +15,8 @@ User = get_user_model()
 
 from ..tasks.job import (index_remote_files,
                          _index_remote_files_task_err_handler,
-                         set_job_status)
+                         set_job_status,
+                         file_should_be_deleted)
 
 
 def _create_user_and_login(username='testuser',
@@ -60,11 +61,84 @@ class TasksTest(TestCase):
                            completed_time=datetime.now())
         self.job_one.save()
 
+        self.files = []
+        self.file_bam = File(
+            location="file:///tmp/laxyjobs/some_job_id/output/bigfile.bam",
+            owner_id=self.user.id,
+            metadata={'size': 1024*1024*1024})
+        self.file_bam.save()
+        self.files.append(self.file_bam)
+
+        self.file_bai = File(
+            location="file:///tmp/laxyjobs/some_job_id/output/bigfile.bai",
+            owner_id=self.user.id,
+            type_tags=['bai'],
+            metadata={'size': 1024})
+        self.file_bai.save()
+        self.files.append(self.file_bai)
+
+        self.file_html = File(
+            location="file:///tmp/laxyjobs/some_job_id/output/report.html",
+            owner_id=self.user.id,
+            metadata={'size': 1024})
+        self.file_html.save()
+        self.files.append(self.file_html)
+
+        self.file_counts = File(
+            location="file:///tmp/laxyjobs/some_job_id/output/counts.txt",
+            owner_id=self.user.id,
+            type_tags=['counts'],
+            metadata={'size': 1024*1024*1024})
+        self.file_counts.save()
+
+        self.file_always_delete_path = File(
+            location="file:///tmp/laxyjobs/some_job_id/output/sikRun/refFiles/some_big_index",
+            owner_id=self.user.id,
+            metadata={'size': 1024})
+        self.file_always_delete_path.save()
+        self.files.append(self.file_always_delete_path)
+
+        self.file_must_keep_path = File(
+            location="file:///tmp/laxyjobs/some_job_id/output/sikRun/multiqc_data/somedatafile",
+            owner_id=self.user.id,
+            metadata={'size': 1024*1024*1024})
+        self.file_must_keep_path.save()
+        self.files.append(self.file_must_keep_path)
+
+        self.file_big = File(
+            location="file:///tmp/laxyjobs/some_job_id/output/just_big",
+            owner_id=self.user.id,
+            metadata={'size': 1024*1024*1024})
+        self.file_big.save()
+        self.files.append(self.file_big)
+
+        self.file_small = File(
+            location="file:///tmp/laxyjobs/some_job_id/output/tiny_file",
+            owner_id=self.user.id,
+            metadata={'size': 1024})
+        self.file_small.save()
+        self.files.append(self.file_small)
+
     def tearDown(self):
         self.compute.delete()
         self.job_one.delete()
         self.admin_user.delete()
         self.user.delete()
+
+        for f in self.files:
+            f.delete()
+
+    def test_file_expiry_matching(self):
+        self.assertTrue(file_should_be_deleted(self.file_bam))
+        self.assertTrue(file_should_be_deleted(self.file_bai))
+        self.assertTrue(file_should_be_deleted(self.file_big))
+        self.assertTrue(file_should_be_deleted(self.file_always_delete_path))
+
+        self.assertFalse(file_should_be_deleted(self.file_html))
+        self.assertFalse(file_should_be_deleted(self.file_counts))
+        self.assertFalse(file_should_be_deleted(self.file_small))
+        self.assertFalse(file_should_be_deleted(self.file_must_keep_path))
+
 
     def test_set_job_status_task(self):
         task_data = dict(job_id=self.job_one.id, status=Job.STATUS_COMPLETE)

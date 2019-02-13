@@ -17,6 +17,7 @@ import tempfile
 import subprocess
 from django.core.exceptions import ImproperlyConfigured
 import environ
+from celery.schedules import crontab
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
 
@@ -77,6 +78,7 @@ default_env = PrefixedEnv(
     CSRF_TRUSTED_ORIGINS=(list, []),
     USE_SSL=(bool, False),
     SENTRY_DSN=(str, ''),
+    DEFAULT_JOB_EXPIRY=(int, 30*24*60*60),
 )
 
 
@@ -150,6 +152,8 @@ if SENTRY_DSN:
         integrations=[DjangoIntegration()]
     )
 
+DEFAULT_JOB_EXPIRY = env('DEFAULT_JOB_EXPIRY')
+
 USE_SSL = env('USE_SSL')
 
 ADMIN_EMAIL = env('ADMIN_EMAIL')
@@ -201,6 +205,16 @@ CELERY_RESULT_BACKEND = 'django-db'
 #     logger.warning("CELERY_ALWAYS_EAGER = True
 #                     seems to prevent tasks from starting ?")
 # CELERY_IGNORE_RESULT = True
+
+CELERYBEAT_SCHEDULE = {
+    "expire_old_jobs": {
+        "task": "laxy_backend.tasks.job.expire_old_jobs",
+        "schedule": timedelta(minutes=15)
+        # "schedule": timedelta(hours=1)
+        # "schedule": timedelta(seconds=60)
+        # "schedule": crontab(minute='*/15')
+    }
+}
 
 MEDIA_ROOT = str(env('MEDIA_ROOT'))
 MEDIA_URL = str(env('MEDIA_URL'))

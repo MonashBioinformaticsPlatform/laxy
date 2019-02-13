@@ -1,7 +1,7 @@
 from django.core.handlers.wsgi import WSGIRequest
 from typing import List, Union
 from collections import OrderedDict, Sequence
-from datetime import datetime
+from datetime import datetime, timedelta
 import math
 import json
 import csv
@@ -59,6 +59,11 @@ SCHEME_STORAGE_CLASS_MAPPING = {
 Maps URL schemes to Django storage backends that can handle them.
 """
 
+CACHED_SFTP_STORAGE_CLASS_INSTANCES = {}
+"""
+Cached instances on the SFTPStorage class, keyed by ComputeResource.id to allow 
+connection pooling for SFTP access to the same host.
+"""
 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def create_auth_token(sender, instance=None, created=False, **kwargs):
@@ -112,6 +117,20 @@ class Timestamped(Model):
 
     created_time = DateTimeField(auto_now_add=True)
     modified_time = DateTimeField(auto_now=True)
+
+
+def _job_expiry_datetime():
+    job_ttl = getattr(settings, 'DEFAULT_JOB_EXPIRY', 30*24*60*60)
+    return datetime.now() + timedelta(seconds=job_ttl)
+
+
+class Expires(Model):
+    class Meta:
+        abstract = True
+        get_latest_by = ['-expiry_time']
+
+    expiry_time = DateTimeField(blank=True, null=True, default=_job_expiry_datetime)
+    expired = BooleanField(default=False)
 
 
 class UUIDModel(Model):
@@ -357,7 +376,7 @@ class ComputeResource(Timestamped, UUIDModel):
 
 
 @reversion.register()
-class Job(Timestamped, UUIDModel):
+class Job(Expires, Timestamped, UUIDModel):
     """
     Represents a processing job (typically a long running remote job managed
     by a Celery task queue).
@@ -451,6 +470,19 @@ class Job(Timestamped, UUIDModel):
 
     def events(self):
         return EventLog.objects.filter(object_id=self.id)
+
+    def log_event(self, event_type: str, message: str, extra=None) -> EventLog:
+        if extra is None:
+            extra = {}
+
+        eventlog = EventLog(event=event_type,
+                            message=message,
+                            extra=extra,
+                            user=self.owner,
+                            object_id=self.id,
+                            content_type=ContentType.objects.get_for_model(self))
+        eventlog.save()
+        return eventlog
 
     def latest_event(self):
         try:
@@ -663,6 +695,8 @@ class File(Timestamped, UUIDModel):
                            null=True,
                            blank=True)
 
+    deleted_time = DateTimeField(blank=True, null=True)
+
     # Arbitrary metadata.
     metadata = JSONField(default=OrderedDict)
 
@@ -804,26 +838,49 @@ class File(Timestamped, UUIDModel):
 
     @property
     def full_path(self):
-        return Path(self.path) / Path(self.name)
+        return str(Path(self.path) / Path(self.name))
 
-    @property
-    def file(self):
-        from laxy_backend.tasks.download import request_with_retries
+    def _compute_resource_from_location(self):
+        url = urlparse(self.location)
+        scheme = url.scheme
+        if scheme != 'laxy+sftp':
+            return None
+        if '.' in url.netloc:
+            return None
+        # use netloc not hostname, since hostname forces lowercase
+        compute_id = url.netloc
+        try:
+            compute = ComputeResource.objects.get(id=compute_id)
+        except ComputeResource.DoesNotExist as e:
+            raise e
 
+        return compute
+
+    def _abs_path_on_compute(self):
+        url = urlparse(self.location)
+        compute = self._compute_resource_from_location()
+        if compute is None:
+            raise Exception(f"Cannot extract ComputeResource ID from: {self.location}")
+
+        base_dir = compute.extra.get('base_dir')
+        file_path = str(Path(base_dir) / Path(url.path).relative_to('/'))
+
+        return file_path
+
+    def _get_storage_class(self):
         url = urlparse(self.location)
         scheme = url.scheme
         storage_class = get_storage_class(
             SCHEME_STORAGE_CLASS_MAPPING.get(scheme, None))
         if scheme == 'laxy+sftp':
-            if '.' in url.netloc:
-                raise NotImplementedError(
-                    "ComputeResource UUID appears invalid.")
-            # use netloc not hostname, since hostname forces lowercase
-            compute_id = url.netloc
-            try:
-                compute = ComputeResource.objects.get(id=compute_id)
-            except ComputeResource.DoesNotExist as e:
-                raise e
+            compute = self._compute_resource_from_location()
+            if compute is None:
+                raise Exception(f"Cannot extract ComputeResource ID from: {self.location}")
+
+            # Return a module-level cached SFTPStorage instance to allow connection
+            # pooling to the same ComputeResource
+            if compute.id in CACHED_SFTP_STORAGE_CLASS_INSTANCES:
+                return CACHED_SFTP_STORAGE_CLASS_INSTANCES[compute.id]
 
             host = compute.hostname
             port = compute.port
@@ -831,14 +888,38 @@ class File(Timestamped, UUIDModel):
                 port = 22
             private_key = compute.private_key
             username = compute.extra.get('username')
-            base_dir = compute.extra.get('base_dir')
             params = dict(port=port,
                           username=username,
                           pkey=RSAKey.from_private_key(StringIO(private_key)))
             # storage = SFTPStorage(host=host, params=params)
             storage = storage_class(host=host, params=params)
-            file_path = str(Path(base_dir) / Path(url.path).relative_to('/'))
+            CACHED_SFTP_STORAGE_CLASS_INSTANCES[compute.id] = storage
 
+            return storage
+
+        # TODO: This needs to be carefully reworked or removed. The intention would be to refer to a mountpoint
+        #       relative to the Laxy backend server filesystem (eg an NFS mount), however there is scope for
+        #       reading arbitrary files on the server if implemented incorrectly.
+        elif scheme == 'file':
+            # raise NotImplementedError('file:// URLs are currently not supported')
+            # TODO: location defaults to Djangos MEDIA_ROOT setting. If we were to use mount points local to the
+            # backend filesystem, we need a mechanism to set this location (eg to something equivalent to
+            # `base_dir` in the ComputeResource extra params. Setting location to something like
+            # `/scratch/jobs/{job_id}/` per-job should mitigate some of the risk here (assuming Django's
+            # FileSystemStorage doesn't allow relative/paths/like/../../../this/ outside the base location.
+            return storage_class(location='/')
+        else:
+            return None
+
+    @property
+    def file(self):
+        from laxy_backend.tasks.download import request_with_retries
+
+        url = urlparse(self.location)
+        scheme = url.scheme
+        if scheme == 'laxy+sftp':
+            storage = self._get_storage_class()
+            file_path = self._abs_path_on_compute()
             filelike = storage.open(file_path)
             # setattr(filelike, 'name', self.name)
             return filelike
@@ -848,7 +929,8 @@ class File(Timestamped, UUIDModel):
         #       reading arbitrary files on the server if implemented incorrectly.
         elif scheme == 'file':
             # raise NotImplementedError('file:// URLs are currently not supported')
-            return storage_class(location='/').open(self.full_path)
+            storage = self._get_storage_class()
+            return storage.open(self.full_path)
         else:
             response = request_with_retries(
                 'GET', self.location,
@@ -858,6 +940,43 @@ class File(Timestamped, UUIDModel):
             filelike = response.raw
             filelike.decode_content = True
             return filelike
+
+    @property
+    def size(self):
+        """
+        Get the file size from metadata or via the storage class, opportunistically caching the value in metadata.
+        Assumes the file size never changes once cached.
+
+        Returns None if there is no size and the storage backend cannot provide one.
+
+        :return:
+        :rtype:
+        """
+        size = self.metadata.get('size', None)
+        if size is None and hasattr(self.file, 'size'):
+            try:
+                size = self.file.size
+                # cache on demand
+                self.metadata['size'] = size
+                self.save()
+            except NotImplementedError as ex:
+                pass
+
+        return size
+
+    @property
+    def deleted(self):
+        return bool(self.deleted_time)
+
+    def delete_file(self):
+        url = urlparse(self.location)
+        scheme = url.scheme
+
+        if scheme == 'laxy+sftp':
+            storage = self._get_storage_class()
+            storage.delete(self._abs_path_on_compute())
+        else:
+            raise NotImplementedError("Only laxy+sftp:// internal URLs can be deleted at this time.")
 
     def get_absolute_url(self):
         from django.urls import reverse

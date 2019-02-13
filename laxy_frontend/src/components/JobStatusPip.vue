@@ -2,8 +2,7 @@
     <md-card :style="cssStripe(getThemedStatusColor(job.status), 'left', 4)">
         <md-card-header>
             <md-card-header-text>
-                <div class="md-title">Job {{ job.status }}
-                </div>
+                <div class="md-title">Job {{ job.status }}</div>
                 <div v-if="job.status != 'running' && job.completed_time" class="md-subhead">
                     It took about {{ job.created_time | moment("from", job.completed_time, true) }}
                 </div>
@@ -13,6 +12,7 @@
             </md-card-header-text>
 
             <md-card-media>
+                <md-spinner v-if="job.status == 'created'" md-indeterminate></md-spinner>
                 <img v-if="job.status == 'running'"
                      src="assets/outline-directions_run-24px.svg" alt="running">
                 <img v-if="job.status == 'complete'"
