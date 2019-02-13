@@ -66,6 +66,18 @@
 
                 <md-layout v-show="showTab === 'summary' || showTab == null"
                            id="top-panel" md-flex="100" :md-row="true" md-gutter="16">
+
+                    <md-layout v-if="valentines" md-flex="100">
+                        <generic-pip
+                                @click="openLinkInTab('https://giphy.com/gifs/love-animaniacs-crush-gfvxlwRKH1y5q')"
+                                :style="`background-color: ${cssColorVars['--accent-light']}`"
+                                class="fill-width"
+                                stripeColor="accent" icon="favorite" buttonIcon="" buttonText="">
+                            <span slot="title">Happy Valentine's Day !</span>
+                            <span slot="subtitle">Laxy loves you</span>
+                        </generic-pip>
+                    </md-layout>
+
                     <!-- smaller iconish boxes in here. eg simple status -->
                     <!-- -->
                     <md-layout md-flex="25" md-flex-medium="100">
@@ -299,9 +311,10 @@
     import SharingLinkList from "./SharingLinkList";
     import {Snackbar} from "../snackbar";
     import AVAILABLE_GENOMES from "../config/genomics/genomes";
+    import GenericPip from "./GenericPip.vue";
 
     @Component({
-        components: {SharingLinkList, FileLinkPip, JobStatusPip, NestedFileList},
+        components: {SharingLinkList, FileLinkPip, JobStatusPip, NestedFileList, GenericPip},
         props: {
             jobId: {type: String, default: ""},
             showTab: {type: String, default: "summary"}
@@ -672,6 +685,14 @@
         @Memoize((link: any) => link.id)
         _linkIsExpired(link: any) {
             return moment(link.expiry_time).isBefore(Date.now());
+        }
+
+        openLinkInTab(url: string) {
+            window.open(url);
+        }
+
+        get valentines() {
+            return moment().format('DD MMM') === '14 Feb';
         }
 
         showErrorDialog(message: string) {
