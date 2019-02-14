@@ -1,4 +1,5 @@
 import fnmatch
+import traceback
 from django.db import transaction
 from typing import Sequence
 from datetime import datetime, timedelta
@@ -151,6 +152,9 @@ def start_job(self, task_data=None, **kwargs):
         succeeded = False
         if hasattr(e, 'message'):
             message = e.message
+        if hasattr(e, '__traceback__'):
+            tb = e.__traceback__
+            message = '%s - Traceback: %s' % (message, ''.join(traceback.format_list(traceback.extract_tb(tb))))
         else:
             message = repr(e)
 
