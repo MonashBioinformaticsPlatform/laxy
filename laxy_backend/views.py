@@ -2345,8 +2345,20 @@ class RemoteBrowseView(JSONView):
             return HttpResponse(status=status.HTTP_400_BAD_REQUEST,
                                 reason=f"Unsupported scheme: {scheme}://")
 
+        try:
+            # We need to check the URL given is actually accessible
+            resp = requests.head(url)
+            resp.raise_for_status()
+        except BaseException as exx:
+            return JsonResponse({'remote_server_response': {'response': resp.status_code, 'reason': resp.reason}},
+                                # TODO: When frontend interprets this better, use status 400 and let the frontend
+                                #       report third-party response from the JSON blob
+                                # status=status.HTTP_400_BAD_REQUEST,
+                                status=resp.status_code,
+                                reason=resp.reason)
+
         fn = Path(urlparse(url).path).name
-        if is_archive_link(url) or fn.endswith('.manifest-md5'):
+        if is_archive_link(url, use_network=True) or fn.endswith('.manifest-md5'):
             try:
                 archive_files = http_remote_index.get_tar_file_manifest(url)
 
@@ -2363,6 +2375,7 @@ class RemoteBrowseView(JSONView):
             except BaseException as ex:
                 logger.debug(f'Unable to find archive manifest for {url}')
                 logger.exception(ex)
+
                 fn = Path(urlparse(url).path).name
                 listing = [dict(name=fn,
                                 location=f'{url}',
