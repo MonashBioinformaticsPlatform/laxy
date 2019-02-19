@@ -26,6 +26,7 @@ from .models import (Job,
                      AccessToken)
 
 from .models import URIValidator
+
 User = get_user_model()
 
 
@@ -57,9 +58,9 @@ class ProfileInline(admin.StackedInline):
 
 
 class LaxyUserAdmin(UserAdmin):
-    inlines = (ProfileInline, )
+    inlines = (ProfileInline,)
     list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff',)
-    list_select_related = ('profile', )
+    list_select_related = ('profile',)
 
     def get_inline_instances(self, request, obj=None):
         if not obj:
@@ -103,10 +104,11 @@ class JobAdmin(Timestamped, VersionAdmin):
                     'created',
                     'modified',
                     'completed',
+                    'expires',
                     '_compute_resource',
                     '_owner_email',
                     '_status')
-    ordering = ('-created_time', '-completed_time', '-modified_time',)
+    ordering = ('-created_time', '-completed_time', '-modified_time', '-expiry_time')
     search_fields = ('id', 'status', 'remote_id',)
     list_filter = ('status',)
     actions = ('trigger_file_ingestion', 'expire_job',)
@@ -117,24 +119,27 @@ class JobAdmin(Timestamped, VersionAdmin):
         Job.STATUS_RUNNING: 'green',
     }
 
-    def completed(self, obj):
+    def completed(self, obj: Job):
         return humanize.naturaltime(obj.completed_time)
 
-    def _compute_resource(self, obj):
+    def expires(self, obj: Job):
+        return humanize.naturaltime(obj.expiry_time)
+
+    def _compute_resource(self, obj: Job):
         c = obj.compute_resource
         if c is not None:
             return format_html('%s (%s)' % (c.id, c.host))
         else:
             return ''
 
-    def _status(self, obj):
+    def _status(self, obj: Job):
         return format_html(
             '<span style="color: {};"><strong>{}</strong></span>',
             self.color_mappings.get(obj.status, 'black'),
             obj.get_status_display(),
         )
 
-    def _owner_email(self, obj):
+    def _owner_email(self, obj: Job):
         if obj.owner:
             ct = ContentType.objects.get_for_model(obj.owner)
             user_url = reverse('admin:%s_%s_change' % (ct.app_label, ct.model), args=(obj.owner.id,))
