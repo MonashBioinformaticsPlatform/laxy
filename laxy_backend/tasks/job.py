@@ -621,7 +621,8 @@ def expire_old_job(self, task_data=None, **kwargs):
 def expire_old_jobs(self, task_data=None, *kwargs):
     expiring_jobs = Job.objects.filter(
         expired=False, expiry_time__lte=datetime.now()).exclude(
-        expiry_time__isnull=True).order_by('-expiry_time')
+        expiry_time__isnull=True).exclude(
+        status=Job.STATUS_RUNNING).order_by('-expiry_time')
     for job in expiring_jobs:
         logging.info(f"Expiring job: {job.id}")
         expire_old_job.s(task_data=dict(job_id=job.id)).apply_async()
