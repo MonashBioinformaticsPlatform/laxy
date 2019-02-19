@@ -65,12 +65,13 @@ setup(
         'backoff',
         'attrdict',
         'trio',
-        'pyaria2==0.2.1.2',
+        "pyaria2 @ git+https://github.com/pansapiens/pyaria2.git#egg=pyaria2-0.2.1.2",
     ],
-    dependency_links=[
-        "git+https://github.com/pansapiens/pyaria2.git#egg=pyaria2-0.2.1.2",
-        # "https://github.com/pansapiens/pyaria2/tarball/master#egg=pyaria2-0.2.1.2"
-    ],
+    # pip deprecated dependency_links :/
+    # dependency_links=[
+    #     "git+https://github.com/pansapiens/pyaria2.git#egg=pyaria2-0.2.1.2",
+    #     # "https://github.com/pansapiens/pyaria2/tarball/master#egg=pyaria2-0.2.1.2"
+    # ],
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
