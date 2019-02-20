@@ -183,49 +183,55 @@ function init_conda_env() {
     # By convention, we name our Conda environments after {pipeline}-{version}
     # Each new pipeline version has it's own Conda env
     local env_name="${1}-${2}"
-    local conda="${CONDA_BASE}/bin/conda"
     local pip="${CONDA_BASE}/bin/pip"
 
     send_event "JOB_INFO" "Activating conda environment (${env_name})."
 
+    # Conda activate misbehaves if nounset and errexit are set
+    # https://github.com/conda/conda/issues/3200
+    set +o nounset
+
+    source "${CONDA_BASE}/etc/profile.d/conda.sh"
+
     if [[ ! -d "${CONDA_BASE}/envs/${env_name}" ]]; then
 
-        # Conda activate misbehaves if nounset and errexit are set
-        # https://github.com/conda/conda/issues/3200
-        set +o nounset
+
         # First we update conda itself
-        "${conda}" update --yes -n base conda
+        conda update --yes -n base conda || return 1
+
+        conda install --yes -n base "pip>=19.0.2" || return 1
 
         # Add required channels
-        "${conda}" config --add channels serine/label/dev \
+        conda config --add channels serine/label/dev \
                                        --add channels serine \
                                        --add channels bioconda \
-                                       --add channels conda-forge
+                                       --add channels conda-forge || return 1
 
         # Create a base environment
-        "${conda}" create --yes -m -n "${env_name}"
+        conda create --yes -m -n "${env_name}" || return 1
 
         # Install an up-to-date curl and GNU parallel
-        "${conda}" install --yes -n "${env_name}" curl aria2 parallel jq awscli
-        "${pip}" install oneliner
+        conda install --yes -n "${env_name}" curl aria2 parallel jq awscli || return 1
+        "${pip}" install oneliner || return 1
 
         # Then install rnasik
-        "${conda}" install --yes -n "${env_name}" rnasik=${2}
+        conda install --yes -n "${env_name}" rnasik=${2} || return 1
 
         # Environment takes a very long time to solve if qualimap is included initially
-        "${conda}" install --yes -n "${env_name}" qualimap
+        conda install --yes -n "${env_name}" qualimap || return 1
 
         # Add mash for contamination screening
-        "${conda}" install --yes -n "${env_name}" mash
+        conda install --yes -n "${env_name}" mash || return 1
     fi
 
     # We shouldn't need to do this .. but it seems required for _some_ environments (ie M3)
     export JAVA_HOME="${CONDA_BASE}/envs/${env_name}/jre"
 
     # shellcheck disable=SC1090
-    source "${CONDA_BASE}/bin/activate" "${CONDA_BASE}/envs/${env_name}"
+    # source "${CONDA_BASE}/bin/activate" "${CONDA_BASE}/envs/${env_name}"
+    conda activate "${CONDA_BASE}/envs/${env_name}" || return 1
 
-    "${conda}" env export >"${JOB_PATH}/input/conda_environment.yml"
+    conda env export >"${JOB_PATH}/input/conda_environment.yml" || return 1
 
     set -o nounset
 }
@@ -233,7 +239,8 @@ function init_conda_env() {
 function update_laxydl() {
      # Requires conda environment to be activated first
      local pip="${CONDA_BASE}/bin/pip"
-    "${pip}" install -U --process-dependency-links "git+https://github.com/MonashBioinformaticsPlatform/laxy#egg=laxy_downloader&subdirectory=laxy_downloader"
+     # "${pip}" install -U --process-dependency-links "git+https://github.com/MonashBioinformaticsPlatform/laxy#egg=laxy_downloader&subdirectory=laxy_downloader"
+     "${pip}" install -U "laxy_downloader @ git+https://github.com/MonashBioinformaticsPlatform/laxy#egg=laxy_downloader&subdirectory=laxy_downloader"
 }
 
 function get_reference_data_aws() {
@@ -581,7 +588,7 @@ mkdir -p output
 install_miniconda
 
 # We import the environment early to ensure we have a recent version of curl (>=7.55)
-init_conda_env "rnasik" "${PIPELINE_VERSION}"
+init_conda_env "rnasik" "${PIPELINE_VERSION}" || exit 1
 
 update_laxydl
 
