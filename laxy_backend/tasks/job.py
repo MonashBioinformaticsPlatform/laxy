@@ -89,7 +89,6 @@ def start_job(self, task_data=None, **kwargs):
     _init_fabric_env()
     private_key = job.compute_resource.private_key
     remote_username = job.compute_resource.extra.get('username', None)
-    base_dir = job.compute_resource.extra.get('base_dir', '/tmp/')
 
     job_script_template_vars = dict(environment)
     job_script_template_vars['JOB_AUTH_HEADER'] = job_auth_header
@@ -111,7 +110,7 @@ def start_job(self, task_data=None, **kwargs):
                          key=private_key,
                          # key_filename=expanduser("~/.ssh/id_rsa"),
                          ):
-            working_dir = os.path.join(base_dir, job_id)
+            working_dir = job.abs_path_on_compute
             input_dir = join(working_dir, 'input')
             output_dir = join(working_dir, 'output')
             job_script_path = join(input_dir, 'run_job.sh')
@@ -213,9 +212,10 @@ def set_job_status(self, task_data=None, **kwargs):
 
     job_id = task_data.get('job_id')
     status = task_data.get('status')
-    job = Job.objects.get(id=job_id)
-    job.status = status
-    job.save()
+    with transaction.atomic():
+        job = Job.objects.get(id=job_id)
+        job.status = status
+        job.save()
 
     if (job.done and
             job.compute_resource and
@@ -250,7 +250,6 @@ def index_remote_files(self, task_data=None, **kwargs):
     _init_fabric_env()
     private_key = job.compute_resource.private_key
     remote_username = job.compute_resource.extra.get('username', None)
-    base_dir = job.compute_resource.extra.get('base_dir', '/tmp/')
 
     compute_id = job.compute_resource.id
     message = "No message."
@@ -312,7 +311,7 @@ def index_remote_files(self, task_data=None, **kwargs):
                          key=private_key,
                          # key_filename=expanduser("~/.ssh/id_rsa"),
                          ):
-            working_dir = os.path.join(base_dir, job_id)
+            working_dir = job.abs_path_on_compute
             input_dir = os.path.join(working_dir, 'input')
             output_dir = os.path.join(working_dir, 'output')
 
@@ -459,8 +458,7 @@ def kill_remote_job(self, task_data=None, **kwargs):
     private_key = job.compute_resource.private_key
     remote_username = job.compute_resource.extra.get('username', None)
 
-    base_dir = job.compute_resource.extra.get('base_dir', '/tmp/')
-    working_dir = os.path.join(base_dir, job_id)
+    working_dir = job.abs_path_on_compute
     kill_script_path = join(working_dir, 'kill_job.sh')
 
     message = "No message."
@@ -491,10 +489,81 @@ def kill_remote_job(self, task_data=None, **kwargs):
     return task_data
 
 
+@shared_task(bind=True, track_started=True)
+def estimate_job_tarball_size(self, task_data=None, **kwargs):
+
+    if task_data is None:
+        raise InvalidTaskError("task_data is None")
+
+    from ..models import Job
+
+    _init_fabric_env()
+
+    environment = task_data.get('environment', {})
+    job_id = task_data.get('job_id')
+    job = Job.objects.get(id=job_id)
+    master_ip = job.compute_resource.host
+    gateway = job.compute_resource.gateway_server
+    queue_type = job.compute_resource.queue_type
+    private_key = job.compute_resource.private_key
+    remote_username = job.compute_resource.extra.get('username', None)
+
+    job_path = job.abs_path_on_compute
+
+    message = "No message."
+    task_result = dict()
+    try:
+        with fabsettings(gateway=gateway,
+                         host_string=master_ip,
+                         user=remote_username,
+                         key=private_key):
+            with cd(job_path):
+                with shell_env(**environment):
+                    # if queue_type == 'slurm':
+                    #     result = run(f"scancel {job.remote_id}")
+                    # else:
+                    #     result = run(f"kill {job.remote_id}")
+
+                    # NOTE: If running tar -czf is too slow / too much extra I/O load,
+                    #       we could use the placeholder heuristic of
+                    #       f`du -bc --max-depth=0 "{job_path}"` * 0.66 for RNAsik runs,
+                    #       stored in job metadata. Or add proper sizes to every File.metdata
+                    #       and derive it from a query.
+
+                    result = run(f'tar -czf - --directory "{job_path}" . | wc --bytes')
+                    if result.succeeded:
+                        tarball_size = int(result.stdout.strip())
+                        with transaction.atomic():
+                            job = Job.objects.get(id=job_id)
+                            job.params['tarball_size'] = tarball_size
+                            job.save()
+
+                        task_result['tarball_size'] = tarball_size
+                    else:
+                        task_result['stdout'] = result.stdout.strip()
+                        task_result['stderr'] = result.stderr.strip()
+
+    except BaseException as e:
+        if hasattr(e, 'message'):
+            message = e.message
+
+        self.update_state(state=states.FAILURE, meta=message)
+        raise e
+
+    task_data.update(result=task_result)
+
+    return task_data
+
+
 # TODO: This function is very pipeline specific (RNAsik) - we need to refactor
 #       to take the pipeline into account (eg based on name in Job.params.params.pipeline)
 #       The various variables/rules for this function could also be declarative and
 #       stored on a new PipelineConfig object.
+#       IDEA: Maybe the behaviour should change so that every job has it's own cleanup script
+#       that is run on expiry. Or, during the File.type_tag tagging / manifest-md5.csv phase,
+#       also tag files for future expiry (explicitly, or via adding an 'expires' type_tag
+#       This better acheives the goal of keeping pipeline specific stuff out of the backend and
+#       pushing it to the 'run scripts'.
 def file_should_be_deleted(ff: File, max_size=200):
     """
     Returns True if a File meets the criteria to be deleted (eg based on size, age, filename, type_tags).
@@ -552,8 +621,7 @@ def expire_old_job(self, task_data=None, **kwargs):
     private_key = job.compute_resource.private_key
     remote_username = job.compute_resource.extra.get('username', None)
 
-    base_dir = job.compute_resource.extra.get('base_dir', '/tmp/')
-    working_dir = os.path.join(base_dir, job_id)
+    working_dir = job.abs_path_on_compute
 
     # def _delete_file(f):
     #     # Just an example of an alternative using fabric ...

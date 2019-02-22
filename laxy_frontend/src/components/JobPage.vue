@@ -71,17 +71,6 @@
                 <md-layout v-show="showTab === 'summary' || showTab == null"
                            id="top-panel" md-flex="100" :md-row="true" md-gutter="16">
 
-                    <md-layout v-if="valentines" md-flex="100">
-                        <generic-pip
-                                @click="openLinkInTab('https://media.giphy.com/media/gfvxlwRKH1y5q/giphy.gif')"
-                                :style="`background-color: ${cssColorVars['--accent-light']}`"
-                                class="fill-width"
-                                stripeColor="accent" icon="favorite" buttonIcon="" buttonText="">
-                            <span slot="title">Happy Valentine's Day !</span>
-                            <span slot="subtitle">Laxy loves you</span>
-                        </generic-pip>
-                    </md-layout>
-
                     <!-- smaller iconish boxes in here. eg simple status -->
                     <!-- -->
                     <md-layout md-flex="25" md-flex-medium="100">
@@ -128,6 +117,21 @@
                             </template>
                         </generic-pip>
                     </md-layout>
+
+                    <!--
+                    <md-layout md-flex="100">
+                        <md-toolbar @click.stop.native=""
+                                    class="shadow fill-width"
+                                    :class="{'md-primary': false, 'md-transparent': true, 'md-accent': false}">
+                            <span style="flex: 1"></span>
+                            <h4><a :href="tarballUrl" @click.prevent="">Download job files (.tar.gz)</a></h4>
+                            <span style="flex: 1"></span>
+                            <md-button class="md-icon-button" @click.prevent="openLinkInTab(tarballUrl)">
+                                <md-icon>save_alt</md-icon>
+                            </md-button>
+                        </md-toolbar>
+                    </md-layout>
+                    !-->
 
                     <!-- input and output file total sizes in pip card -->
                     <!-- pipeline reference genome (icon on organism or DNA double-helix for non-model) -->
@@ -217,8 +221,17 @@
                         </md-layout>
                     </transition>
                     <transition name="fade">
-                        <md-layout v-show="showTab === 'output'" md-column-medium>
-                            <md-layout id="output-files-panel">
+                        <md-layout v-show="showTab === 'output'">
+                            <md-layout md-flex="100">
+                                <md-whiteframe class="pad-32 fill-width">
+                                    <h3>Download all job files (.tar.gz)</h3>
+                                    <DownloadJobFilesTable :url="tarballUrl"
+                                                           :filename="jobId + '.tar.gz'"
+                                                           @flash-message="flashSnackBarEvent">
+                                    </DownloadJobFilesTable>
+                                </md-whiteframe>
+                            </md-layout>
+                            <md-layout id="output-files-panel" md-flex="100">
                                 <nested-file-list v-if="job && outputFilesetTree.children.length"
                                                   id="output-files-card"
                                                   class="fill-width"
@@ -348,9 +361,18 @@
     import ExpiryDialog from "./Dialogs/ExpiryDialog.vue";
     import AVAILABLE_GENOMES from "../config/genomics/genomes";
     import GenericPip from "./GenericPip.vue";
+    import DownloadJobFilesTable from "./DownloadJobFilesTable.vue";
 
     @Component({
-        components: {GenericPip, SharingLinkList, FileLinkPip, JobStatusPip, NestedFileList, ExpiryDialog},
+        components: {
+            GenericPip,
+            SharingLinkList,
+            FileLinkPip,
+            JobStatusPip,
+            NestedFileList,
+            ExpiryDialog,
+            DownloadJobFilesTable
+        },
         props: {
             jobId: {type: String, default: ""},
             showTab: {type: String, default: "summary"}
@@ -392,7 +414,7 @@
             'Never (∞)']
         public sharing: any = {lifetime: this.access_token_lifetime_options[3]};
 
-        public sharingLinks: any[] = [];
+        public sharingLinks: LaxySharingLink[] = [];
 
         public showTopBanner: boolean = true;
 
@@ -466,7 +488,7 @@
             return this.$store.getters.is_authenticated;
         }
 
-        get bannerSharingLink(): string | null {
+        get bannerSharingLink(): LaxySharingLink | null {
             if (this.sharingLinks &&
                 this.sharingLinks.length > 0 &&
                 !this._linkIsExpired(this.sharingLinks[0])) {
@@ -559,6 +581,14 @@
                 rows.push(['Reference genome', this.genomeDescription]);
             }
             return rows;
+        }
+
+        get tarballUrl(): string {
+            let access_token = undefined;
+            if (this.bannerSharingLink) {
+                access_token = this.bannerSharingLink.token;
+            }
+            return WebAPI.downloadJobTarballUrl(this.jobId, access_token);
         }
 
         filesByTag(tag: string): LaxyFile[] {
@@ -683,12 +713,11 @@
             try {
                 const resp = await WebAPI.getJobAccessToken(this.jobId);
                 this.sharingLinks = [];
-                const link = resp.data;
+                const link = resp.data as LaxySharingLink;
                 if (link) this.sharingLinks = [link];
             } catch (error) {
                 console.log(error);
             }
-            return [];
         }
 
         async onDeleteSharingLinkEvent(link_id: string) {
@@ -741,10 +770,6 @@
 
         openLinkInTab(url: string) {
             window.open(url);
-        }
-
-        get valentines() {
-            return moment().format('DD MMM') === '14 Feb';
         }
 
         showErrorDialog(message: string) {

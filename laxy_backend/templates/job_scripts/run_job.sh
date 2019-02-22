@@ -37,11 +37,11 @@ readonly IGNORE_SELF_SIGNED_CERTIFICATE="{{ IGNORE_SELF_SIGNED_CERTIFICATE }}"
 readonly JOB_FILE_PERMS='ug+rw-s'
 readonly JOB_DIR_PERMS='ug+rwx-s'
 
+{% if SLURM_ACCOUNT %}
 export SLURM_ACCOUNT="{{ SLURM_ACCOUNT }}"
-readonly SCHEDULER="{{ SCHEDULER }}"
-# readonly SCHEDULER="local"
-
-readonly BDS_SINGLE_NODE="{{ BDS_SINGLE_NODE }}"
+{% endif %}
+readonly QUEUE_TYPE="{{ QUEUE_TYPE }}"
+# readonly QUEUE_TYPE="local"
 
 if [[ ${IGNORE_SELF_SIGNED_CERTIFICATE} == "yes" ]]; then
     readonly CURL_INSECURE="--insecure"
@@ -58,7 +58,7 @@ fi
 # resources required to run the BDS workflow manager, not the tasks it launches (BDS
 # will [hopefully!] ask for appropriate resources in the sbatch jobs it launches).
 
-if [[ ${BDS_SINGLE_NODE} == "yes" ]]; then
+if [[ ${QUEUE_TYPE} == "local" ]]; then
     # system=local in bds.config - BDS will run each task as local process, not SLURM-aware
 
     # M3 (typically 24 core, ~256 Gb RAM nodes)
@@ -90,11 +90,11 @@ readonly SRUN_OPTIONS="--cpus-per-task=${CPUS} \
                        --job-name=laxy:${JOB_ID}"
 
 PREFIX_JOB_CMD=""
-if [[ "${SCHEDULER}" == "slurm" ]]; then
+if [[ "${QUEUE_TYPE}" == "slurm" ]]; then
     PREFIX_JOB_CMD="srun ${SRUN_OPTIONS} "
 fi
 
-if [[ "${SCHEDULER}" == "local" ]]; then
+if [[ "${QUEUE_TYPE}" == "local" ]]; then
     echo $$ >>"${JOB_PATH}/job.pids"
 fi
 
@@ -170,7 +170,7 @@ function send_job_finished() {
 }
 
 function install_miniconda() {
-    send_event "JOB_INFO" "Installing dependencies (conda env)."
+    send_event "JOB_INFO" "Installing/detecting local conda installation."
 
     if [[ ! -d "${CONDA_BASE}" ]]; then
          wget --directory-prefix "${TMP}" -c "https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh"
@@ -185,16 +185,13 @@ function init_conda_env() {
     local env_name="${1}-${2}"
     local pip="${CONDA_BASE}/bin/pip"
 
-    send_event "JOB_INFO" "Activating conda environment (${env_name})."
-
     # Conda activate misbehaves if nounset and errexit are set
     # https://github.com/conda/conda/issues/3200
-    set +o nounset
+    # set +o nounset
 
     source "${CONDA_BASE}/etc/profile.d/conda.sh"
 
     if [[ ! -d "${CONDA_BASE}/envs/${env_name}" ]]; then
-
 
         # First we update conda itself
         conda update --yes -n base conda || return 1
@@ -233,14 +230,18 @@ function init_conda_env() {
 
     conda env export >"${JOB_PATH}/input/conda_environment.yml" || return 1
 
-    set -o nounset
+    # We can't use send_event BEFORE the env is activated since we rely on a recent
+    # version of curl (>7.55)
+    send_event "JOB_INFO" "Successfully activated conda environment (${env_name})."
+
+    # set -o nounset
 }
 
 function update_laxydl() {
      # Requires conda environment to be activated first
-     local pip="${CONDA_BASE}/bin/pip"
+     # local pip="${CONDA_BASE}/bin/pip"
      # "${pip}" install -U --process-dependency-links "git+https://github.com/MonashBioinformaticsPlatform/laxy#egg=laxy_downloader&subdirectory=laxy_downloader"
-     "${pip}" install -U "laxy_downloader @ git+https://github.com/MonashBioinformaticsPlatform/laxy#egg=laxy_downloader&subdirectory=laxy_downloader"
+     pip install -U "laxy_downloader @ git+https://github.com/MonashBioinformaticsPlatform/laxy#egg=laxy_downloader&subdirectory=laxy_downloader"
 }
 
 function get_reference_data_aws() {
@@ -443,12 +444,15 @@ function setup_bds_config() {
     # TODO: This won't work yet since the default bds.config contains
     # ~/.bds/clusterGeneric/* paths to the SLURM wrapper scripts.
     # The SLURM wrappers don't appear to come with the bds conda package (yet)
-    # if [ "${SCHEDULER}" == "slurm" ]; then
+    # if [ "${QUEUE_TYPE}" == "slurm" ]; then
     #     sed -i 's/#system = "local"/system = "generic"/' ${job_bds_config}
     # fi
 
+    if [[ "${QUEUE_TYPE}" == "local" ]] && [[ -f "${JOB_PATH}/../bds.local.config" ]]; then
+        echo "Using system=local (non-queued) bds.config."
+        default_bds_config="${JOB_PATH}/../bds.local.config"
     # special lower resource bds.config for yeast
-    if [[ "${REFERENCE_GENOME}" == *"Saccharomyces_cerevisiae"* ]] && [[ -f "${JOB_PATH}/../bds.yeast.config" ]]; then
+    elif [[ "${REFERENCE_GENOME}" == *"Saccharomyces_cerevisiae"* ]] && [[ -f "${JOB_PATH}/../bds.yeast.config" ]]; then
         echo "Using low resource yeast specific bds.config."
         default_bds_config="${JOB_PATH}/../bds.yeast.config"
     fi
@@ -531,9 +535,12 @@ function run_mash_screen() {
 
     local mash_reads=$(find "${JOB_PATH}/input" -name "*.fast[q,a].gz" | xargs)
     local cmd="mash screen -w -p 8 ${mash_reference_sketches} ${mash_reads}"
+    # TODO: Try subsamping (1000?) via process substitution - should make mash screen closer to constant time
+    #       A few quick tests suggest it's no faster subsampled in this way (I/O limited ?)
+    # local cmd="mash screen -w -p 8 ${mash_reference_sketches} <(seqtk sample -s 42 ${mash_reads} 1000)"
     local mash_outfile="${JOB_PATH}/output/mash_screen.tab"
 
-    if [[ "${SCHEDULER}" == "slurm" ]]; then
+    if [[ "${QUEUE_TYPE}" == "slurm" ]]; then
         cat >"${JOB_PATH}/input/run_mash.sh" <<EOM
 #!/bin/bash
 #SBATCH --mem 16G

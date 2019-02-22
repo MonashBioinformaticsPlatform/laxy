@@ -169,6 +169,12 @@ DEFAULT_COMPUTE_RESOURCE = env('DEFAULT_COMPUTE_RESOURCE')
 
 FILE_CACHE_PATH = env('FILE_CACHE_PATH')
 
+DEFAULT_JOB_BASE_PATH = '/tmp'
+"""
+The base path where job directories will be created if `base_dir` isn't 
+specified in ComputeResource.extra on the compute node for a job.
+"""
+
 ALLOWED_HOSTS = env('ALLOWED_HOSTS')
 
 # Quick-start development settings - unsuitable for production
@@ -209,8 +215,8 @@ CELERY_RESULT_BACKEND = 'django-db'
 CELERYBEAT_SCHEDULE = {
     "expire_old_jobs": {
         "task": "laxy_backend.tasks.job.expire_old_jobs",
-        "schedule": timedelta(minutes=15)
-        # "schedule": timedelta(hours=1)
+        # "schedule": timedelta(minutes=15)
+        "schedule": timedelta(hours=6)
         # "schedule": timedelta(seconds=60)
         # "schedule": crontab(minute='*/15')
     }

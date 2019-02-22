@@ -276,6 +276,15 @@ export class WebAPI {
         return `${this.baseUrl}/api/v1/job/${job_id}/files/${filepath}?download`;
     }
 
+    public static downloadJobTarballUrl(job_id: string,
+                                        access_token?: string) {
+        let url = `${this.baseUrl}/api/v1/job/${job_id}.tar.gz`;
+        if (access_token) {
+            url = `${url}?access_token=${access_token}`;
+        }
+        return url;
+    }
+
     public static async createSampleset(csvFormData: FormData): Promise<AxiosResponse> {
         try {
             // copy config

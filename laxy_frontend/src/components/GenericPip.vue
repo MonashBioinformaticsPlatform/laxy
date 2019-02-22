@@ -18,10 +18,10 @@
                     <md-icon class="md-size-4x" v-if="icon">{{ icon }}</md-icon>
                 </md-card-media>
 
-                <md-card-content>
-                    <slot name="content"></slot>
-                </md-card-content>
             </md-card-header>
+            <md-card-content>
+                <slot name="content"></slot>
+            </md-card-content>
         </md-card-area>
 
         <md-card-actions v-if="buttonIcon || buttonText">
