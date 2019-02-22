@@ -111,7 +111,9 @@ class JobAdmin(Timestamped, VersionAdmin):
     ordering = ('-created_time', '-completed_time', '-modified_time', '-expiry_time')
     search_fields = ('id', 'status', 'remote_id',)
     list_filter = ('status',)
-    actions = ('trigger_file_ingestion', 'expire_job',)
+    actions = ('trigger_file_ingestion',
+               'expire_job',
+               'estimate_job_tarball_size',)
 
     color_mappings = {
         Job.STATUS_FAILED: 'red',
@@ -161,6 +163,22 @@ class JobAdmin(Timestamped, VersionAdmin):
                               ','.join(failed))
 
     trigger_file_ingestion.short_description = "Ingest files"
+
+    @takes_instance_or_queryset
+    def estimate_job_tarball_size(self, request, queryset):
+        failed = []
+        for obj in queryset:
+            task_data = dict(job_id=obj.id)
+            result = job_tasks.estimate_job_tarball_size.apply_async(args=(task_data,))
+            if result.failed():
+                failed.append(obj.id)
+        if not failed:
+            self.message_user(request, "Starting task !")
+        else:
+            self.message_user(request, "Errors trying to estimate tarball size for %s" %
+                              ','.join(failed))
+
+    estimate_job_tarball_size.short_description = "Estimate tarball size (task)"
 
     @takes_instance_or_queryset
     def expire_job(self, request, queryset):

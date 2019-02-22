@@ -9,23 +9,28 @@ from fnmatch import fnmatch
 import logging
 import os
 import pydash
+
+from paramiko import SSHClient
+from paramiko import RSAKey, AutoAddPolicy
+from . import paramiko_monkeypatch
+
 from toolz import merge as merge_dicts
 import requests
 import rest_framework_jwt
-from celery import chain
+import celery
 from celery import shared_task
 from datetime import datetime
 from django.conf import settings
 from django.contrib.admin.views.decorators import user_passes_test
 from django.db import transaction
-from django.http import HttpResponse, StreamingHttpResponse, JsonResponse
+from django.http import HttpResponse, StreamingHttpResponse, JsonResponse, FileResponse
 from django.urls import reverse
 from django.utils.encoding import force_text
 from django_filters.rest_framework import DjangoFilterBackend, OrderingFilter
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from fs.errors import DirectoryExpected
-from io import BytesIO
+from io import BytesIO, StringIO
 from pathlib import Path
 import paramiko
 from requests import HTTPError
@@ -60,7 +65,8 @@ from .tasks.job import (start_job,
                         index_remote_files,
                         _index_remote_files_task_err_handler,
                         set_job_status,
-                        kill_remote_job)
+                        kill_remote_job,
+                        estimate_job_tarball_size)
 
 from .jwt_helpers import (get_jwt_user_header_dict,
                           get_jwt_user_header_str)
@@ -285,6 +291,44 @@ class PingView(APIView):
         """
         app_version = getattr(settings, 'VERSION', 'unspecified')
         return JsonResponse(PingResponseSerializer({'version': app_version, 'status': 'online'}).data)
+
+
+class JobDirectTarDownload(JSONView):
+    lookup_url_kwarg = 'job_id'
+    queryset = Job.objects.all()
+    permission_classes = (IsOwner | IsSuperuser | HasReadonlyObjectAccessToken,)
+
+    def get(self, request, job_id, version=None):
+        """
+        Download a tar.gz of every file in the job.
+
+        Supports `?access_token=` query parameter for obfuscated public link sharing.
+        """
+
+        # must get object this way to correctly enforce permission_classes !
+        job = self.get_object()
+        compute = job.compute_resource
+        remote_username = compute.extra.get('username')
+        port = compute.port
+        if port is None:
+            port = 22
+        job_path = job.abs_path_on_compute
+
+        client = SSHClient()
+        client.set_missing_host_key_policy(AutoAddPolicy)
+        # client.load_system_host_keys()
+        client.connect(compute.hostname,
+                       port=port,
+                       username=remote_username,
+                       pkey=RSAKey.from_private_key(StringIO(compute.private_key)))
+        stdin, stdout, stderr = client.exec_command(
+            f'tar -czf - --directory "{job_path}" .')
+
+        if request.path.endswith('.tar.gz'):
+            output_fn = f'{job.id}.tar.gz'
+        else:
+            output_fn = f'laxy_job_{job.id}.tar.gz'
+        return FileResponse(stdout, filename=output_fn, as_attachment=True)
 
 
 # TODO: Strangley, Swagger/CoreAPI only show the 'name' for the query parameter
@@ -1583,9 +1627,13 @@ class JobView(JSONView):
                 # result = =index_remote_files.apply_async(
                 #     args=(task_data,))
                 # link_error=self._task_err_handler.s(job_id))
-                result = chain(index_remote_files.s(task_data),
-                               set_job_status.s()).apply_async(
+                result = celery.chain(index_remote_files.s(task_data),
+                                      set_job_status.s()).apply_async(
                     link_error=_index_remote_files_task_err_handler.s(job_id=job.id))
+
+                # We fire this off but aren't too concerned if it fails
+                estimate_job_tarball_size.s(task_data).apply_async()
+
             else:
                 serializer.save()
                 # job = Job.objects.get(id=uuid)
@@ -1729,35 +1777,22 @@ class JobCreate(JSONView):
 
             slurm_account = job.compute_resource.extra.get('slurm_account', None)
 
-            environment = {
-                'DEBUG': sh_bool(
+            environment = dict(
+                DEBUG=sh_bool(
                     getattr(settings, 'DEBUG', False)),
-                'IGNORE_SELF_SIGNED_CERTIFICATE': sh_bool(False),
-                'JOB_ID': job_id,
-                'JOB_COMPLETE_CALLBACK_URL':
-                    callback_url,
-                'JOB_EVENT_URL': job_event_url,
-                'JOB_FILE_REGISTRATION_URL': job_file_bulk_url,
-                'JOB_INPUT_STAGED': sh_bool(False),
-                'REFERENCE_GENOME': shlex.quote(reference_genome_id),
-                'PIPELINE_VERSION': shlex.quote(pipeline_version),
-
-                # TODO: these should come from the ComputeResource
-                'SCHEDULER': 'slurm',
-
-                # TODO: This is very pipeline+ComputeResource specific
-                #       This should come from something like ComputeResource.pipeline_overrides -
-                #       a set of 'pipeline specific overrides' that when pipeline name and optionally
-                #       version (or other parameters) match, the pipeline_overrides params override any
-                #       default here.
-                #       eg ComputeResource.pipeline_overrides =
-                #          [{'name': 'rnasik', 'version': '1.5.1',
-                #           'overrides': {'BDS_SINGLE_NODE': True}}]
-                'BDS_SINGLE_NODE': sh_bool(False)
-            }
-
-            if slurm_account:
-                environment['SLURM_ACCOUNT'] = slurm_account
+                IGNORE_SELF_SIGNED_CERTIFICATE=sh_bool(False),
+                JOB_ID=job_id,
+                JOB_PATH=job.abs_path_on_compute,
+                JOB_COMPLETE_CALLBACK_URL=callback_url,
+                JOB_EVENT_URL=job_event_url,
+                JOB_FILE_REGISTRATION_URL=job_file_bulk_url,
+                JOB_INPUT_STAGED=sh_bool(False),
+                REFERENCE_GENOME=shlex.quote(reference_genome_id),
+                PIPELINE_VERSION=shlex.quote(pipeline_version),
+                QUEUE_TYPE=job.compute_resource.queue_type or 'local',
+                # BDS_SINGLE_NODE=sh_bool(False),
+                SLURM_ACCOUNT=slurm_account or '',
+            )
 
             task_data = dict(job_id=job_id,
                              clobber=False,
@@ -1780,7 +1815,7 @@ class JobCreate(JSONView):
             # Non-async for testing
             # result = start_job(task_data)
 
-            # result = chain(# tasks.stage_job_config.s(task_data),
+            # result = celery.chain(# tasks.stage_job_config.s(task_data),
             #                # tasks.stage_input_files.s(),
             #                tasks.start_job.s(task_data),
             #                ).apply_async()

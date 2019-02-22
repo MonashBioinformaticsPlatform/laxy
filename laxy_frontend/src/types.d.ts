@@ -55,6 +55,16 @@ declare interface ViewMethod {
     method: Function;
 }
 
+declare interface LaxySharingLink {
+    id: string;
+    created_by: string;
+    created_time: string;
+    modified_time: string;
+    expiry_time: string;
+    object_id: string;
+    token: string;
+}
+
 // expanded FormData interface - some methods not available in older browsers
 declare interface IFormData {
     entries(): any[]; // Iterator<Array<any>>;

@@ -7,6 +7,7 @@ from storages.backends.sftpstorage import SFTPStorage
 from ..models import ComputeResource
 
 
+# TODO: This seems unused (probably replaced by models.File.file) - remove ?
 def get_file(url):
     """
     sftp://Some_Compute_UUID/relative/path/from/base_path/file.fastq.gz

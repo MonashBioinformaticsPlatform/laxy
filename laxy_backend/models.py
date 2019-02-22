@@ -1,3 +1,5 @@
+import os
+
 from django.core.handlers.wsgi import WSGIRequest
 from typing import List, Union
 from collections import OrderedDict, Sequence
@@ -65,6 +67,7 @@ Cached instances on the SFTPStorage class, keyed by ComputeResource.id to allow
 connection pooling for SFTP access to the same host.
 """
 
+
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def create_auth_token(sender, instance=None, created=False, **kwargs):
     """
@@ -120,7 +123,7 @@ class Timestamped(Model):
 
 
 def _job_expiry_datetime():
-    job_ttl = getattr(settings, 'DEFAULT_JOB_EXPIRY', 30*24*60*60)
+    job_ttl = getattr(settings, 'DEFAULT_JOB_EXPIRY', 30 * 24 * 60 * 60)
     return datetime.now() + timedelta(seconds=job_ttl)
 
 
@@ -497,6 +500,20 @@ class Job(Expires, Timestamped, UUIDModel):
         return self.input_files.get_files() | self.output_files.get_files()
 
     @property
+    def abs_path_on_compute(self):
+        """
+        Returns the absolute path to the job directory on it's ComputeResource.
+        SSH-centric, but might map to other methods of accessing storage.
+
+        :return: An absolute path to the job directory.
+        :rtype: str
+        """
+
+        fallback_base_dir = getattr(settings, 'DEFAULT_JOB_BASE_PATH', '/tmp')
+        base_dir = self.compute_resource.extra.get('base_dir', fallback_base_dir)
+        return os.path.join(base_dir, self.id)
+
+    @property
     def done(self):
         """
         Returns True if the job has finished, either successfully
@@ -862,7 +879,7 @@ class File(Timestamped, UUIDModel):
         if compute is None:
             raise Exception(f"Cannot extract ComputeResource ID from: {self.location}")
 
-        base_dir = compute.extra.get('base_dir')
+        base_dir = compute.extra.get('base_dir', getattr(settings, 'DEFAULT_JOB_BASE_PATH'))
         file_path = str(Path(base_dir) / Path(url.path).relative_to('/'))
 
         return file_path

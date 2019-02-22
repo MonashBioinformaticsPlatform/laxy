@@ -58,7 +58,7 @@
                                class="md-icon-button push-right"
                                @click="setClipboardFlash(formatSharingLink(link), 'Copied link to clipboard !')">
                         <md-icon>file_copy</md-icon>
-                        <md-tooltip md-direction="top">Copy</md-tooltip>
+                        <md-tooltip md-direction="top">Copy to clipboard</md-tooltip>
                     </md-button>
                     <md-button class="md-icon-button"
                                :class="{'push-right': linkIsExpired(link)}"

@@ -33,7 +33,7 @@ from laxy_backend.views import (JobView, JobCreate,
                                 EventLogCreate, EventLogListView, JobEventLogCreate,
                                 JobFileView, JobFileBulkRegistration, trigger_file_registration,
                                 SendFileToDegust, RemoteBrowseView, AccessTokenCreate, AccessTokenListView,
-                                AccessTokenView, JobAccessTokenView, PingView)
+                                AccessTokenView, JobAccessTokenView, PingView, JobDirectTarDownload)
 
 from laxy_backend.view_auth import (Login, Logout, PublicSocialSessionAuthView,
                                     CsrfCookieView, check_drf_token, UserProfileView)
@@ -142,6 +142,12 @@ api_urls = [
     re_path(r'job/(?P<job_id>[a-zA-Z0-9\-_]+)/accesstoken/$',
             JobAccessTokenView.as_view(),
             name='job_accesstoken'),
+    re_path(r'job/(?P<job_id>[a-zA-Z0-9\-_]+)/download/$',
+            JobDirectTarDownload.as_view(),
+            name='job_tarball_download'),
+    re_path(r'job/(?P<job_id>[a-zA-Z0-9\-_]+).tar.gz$',
+            JobDirectTarDownload.as_view(),
+            name='job_tarball_download'),
     re_path(r'job/(?P<uuid>[a-zA-Z0-9\-_]+)/$',
             JobView.as_view(),
             name='job'),
