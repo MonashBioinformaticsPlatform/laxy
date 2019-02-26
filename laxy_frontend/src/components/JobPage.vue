@@ -99,7 +99,7 @@
                         </generic-pip>
                     </md-layout>
 
-                    <md-layout v-if="job && job.expiry_time && job.status !== 'running' && job.status !== 'created'"
+                    <md-layout v-if="job && job.expiry_time && jobIsDone"
                                md-flex="25" md-flex-medium="100">
                         <generic-pip class="fill-width"
                                      @click="openDialog('expiryInfoDialog')"
@@ -153,7 +153,7 @@
                     <transition name="fade">
                         <md-layout md-flex-medium="100"
                                    v-show="showTab === 'summary' || showTab == null" md-column>
-                            <file-list v-if="job != null && job.status !== 'running'"
+                            <file-list v-if="jobIsDone"
                                        class="shadow"
                                        ref="report-files"
                                        title="Reports"
@@ -163,7 +163,7 @@
                                        :job-id="jobId"
                                        @refresh-error="showErrorDialog">
                             </file-list>
-                            <file-list v-if="job != null && job.status !== 'running'"
+                            <file-list v-if="jobIsDone"
                                        ref="count-files"
                                        title="Count files"
                                        :fileset-id="job.output_fileset_id"
@@ -172,7 +172,7 @@
                                        :job-id="jobId"
                                        @refresh-error="showErrorDialog">
                             </file-list>
-                            <file-list v-if="job != null && job.status !== 'running'"
+                            <file-list v-if="jobIsDone"
                                        ref="alignment-files"
                                        title="Alignment files"
                                        :fileset-id="job.output_fileset_id"
@@ -183,7 +183,7 @@
                             </file-list>
 
                             <!--
-                            <nested-file-list v-if="job && job.status !== 'running'"
+                            <nested-file-list v-if="jobIsRunning"
                                               id="key-files-card"
                                               class="fill-width"
                                               ref="key-files"
@@ -194,7 +194,7 @@
                                               :hide-search="false"
                                               @refresh-error="showErrorDialog"></nested-file-list>
                             -->
-                            <event-log v-if="job && job.status === 'running'"
+                            <event-log v-if="jobIsRunning"
                                        ref="eventlogSummary"
                                        :job-id="jobId"
                                        @refresh-error="showErrorDialog"></event-log>
@@ -222,9 +222,9 @@
                     </transition>
                     <transition name="fade">
                         <md-layout v-show="showTab === 'output'">
-                            <md-layout md-flex="100">
+                            <md-layout v-if="jobIsDone" md-flex="100">
                                 <md-whiteframe class="pad-32 fill-width">
-                                    <h3>Download all job files (.tar.gz)</h3>
+                                    <h3>Download all job files <span v-if="job.params.tarball_size">(~ {{ (job.params.tarball_size / 1000000).toFixed(1) }} Mb)</span></h3>
                                     <DownloadJobFilesTable :url="tarballUrl"
                                                            :filename="jobId + '.tar.gz'"
                                                            @flash-message="flashSnackBarEvent">
@@ -515,7 +515,7 @@
         async mounted() {
             await this.refresh(null);
 
-            //if (this.job && (this.job.status === "running" || this.job.status === "created")) {
+            //if (this.job && !this.jobIsDone) {
             this.refreshPollerId = setInterval(() => {
                 this.refresh(null);
             }, 10000);  // ms
@@ -524,6 +524,14 @@
 
         beforeDestroy() {
             if (this.refreshPollerId != null) clearInterval(this.refreshPollerId);
+        }
+
+        get jobIsDone() {
+            return this.job != null && this.job.status !== 'running' && this.job.status !== 'created';
+        }
+
+        get jobIsRunning() {
+            return this.job != null && this.job.status === 'running';
         }
 
         openFileByPath(filepath: string) {
