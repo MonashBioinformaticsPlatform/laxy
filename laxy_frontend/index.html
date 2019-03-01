@@ -185,7 +185,9 @@
 
             <div>
                 <md-icon v-if="online">cloud_done
-                    <md-tooltip md-direction="bottom">Connected to Laxy backend server</md-tooltip>
+                    <md-tooltip md-direction="bottom">Connected to Laxy backend server
+                        <template v-if="backendVersion">(version {{ backendVersion }})</template>
+                    </md-tooltip>
                 </md-icon>
                 <md-icon v-else="online">cloud_off
                     <md-tooltip md-direction="bottom">Laxy backend server is OFFLINE</md-tooltip>

@@ -51,8 +51,9 @@
                                         </md-table-cell>
                                         <md-table-cell v-else="job.id">{{ job.id }}</md-table-cell>
 
-                                        <md-table-cell @click.native="routeTo('job', {jobId: job.id})">{{
-                                            job.params.pipeline }} ({{ job.params.params.genome }})
+                                        <md-table-cell @click.native="routeTo('job', {jobId: job.id})">
+                                            {{ job.params.pipeline }}
+                                            <template v-if="job && job.params && job.params.params">({{ job.params.params.genome }})</template>
                                         </md-table-cell>
                                         <md-table-cell @click.native="routeTo('job', {jobId: job.id})">
                                             <md-tooltip md-direction="top">{{ job.created_time }}</md-tooltip>
@@ -64,17 +65,13 @@
                                             </span>
                                             <br>
                                         </md-table-cell>
-                                        <md-table-cell>
-                                            <md-toolbar class="md-dense md-transparent"
-                                                        style="margin-left: auto; margin-right: auto;">
-                                                <!-- TODO: Implement feature to re-run job with tweaked params:
-                                                           https://github.com/MonashBioinformaticsPlatform/laxy/issues/10
+                                        <md-table-cell md-numeric>
+                                            <md-toolbar class="md-dense md-transparent">
                                                 <md-button class="md-icon-button"
                                                            @click="cloneJob(job.id)">
                                                     <md-tooltip md-direction="top">Run again</md-tooltip>
                                                     <md-icon>content_copy</md-icon>
                                                 </md-button>
-                                                -->
                                                 <md-button class="md-icon-button"
                                                            @click="routeTo('job', {jobId: job.id})">
                                                     <md-tooltip md-direction="top">View job</md-tooltip>
@@ -137,14 +134,15 @@
         namespace
     } from "vuex-class";
 
-    import {ComputeJob} from "../model";
-    import {FETCH_JOBS} from "../store";
+    import {ComputeJob, SampleCartItems} from "../model";
+    import {FETCH_JOBS, SET_PIPELINE_DESCRIPTION, SET_PIPELINE_PARAMS, SET_SAMPLES} from "../store";
     import {WebAPI} from "../web-api";
 
     //import {AuthMixin} from "../index";
 
     import {DummyJobList as _dummyJobList} from "../test-data";
     import {Snackbar} from "../snackbar";
+    import PipelineParams from "./PipelineParams.vue";
 
     @Component({})
     export default class JobList extends Vue {// Mixins<AuthMixin>(AuthMixin) {
@@ -257,6 +255,35 @@
 
             this.closeDialog("cancel_job_dialog");
             this.refresh();
+        }
+
+        async cloneJob(id: string) {
+            try {
+                const response = await WebAPI.cloneJob(id);
+                const pipelinerun_id = response.data.pipelinerun_id;
+                const sampleset_id = response.data.sampleset_id;
+
+                const p_response = await WebAPI.getPipelineRun(pipelinerun_id);
+                const s_response = await WebAPI.getSampleSet(sampleset_id);
+
+                const pipelinerun = p_response.data;
+                const sampleset = s_response.data;
+
+                let samples = new SampleCartItems();
+                samples.id = sampleset.id;
+                samples.items = sampleset.samples;
+                samples.name = sampleset.name;
+                this.$store.commit(SET_SAMPLES, samples as SampleCartItems);
+
+                this.$store.commit(SET_PIPELINE_PARAMS, pipelinerun.params);
+                this.$store.commit(SET_PIPELINE_DESCRIPTION, pipelinerun.description);
+
+                // TODO: make a prop on RNASeqSetup to allow a jump to second or last step immediately
+                this.$router.push({name: 'rnaseq'});
+
+            } catch (error) {
+                console.log(error)
+            }
         }
 
         openDialog(ref: string) {

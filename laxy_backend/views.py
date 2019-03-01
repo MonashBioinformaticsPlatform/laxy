@@ -1,5 +1,7 @@
 import asyncio
 from collections import OrderedDict
+
+import json
 import shlex
 import coreapi
 import coreschema
@@ -1190,10 +1192,15 @@ class SampleSetCreateUpdate(JSONView):
         :rtype:
         """
 
+        if not obj.name:
+            obj.name = 'Sample set created on %s' % datetime.isoformat(datetime.now())
+
         content_type = get_content_type(request)
         encoding = 'utf-8'
 
         if content_type == 'multipart/form-data':
+            if not obj.name:
+                obj.name = 'CSV uploaded on %s' % datetime.isoformat(datetime.now())
             fh = request.data.get('file', None)
             csv_table = fh.read().decode(encoding)
             obj.from_csv(csv_table)
@@ -1201,6 +1208,8 @@ class SampleSetCreateUpdate(JSONView):
             return Response(self.get_serializer(instance=obj).data, status=status.HTTP_200_OK)
 
         elif content_type == 'text/csv':
+            if not obj.name:
+                obj.name = 'CSV uploaded on %s' % datetime.isoformat(datetime.now())
             csv_table = request.data
             obj.from_csv(csv_table)
 
@@ -1303,8 +1312,8 @@ class SampleSetCreate(SampleSetCreateUpdate):
         :rtype: rest_framework.response.Response
         -->
         """
-        sample_name = request.data.get('name', 'CSV uploaded on %s' %
-                                       datetime.isoformat(datetime.now()))
+
+        sample_name = request.data.get('name', None)
         obj = SampleSet(name=sample_name, owner=request.user)
         return self.create_update(request, obj)
 
@@ -1699,18 +1708,24 @@ class JobCreate(JSONView):
 
         # setattr(request, '_dont_enforce_csrf_checks', True)
 
-        serializer = self.request_serializer(data=request.data,
-                                             context={'request': request})
-
         pipeline_run_id = request.query_params.get('pipeline_run_id', None)
+        sampleset_id = None
         if pipeline_run_id:
             try:
                 pipelinerun_obj = PipelineRun.objects.get(id=pipeline_run_id)
+                pipelinerun = PipelineRunSerializer(pipelinerun_obj).data
+                sampleset_id = pipelinerun.get('sample_set', {}).get('id', None)
+                pipelinerun['pipelinerun_id'] = str(pipelinerun['id'])
+                del pipelinerun['id']
+                request.data['params'] = json.dumps(pipelinerun)
+
             except PipelineRun.DoesNotExist:
                 return HttpResponse(reason='pipeline_run %s does not exist'
                                            % pipeline_run_id,
                                     status=status.HTTP_400_BAD_REQUEST)
-            request.data['params'] = pipelinerun_obj.to_json()
+
+        serializer = self.request_serializer(data=request.data,
+                                             context={'request': request})
 
         if serializer.is_valid():
 
@@ -1723,12 +1738,20 @@ class JobCreate(JSONView):
 
             job = serializer.save()  # owner=request.user)
 
-            if job.status == Job.STATUS_HOLD:
-                return Response(serializer.data, status=status.HTTP_200_OK)
+            # We associate the previously created SampleSet with our new Job object
+            # (SampleSets effectively should be readonly once associated with a Job).
+            if sampleset_id:
+                sampleset = SampleSet.objects.get(id=sampleset_id)
+                sampleset.job = job
+                sampleset.save()
 
             if not job.compute_resource:
-                job.compute_resource = _get_default_compute_resource()
+                default_compute = _get_default_compute_resource()
+                job.compute_resource = default_compute
                 job.save()
+
+            if job.status == Job.STATUS_HOLD:
+                return Response(serializer.data, status=status.HTTP_200_OK)
 
             job_id = job.id
             job = Job.objects.get(id=job_id)
@@ -2174,6 +2197,56 @@ class JobAccessTokenView(JSONView, GetMixin):
                             status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class JobClone(JSONView):
+    queryset = Job.objects.all()
+    serializer_class = JobSerializerResponse
+
+    permission_classes = (IsOwner | IsSuperuser,)
+
+    # permission_classes = (DjangoObjectPermissions,)
+
+    lookup_url_kwarg = 'job_id'
+
+    @view_config(response_serializer=JobSerializerResponse)
+    @etag_headers
+    def post(self, request: Request, job_id, version=None):
+        """
+        Returns info about a Job, specified by Job ID (UUID).
+
+        <!--
+        :param request: The request object.
+        :type request: rest_framework.request.Request
+        :param uuid: The URL-encoded UUID.
+        :type uuid: str
+        :return: The response object.
+        :rtype: rest_framework.response.Response
+        -->
+        """
+        job = self.get_object()
+
+        sampleset_id = job.params.get('sample_set', {}).get('id', None)
+        if sampleset_id is None:
+            return HttpResponse(status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                reason=f'Cannot find sampleset associated with job {job.id}')
+        pipelinerun = PipelineRun.objects.filter(sample_set=sampleset_id).first()
+        sampleset = pipelinerun.sample_set
+
+        sampleset.pk = None
+        sampleset.id = None
+        # SampleSet is being cloned in order to be used for a new Job, so unset this
+        sampleset.job = None
+        sampleset.save()
+        new_sampleset = sampleset
+
+        pipelinerun.pk = None
+        pipelinerun.id = None
+        pipelinerun.sample_set = new_sampleset
+        pipelinerun.save()
+        new_pipelinerun = pipelinerun
+
+        return JsonResponse({'pipelinerun_id': new_pipelinerun.id, 'sampleset_id': new_sampleset.id})
 
 
 # TODO: This should really be POST, since it has side effects,

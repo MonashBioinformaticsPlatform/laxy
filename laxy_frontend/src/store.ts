@@ -9,7 +9,7 @@ import Vue from 'vue';
 import Vuex from 'vuex';
 
 import axios, {AxiosResponse} from 'axios';
-import {ComputeJob, LaxyFile, Sample, SampleSet} from './model';
+import {ComputeJob, LaxyFile, Sample, SampleCartItems} from './model';
 import {WebAPI} from './web-api';
 import {vueAuth, AuthOptions} from './auth';
 
@@ -19,6 +19,7 @@ export const AUTHENTICATE_USER = 'authenticate_user';
 export const SET_USER_PROFILE = 'set_user_profile';
 export const ADD_SAMPLES = 'add_samples';
 export const SET_SAMPLES = 'set_samples';
+export const CLEAR_SAMPLE_CART = 'clear_sample_cart';
 export const SET_SAMPLES_ID = 'set_samples_id';
 export const SET_PIPELINE_PARAMS = 'set_pipeline_params';
 export const SET_PIPELINE_PARAMS_VALID = 'set_pipeline_params_valid';
@@ -46,11 +47,11 @@ export const Store = new Vuex.Store({
         strict: true,
         state: {
             online: false,
-            backend_version: 'unknown',
+            backend_version: '',
             user_profile: null as any,
-            samples: new SampleSet() as SampleSet,
+            samples: new SampleCartItems(),
             pipelineParams: {
-                genome: null,
+                genome: 'Homo_sapiens/Ensembl/GRCh38',
                 description: '',
                 pipeline_version: '1.5.3',
             },
@@ -158,7 +159,7 @@ export const Store = new Vuex.Store({
                 // if (state.samples.items == undefined)
                 state.samples.items.push(...samples);
             },
-            [SET_SAMPLES](state, samples: SampleSet) {
+            [SET_SAMPLES](state, samples: SampleCartItems) {
                 state.samples = samples;
             },
             [SET_SAMPLES_ID](state, id: string) {
@@ -213,7 +214,7 @@ export const Store = new Vuex.Store({
                     }
 
                     const providerOverrides: any = AuthOptions.providers[payload.provider];
-                    if (providerOverrides.name) {
+                    if (providerOverrides && providerOverrides.name) {
                         const response = await vueAuth.authenticateSession(
                             providerOverrides.name,
                             {
@@ -262,6 +263,10 @@ export const Store = new Vuex.Store({
                     commit(SET_SAMPLES, preCommit);
                     throw error;
                 }
+            },
+            async [CLEAR_SAMPLE_CART]({commit, state}) {
+                // commit NOT dispatch, since the dispatch action would update the serverside object too !
+                commit(SET_SAMPLES, new SampleCartItems());
             },
             async [SET_PIPELINE_PARAMS]({commit, state}, params: any) {
                 commit(SET_PIPELINE_PARAMS, params);

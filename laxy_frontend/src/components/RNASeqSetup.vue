@@ -13,7 +13,8 @@
             <!--<md-step md-label="Analysis" md-message="Select one" :md-disabled="true" ref="analysis">-->
             <!--<p>Select your analysis: RNAseq, ChIPSeq</p>-->
             <!--</md-step>-->
-            <md-step md-label="Describe samples" md-message="Specify conditions, pair ends"
+            <md-step md-label="Describe samples"
+                     md-message="Specify sample names, conditions"
                      :md-continue="dataSource_stepComplete"
                      :md-disabled="!dataSource_stepComplete"
                      @exitstep="onExitStep('describeSamples')"
@@ -26,7 +27,7 @@
                              ref="describeSamples_sampleCart"></sample-cart>
             </md-step>
             <md-step md-label="Pipeline settings"
-                     md-message="Use the defaults Luke !"
+                     md-message="Choose a reference genome"
                      md-button-continue="Start job"
                      :md-continue="pipelineSettings_stepComplete"
                      :md-disabled="!describeSamples_stepComplete"
@@ -48,16 +49,27 @@
     import Component from 'vue-class-component';
     import {Emit, Inject, Model, Prop, Provide, Watch} from 'vue-property-decorator'
 
-    @Component({props: {}})
+    @Component({})
     export default class RNASeqSetup extends Vue {
+
+        @Prop({type: Boolean, default: true})
+        public allowSkipping: boolean;
+
         get dataSource_stepComplete() {
-            return this.$store.getters.sample_cart_count > 0;
+            return this.$store.getters.sample_cart_count > 0 || this.allowSkipping;
         }
 
-        describeSamples_stepComplete: boolean = false;
+        _describeSamples_stepComplete: boolean = false;
+        get describeSamples_stepComplete() {
+            return this._describeSamples_stepComplete || this.allowSkipping;
+        }
+
+        set describeSamples_stepComplete(state: boolean) {
+            this._describeSamples_stepComplete = state;
+        }
 
         get pipelineSettings_stepComplete(): boolean {
-            return this.$store.state.pipelineParams_valid;
+            return this.$store.state.pipelineParams_valid || this.allowSkipping;
         }
 
 //        enableStep() {
@@ -86,13 +98,11 @@
         onExitStep(stepName: string) {
             if (stepName === 'dataSource') {
                 this.scrollToTop();
-            }
-            else if (stepName === 'describeSamples') {
-                 (this.$refs['describeSamples_sampleCart'] as any).save();
-                 this.describeSamples_stepComplete = true;
-                 this.scrollToTop();
-            }
-            else if (stepName === 'pipelineSettings') {
+            } else if (stepName === 'describeSamples') {
+                (this.$refs['describeSamples_sampleCart'] as any).save();
+                this.describeSamples_stepComplete = true;
+                this.scrollToTop();
+            } else if (stepName === 'pipelineSettings') {
                 this.scrollToTop();
             }
         }
@@ -101,12 +111,11 @@
             try {
                 const response = await (this.$refs['pipelineParams'] as any).run();
                 if (response && response.data && response.data.id) {
-                    this.$router.push({name: 'job', params: { jobId: response.data.id }});
+                    this.$router.push({name: 'job', params: {jobId: response.data.id}});
                 } else {
                     this.$router.push('jobs');
                 }
-            }
-            catch (error) {
+            } catch (error) {
                 throw error;
             }
         }
