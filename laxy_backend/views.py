@@ -2549,8 +2549,13 @@ def _get_or_create_drf_token(user):
 
 
 def _get_default_compute_resource():
+    default_compute_name = getattr(settings, 'DEFAULT_COMPUTE_RESOURCE')
     compute = ComputeResource.objects.filter(
-        name=getattr(settings, 'DEFAULT_COMPUTE_RESOURCE')).first()
+        name=default_compute_name).first()
+    if not compute:
+        raise Exception(f"The default ComputeResource '{default_compute_name}' does not exist "
+                        f"(DEFAULT_COMPUTE_RESOURCE setting).")
+
     compute.save()
     return compute
 
