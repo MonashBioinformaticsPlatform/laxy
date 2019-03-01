@@ -57,7 +57,6 @@ async function preserveQueryParams(to: any, from: any, next: Function) {
 
 export const router = new VueRouter({
     routes: [
-        // { path: '/', redirect: '/rnaseq' },
         {
             path: '/',
             name: 'home',
@@ -143,6 +142,8 @@ export const router = new VueRouter({
             component: PrivacyPolicy,
         },
     ],
+     // 'history' mode requires extra server (eg nginx) config, breaks direct /job/{id} links
+    // see: https://router.vuejs.org/guide/essentials/history-mode.html#html5-history-mode
     // mode: 'history',
     scrollBehavior(to, from, savedPosition) {
         // This does smooth scrolling to the top of the page

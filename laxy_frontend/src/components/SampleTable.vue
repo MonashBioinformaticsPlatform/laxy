@@ -61,7 +61,7 @@
         Watch
     } from "vue-property-decorator";
 
-    import {Sample, SampleSet} from "../model";
+    import {Sample, SampleCartItems} from "../model";
 
     import {DummySampleList as _dummySampleList} from "../test-data";
 
@@ -71,8 +71,8 @@
     export default class SampleTable extends Vue {
         // public samples: Array<Sample> = _dummySampleList;
 
-        @Prop({default: {}, type: SampleSet})
-        public samples: SampleSet;
+        @Prop({default: {}, type: Object})
+        public samples: SampleCartItems;
 
         ////
         // fields and editableFields can be either top level properties of

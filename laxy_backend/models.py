@@ -24,7 +24,8 @@ from django.core.files.storage import get_storage_class
 from django.core.serializers import serialize
 from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError
-from django.db.models import Model, CharField, URLField, ForeignKey, BooleanField, IntegerField, DateTimeField, QuerySet
+from django.db.models import Model, Manager, CharField, URLField, ForeignKey, BooleanField, IntegerField, DateTimeField, \
+    QuerySet
 from django.contrib.postgres.fields import ArrayField
 # from django.contrib.auth.models import User
 from django.contrib.auth.models import AbstractUser
@@ -134,6 +135,61 @@ class Expires(Model):
 
     expiry_time = DateTimeField(blank=True, null=True, default=_job_expiry_datetime)
     expired = BooleanField(default=False)
+
+
+class ReadOnlyFlag(Model):
+    """
+    Mixin that adds a readonly boolean to a model.
+    Model will not save/delete when this flag is True (on the instance).
+
+    Setting the readonly flag has the side effect of saving the current instance (but updates ONLY
+    the _readonly field on the database, ignoring other modified fields).
+
+    Beware: custom model Managers, raw SQL and bulk operations may not always prevented from modifying
+    the model if they bypass the model instance-level save/delete. The _readonly database field can be
+    modified directly - this mixin isn't intended to completed lock a row, just act as a convenient
+    pattern to help in typical usage.
+
+    (If making a row readonly really really matters, you might want to do something like:
+     https://www.postgresql.org/docs/9.5/ddl-rowsecurity.html).
+
+    eg intended usage:
+
+    >>> class MyReadonlyModel(ReadOnlyFlag, Model):
+    >>>     pass
+
+    >>> myreadonlymodel.readonly = False
+    >>> myreadonlymodel.save()  # works fine
+    >>> myreadonlymodel.readonly = True
+    >>> myreadonlymodel.save()
+    RuntimeError: Attempting to save readonly model: 1
+
+    """
+
+    class Meta:
+        abstract = True
+
+    _readonly = BooleanField(default=False)
+
+    @property
+    def readonly(self):
+        return self._readonly
+
+    @readonly.setter
+    def readonly(self, state):
+        if state != self._readonly:
+            self._readonly = state
+            super(ReadOnlyFlag, self).save(update_fields=['_readonly'])
+
+    def save(self, *args, **kwargs):
+        if self.readonly:
+            raise RuntimeError(f"Attempting to save readonly model: {self.id}")
+        super(ReadOnlyFlag, self).save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        if self.readonly:
+            raise RuntimeError(f"Attempting to delete readonly model: {self.id}")
+        super(ReadOnlyFlag, self).delete(*args, **kwargs)
 
 
 class UUIDModel(Model):
@@ -1157,7 +1213,11 @@ class SampleSet(Timestamped, UUIDModel):
 
     samples = JSONField(default=list)
 
-    # saved = BooleanField(default=False)
+    job = ForeignKey(Job,
+                     blank=True,
+                     null=True,
+                     on_delete=models.CASCADE,
+                     related_name='samplesets')
 
     # 'samples' is a dictionary keyed by sample name, with a list of files grouped by
     # merge_group and pair (a merge_group could be a set of equivalent lanes the sample
@@ -1291,6 +1351,22 @@ class SampleSet(Timestamped, UUIDModel):
         return newline.join(lines)
 
 
+# NOTE: We could bypass this signal in special cases using:
+#       https://github.com/RobertKolner/django-signal-disabler
+@receiver(pre_save, sender=SampleSet)
+def prevent_sampleset_update_after_job_assigned(sender, instance: SampleSet,
+                                                raw, using, update_fields, **kwargs):
+    """
+    Prevents a SampleSet being updated once it has been attached to a Job.
+    """
+    try:
+        obj: SampleSet = sender.objects.get(pk=instance.pk)
+        if obj.job:
+            raise RuntimeError("Updating a SampleSet once the job field is set is not allowed.")
+    except sender.DoesNotExist:
+        pass
+
+
 @reversion.register()
 class PipelineRun(Timestamped, UUIDModel):
     owner = ForeignKey(User,
@@ -1322,11 +1398,6 @@ class PipelineRun(Timestamped, UUIDModel):
 
     # Free-text comment, mostly for users to help keep track of runs.
     description = CharField(max_length=2048, blank=True, null=True)
-
-    def to_json(self):
-        # TODO: Convert File UUIDs into URLs here (or internal 'api/v1/file/{file_id}' URLs) ?
-        from .serializers import PipelineRunSerializer
-        return json.dumps(PipelineRunSerializer(self).data)
 
 
 def _generate_access_token_string():

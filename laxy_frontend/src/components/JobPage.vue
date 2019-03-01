@@ -339,7 +339,7 @@
     } from "vuex-class";
 
     import {NotImplementedError} from "../exceptions";
-    import {ComputeJob, LaxyFile} from "../model";
+    import {ComputeJob, LaxyFile, SampleCartItems} from "../model";
     import {WebAPI} from "../web-api";
     import {
         palette,
@@ -350,7 +350,7 @@
         cssColorVars
     } from "../palette";
 
-    import {FETCH_FILESET, FETCH_JOB} from "../store";
+    import {FETCH_FILESET, FETCH_JOB, SET_PIPELINE_DESCRIPTION, SET_PIPELINE_PARAMS, SET_SAMPLES} from "../store";
     import {DummyJobList as _dummyJobList} from "../test-data";
     import JobStatusPip from "./JobStatusPip";
     import FileLinkPip from "./FileLinkPip";
@@ -700,8 +700,33 @@
             this.refresh(null);
         }
 
-        cloneJob(job_id: string) {
-            throw new NotImplementedError("Job cloning isn't yet implemented.");
+        async cloneJob(id: string) {
+            try {
+                const response = await WebAPI.cloneJob(id);
+                const pipelinerun_id = response.data.pipelinerun_id;
+                const sampleset_id = response.data.sampleset_id;
+
+                const p_response = await WebAPI.getPipelineRun(pipelinerun_id);
+                const s_response = await WebAPI.getSampleSet(sampleset_id);
+
+                const pipelinerun = p_response.data;
+                const sampleset = s_response.data;
+
+                let samples = new SampleCartItems();
+                samples.id = sampleset.id;
+                samples.items = sampleset.samples;
+                samples.name = sampleset.name;
+                this.$store.commit(SET_SAMPLES, samples as SampleCartItems);
+
+                this.$store.commit(SET_PIPELINE_PARAMS, pipelinerun.params);
+                this.$store.commit(SET_PIPELINE_DESCRIPTION, pipelinerun.description);
+
+                // TODO: make a prop on RNASeqSetup to allow a jump to second or last step immediately
+                this.$router.push({name: 'rnaseq'});
+
+            } catch (error) {
+                console.log(error)
+            }
         }
 
         async updateSharingLink(job_id: string, expires_in: number | string) {

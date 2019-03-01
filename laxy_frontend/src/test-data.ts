@@ -1,5 +1,5 @@
 // Test data
-import {SampleSet, ComputeJob, LaxyFile} from './model';
+import {SampleCartItems, ComputeJob, LaxyFile} from './model';
 
 // For testing Element UI Tree
 const demoTreeData: any[] = [{
@@ -38,7 +38,7 @@ const demoTreeData: any[] = [{
     }]
 }];
 
-export const DummySampleList: SampleSet = {
+export const DummySampleList: SampleCartItems = {
     id: undefined,
     name: 'Dummyset',
     items: [
@@ -98,7 +98,7 @@ export const DummySampleList: SampleSet = {
                 }]
         }
     ]
-} as SampleSet;
+} as SampleCartItems;
 
 export const DummyPipelineConfig = {
     'sample_set': '3NNIIOt8skAuS1w2ZfgOq',

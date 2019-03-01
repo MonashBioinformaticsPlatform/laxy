@@ -149,12 +149,13 @@
         namespace
     } from "vuex-class";
 
-    import {Sample, SampleSet} from "../model";
+    import {Sample, SampleCartItems} from "../model";
     import {SET_SAMPLES} from "../store";
     import {WebAPI} from "../web-api";
 
     import {DummySampleList as _dummySampleList} from "../test-data";
     import {Snackbar} from "../snackbar";
+    import CSVSampleListUpload from "./CSVSampleListUpload/CSVSampleListUpload.vue";
 
     @Component({
         props: {},
@@ -217,7 +218,7 @@
             if (this._DEBUG) {
                 if (this.$store.getters.sample_cart_count === null ||
                     this.$store.getters.sample_cart_count === 0) {
-                    const s: SampleSet = _.cloneDeep(_dummySampleList);
+                    const s: SampleCartItems = _.cloneDeep(_dummySampleList);
                     this.$store.commit(SET_SAMPLES, s);
                 }
             }
@@ -227,10 +228,15 @@
             this._samples = _.cloneDeep(this.$store.state.samples);
         }
 
-        public _samples: SampleSet;
-        get samples(): SampleSet {
+        public _samples: SampleCartItems;
+        get samples(): SampleCartItems {
             this._samples = _.cloneDeep(this.$store.state.samples);
             return this._samples;
+        }
+
+        set samples(sampleset: SampleCartItems) {
+            this._samples = sampleset;
+            this.$store.commit(SET_SAMPLES, sampleset as SampleCartItems);
         }
 
         async submit() {

@@ -94,6 +94,8 @@
 
 <script lang="ts">
     import cloneDeep from "lodash-es/cloneDeep";
+    import get from "lodash-es/get";
+    import find from "lodash-es/find";
     import map from "lodash-es/map";
     import {Memoize} from "lodash-decorators";
 
@@ -114,10 +116,10 @@
     import {
         SET_SAMPLES,
         SET_PIPELINE_PARAMS,
-        SET_PIPELINE_DESCRIPTION, SET_PIPELINE_PARAMS_VALID
+        SET_PIPELINE_DESCRIPTION, SET_PIPELINE_PARAMS_VALID, CLEAR_SAMPLE_CART
     } from "../store";
 
-    import {Sample, SampleSet} from "../model";
+    import {Sample, SampleCartItems} from "../model";
     import {WebAPI} from "../web-api";
 
     import AVAILABLE_GENOMES from "../config/genomics/genomes";
@@ -152,17 +154,15 @@
 
         public available_genomes: Array<ReferenceGenome> = AVAILABLE_GENOMES;
 
-        // public reference_genome: string = this.available_genomes[0].id;
-        // public description: string = '';
-
         public reference_genome_valid: boolean = true;
 
-        public selected_genome_organism: string = `${AVAILABLE_GENOMES[0].organism}`;
+        public selected_genome_organism: string = get(find(AVAILABLE_GENOMES,
+            {'id': this.$store.state.pipelineParams.genome}), 'organism', 'Homo sapiens');
 
         public pipeline_versions = ['1.5.3', '1.5.2'];
 
-        public _samples: SampleSet;
-        get samples(): SampleSet {
+        public _samples: SampleCartItems;
+        get samples(): SampleCartItems {
             this._samples = cloneDeep(this.$store.state.samples);
             return this._samples;
         }
@@ -295,7 +295,7 @@
                         `/api/v1/job/?pipeline_run_id=${this.pipelinerun_uuid}`, {}) as AxiosResponse;
                     this.submitting = false;
                     Snackbar.flashMessage("Saved !");
-                    this.clearCart();
+                    await this.clearCart();
                     return response;
                 } catch (error) {
                     console.log(error);
@@ -310,8 +310,8 @@
             return null;
         }
 
-        clearCart() {
-            this.$store.dispatch(SET_SAMPLES, new SampleSet());
+        async clearCart() {
+            await this.$store.dispatch(CLEAR_SAMPLE_CART);
         }
 
         openDialog(ref: string) {

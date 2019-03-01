@@ -28,7 +28,7 @@ export class Sample {
     }
 }
 
-export class SampleSet extends UUIDModel {
+export class SampleCartItems extends UUIDModel {
     // [index: number]: Sample;
 
     public name: string;

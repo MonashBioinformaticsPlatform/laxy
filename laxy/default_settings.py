@@ -206,10 +206,9 @@ CELERY_RESULT_BACKEND = 'django-db'
 # CELERY_RESULT_BACKEND = 'db+postgresql://postgres:postgres@db:5432/postgres'
 # CELERY_RESULT_BACKEND = 'redis://redis:6379/0'
 # CELERY_RESULT_BACKEND = BROKER_URL
-# if DEBUG:
-#     CELERY_ALWAYS_EAGER = True
-#     logger.warning("CELERY_ALWAYS_EAGER = True
-#                     seems to prevent tasks from starting ?")
+if DEBUG:
+    CELERY_ALWAYS_EAGER = True
+    logger.warning("`CELERY_ALWAYS_EAGER = True` seems to prevent tasks from starting ?")
 # CELERY_IGNORE_RESULT = True
 
 CELERYBEAT_SCHEDULE = {

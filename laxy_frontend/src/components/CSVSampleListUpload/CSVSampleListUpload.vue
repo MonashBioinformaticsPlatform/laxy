@@ -47,7 +47,7 @@
         Watch
     } from "vue-property-decorator";
 
-    import {Sample, SampleSet} from "../../model";
+    import {Sample, SampleCartItems} from "../../model";
     import {ADD_SAMPLES} from "../../store";
     import {WebAPI} from "../../web-api";
     import CSVAboutBox from "./CSVAboutBox";

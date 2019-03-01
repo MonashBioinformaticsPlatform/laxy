@@ -23,6 +23,8 @@ services:
       # Number of gunicorn workers
       - WEB_CONCURRENCY=${WEB_CONCURRENCY-4}
     deploy:
+      mode: replicated
+      replicas: 3
       restart_policy:
         condition: any
     volumes:
@@ -76,6 +78,8 @@ services:
     environment:
       - LAXY_DEBUG=no
     deploy:
+      mode: replicated
+      replicas: 3
       restart_policy:
         condition: any
     networks:

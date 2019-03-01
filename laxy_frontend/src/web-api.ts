@@ -203,6 +203,16 @@ export class WebAPI {
         }
     }
 
+    public static async cloneJob(job_id: string) {
+        try {
+            return await this.fetcher.post(
+                `/api/v1/job/${job_id}/clone/`,
+                {}) as AxiosResponse;
+        } catch (error) {
+            throw error;
+        }
+    }
+
     public static async getJobEventLog(job_id: string): Promise<AxiosResponse> {
         try {
             return await this.fetcher.get(
@@ -285,6 +295,15 @@ export class WebAPI {
         return url;
     }
 
+    public static async getSampleSet(fileset_id: string): Promise<AxiosResponse> {
+        try {
+            return await this.fetcher.get(
+                `/api/v1/sampleset/${fileset_id}/`) as AxiosResponse;
+        } catch (error) {
+            throw error;
+        }
+    }
+
     public static async createSampleset(csvFormData: FormData): Promise<AxiosResponse> {
         try {
             // copy config
@@ -297,6 +316,15 @@ export class WebAPI {
             // it  won't work (results in empty form POST !)
             const formPostfetcher = axios.create(config);
             return await formPostfetcher.post('/api/v1/sampleset/', csvFormData, config) as AxiosResponse;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    public static async getPipelineRun(fileset_id: string): Promise<AxiosResponse> {
+        try {
+            return await this.fetcher.get(
+                `/api/v1/pipelinerun/${fileset_id}/`) as AxiosResponse;
         } catch (error) {
             throw error;
         }

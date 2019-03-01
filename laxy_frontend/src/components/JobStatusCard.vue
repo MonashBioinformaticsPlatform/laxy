@@ -99,13 +99,11 @@
         </md-card-content>
 
         <md-card-actions>
-            <!--
             <md-button v-if="job.status !== 'running'"
                        @click="cloneJob(job.id)">
                 <md-icon>content_copy</md-icon>
                 Run again
             </md-button>
-            -->
             <md-button v-if="showCancelButton && job.status === 'running'"
                        @click="askCancelJob(job.id)">
                 <md-icon>cancel</md-icon>
