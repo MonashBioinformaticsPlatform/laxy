@@ -2514,7 +2514,12 @@ class RemoteBrowseView(JSONView):
                                 tags=['archive'] if is_archive_link(fn) else [])]
 
         elif scheme == 'http' or scheme == 'https':
-            file_links, dir_links = http_remote_index.grab_links_from_html_page(url)
+            try:
+                file_links, dir_links = http_remote_index.grab_links_from_html_page(url)
+            except MemoryError as ex:
+                return HttpResponse(status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, reason=str(ex))
+            except ValueError as ex:
+                return HttpResponse(status=status.HTTP_400_BAD_REQUEST, reason=str(ex))
 
             for i in file_links:
                 name = Path(urlparse(i).path).name
