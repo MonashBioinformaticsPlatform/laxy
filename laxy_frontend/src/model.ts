@@ -56,7 +56,7 @@ export class ComputeJob extends UUIDModel {
     public params: any | null;
     public input_fileset_id: string;
     public output_fileset_id: string;
-    public owner: number;
+    public owner: string;
     public secret: string;
 }
 

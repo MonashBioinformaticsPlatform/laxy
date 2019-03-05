@@ -145,12 +145,12 @@ export const ENADummySampleList: ENASample[] = [
 export const DummyJobList: ComputeJob[] = [
     {
         'id': '4bS75UgK4BIkYT2nmnv9BF',
-        'owner': 1,
+        'owner': '3Cx3N2QmRw3WCSuI65qfkw',
         'input_fileset_id': '5cUMhEHPl7tusyWQWRdXCV',
         'output_fileset_id': 'lte5G15TXSkfmF6dlP1aj',
         'params': {
             'id': '2CjwU7RJtFq8u60DBiORik',
-            'owner': 1,
+            'owner': '3Cx3N2QmRw3WCSuI65qfkw',
             'params': {
                 'genome': 'hg19'
             },
@@ -158,7 +158,7 @@ export const DummyJobList: ComputeJob[] = [
             'sample_set': {
                 'id': '461UrmNeZaVe64pJYG9S5q',
                 'name': 'CSV uploaded on 2018-04-24T05:00:10.531287',
-                'owner': 1,
+                'owner': '3Cx3N2QmRw3WCSuI65qfkw',
                 'samples': [
                     {
                         'name': 'SAMN03375745',
@@ -295,12 +295,12 @@ export const DummyJobList: ComputeJob[] = [
     },
     {
         'id': '5bcs2P4W79KKEj43jA85G3',
-        'owner': 1,
+        'owner': '3Cx3N2QmRw3WCSuI65qfkw',
         'input_fileset_id': '3mcv4wK66q6xwPuLhLSlc0',
         'output_fileset_id': '1ZoPXThJx8zniui7Fg2k1q',
         'params': {
             'id': '4AZpf19PMqDrq9clvID1DY',
-            'owner': 1,
+            'owner': '3Cx3N2QmRw3WCSuI65qfkw',
             'params': {
                 'genome': 'R64-1-1'
             },
@@ -308,7 +308,7 @@ export const DummyJobList: ComputeJob[] = [
             'sample_set': {
                 'id': '13kkLzwmPt0QehRE5FfqGd',
                 'name': 'CSV uploaded on 2018-05-02T06:53:12.655648',
-                'owner': 1,
+                'owner': '3Cx3N2QmRw3WCSuI65qfkw',
                 'samples': [
                     {
                         'name': 'SAMN02596468',

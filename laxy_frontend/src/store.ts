@@ -68,6 +68,9 @@ export const Store = new Vuex.Store({
             is_authenticated: state => {
                 return !!state.user_profile;
             },
+            userId: (state): string => {
+                return state.user_profile.id;
+            },
             samples: state => {
                 return state.samples;
             },
@@ -231,7 +234,7 @@ export const Store = new Vuex.Store({
                 try {
                     const response = await WebAPI.getUserProfile();
                     const profile_info = pick(response.data,
-                        ['full_name', 'username', 'email', 'profile_pic']);
+                        ['id', 'full_name', 'username', 'email', 'profile_pic']);
                     commit(SET_USER_PROFILE, profile_info);
                 } catch (error) {
                     throw error;

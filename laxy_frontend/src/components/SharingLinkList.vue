@@ -31,7 +31,7 @@
                 </md-table-cell>
                 <md-table-cell>
                     <span :class="{ 'expired-link': linkIsExpired(link) }">{{ formatExpiryString(link.expiry_time) }}</span>
-                    <md-menu md-size="4" class="push-left">
+                    <md-menu v-if="allowExpiryEdit" md-size="4" class="push-left">
                         <md-button class="md-icon-button"
                                    md-menu-trigger>
                             <md-icon>arrow_drop_down</md-icon>
@@ -60,7 +60,8 @@
                         <md-icon>file_copy</md-icon>
                         <md-tooltip md-direction="top">Copy to clipboard</md-tooltip>
                     </md-button>
-                    <md-button class="md-icon-button"
+                    <md-button v-if="showDeleteButton"
+                               class="md-icon-button"
                                :class="{'push-right': linkIsExpired(link)}"
                                @click="deleteSharingLink(link.id)">
                         <md-icon>delete</md-icon>
@@ -101,6 +102,12 @@
 
         @Prop({type: Array})
         public sharingLinks: any[];
+
+        @Prop({type: Boolean, default: true})
+        public showDeleteButton: boolean;
+
+        @Prop({type: Boolean, default: true})
+        public allowExpiryEdit: boolean;
 
         private _days = 24 * 60 * 60;  // seconds in a day
         public access_token_lifetime_options: any[] = [

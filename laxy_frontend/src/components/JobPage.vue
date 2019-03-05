@@ -266,6 +266,8 @@
                                     <sharing-link-list @flash-message="flashSnackBarEvent"
                                                        @change-link="onChangeLinkEvent"
                                                        @delete-link="onDeleteSharingLinkEvent"
+                                                       :show-delete-button="isJobOwner"
+                                                       :allow-expiry-edit="isJobOwner"
                                                        :job-id="jobId"
                                                        :sharing-links="sharingLinks"></sharing-link-list>
                                 </md-whiteframe>
@@ -447,6 +449,17 @@
             return (color: string, shade: string | number) => {
                 return palette[color][shade];
             }
+        }
+
+        get userId(): string {
+            return this.$store.getters.userId;
+        }
+
+        get isJobOwner(): boolean {
+            if (this.job) {
+                return this.userId === this.job.owner;
+            }
+            return false;
         }
 
         get files(): LaxyFile[] {
