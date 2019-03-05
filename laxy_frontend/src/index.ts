@@ -92,12 +92,12 @@ Vue.component('spinner-cube-grid', SpinnerCubeGrid);
 // import SpinnerEq from './components/spinners/SpinnerEq.vue';
 // Vue.component('spinner-eq', SpinnerEq);
 
-Vue.filter('numeral_format', function (value: number | string, format: string = '0 a') {
+Vue.filter('numeral_format', function(value: number | string, format: string = '0 a') {
     if (!value) return '';
     return numeral(value).format(format);
 });
 
-Vue.filter('deunderscore', function (value: string) {
+Vue.filter('deunderscore', function(value: string) {
     if (!value) return '';
     value = value.replace('_', ' ');
     // capitalize first letter

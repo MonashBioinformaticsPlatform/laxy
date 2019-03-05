@@ -5,7 +5,7 @@
 
         <md-dialog-content>
             Large files associated with this job will be deleted<template v-if="job"> on
-            <strong>{{ job.expiry_time | moment('DD-MMM-YYYY(HH:mm UTCZ)') }}</strong></template>.
+            <strong>{{ job.expiry_time | moment('DD-MMM-YYYY (HH:mm UTCZ)') }}</strong></template>.
             <br/>
             If you wish to preserve these files, please archive them to another location.
             <br/>

@@ -108,7 +108,7 @@
                                      :icon="jobExpiresSoon ? 'warning': ''" buttonIcon="" buttonText="">
                             <template v-if="!job.expired">
                                 <span slot="title">Job expiry {{ jobExpiresSoon ? 'in less than 7 days': '' }}</span>
-                                <span slot="subtitle">Large files associated with this job will be deleted on<br/>
+                                <span slot="subtitle">Large files associated with this job will be deleted on <br/>
                                 <strong>{{ job.expiry_time | moment('DD-MMM-YYYY (HH:mm UTCZ)') }}</strong></span>
                             </template>
                             <template v-else>
@@ -788,7 +788,7 @@
             if (m.isBefore(Date.now())) {
                 suffix = 'ago';
             }
-            let formatted = `${m.format("L, h:mm a")} (${m.fromNow(true)} ${suffix})`;
+            let formatted = `${m.format("DD-MMM-YYYY (HH:mm UTCZ)")} (${m.fromNow(true)} ${suffix})`;
             if (add_sentence_words) {
                 formatted = ` until ${formatted}`;
             }

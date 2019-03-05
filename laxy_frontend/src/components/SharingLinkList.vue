@@ -147,7 +147,7 @@
             if (m.isBefore(Date.now())) {
                 suffix = 'ago';
             }
-            let formatted = `${m.format("L, h:mm a")} (${m.fromNow(true)} ${suffix})`;
+            let formatted = `${m.fromNow(true)} ${suffix} on ${m.format("DD-MMM-YYYY (HH:mm UTCZ)")}`;
             if (add_sentence_words) {
                 formatted = ` until ${formatted}`;
             }
