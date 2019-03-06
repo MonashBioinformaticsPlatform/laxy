@@ -87,7 +87,7 @@
 
 <script lang="ts">
 
-    import get from "lodash-es/get";
+    import map from "lodash-es/map";
 
     import "es6-promise";
 
@@ -123,6 +123,9 @@
         TreeNode
     } from "../../file-tree-util";
     import {Snackbar} from "../../snackbar";
+
+    import {longestCommonPrefix} from "../../prefix";
+    import {escapeRegExp, reverseString} from "../../util";
 
     interface DbAccession {
         accession: string;
@@ -222,6 +225,12 @@
             // console.log(this.selectedFiles);
             const cart_samples: Sample[] = [];
             const added_files: LaxyFile[] = [];
+
+            const names: string[] = map(this.selectedFiles, (i) => {
+                return reverseString(simplifyFastqName(i.name));
+            });
+            const commonSuffix = reverseString(longestCommonPrefix(names));
+
             for (let f of this.selectedFiles) {
                 if (f.name === '..') {
                     continue;
@@ -233,6 +242,7 @@
                 if (pair != null) {
                     sname = simplifyFastqName(f.name);
                 }
+                sname = sname.replace(commonSuffix, '');
                 let sfiles: any = [{R1: f.location}];
                 if (pair != null) {
                     sfiles = [{R1: f.location, R2: pair.location}];

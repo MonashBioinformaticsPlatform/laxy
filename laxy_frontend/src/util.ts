@@ -41,3 +41,12 @@ export function browserLocale() {
         ? navigator.languages[0]
         : (navigator.language || (navigator as any).userLanguage);
 }
+
+export function reverseString(str: string): string {
+    return str.split('').reverse().join('');
+}
+
+// https://stackoverflow.com/a/3561711
+export function escapeRegExp(str: string) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+}
