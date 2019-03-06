@@ -451,7 +451,7 @@
             }
         }
 
-        get userId(): string {
+        get userId(): string | null {
             return this.$store.getters.userId;
         }
 

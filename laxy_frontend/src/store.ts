@@ -68,8 +68,11 @@ export const Store = new Vuex.Store({
             is_authenticated: state => {
                 return !!state.user_profile;
             },
-            userId: (state): string => {
-                return state.user_profile.id;
+            userId: (state): string | null => {
+                if (state.user_profile) {
+                    return state.user_profile.id;
+                }
+                return null;
             },
             samples: state => {
                 return state.samples;
