@@ -26,7 +26,7 @@ fs  # PyFilesystem
 sentry-sdk==0.6.8
 
 # Base Django packages
-django==2.1.6
+django==2.1.7
 django-reversion
 django-cors-headers
 django-extensions
