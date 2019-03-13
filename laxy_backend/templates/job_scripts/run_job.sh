@@ -79,6 +79,7 @@ else
     CPUS=2
 fi
 
+# TODO: A blocking alternative to srun is using sbatch --wait
 readonly SRUN_OPTIONS="--cpus-per-task=${CPUS} \
                        --mem=${MEM} \
                        -t 1-0:00 \
@@ -187,7 +188,7 @@ function init_conda_env() {
 
     # Conda activate misbehaves if nounset and errexit are set
     # https://github.com/conda/conda/issues/3200
-    # set +o nounset
+    set +o nounset
 
     source "${CONDA_BASE}/etc/profile.d/conda.sh"
 
@@ -208,7 +209,7 @@ function init_conda_env() {
         conda create --yes -m -n "${env_name}" || return 1
 
         # Install an up-to-date curl and GNU parallel
-        conda install --yes -n "${env_name}" curl aria2 parallel jq awscli || return 1
+        conda install --yes -n "${env_name}" curl parallel jq awscli || return 1
         "${pip}" install oneliner || return 1
 
         # Then install rnasik
@@ -219,6 +220,10 @@ function init_conda_env() {
 
         # Add mash for contamination screening
         conda install --yes -n "${env_name}" mash || return 1
+
+        # The version of libssl.so is old for the bioconda aria2c package
+        # so we need to install it last with an explicit openssl version for it to work
+        conda install --yes -n "${env_name}" aria2 "openssl=1.0.2p=h14c3975_1002" || return 1
     fi
 
     # We shouldn't need to do this .. but it seems required for _some_ environments (ie M3)
@@ -234,7 +239,7 @@ function init_conda_env() {
     # version of curl (>7.55)
     send_event "JOB_INFO" "Successfully activated conda environment (${env_name})."
 
-    # set -o nounset
+    set -o nounset
 }
 
 function update_laxydl() {
