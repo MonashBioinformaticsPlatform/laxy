@@ -6,15 +6,19 @@ import requests
 from requests.exceptions import HTTPError
 import csv
 from lxml import etree
+import xmltodict
 import pandas
 from django.db import transaction
+from cache_memoize import cache_memoize
 import enasearch
 
 from .models import File, FileSet
 
 # from .models import User
 from django.contrib.auth import get_user_model
+
 User = get_user_model()
+
 
 # def parse_fastq_table_flatten(table: str) -> Dict[str, Dict]:
 #     """
@@ -256,7 +260,8 @@ def get_fastq_urls(accessions: List[str], fields: List[str] = None) -> Dict[str,
     """
 
     if fields is None:
-        fields = ['run_accession', 'experiment_accession', 'study_accession', 'sample_accession',
+        fields = ['run_accession', 'experiment_accession', 'study_accession',
+                  'sample_accession', 'secondary_sample_accession',
                   'instrument_platform', 'library_strategy', 'read_count',
                   'fastq_ftp', 'fastq_md5', 'fastq_bytes']
 
@@ -288,7 +293,8 @@ def get_run_table(accessions: List[str], fields: List[str] = None) -> Dict[str, 
 
     if fields is None:
         fields = ['run_accession', 'experiment_accession', 'study_accession',
-                  'sample_accession', 'instrument_platform', 'instrument_model',
+                  'sample_accession', 'secondary_sample_accession',
+                  'instrument_platform', 'instrument_model',
                   'library_strategy', 'library_source', 'library_layout',
                   'library_selection', 'library_name', 'broker_name',
                   'study_alias', 'experiment_alias', 'sample_alias',
@@ -307,9 +313,32 @@ def get_run_table(accessions: List[str], fields: List[str] = None) -> Dict[str, 
     # [{'R1': 'ftp://bla_1.fastq.gz'}, {'R2': 'ftp://bla_2.fastq.gz'}]
     for run, metadata in runs_dict.items():
         if metadata.get('fastq_ftp', False):
-            metadata['fastq_ftp'] = [{'R%s' % str(n+1): url}
+            metadata['fastq_ftp'] = [{'R%s' % str(n + 1): url}
                                      for n, url in enumerate(metadata['fastq_ftp'])]
     return runs_dict
+
+
+@cache_memoize(timeout=24*60*60)
+def get_organism_from_sample_accession(accession: str) -> Dict:
+    """
+    :param accession:
+    :type accession:
+    :return:
+    :rtype:
+    """
+    url = (f'https://www.ebi.ac.uk/ena/data/warehouse/search?' +
+           f'query="sample_accession={accession}"' +
+           f'&result=sample&display=xml')
+    resp = requests.get(url)
+    resp.raise_for_status()
+    xml = etree.fromstring(resp.content)
+    # organism = xml.xpath("//SAMPLE_NAME/SCIENTIFIC_NAME/text()")[0]
+    # taxon_id = xml.xpath("//SAMPLE_NAME/TAXON_ID/text()")[0]
+    sample_name_el = xml.xpath("//SAMPLE_NAME")[0]
+    raw_organism_info = dict(xmltodict.parse(etree.tostring(sample_name_el))['SAMPLE_NAME'])
+    # Make keys lowercase
+    organism_info = {k.lower(): v for k, v in raw_organism_info.items()}
+    return organism_info
 
 
 def search_ena_accessions(accessions: List[str]):

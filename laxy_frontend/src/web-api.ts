@@ -162,6 +162,11 @@ export class WebAPI {
         return await this.fetcher.get(url);
     }
 
+    public static async enaSpeciesInfo(accession: string): Promise<AxiosResponse> {
+        const url = `/api/v1/ena/species/${accession}`;
+        return await this.fetcher.get(url);
+    }
+
     public static async remoteFilesList(url: string): Promise<AxiosResponse> {
         try {
             const api_url = `/api/v1/remote-browse/?url=${url}`;

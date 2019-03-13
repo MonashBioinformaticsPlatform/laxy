@@ -269,6 +269,8 @@
         // }
 
         async submitUrl(url: string) {
+            url = url.trim();
+            this.url = url;
             this.initialUrl = url;
             await this.listLinks(url);
         }

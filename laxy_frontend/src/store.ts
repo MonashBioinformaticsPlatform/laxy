@@ -24,6 +24,7 @@ export const SET_SAMPLES_ID = 'set_samples_id';
 export const SET_PIPELINE_PARAMS = 'set_pipeline_params';
 export const SET_PIPELINE_PARAMS_VALID = 'set_pipeline_params_valid';
 export const SET_PIPELINE_DESCRIPTION = 'set_pipeline_description';
+export const SET_PIPELINE_GENOME = 'set_pipeline_genome';
 export const SET_JOBS = 'set_jobs';
 export const SET_FILESET = 'set_fileset';
 export const SET_VIEWED_JOB = 'set_viewed_job';
@@ -179,6 +180,9 @@ export const Store = new Vuex.Store({
             },
             [SET_PIPELINE_DESCRIPTION](state, txt: any) {
                 state.pipelineParams.description = txt;
+            },
+            [SET_PIPELINE_GENOME](state, genome_id: any) {
+                state.pipelineParams.genome = genome_id;
             },
             [SET_JOBS](state, jobs: JobsPage) {
                 state.jobs = jobs;

@@ -500,6 +500,47 @@ class ENAFastqUrlQueryView(JSONView):
         return Response({}, status=status.HTTP_400_BAD_REQUEST)
 
 
+class ENASpeciesLookupView(APIView):
+    renderer_classes = (JSONRenderer,)
+    serializer_class = SchemalessJsonResponseSerializer
+    api_docs_visible_to = 'public'
+    # permission_classes = (AllowAny,)
+
+    @view_config(response_serializer=SchemalessJsonResponseSerializer)
+    def get(self, request, accession: str, version=None):
+        """
+        Queries ENA with a sample accession and returns the species information.
+
+        Response example:
+        ```json
+         {
+          "taxon_id":"10090",
+          "scientific_name":"Mus musculus",
+          "common_name":"house mouse"
+         }
+        ```
+
+        <!--
+        :param accession: An ENA sample accession (eg SAMN07548382)
+        :type accession: str
+        :param request:
+        :type request:
+        :param version:
+        :type version:
+        :return:
+        :rtype:
+        -->
+        """
+
+        try:
+            ena_result = ena.get_organism_from_sample_accession(accession)
+            return Response(ena_result, status=status.HTTP_200_OK)
+        except IndexError as ex:
+            return Response({}, status=status.HTTP_404_NOT_FOUND)
+        except HTTPError as ex:
+            raise ex
+
+
 class FileCreate(JSONView):
     queryset = File.objects.all()
     serializer_class = FileSerializer

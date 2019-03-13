@@ -18,7 +18,7 @@
                                id="genome_organism"
                                :required="true"
                                v-model="selected_genome_organism"
-                                @change="onOrganismChange">
+                               @change="onOrganismChange">
                         <md-option v-for="organism in genome_organism_list"
                                    :key="organism"
                                    :value="organism">
@@ -116,7 +116,7 @@
     import {
         SET_SAMPLES,
         SET_PIPELINE_PARAMS,
-        SET_PIPELINE_DESCRIPTION, SET_PIPELINE_PARAMS_VALID, CLEAR_SAMPLE_CART
+        SET_PIPELINE_DESCRIPTION, SET_PIPELINE_PARAMS_VALID, CLEAR_SAMPLE_CART, SET_PIPELINE_GENOME
     } from "../store";
 
     import {Sample, SampleCartItems} from "../model";
@@ -156,8 +156,20 @@
 
         public reference_genome_valid: boolean = true;
 
-        public selected_genome_organism: string = get(find(AVAILABLE_GENOMES,
-            {'id': this.$store.state.pipelineParams.genome}), 'organism', 'Homo sapiens');
+        /* we keep a component local _selected_genome_organism when *setting*, but always
+           pull the value from the Vuex store (since the org/centre/release genome identifier
+           determines the current _selected_genome_organism, and pipelineParams.genome in the
+           store may be set from other places [eg automatically via the ENA search form]).
+         */
+        _selected_genome_organism: string = 'Homo sapiens';
+        get selected_genome_organism(): string {
+            return get(find(AVAILABLE_GENOMES,
+                {'id': this.$store.state.pipelineParams.genome}), 'organism', 'Homo sapiens');
+        }
+
+        set selected_genome_organism(organism: string) {
+            this._selected_genome_organism = organism;
+        }
 
         public pipeline_versions = ['1.5.3', '1.5.2'];
 
@@ -182,9 +194,9 @@
         }
 
         set reference_genome(id: string) {
-            let state = Object.assign({}, this.$store.state.pipelineParams);
-            state.genome = id;
-            this.$store.commit(SET_PIPELINE_PARAMS, state);
+            // let state = Object.assign({}, this.$store.state.pipelineParams);
+            // state.genome = id;
+            this.$store.commit(SET_PIPELINE_GENOME, id);
             this.validatePipelineParams();
         }
 

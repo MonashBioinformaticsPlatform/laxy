@@ -126,6 +126,8 @@
     // import "vue-material/dist/vue-material.css";
 
     import get from "lodash-es/get";
+    import find from "lodash-es/find";
+    import last from "lodash-es/last";
     import uniq from "lodash-es/uniq";
     import compact from "lodash-es/compact";
 
@@ -149,8 +151,10 @@
 
     import ENASearchAboutBox from "./ENASearchAboutBox";
     import {Sample} from "../../model";
-    import {ADD_SAMPLES} from "../../store";
+    import {ADD_SAMPLES, SET_PIPELINE_GENOME} from "../../store";
     import {WebAPI} from "../../web-api";
+
+    import AVAILABLE_GENOMES from "../../config/genomics/genomes";
 
     import {ENADummySampleList as _dummysampleList} from "../../test-data";
     import {Snackbar} from "../../snackbar";
@@ -256,7 +260,7 @@
             }
         }
 
-        addToCart() {
+        async addToCart() {
             // TODO: this.selectedSamples needs to be transformed from an array
             // of ENASample[] to an array of Sample[], mapping 'fastq_ftp' to 'files',
             // 'sample_accession' to 'name'.
@@ -284,6 +288,18 @@
                     metadata: {condition: "", ena: ena},
                 } as Sample);
             }
+
+            const last_sample = last(cart_samples);
+            if (last_sample && get(last_sample, 'metadata.ena.sample_accession')) {
+                const species_resp =
+                    await WebAPI.enaSpeciesInfo(last_sample.metadata.ena.sample_accession);
+                const organism = get(species_resp.data, 'scientific_name');
+                const genome_id = get(find(AVAILABLE_GENOMES,
+                    {'organism': organism}),
+                    'id', AVAILABLE_GENOMES[0].id);
+                this.$store.commit(SET_PIPELINE_GENOME, genome_id);
+            }
+
             this.$store.commit(ADD_SAMPLES, cart_samples);
             let count = this.selectedSamples.length;
             Snackbar.flashMessage(`Added ${count} ${pluralize("sample", count)} to cart.`);
