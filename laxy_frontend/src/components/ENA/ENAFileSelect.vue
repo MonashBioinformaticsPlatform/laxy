@@ -290,9 +290,10 @@
             }
 
             const last_sample = last(cart_samples);
-            if (last_sample && get(last_sample, 'metadata.ena.sample_accession')) {
+            const last_sample_accession = get(last_sample, 'metadata.ena.sample_accession', undefined);
+            if (last_sample && last_sample_accession) {
                 const species_resp =
-                    await WebAPI.enaSpeciesInfo(last_sample.metadata.ena.sample_accession);
+                    await WebAPI.enaSpeciesInfo(last_sample_accession);
                 const organism = get(species_resp.data, 'scientific_name');
                 const genome_id = get(find(AVAILABLE_GENOMES,
                     {'organism': organism}),
