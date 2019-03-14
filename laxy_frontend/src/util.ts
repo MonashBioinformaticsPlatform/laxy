@@ -50,3 +50,7 @@ export function reverseString(str: string): string {
 export function escapeRegExp(str: string) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
 }
+
+export function basename(path: string): string | undefined {
+    return path.split(/[\\/]/).pop();
+}

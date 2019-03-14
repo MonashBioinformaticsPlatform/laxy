@@ -22,6 +22,7 @@
         </md-dialog>
 
         <ExpiryDialog ref="expiryInfoDialog" :job="job"></ExpiryDialog>
+        <DownloadHelpDialog ref="downloadHelpDialog" :tarballUrl="tarballUrl"></DownloadHelpDialog>
 
         <md-toolbar v-if="job && jobExpiresSoon && showTopBanner"
                     @click.native.stop="openDialog('expiryInfoDialog')"
@@ -224,7 +225,16 @@
                         <md-layout v-show="showTab === 'output'">
                             <md-layout v-if="jobIsDone" md-flex="100">
                                 <md-whiteframe class="pad-32 fill-width">
-                                    <h3>Download all job files <span v-if="job.params.tarball_size">(~ {{ (job.params.tarball_size / 1000000).toFixed(1) }} Mb)</span></h3>
+                                    <div>
+                                        <h3 style="display: inline; float: left; margin-top:-8px;">Download all job files <span v-if="job.params.tarball_size">(~ {{ (job.params.tarball_size / 1000000).toFixed(1) }} Mb)</span>
+                                        </h3>
+                                        <md-button id="helpButton"
+                                                   @click="openDialog('downloadHelpDialog')"
+                                                   class="push-right md-icon-button md-raised md-dense"
+                                                   style="display: inline;">
+                                            <md-icon style="color: #bdbdbd;">help</md-icon>
+                                        </md-button>
+                                    </div>
                                     <DownloadJobFilesTable :url="tarballUrl"
                                                            :filename="jobId + '.tar.gz'"
                                                            @flash-message="flashSnackBarEvent">
@@ -364,9 +374,11 @@
     import AVAILABLE_GENOMES from "../config/genomics/genomes";
     import GenericPip from "./GenericPip.vue";
     import DownloadJobFilesTable from "./DownloadJobFilesTable.vue";
+    import DownloadHelpDialog from "./Dialogs/DownloadHelpDialog.vue";
 
     @Component({
         components: {
+            DownloadHelpDialog,
             GenericPip,
             SharingLinkList,
             FileLinkPip,
