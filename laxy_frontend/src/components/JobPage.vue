@@ -698,6 +698,7 @@
             try {
                 this.refreshing = true;
                 await WebAPI.cancelJob(this.jobId);
+                await this.refresh();
                 this.refreshing = false;
                 Snackbar.flashMessage("Job cancelled.");
             } catch (error) {

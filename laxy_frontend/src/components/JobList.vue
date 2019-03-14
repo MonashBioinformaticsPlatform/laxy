@@ -242,6 +242,7 @@
             try {
                 this.submitting = true;
                 await WebAPI.cancelJob(id);
+                await this.refresh(null);
                 this.submitting = false;
                 Snackbar.flashMessage(`Job ${id} cancelled.`);
             } catch (error) {
