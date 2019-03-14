@@ -1,4 +1,5 @@
 from typing import List
+import backoff
 
 import xmlrpc
 from pyaria2 import PyAria2, AriaServerSettings
@@ -99,9 +100,14 @@ def stop_all():
     __aria2daemon__ = None
 
 
+@backoff.on_exception(backoff.expo,
+                      (ConnectionRefusedError,),
+                      max_tries=8,
+                      jitter=backoff.full_jitter)
 def log_status():
     aria = get_daemon()
     statuses = aria.tellActive() + aria.tellWaiting(0, 999) + aria.tellStopped(0, 999)
+
     for dl in statuses:
         options = aria.getOption(dl['gid'])
         url = dl["files"][0]["uris"][0]["uri"]

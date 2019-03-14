@@ -24,8 +24,7 @@ def _generate_secret_key_file(filepath=None):
 def get_secret_key(filepath=None):
     """
     We will always get a secret key, one way or another. Either find
-    a cached key, generate a cached key, or just generate a non-cached key,
-    sessions be damned.
+    a cached key, generate a cached key, or just generate a non-cached key.
 
     :param filepath:
     :type filepath:
