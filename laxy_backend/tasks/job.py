@@ -131,20 +131,27 @@ def start_job(self, task_data=None, **kwargs):
                          mode=0o600)
             with cd(working_dir):
                 with shell_env(**environment):
-                    if job.compute_resource.queue_type == 'slurm':
-                        result = run(f"sbatch --parsable "
-                                     f'--job-name="laxy:{job_id}" '
-                                     f"--output output/run_job.out "
-                                     f"{job_script_path} "
-                                     f" >>slurm.jids")
-                        remote_id = run(str("head -1 slurm.jids"))
-                    # if job.compute_resource.queue_type == 'local':
-                    else:
-                        result = run(f"nohup bash -l -c '"
-                                     f"{job_script_path} & "
-                                     f"echo $! >>job.pids"
-                                     f"' >output/run_job.out")
-                        remote_id = run(str("head -1 job.pids"))
+                    # NOTE: We can't sbatch the run_job.sh script due to
+                    #       the local aria2c RPC daemon launched by laxydl
+                    #       In the future, we may have a DataTransferHost where
+                    #       the data staging steps run, then we could launch
+                    #       run_job.sh via sbatch.
+                    # if job.compute_resource.queue_type == 'slurm':
+                    #     result = run(f"sbatch --parsable "
+                    #                  f'--job-name="laxy:{job_id}" '
+                    #                  f"--output output/run_job.out "
+                    #                  f"{job_script_path} "
+                    #                  f" >>slurm.jids")
+                    #     remote_id = run(str("head -1 slurm.jids"))
+
+                    # The job script is always run locally on the compute
+                    # node (not sbatched), but will itself send jobs
+                    # to the queue.
+                    result = run(f"nohup bash -l -c '"
+                                 f"{job_script_path} & "
+                                 f"echo $! >>job.pids"
+                                 f"' >output/run_job.out")
+                    remote_id = run(str("head -1 job.pids"))
 
         succeeded = result.succeeded
     except BaseException as e:

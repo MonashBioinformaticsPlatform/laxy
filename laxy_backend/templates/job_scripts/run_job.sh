@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-#SBATCH --cpus-per-task=2
-#SBATCH --mem=4000
 {% if SLURM_ACCOUNT %}
 #SBATCH --account={{ SLURM_ACCOUNT }}
 {% endif %}
@@ -572,6 +570,42 @@ EOM
     fi
 }
 
+function download_input_data() {
+    if [[ "${JOB_INPUT_STAGED}" == "no" ]]; then
+
+        # send_event "INPUT_DATA_DOWNLOAD_STARTED" "Input data download started."
+
+        readonly PARALLEL_DOWNLOADS=8
+        # one URL per line
+        readonly urls=$(get_input_data_urls)
+
+        mkdir -p "${JOB_PATH}/../cache"
+        laxydl download \
+           ${LAXYDL_INSECURE} \
+           -vvv \
+           --cache-path "${DOWNLOAD_CACHE_PATH}" \
+           --no-progress \
+           --untar \
+           --parallel-downloads "${PARALLEL_DOWNLOADS}" \
+           --event-notification-url "${JOB_EVENT_URL}" \
+           --event-notification-auth-file "${AUTH_HEADER_FILE}" \
+           --pipeline-config "${JOB_PATH}/input/pipeline_config.json" \
+           --destination-path "${JOB_PATH}/input"
+
+        DL_EXIT_CODE=$?
+        if [[ $DL_EXIT_CODE != 0 ]]; then
+            send_job_finished $DL_EXIT_CODE
+        fi
+        return $DL_EXIT_CODE
+
+        # send_event "INPUT_DATA_DOWNLOAD_FINISHED" "Input data download completed."
+    fi
+}
+
+function capture_environment_variables() {
+    env >"${JOB_PATH}/output/job_env.out"
+}
+
 #function filter_ena_urls() {
 #    local urls
 #    urls=$(get_input_data_urls)
@@ -617,34 +651,11 @@ add_sik_config
 #### Stage input data ###
 ####
 
-if [[ "${JOB_INPUT_STAGED}" == "no" ]]; then
+download_input_data || exit 1
 
-    # send_event "INPUT_DATA_DOWNLOAD_STARTED" "Input data download started."
+capture_environment_variables
 
-    readonly PARALLEL_DOWNLOADS=8
-    # one URL per line
-    readonly urls=$(get_input_data_urls)
-
-    mkdir -p "${JOB_PATH}/../cache"
-    laxydl download \
-           ${LAXYDL_INSECURE} \
-           -vvv \
-           --cache-path "${DOWNLOAD_CACHE_PATH}" \
-           --no-progress \
-           --untar \
-           --parallel-downloads "${PARALLEL_DOWNLOADS}" \
-           --event-notification-url "${JOB_EVENT_URL}" \
-           --event-notification-auth-file "${AUTH_HEADER_FILE}" \
-           --pipeline-config "${JOB_PATH}/input/pipeline_config.json" \
-           --destination-path "${JOB_PATH}/input" || send_job_finished $?
-
-    # send_event "INPUT_DATA_DOWNLOAD_FINISHED" "Input data download completed."
-
-fi
-
-cd output
-
-env >job_env.out
+cd "${JOB_PATH}/output"
 
 ####
 #### Job happens in here
