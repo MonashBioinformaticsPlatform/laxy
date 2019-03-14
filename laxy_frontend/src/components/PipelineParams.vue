@@ -148,27 +148,21 @@
         public snackbar_duration: number = 2000;
 
         public pipelinerun_uuid: string | null = null;
-        // public samples: SampleSet = _dummySampleList;
-        // public sampleset_id: string = "3NNIIOt8skAuS1w2ZfgOq";
         public selectedSamples: Array<Sample> = [];
 
         public available_genomes: Array<ReferenceGenome> = AVAILABLE_GENOMES;
 
         public reference_genome_valid: boolean = true;
 
-        /* we keep a component local _selected_genome_organism when *setting*, but always
-           pull the value from the Vuex store (since the org/centre/release genome identifier
-           determines the current _selected_genome_organism, and pipelineParams.genome in the
-           store may be set from other places [eg automatically via the ENA search form]).
-         */
-        _selected_genome_organism: string = 'Homo sapiens';
         get selected_genome_organism(): string {
-            return get(find(AVAILABLE_GENOMES,
-                {'id': this.$store.state.pipelineParams.genome}), 'organism', 'Homo sapiens');
+            return this.get_organism_from_genome_id(this.$store.state.pipelineParams.genome)
+                || 'Homo sapiens';
         }
 
         set selected_genome_organism(organism: string) {
-            this._selected_genome_organism = organism;
+            const id = this.get_first_genome_id_for_organism(organism)
+                || AVAILABLE_GENOMES[0].id;
+            this.$store.commit(SET_PIPELINE_GENOME, id);
         }
 
         public pipeline_versions = ['1.5.3', '1.5.2'];
@@ -229,6 +223,18 @@
             return genomes;
         }
 
+        @Memoize
+        get_organism_from_genome_id(genome_id: string): string | undefined {
+            return get(find(AVAILABLE_GENOMES, {'id': genome_id}), 'organism');
+        }
+
+        @Memoize
+        get_first_genome_id_for_organism(organism: string): string | undefined {
+            return get(find(AVAILABLE_GENOMES,
+                {'organism': organism}), 'id');
+        }
+
+        @Memoize
         get_genome_description(reference: ReferenceGenome): string {
             const [org, centre, build] = reference.id.split('/');
             // return `${build} [${centre}] (${reference.organism})`;

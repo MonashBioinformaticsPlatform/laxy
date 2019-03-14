@@ -13,6 +13,8 @@ import {ComputeJob, LaxyFile, Sample, SampleCartItems} from './model';
 import {WebAPI} from './web-api';
 import {vueAuth, AuthOptions} from './auth';
 
+import AVAILABLE_GENOMES from "./config/genomics/genomes";
+
 export const SET_ONLINE_STATUS = 'set_online_status';
 export const SET_BACKEND_VERSION = 'set_backend_version';
 export const AUTHENTICATE_USER = 'authenticate_user';
@@ -52,7 +54,7 @@ export const Store = new Vuex.Store({
             user_profile: null as any,
             samples: new SampleCartItems(),
             pipelineParams: {
-                genome: 'Homo_sapiens/Ensembl/GRCh38',
+                genome: AVAILABLE_GENOMES[0].id,
                 description: '',
                 pipeline_version: '1.5.3',
             },
