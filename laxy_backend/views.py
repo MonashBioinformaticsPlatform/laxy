@@ -2069,9 +2069,12 @@ class JobEventLogCreate(EventLogCreate):
             except Job.DoesNotExist:
                 return Response(status=status.HTTP_404_NOT_FOUND)
 
-        return super(JobEventLogCreate, self).post(request,
-                                                   version=version,
-                                                   subject_obj=job)
+        if job.owner == request.user or request.user.is_superuser:
+            return super(JobEventLogCreate, self).post(request,
+                                                       version=version,
+                                                       subject_obj=job)
+
+        return Response(status=status.HTTP_403_FORBIDDEN)
 
 
 class AccessTokenView(JSONView, GetMixin, DeleteMixin):
