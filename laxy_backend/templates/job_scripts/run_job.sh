@@ -77,8 +77,9 @@ else
     CPUS=2
 fi
 
-# TODO: A blocking alternative to srun is using sbatch --wait
-readonly SRUN_OPTIONS="--cpus-per-task=${CPUS} \
+# We use sbatch --wait --wrap rather than srun, since it seems more reliable
+# and jobs appear pending on the queue immediately
+readonly SLURM_OPTIONS="--cpus-per-task=${CPUS} \
                        --mem=${MEM} \
                        -t 1-0:00 \
                        --ntasks-per-node=1 \
@@ -88,9 +89,11 @@ readonly SRUN_OPTIONS="--cpus-per-task=${CPUS} \
                        {% endif %}
                        --job-name=laxy:${JOB_ID}"
 
-PREFIX_JOB_CMD=""
+# For default QUEUE_TYPE=='local'
+PREFIX_JOB_CMD="/usr/bin/env bash -l -c "
+
 if [[ "${QUEUE_TYPE}" == "slurm" ]]; then
-    PREFIX_JOB_CMD="srun ${SRUN_OPTIONS} "
+    PREFIX_JOB_CMD="sbatch ${SLURM_OPTIONS} --wait --wrap "
 fi
 
 if [[ "${QUEUE_TYPE}" == "local" ]]; then
@@ -697,7 +700,7 @@ while [[ "${EXIT_CODE}" -ne 0 ]] && [[ ${RETRY_COUNT} -le ${MAX_RETRIES} ]]; do
 
     if [[ -z "${PAIRIDS}" ]]; then
         ${PREFIX_JOB_CMD} \
-           RNAsik \
+           "RNAsik \
                -configFile ${JOB_PATH}/input/sik.config \
                -align star \
                -fastaRef ${GENOME_FASTA} \
@@ -707,10 +710,10 @@ while [[ "${EXIT_CODE}" -ne 0 ]] && [[ ${RETRY_COUNT} -le ${MAX_RETRIES} ]]; do
                -gtfFile ${GENOME_GTF} \
                -all \
                -extn ${EXTN} \
-               >>rnasik.out 2>>rnasik.err
+               >>rnasik.out 2>>rnasik.err"
     else
         ${PREFIX_JOB_CMD} \
-           RNAsik \
+           "RNAsik \
                -configFile ${JOB_PATH}/input/sik.config \
                -align star \
                -fastaRef ${GENOME_FASTA} \
@@ -722,7 +725,7 @@ while [[ "${EXIT_CODE}" -ne 0 ]] && [[ ${RETRY_COUNT} -le ${MAX_RETRIES} ]]; do
                -paired \
                -extn ${EXTN} \
                -pairIds ${PAIRIDS} \
-               >>rnasik.out 2>>rnasik.err
+               >>rnasik.out 2>>rnasik.err"
     fi
 
     # Capture the exit code of the important process, to be returned
