@@ -536,8 +536,9 @@ def estimate_job_tarball_size(self, task_data=None, **kwargs):
                     #       f`du -bc --max-depth=0 "{job_path}"` * 0.66 for RNAsik runs,
                     #       stored in job metadata. Or add proper sizes to every File.metdata
                     #       and derive it from a query.
+                    # We run as 'nice' since this is considered low priority
 
-                    result = run(f'tar -czf - --directory "{job_path}" . | wc --bytes')
+                    result = run(f'nice tar -czf - --directory "{job_path}" . | nice wc --bytes')
                     if result.succeeded:
                         tarball_size = int(result.stdout.strip())
                         with transaction.atomic():
