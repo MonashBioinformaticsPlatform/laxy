@@ -40,7 +40,7 @@
         filters: {}
     })
     export default class DownloadHelpDialog extends Vue {
-        @Prop({type: Object})
+        @Prop({type: String})
         tarballUrl: string;
 
         @Prop({default: null, type: String})

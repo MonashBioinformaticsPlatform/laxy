@@ -13,8 +13,8 @@
                 <md-table-body>
                     <md-table-row v-for="file in files" :key="file.id">
                         <md-table-cell>
-                            <div class="no-line-break"><i class="md-caption">{{ file.path | truncate }}</i></div>
-                            <div class="no-line-break" :class="{ strikethrough: file.deleted }">{{ file.name | truncate }}</div>
+                            <div class="no-line-break"><i class="md-caption">{{ file.path | magic_truncate }}</i></div>
+                            <div class="no-line-break" :class="{ strikethrough: file.deleted }">{{ file.name | magic_truncate }}</div>
                         </md-table-cell>
                         <md-table-cell md-numeric v-if="!file.deleted">
                             <!--<div class="push-right">-->

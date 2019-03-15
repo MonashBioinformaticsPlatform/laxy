@@ -92,7 +92,7 @@
         }
 
         .truncate-text {
-            width: 100%;
+            max-width: 90%;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -172,7 +172,7 @@
 
             <span style="flex: 1"></span>
 
-            <h4 v-if="showHeaderMessage">
+            <h4 v-if="showHeaderMessage" class="md-hide-small md-hide-xsmall">
                 <a href="https://github.com/MonashBioinformaticsPlatform/laxy/issues"
                    target="_blank" style="color: white;">Please report issues and suggestions on Github</a> &nbsp;
                 <a href="https://github.com/MonashBioinformaticsPlatform/laxy/issues"

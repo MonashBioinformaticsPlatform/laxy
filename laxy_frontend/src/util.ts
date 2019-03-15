@@ -25,6 +25,20 @@ export function truncateString(str: string,
     }
 }
 
+/*
+* This function truncates a string based on the window width. It's a bit of a fudge since
+* the pixel length of the text will vary based on the font and the character composition
+* for non-fixed fonts, however it tends to work well enough in the case where you want to
+* ensure a string will never be wider that the window and be truncated appropriately.
+*
+* There might be a nice way to do this in CSS, including internal ellipsis so we can see the
+* file extension of truncated filenames, but I haven't found it.
+*/
+export function widthAwareStringTruncate(str: string, factor: number = 0.085) {
+    const charWidth = Math.round(window.innerWidth * factor);
+    return truncateString(str, charWidth);
+}
+
 /**
  * Takes a string, or an array of strings, and turns them into RexExp objects.
  */

@@ -89,7 +89,7 @@
                                         <md-icon v-if="node.meta.tags && node.meta.tags.includes('archive')">
                                             folder_special
                                         </md-icon>
-                                        {{ node.obj.name | truncate }}
+                                        {{ node.obj.name | magic_truncate }}
                                     </div>
                                 </md-table-cell>
                                 <md-table-cell v-if="!hideActions && !node.obj.deleted"
@@ -150,7 +150,7 @@
                                 </md-table-cell>
                                 <md-table-cell @click.native="getProp(node.meta, 'onclick', enterDirectory)(node)">
                                     <div class="no-line-break">
-                                        {{ node.name | truncate }}
+                                        {{ node.name | magic_truncate }}
                                     </div>
                                 </md-table-cell>
                                 <md-table-cell md-numeric

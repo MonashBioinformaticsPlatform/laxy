@@ -64,7 +64,7 @@ import {
     SET_USER_PROFILE,
     Store as store
 } from './store';
-import {truncateString} from './util';
+import {truncateString, widthAwareStringTruncate} from './util';
 
 import InputDataForm from './components/InputFilesForm.vue';
 import SampleCart from './components/SampleCart.vue';
@@ -105,6 +105,7 @@ Vue.filter('deunderscore', function(value: string) {
 });
 
 Vue.filter('truncate', truncateString);
+Vue.filter('magic_truncate', widthAwareStringTruncate);
 
 // The vue-moment docs claim that package adds this filter, but it doesn't
 // seem to be the case. So, we add our own duration filter.
