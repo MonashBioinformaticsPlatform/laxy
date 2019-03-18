@@ -233,8 +233,7 @@
                     // Sadly needs popup whitelisting by the user.
                     this.actionRunning[file.id] = true;
                     Snackbar.flashMessage("Please wait - sometimes sending counts to Degust takes time.", 5000);
-                    const url = `/api/v1/action/send-to/degust/${file.id}/`;
-                    const resp = await WebAPI.fetcher.post(url);
+                    const resp = await WebAPI.sendToDegust(file.id);
                     if (resp.data.status == 200) {
                         window.open(resp.data.redirect);
                     } else {

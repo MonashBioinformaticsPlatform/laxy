@@ -427,5 +427,13 @@ export class WebAPI {
         }
     }
 
-
+    public static async sendToDegust(file_id: string): Promise<AxiosResponse> {
+        try {
+            const url = `/api/v1/action/send-to/degust/${file_id}/`;
+            // const url = `/api/v1/action/send-to/degust/${file_id}/?force_new=1`;  // for testing
+            return await this.fetcher.post(url) as AxiosResponse;
+        } catch (error) {
+            throw error;
+        }
+    }
 }

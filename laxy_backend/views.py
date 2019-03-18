@@ -53,6 +53,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from typing import Dict, List, Union
+import urllib
 from urllib.parse import urlparse
 from wsgiref.util import FileWrapper
 
@@ -504,6 +505,7 @@ class ENASpeciesLookupView(APIView):
     renderer_classes = (JSONRenderer,)
     serializer_class = SchemalessJsonResponseSerializer
     api_docs_visible_to = 'public'
+
     # permission_classes = (AllowAny,)
 
     @view_config(response_serializer=SchemalessJsonResponseSerializer)
@@ -2361,6 +2363,17 @@ class SendFileToDegust(JSONView):
         degust_api_url = 'http://degust.erc.monash.edu'
 
         counts_file: File = self.get_object()
+        job = counts_file.fileset.jobs_as_output.first()
+        sample_set = job.params.get('sample_set', {})
+        samples = sample_set.get('samples', [])
+        conditions = list(set([sample['metadata'].get('condition') for sample in samples]))
+        # {'some_condition': []} dict of empty lists
+        degust_conditions = OrderedDict([(condition, []) for condition in conditions])
+
+        for sample in samples:
+            name = sample['name']
+            condition = sample['metadata'].get('condition')
+            degust_conditions[condition].append(name)
 
         if not counts_file:
             return HttpResponse(status=status.HTTP_404_NOT_FOUND,
@@ -2368,7 +2381,9 @@ class SendFileToDegust(JSONView):
                                        "authorized to access it).")
 
         saved_degust_url = counts_file.metadata.get('degust_url', None)
-        if saved_degust_url:
+        # force_new is mostly for testing, creates a new Degust session overwriting the cached URL in File metadata
+        force_new = request.query_params.get('force_new', False)
+        if saved_degust_url and not force_new:
             data = RedirectResponseSerializer(data={
                 'status': status.HTTP_200_OK,
                 'redirect': saved_degust_url})
@@ -2376,6 +2391,12 @@ class SendFileToDegust(JSONView):
                 return Response(data=data.validated_data,
                                 status=status.HTTP_200_OK)
 
+        # TODO: RoboBrowser is still required since while Degust no longer requires a CSRF token upon upload,
+        #       an 'upload_token' per-user is required:
+        #       https://github.com/drpowell/degust/blob/master/FAQ.md#uploading-a-counts-file-from-the-command-line
+        #       We either need an application level API token for Degust (to create anonymous uploads), or a
+        #       trust relationship (eg proper OAuth2 provider or simple shared Google Account ID) that allows
+        #       Laxy to retrieve the upload token for a user programmatically
         url = f'{degust_api_url}/upload'
         browser = RoboBrowser(history=True, parser='lxml')
         loop = asyncio.new_event_loop()
@@ -2406,16 +2427,43 @@ class SendFileToDegust(JSONView):
             get_form_and_file(url, counts_file.file))
         loop.close()
 
+        # First POST the counts file, get a new Degust session ID
         form['filename'].value = filelike
         browser.submit_form(form)
-        degust_url = browser.url
+        degust_config_url = browser.url.replace('/compare.html?', '/config.html?', 1)
+        degust_id = urllib.parse.parse_qs(urlparse(degust_config_url).query).get('code', [None]).pop()
 
-        counts_file.metadata['degust_url'] = degust_url
+        counts_file.metadata['degust_url'] = degust_config_url
         counts_file.save()
+
+        # Now POST the settings to the Degust session, as per:
+        # https://github.com/drpowell/degust/blob/master/FAQ.md#uploading-a-counts-file-from-the-command-line
+        description = job.params.get('params').get('description', '')
+        replicates = list(degust_conditions.items())
+        init_select = []
+        if len(conditions) >= 2:
+            init_select = conditions[0:2]
+
+        degust_settings = {
+            'csv_format': False,
+            'replicates': replicates,
+            'fc_columns': [],
+            'info_columns': ['Gene.ID', 'Chrom', 'Gene.Name', 'Biotype'],
+            'analyze_server_side': True,
+            'name': f'{description} (Laxy job: {job.id})',
+            # 'primary_name': '',
+            'init_select': init_select,
+            # 'hidden_factor': [],
+            'link_column': 'Gene.ID'
+        }
+
+        degust_settings_url = f'{degust_api_url}/degust/{degust_id}/settings'
+        resp = requests.post(degust_settings_url, files={'settings': (None, json.dumps(degust_settings))})
+        resp.raise_for_status()
 
         data = RedirectResponseSerializer(data={
             'status': browser.response.status_code,
-            'redirect': degust_url})
+            'redirect': degust_config_url})
         if data.is_valid():
             return Response(data=data.validated_data,
                             status=status.HTTP_200_OK)
