@@ -815,7 +815,7 @@
 
         get jobExpiresDaysFromNow(): number {
             // const expiry_time = new Date(this.job.expiry_time);
-            if (this.job) {
+            if (this.job && this.job.expiry_time) {
                 const expiry_time = moment(this.job.expiry_time || undefined);
                 const now = moment();
                 return expiry_time.diff(now, 'days') as number;
