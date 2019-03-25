@@ -60,8 +60,14 @@ from wsgiref.util import FileWrapper
 from drf_openapi.utils import view_config
 
 from laxy_backend.storage.http_remote_index import is_archive_link
-from .permissions import HasReadonlyObjectAccessToken, IsOwner, IsSuperuser, is_owner, \
-    HasAccessTokenForEventLogSubject, token_is_valid, FilesetHasAccessTokenForJob
+from .permissions import (HasReadonlyObjectAccessToken,
+                          IsOwner,
+                          IsSuperuser,
+                          is_owner,
+                          HasAccessTokenForEventLogSubject,
+                          token_is_valid,
+                          FileSetHasAccessTokenForJob,
+                          FileHasAccessTokenForJob)
 from . import bcbio
 from . import ena
 from .tasks.job import (start_job,
@@ -1190,7 +1196,7 @@ class FileSetView(GetMixin,
     queryset = FileSet.objects.all()
     serializer_class = FileSetSerializer
 
-    permission_classes = (IsAuthenticated | FilesetHasAccessTokenForJob,)
+    permission_classes = (IsAuthenticated | FileSetHasAccessTokenForJob,)
 
     # permission_classes = (DjangoObjectPermissions,)
 
@@ -2319,7 +2325,7 @@ class SendFileToDegust(JSONView):
     queryset = File.objects.all()
     serializer_class = FileSerializer
 
-    # permission_classes = (DjangoObjectPermissions,)
+    permission_classes = (IsOwner | IsSuperuser | FileHasAccessTokenForJob,)
 
     # Non-async version
     # @view_config(response_serializer=RedirectResponseSerializer)

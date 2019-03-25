@@ -20,6 +20,7 @@ from django.conf import settings
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.db import models, transaction
+from django.db.models import Q
 from django.core.files.storage import get_storage_class
 from django.core.serializers import serialize
 from django.core.validators import URLValidator
@@ -1190,6 +1191,7 @@ class FileSet(Timestamped, UUIDModel):
         return f
 
     def jobs(self):
+        # return Job.objects.filter(Q(input_files=self.id) | Q(output_files=self.id)).all()
         return self.jobs_as_input.all().union(self.jobs_as_output.all()).all()
 
 

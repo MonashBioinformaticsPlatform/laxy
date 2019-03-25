@@ -16,6 +16,17 @@ def _get_content_types(*models):
 
 
 def token_is_valid(token: str, obj_id: str):
+    """
+    Return True is an access token is valid for the given object (by ID).
+
+    :param token:
+    :type token:
+    :param obj_id:
+    :type obj_id:
+    :return: True if the token is valid for this object
+    :rtype: bool
+    """
+
     return (AccessToken.objects
             .filter(token=token,
                     # content_type__in=self.valid_content_types,
@@ -54,11 +65,22 @@ class HasAccessTokenForEventLogSubject(permissions.BasePermission):
         return False
 
 
-class FilesetHasAccessTokenForJob(permissions.BasePermission):
-    def has_object_permission(self, request, view, obj):
+class FileSetHasAccessTokenForJob(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj: FileSet):
         token = request.query_params.get('access_token', None)
         if token:
-            jobs = Job.objects.filter(Q(input_files=obj) | Q(output_files=obj))
+            jobs = obj.jobs()
+            for job in jobs:
+                if token_is_valid(token, job.id):
+                    return True
+        return False
+
+
+class FileHasAccessTokenForJob(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj: File):
+        token = request.query_params.get('access_token', None)
+        if token:
+            jobs = obj.fileset.jobs()
             for job in jobs:
                 if token_is_valid(token, job.id):
                     return True
@@ -66,7 +88,6 @@ class FilesetHasAccessTokenForJob(permissions.BasePermission):
 
 
 class IsSuperuser(permissions.BasePermission):
-
     def has_object_permission(self, request, view, obj):
         if request.user.is_superuser:
             return True
