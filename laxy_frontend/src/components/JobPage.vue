@@ -37,6 +37,9 @@
                 <md-icon>close</md-icon>
             </md-button>
         </md-toolbar>
+
+        <PopupBlockerBanner :do-test-on-create="false"></PopupBlockerBanner>
+
         <md-layout md-gutter>
             <md-layout md-flex="15" md-hide-medium>
                 <md-list>
@@ -171,6 +174,7 @@
                                        :tag-filters="['degust', 'counts']"
                                        :hide-search="true"
                                        :job-id="jobId"
+                                       @action-error="showErrorDialog"
                                        @refresh-error="showErrorDialog">
                             </file-list>
                             <file-list v-if="jobIsDone"
@@ -349,6 +353,7 @@
         Mutation,
         namespace
     } from "vuex-class";
+    import { State2Way } from 'vuex-class-state2way'
 
     import {NotImplementedError} from "../exceptions";
     import {ComputeJob, LaxyFile, SampleCartItems} from "../model";
@@ -362,7 +367,14 @@
         cssColorVars
     } from "../palette";
 
-    import {FETCH_FILESET, FETCH_JOB, SET_PIPELINE_DESCRIPTION, SET_PIPELINE_PARAMS, SET_SAMPLES} from "../store";
+    import {
+        FETCH_FILESET,
+        FETCH_JOB,
+        SET_PIPELINE_DESCRIPTION,
+        SET_PIPELINE_PARAMS,
+        SET_SAMPLES,
+    } from "../store";
+
     import {DummyJobList as _dummyJobList} from "../test-data";
     import JobStatusPip from "./JobStatusPip";
     import FileLinkPip from "./FileLinkPip";
@@ -375,9 +387,11 @@
     import GenericPip from "./GenericPip.vue";
     import DownloadJobFilesTable from "./DownloadJobFilesTable.vue";
     import DownloadHelpDialog from "./Dialogs/DownloadHelpDialog.vue";
+    import PopupBlockerBanner from "./PopupBlockerBanner.vue";
 
     @Component({
         components: {
+            PopupBlockerBanner,
             DownloadHelpDialog,
             GenericPip,
             SharingLinkList,
@@ -394,6 +408,8 @@
         filters: {},
     })
     export default class JobPage extends Vue {
+        $store: any;
+
         _DEBUG: boolean = false;
 
         public job: ComputeJob | null = null;
@@ -425,12 +441,16 @@
             2 * this._days,
             7 * this._days,
             30 * this._days,
-            'Never (∞)']
+            'Never (∞)'];
         public sharing: any = {lifetime: this.access_token_lifetime_options[3]};
 
         public sharingLinks: LaxySharingLink[] = [];
 
         public showTopBanner: boolean = true;
+
+        // get popupsAreBlocked(): boolean {
+        //     return this.$store.state.popupsAreBlocked;
+        // }
 
         public refreshing: boolean = false;
         public error_alert_message: string = "Everything is fine. 🐺";

@@ -83,6 +83,7 @@
     "vue-router-multiguard": "^1.0.3",
     "vue2-filters": "^0.4.1",
     "vuex": "^3.1.0",
-    "vuex-class": "^0.3.1"
+    "vuex-class": "^0.3.1",
+    "vuex-class-state2way": "^1.0.1"
   }
 }

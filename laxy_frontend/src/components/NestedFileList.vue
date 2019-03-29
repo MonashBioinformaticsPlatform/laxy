@@ -209,6 +209,7 @@
     } from "vuex-class";
 
     import {ComputeJob, LaxyFile} from "../model";
+    import {degustLoaderPage} from "../routes";
     import {WebAPI} from "../web-api";
     import {FETCH_FILESET} from "../store";
     import {strToRegex} from "../util";
@@ -487,13 +488,25 @@
                     // to the client to open a new tab.
                     // Sadly needs popup whitelisting by the user.
                     this.actionRunning[file.id] = true;
-                    Snackbar.flashMessage("Please wait - sometimes sending counts to Degust takes time.", 5000);
+                    Snackbar.flashMessage("Sending to Degust (please disable any pop-up blockers)", 5000);
+                    const degustPopup = window.open('', '_blank');
+                    if (degustPopup != null) {
+                        degustPopup.document.write(degustLoaderPage);
+                    } else {
+                        console.log(`Failed to open new tab - pop-up blocker ?`);
+                    }
                     const resp = await WebAPI.sendToDegust(file.id);
                     if (resp.data.status == 200) {
-                        window.open(resp.data.redirect);
+                        // window.open(resp.data.redirect);
+                        if (degustPopup != null) {
+                            degustPopup.location.href = resp.data.redirect;
+                        } else {
+                            this.emitActionError(`Unable to open new tab (maybe your browser is blocking pop-ups ?). Please open: ${resp.data.redirect}`);
+                        }
                     } else {
-                        console.error(`Failed sending to Degust`);
+                        if (degustPopup) degustPopup.close();
                         console.log(resp);
+                        console.error(`Failed to send to Degust - backend error ?`);
                     }
                     this.actionRunning[file.id] = false;
                 }
@@ -507,6 +520,12 @@
             // this.filesetId = _dummyFileSet.id;
             //this.currentLevel = this.fileTree[4];
             this.currentLevel = this.fileTree;
+        }
+
+        // we need this wrapped in a method otherwise the viewMethod.method
+        // doesn't have the correct 'this' context to $emit events.
+        emitActionError(msg: string) {
+            this.$emit('action-error', msg);
         }
 
         getViewMethodsForTags(tags: string[]) {

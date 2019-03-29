@@ -17,6 +17,9 @@ import AVAILABLE_GENOMES from "./config/genomics/genomes";
 
 export const SET_ONLINE_STATUS = 'set_online_status';
 export const SET_BACKEND_VERSION = 'set_backend_version';
+export const SET_POPUPS_ARE_BLOCKED = 'set_popups_are_blocked';
+export const SET_POPUP_BLOCKER_TESTED = 'set_popup_blocker_tested';
+export const SET_POPUP_WARNING_DISMISSED = 'set_popup_warning_dismissed';
 export const AUTHENTICATE_USER = 'authenticate_user';
 export const SET_USER_PROFILE = 'set_user_profile';
 export const ADD_SAMPLES = 'add_samples';
@@ -51,6 +54,9 @@ export const Store = new Vuex.Store({
         state: {
             online: false,
             backend_version: '',
+            popupsAreBlocked: false,
+            popupBlockerTested: false,
+            popupWarningDismissed: false,
             user_profile: null as any,
             samples: new SampleCartItems(),
             pipelineParams: {
@@ -153,6 +159,15 @@ export const Store = new Vuex.Store({
             },
             [SET_BACKEND_VERSION](state, version: string) {
                 state.backend_version = version;
+            },
+            [SET_POPUPS_ARE_BLOCKED](state, blocked: boolean) {
+                state.popupsAreBlocked = blocked;
+            },
+            [SET_POPUP_BLOCKER_TESTED](state, tested: boolean) {
+                state.popupBlockerTested = tested;
+            },
+            [SET_POPUP_WARNING_DISMISSED](state, dismissed: boolean) {
+                state.popupWarningDismissed = dismissed;
             },
             [SET_GLOBAL_SNACKBAR](state, params: any) {
                 state.global_snackbar_message = params.message || null;
