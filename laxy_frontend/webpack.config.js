@@ -1,5 +1,7 @@
 const path = require('path');
 const webpack = require('webpack');
+const UglifyJsPlugin = require("uglifyjs-webpack-plugin");
+const VueLoaderPlugin = require('vue-loader/lib/plugin')
 const WebpackShellPlugin = require('webpack-shell-plugin');
 const Dotenv = require('dotenv-webpack');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
@@ -23,7 +25,8 @@ const plugins = [
         template: 'index.html',
         // favicon: 'assets/favicon.ico',
         hash: true,
-  })
+    }),
+    new VueLoaderPlugin(),
 ];
 
 /*
@@ -39,23 +42,14 @@ module.exports = {
     entry: "./src/index.ts",
     output: {
         path: path.resolve(__dirname, './dist'),
-        filename: process.env.NODE_ENV === 'production' ? "bundle.[hash].js": "bundle.js",
+        filename: process.env.NODE_ENV === 'production' ? "bundle.[hash].js" : "bundle.js",
     },
     module: {
         rules: [
             {
                 test: /\.vue$/,
                 loader: 'vue-loader',
-                options: {
-                    loaders: {
-                        // Since sass-loader (weirdly) has SCSS as its default parse mode, we map
-                        // the "scss" and "sass" values for the lang attribute to the right configs here.
-                        // other preprocessors should work out of the box, no loader config like this necessary.
-                        'scss': 'vue-style-loader!css-loader!sass-loader',
-                        'sass': 'vue-style-loader!css-loader!sass-loader?indentedSyntax',
-                    }
-                    // other vue-loader options go here
-                }
+                options: {},
             },
             {
                 test: /\.tsx?$/,
@@ -76,8 +70,19 @@ module.exports = {
             {
                 test: /\.css$/,
                 // loader: 'style-loader!css-loader',
-                use: ['style-loader', 'css-loader']
+                use: ['vue-style-loader', 'style-loader', 'css-loader']
             },
+            {
+                test: /\.scss$|\.sass$/,
+                use: [
+                    'vue-style-loader',
+                    {
+                        loader: 'css-loader',
+                        options: {modules: true}
+                    },
+                    'sass-loader'
+                ]
+            }
         ]
     },
     resolve: {
@@ -95,6 +100,14 @@ module.exports = {
         hints: false
     },
     devtool: 'inline-source-map',
+    optimization: {
+        minimizer: [
+            new UglifyJsPlugin({
+                sourceMap: true,
+                uglifyOptions: {}
+            })
+        ]
+    },
 };
 
 if (process.env.NYAN === 'true') {
@@ -121,12 +134,6 @@ if (process.env.NODE_ENV === 'production') {
     module.exports.devtool = 'source-map';
     // http://vue-loader.vuejs.org/en/workflow/production.html
     module.exports.plugins = (module.exports.plugins || []).concat([
-        new webpack.optimize.UglifyJsPlugin({
-            sourceMap: true,
-            compress: {
-                warnings: false
-            }
-        }),
         new webpack.LoaderOptionsPlugin({
             minimize: true
         })
