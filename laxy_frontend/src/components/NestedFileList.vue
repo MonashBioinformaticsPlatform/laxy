@@ -391,7 +391,7 @@
 
         onSelect(rows: any) {
             this.$emit("select", rows);
-            // console.log(rows);
+            // console.dir(rows);
         }
 
         // checks / unchecks the mdTableRow checkbox, based on finding the

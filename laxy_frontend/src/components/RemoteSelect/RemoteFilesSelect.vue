@@ -88,6 +88,7 @@
 <script lang="ts">
 
     import map from "lodash-es/map";
+    import filter from "lodash-es/filter";
 
     import "es6-promise";
 
@@ -211,7 +212,7 @@
             // if (fileList) {
             //     this.selectedFiles = fileList.selectedFiles;
             // }
-            this.selectedFiles = rows;
+            this.selectedFiles = filter(rows, {type: 'file'});
         }
 
         remove(rows: LaxyFile[]) {
@@ -229,7 +230,12 @@
             const names: string[] = map(this.selectedFiles, (i) => {
                 return reverseString(simplifyFastqName(i.name));
             });
-            const commonSuffix = reverseString(longestCommonPrefix(names));
+            // console.dir(names);
+            // actually longest common SUFFIX of (simplified) file names, since we reversed names above
+            const lcp = longestCommonPrefix(names);
+            // console.dir(lcp);
+            const commonSuffix = lcp.length > 0 ? reverseString(lcp) : '';
+            // console.dir(commonSuffix);
 
             for (let f of this.selectedFiles) {
                 if (f.name === '..') {
@@ -243,6 +249,7 @@
                     sname = simplifyFastqName(f.name);
                 }
                 sname = sname.replace(commonSuffix, '');
+                if (sname === '') sname = commonSuffix;
                 let sfiles: any = [{R1: f.location}];
                 if (pair != null) {
                     sfiles = [{R1: f.location, R2: pair.location}];

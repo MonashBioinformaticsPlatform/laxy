@@ -165,12 +165,13 @@ export function truncateFastqFilename(filename: string): string {
     return fn;
 }
 
-/* Given a typical FASTQ filename, XXXBLAFOO_R1.fastq.gz, return something like
-   the 'sample name' XXXBLAFOO.
+/* Given a FASTQ filename XXXBLAFOO_R1.fastq.gz, return something like
+   the 'sample name' XXXBLAFOO. Should work with typical naming used by Illumina instrument and SRA/ENA FASTQ files.
  */
 export function simplifyFastqName(filename: string): string {
     let fn = truncateFastqFilename(filename);
-    fn = fn.replace(/_1$|_2$|_R1$|_R2$/, '');
+    // eg remove suffix _L002_R1 or L003_2 or _2, or just _R2
+    fn = fn.replace(/_(R)?[1-2]$|_L[0-9][0-9][0-9]_(R)?[1-2]$/, '');
     return fn;
 }
 
