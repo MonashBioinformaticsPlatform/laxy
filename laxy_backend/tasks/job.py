@@ -654,6 +654,7 @@ def expire_old_job(self, task_data=None, **kwargs):
 
     # Use modified_time instead ?
     old_files = job.get_files().filter(created_time__lt=datetime.now() - timedelta(seconds=ttl)).all()
+    message = "No message."
     try:
         count = 0
         for f in old_files:
