@@ -3,10 +3,13 @@ from collections import OrderedDict
 
 import json
 import shlex
+
+import backoff
 import coreapi
 import coreschema
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
+from django.shortcuts import redirect
 from fnmatch import fnmatch
 import logging
 import os
@@ -48,7 +51,7 @@ from rest_framework.filters import BaseFilterBackend
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
-from rest_framework.renderers import JSONRenderer, BaseRenderer
+from rest_framework.renderers import JSONRenderer, BaseRenderer, TemplateHTMLRenderer
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -672,6 +675,10 @@ class FileContentDownload(StreamFileMixin,
 
     # permission_classes = (DjangoObjectPermissions,)
 
+    @backoff.on_exception(backoff.expo,
+                          (Exception,),
+                          max_tries=2,
+                          jitter=backoff.full_jitter)
     @view_config(response_serializer=FileSerializer)
     def get(self, request: Request, uuid=None, filename=None, version=None):
         """

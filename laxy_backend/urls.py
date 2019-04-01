@@ -224,7 +224,6 @@ api_urls = [
             AccessTokenListView.as_view(),
             name='list_accesstokens'),
 
-
     re_path(r'action/send-to/degust/(?P<file_id>[a-zA-Z0-9\-_]+)/$',
             SendFileToDegust.as_view(),
             name='send_to_degust'),
