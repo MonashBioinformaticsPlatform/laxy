@@ -57,6 +57,7 @@ default_env = PrefixedEnv(
     DEBUG=(bool, False),
     SECRET_KEY=(str, None),
     VERSION=(str, ''),
+    ENV=(str, ''),
     ADMIN_EMAIL=(str, None),
     ADMIN_USERNAME=(str, None),
     AWS_ACCESS_KEY_ID=(str, None),
@@ -136,6 +137,7 @@ def get_git_commit():
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
+ENV = env('ENV')
 
 # Take LAXY_VERSION from env vars, if set, else try to get the git commit, else 'unspecified'
 VERSION = env('VERSION')
@@ -146,9 +148,12 @@ if not VERSION:
 
 SENTRY_DSN = env('SENTRY_DSN')
 if SENTRY_DSN:
+    SENTRY_RELEASE = f'{VERSION}'
+    if ENV:
+        SENTRY_RELEASE = f'{ENV}:{VERSION}'
     sentry_sdk.init(
         dsn=SENTRY_DSN,
-        release=VERSION,
+        release=SENTRY_RELEASE,
         integrations=[DjangoIntegration()]
     )
 
