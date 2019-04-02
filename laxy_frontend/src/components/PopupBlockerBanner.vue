@@ -31,7 +31,8 @@
         Mutation,
         namespace
     } from "vuex-class";
-    import {State2Way} from 'vuex-class-state2way'
+    // import {State2Way} from 'vuex-class-state2way'
+    import { State2Way } from '../vuex/state2way';
 
     import {
         SET_POPUPS_ARE_BLOCKED,

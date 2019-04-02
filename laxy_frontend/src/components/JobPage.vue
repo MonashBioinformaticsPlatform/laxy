@@ -353,7 +353,8 @@
         Mutation,
         namespace
     } from "vuex-class";
-    import { State2Way } from 'vuex-class-state2way'
+    // import { State2Way } from 'vuex-class-state2way'
+    import { State2Way } from '../vuex/state2way';
 
     import {NotImplementedError} from "../exceptions";
     import {ComputeJob, LaxyFile, SampleCartItems} from "../model";
