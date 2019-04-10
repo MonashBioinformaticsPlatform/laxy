@@ -54,7 +54,7 @@ export function hasSharedTagOrEmpty(viewMethodTags: any[], file_type_tags: any[]
 }
 
 export function filterByTag(files: LaxyFile[], tags: string[] | null): LaxyFile[] {
-    if (tags == null || tags.length === 0) {
+    if (tags == null || tags.length === 0 || files == null) {
         return files;
     }
     const tag_filtered: LaxyFile[] = [];
@@ -71,7 +71,7 @@ export function filterByTag(files: LaxyFile[], tags: string[] | null): LaxyFile[
 }
 
 export function filterByRegex(files: LaxyFile[], patterns: RegExp[] | null): LaxyFile[] {
-    if (patterns == null || patterns.length === 0) {
+    if (patterns == null || patterns.length === 0 || files == null) {
         return files;
     }
     const regex_filtered: LaxyFile[] = [];
@@ -90,7 +90,7 @@ export function filterByRegex(files: LaxyFile[], patterns: RegExp[] | null): Lax
 export function filterBy(files: LaxyFile[],
                          query: string | null,
                          map_fn: Function): LaxyFile[] {
-    if (query == null || query.length === 0) {
+    if (query == null || query.length === 0 || files == null) {
         return files;
     }
     const query_filtered: LaxyFile[] = [];
@@ -104,12 +104,26 @@ export function filterBy(files: LaxyFile[],
     return query_filtered;
 }
 
-export function filterByFullPath(files: LaxyFile[], query: string | null): LaxyFile[] {
-    return filterBy(files, query, (f: LaxyFile) => `${f.path}/${f.name}`);
+export function filterByFullPath(files: LaxyFile[], query: string | null, caseSensitive: boolean = true): LaxyFile[] {
+    if (!query || query.length === 0 || files == null) {
+        return files;
+    }
+    if (caseSensitive) {
+        return filterBy(files, query, (f: LaxyFile) => `${f.path}/${f.name}`);
+    } else {
+        return filterBy(files, query.toLowerCase(), (f: LaxyFile) => `${f.path}/${f.name}`.toLowerCase());
+    }
 }
 
-export function filterByFilename(files: LaxyFile[], query: string | null): LaxyFile[] {
-    return filterBy(files, query, (f: LaxyFile) => f.name);
+export function filterByFilename(files: LaxyFile[], query: string | null, caseSensitive: boolean = true): LaxyFile[] {
+    if (!query || query.length === 0 || files == null) {
+        return files;
+    }
+    if (caseSensitive) {
+        return filterBy(files, query, (f: LaxyFile) => f.name);
+    } else {
+        return filterBy(files, query.toLowerCase(), (f: LaxyFile) => f.name.toLowerCase());
+    }
 }
 
 export function viewFile(file_id: string | LaxyFile,
