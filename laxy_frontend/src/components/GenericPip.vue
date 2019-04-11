@@ -1,5 +1,5 @@
 <template>
-    <md-card md-with-hover
+    <md-card :md-with-hover="hover"
              @click.native.stop="onClicked"
              :class="'md-' + cardClass"
              :style="!cardClass ? cssStripe(getThemeColor(stripeColor), 'left', 4): ''">
@@ -65,6 +65,9 @@
 
         @Prop({type: String, default: ''})
         public cardClass: '' | 'primary' | 'accent' | 'warn';
+
+        @Prop({type: Boolean, default: true})
+        public hover: boolean;
 
         cssStripe = cssStripe;
         getThemeColor = getThemeColor;

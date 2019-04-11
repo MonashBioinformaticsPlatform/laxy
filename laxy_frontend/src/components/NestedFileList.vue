@@ -209,7 +209,6 @@
     } from "vuex-class";
 
     import {ComputeJob, LaxyFile} from "../model";
-    import {degustLoaderPage} from "../routes";
     import {WebAPI} from "../web-api";
     import {FETCH_FILESET} from "../store";
     import {strToRegex} from "../util";
@@ -274,7 +273,7 @@
         @Prop({default: true})
         public autoSelectPair: boolean;
 
-        @Prop({default: 3, type: Number})
+        @Prop({default: 2, type: Number})
         public minQueryLength: number;
 
         @Prop(String)
@@ -302,26 +301,27 @@
 
         public currentLevel: TreeNode<LaxyFile> | null = null;
 
-        @Debounce(1000)
+        @Debounce(600)
         get searchFilteredNodes(): Array<TreeNode<LaxyFile>> {
-            const query = this.searchQuery.trim();
-
+            this.searching = true;
             const nodes = flattenTree(this.fileTree.children);
 
-            if (!query || query.length === 0) return nodes;
+            if (!this.searchQuery || this.searchQuery.trim().length === 0) return nodes;
+            const query = this.searchQuery.trim().toLowerCase();
 
             const hits: Array<TreeNode<LaxyFile>> = filter(nodes,
                 (node: TreeNode<LaxyFile>) => {
                     if (node.obj) {
-                        return `${node.obj.name}/${node.obj.name}`.includes(query);
+                        return `${node.obj.name}/${node.obj.name}`.toLowerCase().includes(query);
                         // TODO: Make globbing work, or look at vuex-search
                         // return minimatch(`${node.obj.name}/${node.obj.name}`, query);
                     } else {
-                        return node.name.includes(query);
+                        return node.name.toLowerCase().includes(query);
                         // TODO: Make globbing work, or look at vuex-search
                         // return minimatch(node.name, query);
                     }
                 });
+            this.searching = false;
             return hits;
         }
 
@@ -330,9 +330,7 @@
                 let nodes = this.currentLevel.children;
                 const query = this.searchQuery.trim();
                 if (query.length >= this.minQueryLength) {
-                    this.searching = true;
                     nodes = this.searchFilteredNodes;
-                    this.searching = false;
                 }
                 return sortBy(nodes,
                     [
@@ -468,47 +466,7 @@
                 icon: "dashboard",
                 tags: ["counts", "degust"],
                 method: async (file: LaxyFile) => {
-                    // This won't work clientside due to CSRF tokens and Cross-Origin rules
-                    // (Degust could provide a proper API and get friendly with
-                    //  it's CORS config / headers to fix this)
-                    //
-                    // const url = 'http://degust.erc.monash.edu/upload'
-                    // const file = this.$store.getters.fileById(this.fileset, file_id);
-                    // const get_file_resp: AxiosResponse = await WebAPI.fetcher.get(
-                    //     WebAPI.downloadFileByIdUrl(file_id));
-                    // const file_content = get_file_resp.data;
-                    // let form = new FormData();
-                    // form.append('filename', file_content, 'counts.txt');
-                    // const resp = await axios.post(url, form,
-                    //     { headers: { 'Content-Type': 'multipart/form-data' } });
-                    // window.open(resp.url);
-
-                    // We POST the counts file to Degust serverside, then
-                    // return the resulting '?code=' URL from Degust back
-                    // to the client to open a new tab.
-                    // Sadly needs popup whitelisting by the user.
-                    this.actionRunning[file.id] = true;
-                    Snackbar.flashMessage("Sending to Degust (please disable any pop-up blockers)", 5000);
-                    const degustPopup = window.open('', '_blank');
-                    if (degustPopup != null) {
-                        degustPopup.document.write(degustLoaderPage);
-                    } else {
-                        console.log(`Failed to open new tab - pop-up blocker ?`);
-                    }
-                    const resp = await WebAPI.sendToDegust(file.id);
-                    if (resp.data.status == 200) {
-                        // window.open(resp.data.redirect);
-                        if (degustPopup != null) {
-                            degustPopup.location.href = resp.data.redirect;
-                        } else {
-                            this.emitActionError(`Unable to open new tab (maybe your browser is blocking pop-ups ?). Please open: ${resp.data.redirect}`);
-                        }
-                    } else {
-                        if (degustPopup) degustPopup.close();
-                        console.log(resp);
-                        console.error(`Failed to send to Degust - backend error ?`);
-                    }
-                    this.actionRunning[file.id] = false;
+                    window.open(WebAPI.getExternalAppRedirectUrl('degust', file.id), '_blank');
                 }
             },
         ];

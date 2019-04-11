@@ -8,8 +8,7 @@
                    md-close-to="#add_menu_button" ref="cancel_job_dialog">
             <md-dialog-title>Cancel job</md-dialog-title>
 
-            <md-dialog-content>Are you sure ?
-            </md-dialog-content>
+            <md-dialog-content>Are you sure ?</md-dialog-content>
 
             <md-dialog-actions>
                 <md-button class="md-primary"
@@ -24,21 +23,15 @@
         <ExpiryDialog ref="expiryInfoDialog" :job="job"></ExpiryDialog>
         <DownloadHelpDialog ref="downloadHelpDialog" :tarballUrl="tarballUrl"></DownloadHelpDialog>
 
-        <md-toolbar v-if="job && jobExpiresSoon && showTopBanner"
-                    @click.native.stop="openDialog('expiryInfoDialog')"
-                    class="shadow"
-                    :class="{'md-warn': jobExpiresSoon && !job.expired, 'md-transparent': !jobExpiresSoon, 'md-accent': job.expired}">
-            <span style="flex: 1"></span>
-            <h4 v-if="!job.expired">Job expires {{ jobExpiresSoon ? 'in less than 7 days': '' }} on &nbsp;{{
-                job.expiry_time }}</h4>
-            <h4 v-if="job.expired">Job has expired - large files are no longer available</h4>
-            <span style="flex: 1"></span>
-            <md-button class="md-icon-button" @click.stop="() => { showTopBanner = false }">
-                <md-icon>close</md-icon>
-            </md-button>
-        </md-toolbar>
+        <banner-notice v-if="job && jobExpiresSoon && showTopBanner"
+                       @click="openDialog('expiryInfoDialog')"
+                       :type="jobExpiresSoon && !job.expired ? 'warning': (job.expired ? 'error': 'clear')">
+            <span v-if="!job.expired">Job expires {{ jobExpiresSoon ? 'in less than 7 days': '' }} on &nbsp;{{
+                job.expiry_time }}</span>
+            <span v-if="job.expired">Job has expired - large files are no longer available</span>
+        </banner-notice>
 
-        <PopupBlockerBanner :do-test-on-create="false"></PopupBlockerBanner>
+        <!-- <PopupBlockerBanner :do-test-on-create="false"></PopupBlockerBanner> -->
 
         <md-layout md-gutter>
             <md-layout md-flex="15" md-hide-medium>
@@ -88,6 +81,30 @@
                                      stripeColor="primary" icon="list" buttonIcon="" buttonText="">
                             <span slot="title">MultiQC report</span>
                             <span slot="subtitle">Open in new tab</span>
+                        </generic-pip>
+                    </md-layout>
+
+                    <md-layout v-if="hasDegustCounts" md-flex="25" md-flex-medium="100">
+                        <generic-pip @click.stop.native=""
+                                     :hover="false"
+                                     :style="`background-color: ${cssColorVars['--primary-light']}`"
+                                     class="fill-width"
+                                     stripeColor="primary" icon="dashboard" buttonIcon="" buttonText="">
+                            <span slot="title">Send to Degust</span>
+                            <span slot="subtitle">See the "Count files" section below for other options.</span>
+                            <template slot="content" style="list-style-type: none;">
+                                <span v-for="countsFile in filterByTag(outputFiles, ['degust'])">
+                                    <template v-if="countsFile">
+                                        <md-button
+                                                class="md-dense"
+                                                @click="openDegustLink(countsFile.id)"
+                                                target="_blank">
+                                            {{ _rnaSikcountsFileNiceDescription(countsFile.name) }}
+                                            <md-tooltip>{{ countsFile.name }}</md-tooltip>
+                                        </md-button>
+                                    </template>
+                                </span>
+                            </template>
                         </generic-pip>
                     </md-layout>
 
@@ -230,7 +247,8 @@
                             <md-layout v-if="jobIsDone" md-flex="100">
                                 <md-whiteframe class="pad-32 fill-width">
                                     <div>
-                                        <h3 style="display: inline; float: left; margin-top:-8px;">Download all job files <span v-if="job.params.tarball_size">(~ {{ (job.params.tarball_size / 1000000).toFixed(1) }} Mb)</span>
+                                        <h3 style="display: inline; float: left; margin-top:-8px;">Download all job
+                                            files <span v-if="job.params.tarball_size">(~ {{ (job.params.tarball_size / 1000000).toFixed(1) }} Mb)</span>
                                         </h3>
                                         <md-button id="helpButton"
                                                    @click="openDialog('downloadHelpDialog')"
@@ -354,7 +372,7 @@
         namespace
     } from "vuex-class";
     // import { State2Way } from 'vuex-class-state2way'
-    import { State2Way } from '../vuex/state2way';
+    import {State2Way} from '../vuex/state2way';
 
     import {NotImplementedError} from "../exceptions";
     import {ComputeJob, LaxyFile, SampleCartItems} from "../model";
@@ -376,6 +394,13 @@
         SET_SAMPLES,
     } from "../store";
 
+    import {
+        filterByTag,
+        filterByRegex,
+        filterByFullPath,
+        filterByFilename,
+    } from "../file-tree-util";
+
     import {DummyJobList as _dummyJobList} from "../test-data";
     import JobStatusPip from "./JobStatusPip";
     import FileLinkPip from "./FileLinkPip";
@@ -389,9 +414,11 @@
     import DownloadJobFilesTable from "./DownloadJobFilesTable.vue";
     import DownloadHelpDialog from "./Dialogs/DownloadHelpDialog.vue";
     import PopupBlockerBanner from "./PopupBlockerBanner.vue";
+    import BannerNotice from "./BannerNotice.vue";
 
     @Component({
         components: {
+            BannerNotice,
             PopupBlockerBanner,
             DownloadHelpDialog,
             GenericPip,
@@ -410,6 +437,9 @@
     })
     export default class JobPage extends Vue {
         $store: any;
+        $refs: any;
+        WebAPI: any = WebAPI;
+        filterByTag: Function = filterByTag;
 
         _DEBUG: boolean = false;
 
@@ -610,6 +640,14 @@
             return this.hasFileTagged("multiqc");
         }
 
+        get hasDegustCounts(): boolean {
+            return this.hasFileTagged("degust");
+        }
+
+        openDegustLink(fileId: string) {
+            window.open(WebAPI.getExternalAppRedirectUrl('degust', fileId), '_blank');
+        }
+
         // TODO: This may be better shifted to a dedicated JobParamsCard rather than including it as a row in
         // the generic JobStatusCard
         get genomeDescription(): string | null {
@@ -622,6 +660,16 @@
                 return `${build} (${organism})`;
             }
             return null;
+        }
+
+        _rnaSikcountsFileNiceDescription(filename: string): string {
+            let data: any = {strandedness: '', geneSet: ''};
+            if (filename.includes('NonStranded')) data.strandedness = 'non-stranded';
+            if (filename.includes('Forward')) data.strandedness = 'forward-stranded';
+            if (filename.includes('Reverse')) data.strandedness = 'reverse-stranded';
+            if (filename.includes('proteinCoding')) data.geneSet = 'Protein coding';
+            if (!filename.includes('proteinCoding')) data.geneSet = 'All genes';
+            return `${data.geneSet} (${data.strandedness})`;
         }
 
         get jobParamRows() {

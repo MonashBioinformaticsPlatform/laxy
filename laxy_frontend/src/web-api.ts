@@ -436,4 +436,8 @@ export class WebAPI {
             throw error;
         }
     }
+
+    public static getExternalAppRedirectUrl(appName: string, objectId: string) {
+        return `${this.apiSettings.frontendUrl}/#/redirect-external/${appName}/${objectId}`;
+    }
 }

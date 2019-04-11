@@ -1,14 +1,10 @@
 <template>
-    <md-toolbar v-if="popupsAreBlocked && !popupWarningDismissed"
-                class="shadow"
-                :class="{'md-warn': true}">
-        <span style="flex: 1"></span>
-        <h4>Please enable pop-ups for this site</h4>
-        <span style="flex: 1"></span>
-        <md-button class="md-icon-button" @click.stop="() => { popupWarningDismissed = true }">
-            <md-icon>close</md-icon>
-        </md-button>
-    </md-toolbar>
+    <banner-notice v-if="popupsAreBlocked && !popupWarningDismissed"
+                   @click="() => { popupWarningDismissed = true }"
+                   class="shadow"
+                   type="warning">
+        Please enable pop-ups for this site
+    </banner-notice>
 </template>
 
 <script lang="ts">
@@ -39,9 +35,10 @@
         SET_POPUP_BLOCKER_TESTED,
         SET_POPUP_WARNING_DISMISSED
     } from "../store";
+    import BannerNotice from "./BannerNotice.vue";
 
     @Component({
-        components: {},
+        components: {BannerNotice},
         filters: {}
     })
     export default class PopupBlockerBanner extends Vue {
