@@ -91,7 +91,7 @@
                                      class="fill-width"
                                      stripeColor="primary" icon="dashboard" buttonIcon="" buttonText="">
                             <span slot="title">Send to Degust</span>
-                            <span slot="subtitle">See the "Count files" section below for other options.</span>
+                            <span slot="subtitle">Library appears {{ _strandednessGuess }}. See the "Count files" section below for other options.</span>
                             <template slot="content" style="list-style-type: none;">
                                 <span v-for="countsFile in filterByTag(outputFiles, ['degust'])">
                                     <template v-if="countsFile">
@@ -99,7 +99,7 @@
                                                 class="md-dense"
                                                 @click="openDegustLink(countsFile.id)"
                                                 target="_blank">
-                                            {{ _rnaSikcountsFileNiceDescription(countsFile.name) }}
+                                            {{ _countsFileInfo(countsFile.name).featureSet }}
                                             <md-tooltip>{{ countsFile.name }}</md-tooltip>
                                         </md-button>
                                     </template>
@@ -188,7 +188,7 @@
                                        ref="count-files"
                                        title="Count files"
                                        :fileset-id="job.output_fileset_id"
-                                       :tag-filters="['degust', 'counts']"
+                                       :tag-filters="['degust', 'counts', 'strand-info']"
                                        :hide-search="true"
                                        :job-id="jobId"
                                        @action-error="showErrorDialog"
@@ -662,14 +662,26 @@
             return null;
         }
 
-        _rnaSikcountsFileNiceDescription(filename: string): string {
-            let data: any = {strandedness: '', geneSet: ''};
+        _countsFileInfo(filename: string): {strandedness: string, featureSet: string} {
+            let data: {strandedness: string, featureSet: string} = {strandedness: '', featureSet: ''};
             if (filename.includes('NonStranded')) data.strandedness = 'non-stranded';
             if (filename.includes('Forward')) data.strandedness = 'forward-stranded';
             if (filename.includes('Reverse')) data.strandedness = 'reverse-stranded';
-            if (filename.includes('proteinCoding')) data.geneSet = 'Protein coding';
-            if (!filename.includes('proteinCoding')) data.geneSet = 'All genes';
-            return `${data.geneSet} (${data.strandedness})`;
+            if (filename.includes('proteinCoding')) data.featureSet = 'Protein coding';
+            if (!filename.includes('proteinCoding')) data.featureSet = 'All genes';
+            return data;
+        }
+
+        // TODO: It would be preferable to add something to Job.params (or new field Job.metadata ?)
+        //       via the run_job.sh script to indicate the predicted strandedness and use that instead
+        //       of detecting via filenames present.
+        get _strandednessGuess(): string {
+            let strandedness = 'unknown';
+            const countFiles = filterByTag(this.outputFiles || [], ['degust']);
+            if (countFiles && countFiles.length > 0) {
+                strandedness = this._countsFileInfo(countFiles[0].name).strandedness;
+            }
+            return strandedness;
         }
 
         get jobParamRows() {
