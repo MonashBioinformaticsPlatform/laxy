@@ -28,6 +28,7 @@ import requests
 import backoff
 from toolz.dicttoolz import merge as merge_dicts
 from requests.auth import HTTPBasicAuth
+import magic
 import trio
 import asks
 from attrdict import AttrDict
@@ -399,17 +400,40 @@ def create_copy_from_cache(url: str, target_dir, cache_path, filename=None):
     shutil.copyfile(cached, os.path.join(target_dir, filename))
 
 
+def is_zipfile(fpath: str) -> bool:
+    return magic.from_file(fpath, mime=True) == 'application/zip'
+
+
+def is_tarfile(fpath: str) -> bool:
+    return tarfile.is_tarfile(fpath)
+
+
 def untar(cached, target_dir, extract_files: Union[List[str], None] = None):
     if extract_files is None:
         extract_files = []
 
-    if tarfile.is_tarfile(cached):
+    if is_tarfile(cached):
         cmd = ['tar', 'xvf', cached, '-C', target_dir]
         cmd.extend(extract_files)
         result = subprocess.run(cmd)
         result.check_returncode()
     else:
         raise ValueError(f"{cached} is not a tar file")
+
+    return result
+
+
+def unzip(cached, target_dir, extract_files: Union[List[str], None] = None):
+    if extract_files is None:
+        extract_files = []
+
+    if is_zipfile(cached):
+        cmd = ['unzip', '-n', '-d', target_dir, cached]
+        cmd.extend(extract_files)
+        result = subprocess.run(cmd)
+        result.check_returncode()
+    else:
+        raise ValueError(f"{cached} is not a zip file")
 
     return result
 

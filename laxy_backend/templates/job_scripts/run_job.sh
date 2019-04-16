@@ -592,7 +592,7 @@ function download_input_data() {
            -vvv \
            --cache-path "${DOWNLOAD_CACHE_PATH}" \
            --no-progress \
-           --untar \
+           --unpack \
            --parallel-downloads "${PARALLEL_DOWNLOADS}" \
            --event-notification-url "${JOB_EVENT_URL}" \
            --event-notification-auth-file "${AUTH_HEADER_FILE}" \

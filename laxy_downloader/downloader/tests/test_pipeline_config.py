@@ -22,3 +22,5 @@ class PipelineConfigTest(TestCase):
                               'ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR596/005/SRR5963435/SRR5963435_2.fastq.gz'],
                              urls)
 
+if __name__ == '__main__':
+    unittest.main()

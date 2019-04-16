@@ -15,7 +15,10 @@ from .downloader import (get_default_cache_path,
                          parse_pipeline_config,
                          get_urls_from_pipeline_config,
                          download_concurrent,
+                         is_tarfile,
+                         is_zipfile,
                          untar,
+                         unzip,
                          find_filename_and_size_from_url,
                          get_url_cached_path,
                          create_symlink_to_cache,
@@ -51,8 +54,8 @@ def add_commandline_args(parser: argparse.ArgumentParser) -> argparse.ArgumentPa
                            help="Path to a pipeline_config.json file from Laxy. You must provide this if URLs aren't "
                                 "specified on the commandline",
                            type=argparse.FileType('r'))
-    dl_parser.add_argument("--untar",
-                           help="Untar any tar archives to --destination-path",
+    dl_parser.add_argument("--unpack", "--untar",
+                           help="Unpack any tar or archives to --destination-path",
                            action="store_true")
     dl_parser.add_argument("--parallel-downloads",
                            help="The maximum number of files to download concurrently.",
@@ -214,14 +217,17 @@ def _run_download_cli(args, rpc_secret):
             for url in urls:
                 cached = get_url_cached_path(url, args.cache_path)
                 filename, _ = find_filename_and_size_from_url(url)
-                if is_tar_url_with_fragment(url) and tarfile.is_tarfile(cached) and args.untar:
+                if is_tar_url_with_fragment(url) and is_tarfile(cached) and args.unpack:
                     # TODO: It's probably more efficient to group all URLs for the same tar file
                     # and extract all #fragment files from their archive at once. But this works for now.
                     logger.info(f"Untarring file from {cached} ({url})")
                     untar_from_url_fragment(cached, args.destination_path, url)
-                elif tarfile.is_tarfile(cached) and args.untar:
+                elif is_tarfile(cached) and args.unpack:
                     logger.info(f"Untarring {cached} ({url})")
                     untar(cached, args.destination_path)
+                elif is_zipfile(cached) and args.unpack:
+                    logger.info(f"Unzipping {cached} ({url})")
+                    unzip(cached, args.destination_path)
                 elif args.copy_from_cache:
                     logger.info(
                         f"Copying {cached} -> "
