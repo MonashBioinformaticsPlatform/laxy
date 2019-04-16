@@ -91,7 +91,7 @@
                                      class="fill-width"
                                      stripeColor="primary" icon="dashboard" buttonIcon="" buttonText="">
                             <span slot="title">Send to Degust</span>
-                            <span slot="subtitle">Library appears {{ _strandednessGuess }}. See the "Count files" section below for other options.</span>
+                            <span slot="subtitle">This library appears to be {{ _strandednessGuess }}. See the "Count files" section below for other options.</span>
                             <template slot="content" style="list-style-type: none;">
                                 <span v-for="countsFile in filterByTag(outputFiles, ['degust'])">
                                     <template v-if="countsFile">
