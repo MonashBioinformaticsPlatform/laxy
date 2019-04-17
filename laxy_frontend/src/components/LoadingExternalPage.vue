@@ -43,6 +43,14 @@
             },
         };
 
+        get access_token(): string | undefined {
+            let token = this.$route.query.access_token;
+            if (token != null) {
+                return token.toString();
+            }
+            return undefined;
+        }
+
         public async created() {
             const app = this.appMethods[this.appName];
             if (!app) {
@@ -57,7 +65,7 @@
         }
 
         public async redirectToDegust(fileId: string) {
-            const response = await WebAPI.sendToDegust(fileId);
+            const response = await WebAPI.sendToDegust(fileId, this.access_token);
             if (response.data.status == 200) {
                 window.location.href = response.data.redirect;
             } else {

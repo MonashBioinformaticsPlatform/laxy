@@ -645,7 +645,7 @@
         }
 
         openDegustLink(fileId: string) {
-            window.open(WebAPI.getExternalAppRedirectUrl('degust', fileId), '_blank');
+            window.open(WebAPI.getExternalAppRedirectUrl('degust', fileId, this.access_token), '_blank');
         }
 
         // TODO: This may be better shifted to a dedicated JobParamsCard rather than including it as a row in
@@ -697,8 +697,16 @@
             return rows;
         }
 
+        get access_token(): string | undefined {
+            let token = this.$route.query.access_token;
+            if (token != null) {
+                return token.toString();
+            }
+            return undefined;
+        }
+
         get tarballUrl(): string {
-            let access_token = undefined;
+            let access_token = this.access_token;
             if (this.bannerSharingLink) {
                 access_token = this.bannerSharingLink.token;
             }
@@ -726,7 +734,7 @@
 
                 await this.$store.dispatch(FETCH_JOB, {
                     job_id: this.jobId,
-                    access_token: this.$route.query.access_token
+                    access_token: this.access_token
                 });
                 this.job = this.$store.state.currentViewedJob;
                 if (this.job) {

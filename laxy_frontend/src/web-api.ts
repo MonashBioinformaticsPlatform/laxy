@@ -427,9 +427,12 @@ export class WebAPI {
         }
     }
 
-    public static async sendToDegust(file_id: string): Promise<AxiosResponse> {
+    public static async sendToDegust(file_id: string, access_token?: string ): Promise<AxiosResponse> {
         try {
-            const url = `/api/v1/action/send-to/degust/${file_id}/`;
+            let url = `/api/v1/action/send-to/degust/${file_id}/`;
+            if (access_token) {
+                url = `${url}?access_token=${access_token}`;
+            }
             // const url = `/api/v1/action/send-to/degust/${file_id}/?force_new=1`;  // for testing
             return await this.fetcher.post(url) as AxiosResponse;
         } catch (error) {
@@ -437,7 +440,11 @@ export class WebAPI {
         }
     }
 
-    public static getExternalAppRedirectUrl(appName: string, objectId: string) {
-        return `${this.apiSettings.frontendUrl}/#/redirect-external/${appName}/${objectId}`;
+    public static getExternalAppRedirectUrl(appName: string, objectId: string, access_token?: string) {
+        let url = `${this.apiSettings.frontendUrl}/#/redirect-external/${appName}/${objectId}`;
+        if (access_token) {
+            url = `${url}?access_token=${access_token}`;
+        }
+        return url;
     }
 }
