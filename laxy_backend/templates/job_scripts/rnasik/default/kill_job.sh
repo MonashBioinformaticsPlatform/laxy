@@ -16,7 +16,7 @@ readonly JOB_EVENT_URL="{{ JOB_EVENT_URL }}"
 readonly JOB_PATH=${PWD}
 readonly AUTH_HEADER_FILE="${JOB_PATH}/.private_request_headers"
 readonly IGNORE_SELF_SIGNED_CERTIFICATE="{{ IGNORE_SELF_SIGNED_CERTIFICATE }}"
-readonly SCHEDULER="{{ SCHEDULER }}"
+# readonly QUEUE_TYPE="{{ QUEUE_TYPE }}"
 
 readonly LOCAL_JOB_PIDS="${JOB_PATH}/job.pids"
 readonly SLURM_JOB_IDS="${JOB_PATH}/slurm.jids"

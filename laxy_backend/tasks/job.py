@@ -1,7 +1,7 @@
 import fnmatch
 import traceback
 from django.db import transaction
-from typing import Sequence
+from typing import Sequence, Union
 from datetime import datetime, timedelta
 from pathlib import Path
 import logging
@@ -18,7 +18,8 @@ from django.conf import settings
 
 from celery.result import AsyncResult
 from django.contrib.contenttypes.models import ContentType
-from django.template.loader import get_template, render_to_string
+from django.template import TemplateDoesNotExist
+from django.template.loader import get_template, render_to_string, select_template
 from celery.utils.log import get_task_logger
 from celery import shared_task
 from celery import Celery, states, chain, group
@@ -67,6 +68,22 @@ def _init_fabric_env():
     return env
 
 
+def get_template_files(must_contain='/job_scripts/'):
+    from django.conf import settings
+    from django.template.loaders.app_directories import get_app_template_dirs
+    import os
+
+    template_dir_list = list(get_app_template_dirs('templates'))
+
+    template_list = []
+    for template_dir in (template_dir_list + settings.TEMPLATES[0]['DIRS']):
+        for base_dir, dirnames, filenames in os.walk(template_dir):
+            for filename in filenames:
+                template_list.append(os.path.join(base_dir, filename))
+
+    return [p for p in template_list if must_contain in p]
+
+
 @shared_task(bind=True, track_started=True)
 def start_job(self, task_data=None, **kwargs):
     from ..models import Job
@@ -90,16 +107,56 @@ def start_job(self, task_data=None, **kwargs):
     private_key = job.compute_resource.private_key
     remote_username = job.compute_resource.extra.get('username', None)
 
+    pipeline_name = job.params.get('pipeline')
+    pipeline_version = job.params.get('params', {}).get('pipeline_version', 'default')
+
+    def find_job_file(script: str) -> Union[str, None]:
+        base = f'job_scripts/{pipeline_name}'
+        options = [f'{base}/{pipeline_version}/{script}',
+                   f'{base}/default/{script}']
+        try:
+            template = select_template(options)
+            return template.origin.name
+        except TemplateDoesNotExist:
+            logger.warning(f"Unable to find job template file in: {str(options)}")
+            return None
+
+        # for fpath in options:
+        #     # if os.path.exists(fpath):
+        #     #    return fpath
+        #     try:
+        #         template = get_template(fpath)
+        #     except TemplateDoesNotExist:
+        #         continue
+
+        # raise IOError(f"Unable to find job template file: {script}")
+
     job_script_template_vars = dict(environment)
-    job_script_template_vars['JOB_AUTH_HEADER'] = job_auth_header
-    job_script = BytesIO(render_to_string('job_scripts/run_job.sh',
-                                          context=job_script_template_vars)
-                         .encode('utf-8'))
-    kill_script = BytesIO(render_to_string('job_scripts/kill_job.sh',
-                                           context=job_script_template_vars)
-                          .encode('utf-8'))
-    curl_headers = BytesIO(b"%s\n" % job_auth_header.encode('utf-8'))
+
+    def template_filelike(fpath):
+        return BytesIO(
+            render_to_string(fpath, context=job_script_template_vars).encode('utf-8'))
+
     config_json = BytesIO(json.dumps(job.params).encode('utf-8'))
+    job_script_template_vars['JOB_AUTH_HEADER'] = job_auth_header
+    curl_headers = BytesIO(b"%s\n" % job_auth_header.encode('utf-8'))
+
+    # TODO: This should be refactored to just grab EVERY file recursively in job_scripts/{pipeline_name}/default/,
+    #       then overwriting / overriding with any files in job_scripts/{pipeline_name}/{pipeline_version}.
+    #       Treat every file as it as a template (or maybe only if it has a .j2 extension ?), and copy it
+    #       to the equivalent relative path on the compute node (eg input/ and output/).
+    #       Possibly using the get_template_files() function. But things might be easier at this point if
+    #       we just ignored the Django template system and just worked with os.walk and the laxy_backend/templates path.
+    job_script = template_filelike(find_job_file('input/run_job.sh'))
+    kill_script = template_filelike(find_job_file('kill_job.sh'))
+
+    # From: conda list --explicit >conda_environment_explicit.txt
+    conda_env_template = find_job_file('input/conda_environment_explicit.txt')
+    if not conda_env_template:
+        # From: conda env export >../conda_environment.yml
+        find_job_file('input/conda_environment.yml')
+
+    conda_env = template_filelike(find_job_file('input/conda_environment.yml'))
 
     remote_id = None
     message = "Failure, without exception."
@@ -115,6 +172,7 @@ def start_job(self, task_data=None, **kwargs):
             output_dir = join(working_dir, 'output')
             job_script_path = join(input_dir, 'run_job.sh')
             kill_script_path = join(working_dir, 'kill_job.sh')
+            conda_env_path = join(input_dir, 'conda_environment.yml')
             for d in [working_dir, input_dir, output_dir]:
                 result = run(f'mkdir -p {d} && chmod 700 {d}')
             result = put(job_script,
@@ -123,6 +181,9 @@ def start_job(self, task_data=None, **kwargs):
             result = put(kill_script,
                          kill_script_path,
                          mode=0o700)
+            result = put(conda_env,
+                         conda_env_path,
+                         mode=0o600)
             result = put(curl_headers,
                          join(working_dir, '.private_request_headers'),
                          mode=0o600)
@@ -498,7 +559,6 @@ def kill_remote_job(self, task_data=None, **kwargs):
 
 @shared_task(bind=True, track_started=True)
 def estimate_job_tarball_size(self, task_data=None, **kwargs):
-
     if task_data is None:
         raise InvalidTaskError("task_data is None")
 

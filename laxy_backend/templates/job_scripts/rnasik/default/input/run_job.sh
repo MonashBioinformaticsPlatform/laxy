@@ -185,7 +185,7 @@ function init_conda_env() {
     # By convention, we name our Conda environments after {pipeline}-{version}
     # Each new pipeline version has it's own Conda env
     local env_name="${1}-${2}"
-    local pip="${CONDA_BASE}/bin/pip"
+    local pip="${CONDA_BASE}/envs/${env_name}/bin/pip"
 
     # Conda activate misbehaves if nounset and errexit are set
     # https://github.com/conda/conda/issues/3200
@@ -194,37 +194,19 @@ function init_conda_env() {
     source "${CONDA_BASE}/etc/profile.d/conda.sh"
 
     if [[ ! -d "${CONDA_BASE}/envs/${env_name}" ]]; then
-
         # First we update conda itself
         conda update --yes -n base conda || return 1
 
-        conda install --yes -n base "pip>=19.0.2" || return 1
+        # Create an empty environment
+        # conda create --yes -m -n "${env_name}" || return 1
 
-        # Add required channels
-        conda config --add channels serine/label/dev \
-                                       --add channels serine \
-                                       --add channels bioconda \
-                                       --add channels conda-forge || return 1
-
-        # Create a base environment
-        conda create --yes -m -n "${env_name}" || return 1
-
-        # Install an up-to-date curl and GNU parallel
-        conda install --yes -n "${env_name}" curl parallel jq awscli || return 1
-        "${pip}" install oneliner || return 1
-
-        # Then install rnasik
-        conda install --yes -n "${env_name}" rnasik=${2} || return 1
-
-        # Environment takes a very long time to solve if qualimap is included initially
-        conda install --yes -n "${env_name}" qualimap || return 1
-
-        # Add mash for contamination screening
-        conda install --yes -n "${env_name}" mash || return 1
-
-        # The version of libssl.so is old for the bioconda aria2c package
-        # so we need to install it last with an explicit openssl version for it to work
-        conda install --yes -n "${env_name}" aria2 "openssl=1.0.2p=h14c3975_1002" || return 1
+        if [[ -f "${JOB_PATH}/input/conda_environment_explicit.txt" ]]; then
+            # Create environment with explicit dependencies
+            conda create --name "${env_name}" --file "${JOB_PATH}/input/conda_environment_explicit.txt"
+        else
+            # Create from an environment (yml) file
+            conda env create --name "${env_name}" --file "${JOB_PATH}/input/conda_environment.yml" || return 1
+        fi
     fi
 
     # We shouldn't need to do this .. but it seems required for _some_ environments (ie M3)
@@ -234,7 +216,9 @@ function init_conda_env() {
     # source "${CONDA_BASE}/bin/activate" "${CONDA_BASE}/envs/${env_name}"
     conda activate "${CONDA_BASE}/envs/${env_name}" || return 1
 
-    conda env export >"${JOB_PATH}/input/conda_environment.yml" || return 1
+    # Capture environment files if they weren't provided
+    [[ ! -f "${JOB_PATH}/input/conda_environment.yml" ]] || conda env export >"${JOB_PATH}/input/conda_environment.yml" || return 1
+    [[ ! -f "${JOB_PATH}/input/conda_environment_explicit.txt" ]] || conda list --explicit >"${JOB_PATH}/input/conda_environment_explicit.txt" || return 1
 
     # We can't use send_event BEFORE the env is activated since we rely on a recent
     # version of curl (>7.55)
@@ -246,8 +230,10 @@ function init_conda_env() {
 function update_laxydl() {
      # Requires conda environment to be activated first
      # local pip="${CONDA_BASE}/bin/pip"
+     # CONDA_PREFIX is set when the conda environment is activated
+     local pip="${CONDA_PREFIX}/bin/pip"
      # "${pip}" install -U --process-dependency-links "git+https://github.com/MonashBioinformaticsPlatform/laxy#egg=laxy_downloader&subdirectory=laxy_downloader"
-     pip install -U "laxy_downloader @ git+https://github.com/MonashBioinformaticsPlatform/laxy#egg=laxy_downloader&subdirectory=laxy_downloader"
+     ${pip} install -U "laxy_downloader @ git+https://github.com/MonashBioinformaticsPlatform/laxy#egg=laxy_downloader&subdirectory=laxy_downloader"
 }
 
 function get_reference_data_aws() {
@@ -764,5 +750,7 @@ send_job_finished "${EXIT_CODE}"
 
 # Extra security: Remove the access token now that we don't need it anymore
 if [[ ${DEBUG} != "yes" ]]; then
+  # TODO: Maybe this should be a trap statement near the top of the script eg:
+  # trap "rm -f ${AUTH_HEADER_FILE}" EXIT
   rm "${AUTH_HEADER_FILE}"
 fi
