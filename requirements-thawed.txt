@@ -22,6 +22,7 @@ enasearch
 attrdict
 robobrowser
 python-magic
+urllib3>=1.24.2
 Jinja2>=2.10.1
 fs  # PyFilesystem
 sentry-sdk==0.6.8
