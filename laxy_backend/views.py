@@ -17,6 +17,9 @@ import pydash
 
 from paramiko import SSHClient
 from paramiko import RSAKey, AutoAddPolicy
+
+from laxy_backend.scraping import render_page, parse_cloudstor_links, parse_simple_index_links, is_apache_index_page, \
+    parse_cloudstor_webdav
 from . import paramiko_monkeypatch
 
 from toolz import merge as merge_dicts
@@ -57,12 +60,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from typing import Dict, List, Union
 import urllib
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 from wsgiref.util import FileWrapper
 
 from drf_openapi.utils import view_config
 
-from laxy_backend.storage.http_remote_index import is_archive_link
+from laxy_backend.storage.http_remote import is_archive_link, _check_content_size_and_resolve_redirects
 from .permissions import (HasReadonlyObjectAccessToken,
                           IsOwner,
                           IsSuperuser,
@@ -117,13 +120,23 @@ from .util import (sh_bool,
                    generate_uuid,
                    multikeysort,
                    get_content_type)
-from .storage import http_remote_index
+from .storage import http_remote
 from .view_mixins import (JSONView, GetMixin, PatchMixin,
                           DeleteMixin, PostMixin, CSVTextParser,
                           PutMixin, RowsCSVTextParser, etag_headers, JSONPatchMixin)
 
 # from .models import User
 from django.contrib.auth import get_user_model
+
+# This is a mapping of 'matchers' to link parsing functions.
+# The matchers can be simple strings, which are tested as a substring of the URL,
+# or a function like matcher(url, page_text). The matcher function returns True or False.
+LINK_SCRAPER_MAPPINGS = [
+    ('://cloudstor.aarnet.edu.au/plus/s/', parse_cloudstor_webdav),
+    # ('://cloudstor.aarnet.edu.au/plus/s/', parse_cloudstor_links),
+    (is_apache_index_page, parse_simple_index_links),
+    ('://', parse_simple_index_links),
+]
 
 User = get_user_model()
 
@@ -681,10 +694,6 @@ class FileContentDownload(StreamFileMixin,
 
     # permission_classes = (DjangoObjectPermissions,)
 
-    @backoff.on_exception(backoff.expo,
-                          (Exception,),
-                          max_tries=2,
-                          jitter=backoff.full_jitter)
     @view_config(response_serializer=FileSerializer)
     def get(self, request: Request, uuid=None, filename=None, version=None):
         """
@@ -1342,6 +1351,9 @@ class SampleSetCreate(SampleSetCreateUpdate):
 
         For two samples (R1, R2 paired end) split across two lanes, using
         File UUIDs:
+
+        *TODO*: Change this to files: [{R1: {location: "http://foo/bla.txt", name: "bla.txt}] form
+        shaped like a subset of models.File fields.
 
         ```json
         {
@@ -2159,6 +2171,11 @@ class AccessTokenCreate(JSONView):
         return is_owner(user, target_obj)
 
     def post(self, request: Request, version=None):
+        """
+        Generate a time-limited access token for a specific object.
+        Can be used like `?access_token={the_token}` in certain URLs to provide
+        read-only access.
+        """
         serializer = self.get_serializer(data=request.data,
                                          context={'request': request})
         if serializer.is_valid():
@@ -2387,6 +2404,23 @@ class SendFileToDegust(JSONView):
 
     @view_config(response_serializer=RedirectResponseSerializer)
     def post(self, request: Request, file_id: str, version=None):
+        """
+        Sends the File specified by `file_id` to the Degust web app (http://degust.erc.monash.edu).
+        The file should be a compatible counts matrix (eg TSV).
+        Creates a new Degust session if the file hasn't been send before, or returns the URL to the existing
+        session if it has.
+
+        Response:
+
+        The HTTP status code returned by Degust, and if successful the URL to the Degust session.
+
+        ```json
+        {
+          "status": 200
+          "redirect": "http://degust.erc.monash.edu/degust/config.html?code=abfa3b7a2b726bfadcf3076f6feb3ecd"
+         }
+        ```
+        """
         degust_api_url = 'http://degust.erc.monash.edu'
 
         counts_file: File = self.get_object()
@@ -2458,7 +2492,7 @@ class SendFileToDegust(JSONView):
         form['filename'].value = filelike
         browser.submit_form(form)
         degust_config_url = browser.url.replace('/compare.html?', '/config.html?', 1)
-        degust_id = urllib.parse.parse_qs(urlparse(degust_config_url).query).get('code', [None]).pop()
+        degust_id = parse_qs(urlparse(degust_config_url).query).get('code', [None]).pop()
 
         counts_file.metadata['degust_url'] = degust_config_url
         counts_file.save()
@@ -2577,7 +2611,9 @@ class RemoteBrowseView(JSONView):
             resp = requests.head(url)
             resp.raise_for_status()
         except BaseException as exx:
-            return JsonResponse({'remote_server_response': {'response': resp.status_code, 'reason': resp.reason}},
+            return JsonResponse({'remote_server_response': {'url': url,
+                                                            'status': resp.status_code,
+                                                            'reason': resp.reason}},
                                 # TODO: When frontend interprets this better, use status 400 and let the frontend
                                 #       report third-party response from the JSON blob
                                 # status=status.HTTP_400_BAD_REQUEST,
@@ -2587,7 +2623,7 @@ class RemoteBrowseView(JSONView):
         fn = Path(urlparse(url).path).name
         if is_archive_link(url, use_network=True) or fn.endswith('.manifest-md5'):
             try:
-                archive_files = http_remote_index.get_tar_file_manifest(url)
+                archive_files = http_remote.get_tar_file_manifest(url)
 
                 # Remove .manifest-md5 if present
                 u = urlparse(url)
@@ -2633,27 +2669,28 @@ class RemoteBrowseView(JSONView):
                                 tags=['archive'] if is_archive_link(fn) else [])]
 
         elif scheme == 'http' or scheme == 'https':
+            _url = _check_content_size_and_resolve_redirects(url)
+
             try:
-                file_links, dir_links = http_remote_index.grab_links_from_html_page(url)
+                text = render_page(_url)
             except MemoryError as ex:
                 return HttpResponse(status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, reason=str(ex))
             except ValueError as ex:
                 return HttpResponse(status=status.HTTP_400_BAD_REQUEST, reason=str(ex))
 
-            for i in file_links:
-                name = Path(urlparse(i).path).name
-                if not fnmatch(name, fileglob):
-                    continue
-                listing.append(dict(type='file',
-                                    name=name,
-                                    location=i,
-                                    tags=['archive'] if is_archive_link(name) else []))
-            for i in dir_links:
-                name = Path(urlparse(i).path).name
-                listing.append(dict(type='directory',
-                                    name=name,
-                                    location=f'{i.rstrip("/")}/',
-                                    tags=[]))
+            _matched = False
+            for matcher, link_parser_fn in LINK_SCRAPER_MAPPINGS:
+                if isinstance(matcher, str) and matcher in _url:
+                    _matched = True
+                elif callable(matcher) and matcher(_url, text):
+                    _matched = True
+
+                if _matched:
+                    listing = link_parser_fn(text, _url)
+                    break
+
+            if not _matched:
+                return HttpResponse(status=status.HTTP_400_BAD_REQUEST, reason=f"No parser for this url: {_url}")
 
         # listing = pydash.sort_by(listing, ['type', 'name'])
         listing = multikeysort(listing, ['type', 'name'])

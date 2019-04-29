@@ -91,6 +91,11 @@ services:
       - ./laxy_frontend/dist:/usr/share/nginx/html
       - ./certs:/certs
 
+  splash:
+    command: --disable-lua --disable-browser-caches --max-timeout 300
+    ports:
+      - "8050:8050"
+
   # This method of 'cron-via-docker-restarts' will only work in Swarm mode, due to use of 'deploy'
 #  ssl-certs-restart-daily:
 #    image: alpine:3.8

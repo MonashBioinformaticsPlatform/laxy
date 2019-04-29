@@ -7,6 +7,8 @@ services:
     environment:
       - LAXY_DATABASE_URL=postgres://postgres:postgres@db:5432/postgres
       - LAXY_BROKER_URL=amqp://guest@rabbitmq
+      - LAXY_WEB_SCRAPER_BACKEND=splash
+      - LAXY_WEB_SCRAPER_SPLASH_HOST=http://splash:8050
     command: bash -c "sleep 10 && python3 manage.py runserver 0.0.0.0:8001"
     expose:
       - "8001"
@@ -52,6 +54,8 @@ services:
       - LAXY_DATABASE_URL=postgres://postgres:postgres@db:5432/postgres
       - LAXY_BROKER_URL=amqp://guest@rabbitmq
 #     - LAXY_BROKER_URL=redis://redis:6379/0
+      - LAXY_WEB_SCRAPER_BACKEND=splash
+      - LAXY_WEB_SCRAPER_SPLASH_HOST=http://splash:8050
     command: bash -c "celery -A laxy worker -B -E -l info --broker=${LAXY_BROKER_URL}"
     depends_on:
       - db
@@ -80,6 +84,16 @@ services:
     # exist BEFORE nginx starts.
     depends_on:
       - django
+
+  splash:
+    image: scrapinghub/splash:latest
+    command: --disable-ui --disable-lua --disable-browser-caches --max-timeout 300
+    expose:
+      - "8050"
+    depends_on:
+      - django
+      - celeryd
+
 
 volumes:
   dbdata:

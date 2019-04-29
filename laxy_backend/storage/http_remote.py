@@ -9,7 +9,6 @@ import re
 import os
 import requests
 from requests import HTTPError, Response
-from bs4 import BeautifulSoup
 import magic  # python-magic
 from cache_memoize import cache_memoize
 
@@ -94,40 +93,9 @@ def get_url_filelike(url: str, headers=None, auth=None):
         return resp
 
 
-def grab_links_from_html_page(url: str,
-                              regex: Union[str, Pattern] = '^https?://|^ftp://',
-                              ignore: str = '\/\?C=.;O=.',
-                              max_size: int = 10*1024*1024) -> Tuple[List[str], List[str]]:
-    """
-    Parses a remote HTTP(s) index page containing links, returns
-    a list of the links, filtered by provided `regex`. Works best
-    with simple HTML pages of links, like the default Apache directory
-    listing page.
-
-    :param url: The index page URL.
-    :type url: str
-    :param regex: A regular expression (as compiled regex or string) that links
-                  must match.
-    :type regex: str | Pattern
-    :param ignore: Ignore URLs matching this regex pattern
-                   (compiled regex or string)
-    :type ignore: str | Pattern
-    :param max_size: Maximum allowed file size for index page
-    :type max_size: int
-    :return: The filtered list of links (URLs) on the page, as a tuple. First
-             element is the list (presumed) to be links to downloadable files,
-             the second is a list of (presumed) 'directories' that are likely
-             to lead to additional index pages.
-    :rtype: Tuple[List[str], List[str]]
-    """
-
-    if isinstance(regex, str):
-        regex = re.compile(regex)
-    if isinstance(ignore, str):
-        ignore = re.compile(ignore)
-
+def _check_content_size_and_resolve_redirects(url: str, max_size: int = 10*1024*1024):
     try:
-        with closing(request_with_retries('GET', url, allow_redirects=True)) as resp:
+        with closing(request_with_retries('HEAD', url, allow_redirects=True)) as resp:
             resp.raise_for_status()
             content_length = int(resp.headers.get('content-length', 0))
             content_type = resp.headers.get('content-type', '').split(';')[0].strip()
@@ -136,42 +104,11 @@ def grab_links_from_html_page(url: str,
             if content_type != 'text/html':
                 raise ValueError(f"File doesn't look like sane HTML (Content-Type: {content_type})")
 
-            text = []
-            chunk_size = 1024
-            size = 0
-            for chunk in resp.iter_content(chunk_size=chunk_size, decode_unicode=True):
-                text.append(chunk)
-                size += chunk_size
-                if size > max_size:
-                    raise MemoryError(f"File is too large (> {max_size} bytes)")
-
-            try:
-                text = ''.join(text)
-            except TypeError as ex:
-                raise ValueError(f"File doesn't look like sane HTML")
-            # Update the URL to the final destination in case we were redirected
-            url = resp.url
+            # Return the URL to the final destination in case we were redirected
+            return resp.url
 
     except BaseException as e:
         raise e
-
-    soup = BeautifulSoup(text, 'html.parser')
-
-    file_urls = []
-    dir_urls = []
-    for a in soup.find_all('a'):
-        href = a.get('href')
-        u = str(href)
-        if href is not None and "://" not in href:
-            # convert to full URL, not just path
-            u = urljoin(url, href)
-        if regex.search(u) and not ignore.search(u):
-            if urlparse(u).path.endswith('/'):
-                dir_urls.append(u)
-            else:
-                file_urls.append(u)
-
-    return file_urls, dir_urls
 
 
 def get_tar_file_manifest(

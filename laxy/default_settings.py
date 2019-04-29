@@ -80,6 +80,8 @@ default_env = PrefixedEnv(
     USE_SSL=(bool, False),
     SENTRY_DSN=(str, ''),
     DEFAULT_JOB_EXPIRY=(int, 30*24*60*60),
+    WEB_SCRAPER_BACKEND=(str, 'simple'),
+    WEB_SCRAPER_SPLASH_HOST=(str, 'http://localhost:8050'),
 )
 
 
@@ -178,6 +180,17 @@ DEFAULT_JOB_BASE_PATH = '/tmp'
 """
 The base path where job directories will be created if `base_dir` isn't 
 specified in ComputeResource.extra on the compute node for a job.
+"""
+
+WEB_SCRAPER_BACKEND = env('WEB_SCRAPER_BACKEND')
+"""
+Valid options are 'simple', 'splash' (and possibly 'pyppeteer' in the future)
+"""
+
+WEB_SCRAPER_SPLASH_HOST = env('WEB_SCRAPER_SPLASH_HOST')
+"""
+The URL to a Splash scraping server (eg https://splash.readthedocs.io/en/stable/api.html#render-html).
+When running under docker-compose this might be 'http://splash:8050'.
 """
 
 ALLOWED_HOSTS = env('ALLOWED_HOSTS')
