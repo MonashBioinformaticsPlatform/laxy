@@ -615,6 +615,12 @@ class StreamFileMixin(JSONView):
 
         return response
 
+    @backoff.on_exception(backoff.expo,
+                          (EOFError,
+                           paramiko.ssh_exception.AuthenticationException,
+                           paramiko.ssh_exception.SSHException),
+                          max_tries=2,
+                          jitter=backoff.full_jitter)
     def _stream_response(
             self,
             obj_ref: Union[str, File],
@@ -844,10 +850,11 @@ class FileView(StreamFileMixin,
                 else:
                     return super().view(uuid, filename=filename)
             except (paramiko.ssh_exception.AuthenticationException,
-                    paramiko.ssh_exception.SSHException) as ex:
+                    paramiko.ssh_exception.SSHException,
+                    EOFError) as ex:
                 return HttpResponse(
                     status=status.HTTP_503_SERVICE_UNAVAILABLE,
-                    reason="paramiko.ssh_exception.AuthenticationException")
+                    reason="Error accessing file via SFTP storage backend")
 
     @view_config(request_serializer=FileSerializer,
                  response_serializer=PatchSerializerResponse)
@@ -979,13 +986,20 @@ class JobFileView(StreamFileMixin,
         if content_type == 'application/json':
             return super().get(request, file_obj.id)
         else:
-            # File view/download is the default when no Content-Type is specified
-            if 'download' in request.query_params:
-                logger.debug(f"Attempting download of {file_obj.id}")
-                return super().download(file_obj, filename=fname)
-            else:
-                logger.debug(f"Attempting view in browser of {file_obj.id}")
-                return super().view(file_obj, filename=fname)
+            try:
+                # File view/download is the default when no Content-Type is specified
+                if 'download' in request.query_params:
+                    logger.debug(f"Attempting download of {file_obj.id}")
+                    return super().download(file_obj, filename=fname)
+                else:
+                    logger.debug(f"Attempting view in browser of {file_obj.id}")
+                    return super().view(file_obj, filename=fname)
+            except (paramiko.ssh_exception.AuthenticationException,
+                    paramiko.ssh_exception.SSHException,
+                    EOFError) as ex:
+                return HttpResponse(
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    reason="Error accessing file via SFTP storage backend")
 
         # return super(FileView, self).get(request, file_obj.id)
 
