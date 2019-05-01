@@ -9,7 +9,7 @@
         </md-table-header>
         <md-table-body>
             <md-table-row v-for="(sample, index) in samples.items"
-                          :key="JSON.stringify([sample.id, sample.name, sample.files])"
+                          :key="sha1(sample)"
                           :md-item="sample"
                           :md-selection="selectable">
                 <md-table-cell v-for="field in fields" :key="field">
@@ -61,6 +61,8 @@
         Watch
     } from "vue-property-decorator";
 
+    import {sha1} from 'object-hash';
+
     import {Sample, SampleCartItems} from "../model";
 
     import {DummySampleList as _dummySampleList} from "../test-data";
@@ -98,9 +100,10 @@
         //     return _;
         // }
 
-        // lodash for templates
+        // lodash & object-hash for templates
         get = get;
         filter  = filter;
+        sha1 = sha1;
 
         /* Sets/retrieves a property deeply.nested.in.an.object */
         deep_path(obj: any, path: string): any {
