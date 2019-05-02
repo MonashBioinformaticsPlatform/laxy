@@ -59,7 +59,7 @@ setup(
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=[
-        'asks',
+        'asks==2.3.2',
         'requests',
         'toolz',
         'backoff',

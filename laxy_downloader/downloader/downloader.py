@@ -36,8 +36,6 @@ from attrdict import AttrDict
 logger = logging.getLogger(__name__)
 # logging.basicConfig(format='%(levelname)s: %(asctime)s -- %(message)s', level=logging.INFO)
 
-asks.init(trio)
-
 
 def get_tmpdir():
     return '/tmp' if platform.system() == 'Darwin' else tempfile.gettempdir()
