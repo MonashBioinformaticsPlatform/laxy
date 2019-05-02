@@ -333,7 +333,11 @@ def get_urls_from_pipeline_config(config):
     urls = []
     for sample in config['sample_set']['samples']:
         for f in sample['files']:
-            urls.extend(list(f.values()))
+            for read_number, url_descriptor in f.items():
+                if isinstance(url_descriptor, str):
+                    urls.append(url_descriptor)
+                elif isinstance(url_descriptor, dict) and url_descriptor.get('location', False):
+                    urls.append(url_descriptor['location'])
 
     return urls
 
