@@ -325,7 +325,7 @@ def parse_cloudstor_webdav(text: Union[str, None] = None, url=None) -> List[dict
         else:
             links.append(dict(type='file',
                               name=name,
-                              location=f"{base_url}/s/{share_id}?path=/{path}&files={name}",
+                              location=f"{base_url}/s/{share_id}/download?path=/{path}&files={name}",
                               tags=['archive'] if is_archive_link(name) else []))
 
     return links
