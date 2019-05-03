@@ -1,7 +1,7 @@
 git+https://github.com/pansapiens/drf_openapi.git@105-proxy-label-cannot-be-decoded#egg=drf_openapi
 git+https://github.com/pansapiens/json-merge-patch.git#egg=json_merge_patch
 hg+https://bitbucket.org/schinckel/django-jsonfield#egg=django-jsonfield
-git+https://github.com/romrom1948/webdav-client-python.git@dd11bf024280a6a60567914a99f5e9ad914f7719#egg=webdavclient
+git+https://github.com/pansapiens/webdav-client-python.git@master#egg=webdavclient
 alabaster==0.7.10
 amqp==2.2.2
 appdirs==1.4.3
