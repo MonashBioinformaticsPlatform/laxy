@@ -207,7 +207,7 @@
         }
 
         onSelect(rows: any) {
-            // console.log(rows);
+            console.log(rows);
             // const fileList = this.$refs['remote-files-list'] as NestedFileList;
             // if (fileList) {
             //     this.selectedFiles = fileList.selectedFiles;
@@ -250,9 +250,9 @@
                 }
                 sname = sname.replace(commonSuffix, '');
                 if (sname === '') sname = commonSuffix;
-                let sfiles: any = [{R1: f.location}];
+                let sfiles: any = [{R1: f}];
                 if (pair != null) {
-                    sfiles = [{R1: f.location, R2: pair.location}];
+                    sfiles = [{R1: f, R2: pair}];
                 }
                 cart_samples.push({
                     name: sname,
@@ -300,6 +300,7 @@
         }
 
         populateSelectionList(data: any) {
+            // console.dir(data);
             this.listing = [];
             if (is_archive_url(this.navigatedUrl)) {
                 // add a '..' entry to navigate out of TAR archive

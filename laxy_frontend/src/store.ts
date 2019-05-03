@@ -127,7 +127,7 @@ export const Store = new Vuex.Store({
             //     return state.filesets[(state.currentViewedJob as any).output_fileset_id];
             // },
             fileById: state => {
-                return (file_id: string, fileset: LaxyFileSet | null): LaxyFile | undefined => {
+                return (file_id: string, fileset: LaxyFileSet | null): ILaxyFile | undefined => {
                     // if the fileset isn't specified we can still retrieve the file object by searching
                     // all filesets in the store.
                     // TODO: make this more efficient (maybe keep an index of {file_id: file})
@@ -140,7 +140,7 @@ export const Store = new Vuex.Store({
                         }
                     }
                     if (fileset != null) {
-                        return head(filter(fileset.files, (f: LaxyFile) => {
+                        return head(filter(fileset.files, (f: ILaxyFile) => {
                             return f.id === file_id;
                         }));
                     }
@@ -179,7 +179,7 @@ export const Store = new Vuex.Store({
             [SET_USER_PROFILE](state, profile_info: {}) {
                 state.user_profile = profile_info;
             },
-            [ADD_SAMPLES](state, samples: Sample[]) {
+            [ADD_SAMPLES](state, samples: ISample[]) {
                 // if (state.samples.items == undefined)
                 state.samples.items.push(...samples);
             },

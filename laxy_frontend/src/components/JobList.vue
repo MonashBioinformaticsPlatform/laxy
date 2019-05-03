@@ -268,11 +268,29 @@
                 const s_response = await WebAPI.getSampleSet(sampleset_id);
 
                 const pipelinerun = p_response.data;
-                const sampleset = s_response.data;
+                const sampleset = s_response.data as ILaxySampleSet;
 
                 let samples = new SampleCartItems();
                 samples.id = sampleset.id;
                 samples.items = sampleset.samples;
+
+                for (let ss of sampleset.samples) {
+                    for (let ff of ss.files) {
+                        for (let field of ['R1', 'R2']) {
+                            const url = ff[field];
+                            // Replace and simple URL strings in the R1/R2 field with an ILaxyFile shaped object
+                            if (url != undefined &&
+                                typeof url === 'string' &&
+                                url.includes('://')) {
+                                    ff[field] = {
+                                        location: url,
+                                        name: url,
+                                        type: 'file'} as ILaxyFile;
+                            }
+                        }
+                    }
+                }
+
                 samples.name = sampleset.name;
                 this.$store.commit(SET_SAMPLES, samples as SampleCartItems);
 

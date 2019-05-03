@@ -29,8 +29,8 @@
                     </span>
                     <span v-else-if="field === 'R1' || field === 'R2'">
                         <span v-for="file in filter(sample.files, (f) => get(f, field, false))">
-                            {{ file_basename(get(file, field, '')) }}
-                                <md-tooltip>{{ file[field] }}</md-tooltip>
+                            {{ file[field].name }}
+                                <md-tooltip>{{ file[field].location }}</md-tooltip>
                         </span>
                     </span>
                     <span v-else>
@@ -108,14 +108,6 @@
         /* Sets/retrieves a property deeply.nested.in.an.object */
         deep_path(obj: any, path: string): any {
             return get(obj, path);
-        }
-
-        file_basename(filepath: string): string | undefined {
-            return filepath.split('/').pop();
-        }
-
-        created() {
-
         }
 
         onSelect(rows: any) {

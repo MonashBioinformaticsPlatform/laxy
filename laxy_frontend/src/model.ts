@@ -13,10 +13,10 @@ class UUIDModel {
     }
 }
 
-export class Sample {
+export class Sample implements ISample {
     public id?: string;
     public name: string;
-    public files: any[];
+    public files: Array<{R1: ILaxyFile, R2: ILaxyFile}>;
     public metadata: {}; // {condition: '', ena: {}}
     // condition?: string;
 
@@ -32,7 +32,7 @@ export class SampleCartItems extends UUIDModel {
     // [index: number]: Sample;
 
     public name: string;
-    public items: Sample[] = [];
+    public items: ISample[] = [];
 
     // public get samples(): Sample[] {
     //     return this.items;

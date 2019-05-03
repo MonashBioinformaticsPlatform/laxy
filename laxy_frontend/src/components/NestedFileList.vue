@@ -401,6 +401,10 @@
             const row = rows[table.data.indexOf(file)];
             table.setRowSelection(state, file);
             row.checkbox = state;
+
+            // we need to re-emit the md-table @select event since we've auto-selected rows
+            // (MdTable.setRowSelection doesn't do this itself)
+            this.$emit("select", table.selectedRows);
         }
 
         onSelectedRow(file: LaxyFile) {
@@ -411,6 +415,7 @@
                 }
                 // console.log([file, pair]);
             }
+
             this.$emit("selected", file);
         }
 

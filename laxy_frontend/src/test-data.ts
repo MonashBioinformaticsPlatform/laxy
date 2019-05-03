@@ -48,8 +48,8 @@ export const DummySampleList: SampleCartItems = {
             'metadata': {'condition': 'wildtype'},
             'files': [
                 {
-                    'R1': 'ftp://example.com/sampleA_lane1_R1.fastq.gz',
-                    'R2': 'ftp://example.com/sampleA_lane1_R2.fastq.gz'
+                    'R1': {name: 'sampleA_lane1_R1.fastq.gz', location: 'ftp://example.com/sampleA_lane1_R1.fastq.gz'} as ILaxyFile,
+                    'R2':{name: 'sampleA_lane1_R2.fastq.gz', location: 'ftp://example.com/sampleA_lane1_R2.fastq.gz'} as ILaxyFile,
                 },
             ],
         },
@@ -59,12 +59,12 @@ export const DummySampleList: SampleCartItems = {
             'metadata': {'condition': 'mutant'},
             'files': [
                 {
-                    'R1': 'ftp://example.com/sampleB_lane1_R1.fastq.gz',
-                    'R2': 'ftp://example.com/sampleB_lane1_R2.fastq.gz'
+                    'R1': {name: 'sampleB_lane1_R1.fastq.gz', location: 'ftp://example.com/sampleB_lane1_R1.fastq.gz'} as ILaxyFile,
+                    'R2':{name: 'sampleB_lane1_R2.fastq.gz', location: 'ftp://example.com/sampleB_lane1_R2.fastq.gz'} as ILaxyFile,
                 },
                 {
-                    'R1': 'ftp://example.com/sampleB_lane4_R1.fastq.gz',
-                    'R2': 'ftp://example.com/sampleB_lane4_R2.fastq.gz'
+                    'R1': {name: 'sampleB_lane4_R1.fastq.gz', location: 'ftp://example.com/sampleB_lane4_R1.fastq.gz'} as ILaxyFile,
+                    'R2':{name: 'sampleB_lane4_R2.fastq.gz', location: 'ftp://example.com/sampleB_lane4_R2.fastq.gz'} as ILaxyFile,
                 }
 
             ]
@@ -75,12 +75,12 @@ export const DummySampleList: SampleCartItems = {
             'metadata': {'condition': 'wildtype'},
             'files': [
                 {
-                    'R1': '2VSd4mZvmYX0OXw07dGfnV',
-                    'R2': '3XSd4mZvmYX0OXw07dGfmZ'
+                    'R1': {id: '2VSd4mZvmYX0OXw07dGfnV'} as ILaxyFile,
+                    'R2': {id:'3XSd4mZvmYX0OXw07dGfmZ'} as ILaxyFile
                 },
                 {
-                    'R1': 'Toopini9iPaenooghaquee',
-                    'R2': 'Einanoohiew9ungoh3yiev'
+                    'R1': {id: 'Toopini9iPaenooghaquee'} as ILaxyFile,
+                    'R2': {id: 'Einanoohiew9ungoh3yiev'} as ILaxyFile
                 }]
         },
         {
@@ -89,12 +89,12 @@ export const DummySampleList: SampleCartItems = {
             'metadata': {'condition': 'mutant'},
             'files': [
                 {
-                    'R1': 'zoo7eiPhaiwion6ohniek3',
-                    'R2': 'ieshiePahdie0ahxooSaed'
+                    'R1': {id: 'zoo7eiPhaiwion6ohniek3'} as ILaxyFile,
+                    'R2': {id: 'ieshiePahdie0ahxooSaed'} as ILaxyFile
                 },
                 {
-                    'R1': 'nahFoogheiChae5de1iey3',
-                    'R2': 'Dae7leiZoo8fiesheech5s'
+                    'R1': {id: 'nahFoogheiChae5de1iey3'} as ILaxyFile,
+                    'R2': {id: 'Dae7leiZoo8fiesheech5s'} as ILaxyFile
                 }]
         }
     ]

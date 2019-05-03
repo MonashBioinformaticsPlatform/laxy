@@ -28,16 +28,16 @@ declare interface ReferenceGenome {
 }
 
 declare interface ILaxyFile {
-    id: string;
+    id?: string;
     name: string;
-    path: string;
+    path?: string;
     location: string;
-    owner: number | string;
-    checksum: string | null;
-    fileset: string | null;
-    metadata: any;
-    type_tags: string[];
-    deleted: boolean;
+    owner?: number | string;
+    checksum?: string | null;
+    fileset?: string | null;
+    metadata?: any;
+    type_tags?: string[];
+    deleted?: boolean;
     // fullPath: string;
 }
 
@@ -46,6 +46,26 @@ declare interface LaxyFileSet {
     name: string;
     owner: number | string;
     files: ILaxyFile[];
+}
+
+declare interface PairedEndFiles {
+    [key: string]: ILaxyFile | string | undefined;
+    R1: ILaxyFile | string;
+    R2?: ILaxyFile | string;
+}
+
+declare interface ISample {
+    id?: string;
+    name: string;
+    files: PairedEndFiles[];  // {R1: someILaxyFile, R2: anotherILaxyFile}
+    metadata: any;
+}
+
+declare interface ILaxySampleSet {
+    id: string;
+    name: string;
+    owner: string;
+    samples: ISample[];
 }
 
 declare interface ViewMethod {

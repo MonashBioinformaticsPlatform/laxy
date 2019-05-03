@@ -193,6 +193,9 @@ export function simplifyFastqName(filename: string): string {
  Given a file and a list of
  */
 export function findPair(file: any, files: any[], getName: Function | null = null): any | null {
+    const lastChar = (s: string) => s.slice(-1);
+    const dropLast = (s: string) => s.slice(0, -1);
+
     if (getName == null) {
         getName = (f: any) => f.name;
     }
@@ -200,8 +203,8 @@ export function findPair(file: any, files: any[], getName: Function | null = nul
     for (const f of files) {
         if (f === null) continue;
         const other = truncateFastqFilename(getName(f));
-        if (fn.slice(0, -1) === other.slice(0, -1) &&
-            (parseInt(fn.slice(-1), 10) + parseInt(other.slice(-1), 10)) === 3) {
+        if (dropLast(fn) === dropLast(other) &&
+            (Number(lastChar(fn)) + Number(lastChar(other))) === 3) {
             return f;
         }
     }
