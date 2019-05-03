@@ -18,13 +18,11 @@
             "R1": {
               "name": "SRR5963435_ss_1.fastq.gz",
               "tags": [],
-              "type": "file",
               "location": "https://cloudstor.aarnet.edu.au/plus/s/lnSmyyug1fexY8l?path=/&files=SRR5963435_ss_1.fastq.gz"
             },
             "R2": {
               "name": "SRR5963435_ss_2.fastq.gz",
               "tags": [],
-              "type": "file",
               "location": "https://cloudstor.aarnet.edu.au/plus/s/lnSmyyug1fexY8l?path=/&files=SRR5963435_ss_2.fastq.gz"
             }
           }
@@ -40,13 +38,11 @@
             "R1": {
               "name": "SRR5963441_ss_1.fastq.gz",
               "tags": [],
-              "type": "file",
               "location": "https://cloudstor.aarnet.edu.au/plus/s/lnSmyyug1fexY8l?path=/&files=SRR5963441_ss_1.fastq.gz"
             },
             "R2": {
               "name": "SRR5963441_ss_2.fastq.gz",
               "tags": [],
-              "type": "file",
               "location": "https://cloudstor.aarnet.edu.au/plus/s/lnSmyyug1fexY8l?path=/&files=SRR5963441_ss_2.fastq.gz"
             }
           }

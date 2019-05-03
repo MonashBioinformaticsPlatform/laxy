@@ -13,9 +13,11 @@ from functools import cmp_to_key
 from typing import Mapping, Sequence
 
 from urllib.parse import urlparse
+from cache_memoize import cache_memoize
 
 from django.urls import reverse
 from django.utils.http import urlencode
+
 
 from rest_framework.request import Request
 
@@ -75,6 +77,7 @@ def ordereddicts_to_dicts(d: OrderedDict) -> dict:
     return json.loads(json.dumps(d))
 
 
+@cache_memoize(timeout=3*60*60, cache_alias='memoize')
 def find_filename_and_size_from_url(url, **kwargs):
     """
     Tries to determine the filename for a given download URL via the
@@ -89,33 +92,37 @@ def find_filename_and_size_from_url(url, **kwargs):
 
     :param url: The URL
     :type url: str
-    :return: The download filename
-    :rtype: str
+    :return: A tuple of (filename, size) (the download filename and size in bytes)
+    :rtype: (str, int)
     """
     scheme = urlparse(url).scheme.lower()
     file_size = None
     filename = None
     if scheme in ['http', 'https']:
-        head = requests.head(url, **kwargs)
-        filename_header = cgi.parse_header(
-            head.headers.get('Content-Disposition', ''))[-1]
-        file_size = head.headers.get('Content-Length', None)
-        if file_size is not None:
-            file_size = int(file_size)
-        if 'filename' in filename_header:
-            filename = filename_header.get('filename').strip()
-        else:
-            filename = os.path.basename(urlparse(url).path).strip()
-    elif scheme == 'file' or scheme == 'ftp' or scheme == 'sftp':
-        filename = os.path.basename(urlparse(url).path).strip()
+        try:
+            head = requests.head(url, **kwargs)
+            filename_header = cgi.parse_header(
+                head.headers.get('Content-Disposition', ''))[-1]
+            file_size = head.headers.get('Content-Length', None)
+            if file_size is not None:
+                file_size = int(file_size)
+            if 'filename' in filename_header:
+                filename = filename_header.get('filename')
+        except:
+            pass
 
+    if filename is None or (scheme == 'file' or scheme == 'ftp' or scheme == 'sftp'):
+        filename = os.path.basename(urlparse(url).path)
+
+    # TODO: Should we disallow this, given that it actually reads the local filesystem and may be
+    #  unsafe or an information leak if used with arbitrary user supplied URLs ?
     if scheme == 'file':
         file_size = os.path.getsize(urlparse(url).path)
 
     if not filename:
         raise ValueError('Could not find a filename for: %s' % url)
 
-    return filename, file_size
+    return filename.strip(), file_size
 
 
 def reverse_querystring(view, urlconf=None, args=None, kwargs=None,

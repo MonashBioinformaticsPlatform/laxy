@@ -155,7 +155,7 @@
         public previousUrl: string = "";
         public listing: Array<any> = [];
 
-        public selectedFiles: any[] = [];
+        public selectedFiles: FileListItem[] = [];
 
         public snackbar_message: string = "Everything is fine. ☃";
         public snackbar_duration: number = 2000;
@@ -212,7 +212,7 @@
             // if (fileList) {
             //     this.selectedFiles = fileList.selectedFiles;
             // }
-            this.selectedFiles = filter(rows, {type: 'file'});
+            this.selectedFiles = filter(rows, {type: 'file'}) as FileListItem[];
         }
 
         remove(rows: LaxyFile[]) {
@@ -225,7 +225,7 @@
         addToCart() {
             // console.log(this.selectedFiles);
             const cart_samples: Sample[] = [];
-            const added_files: LaxyFile[] = [];
+            const added_files: ILaxyFile[] = [];
 
             const names: string[] = map(this.selectedFiles, (i) => {
                 return reverseString(simplifyFastqName(i.name));
@@ -241,7 +241,7 @@
                 if (f.name === '..') {
                     continue;
                 }
-                if (added_files.includes(f)) continue;
+                if (filter(added_files, {'location': f.location}).length > 0) continue;
                 const pair = findPair(f, this.selectedFiles);
 
                 let sname = f.name;
@@ -250,17 +250,23 @@
                 }
                 sname = sname.replace(commonSuffix, '');
                 if (sname === '') sname = commonSuffix;
-                let sfiles: any = [{R1: f}];
+
+                // copy and drop 'type' prop (ILaxyFile doesn't want 'type')
+                const _f = Object.assign({}, f) as FileListItem;
+                delete _f.type;
+                const _pair = Object.assign({}, f) as FileListItem;
+                delete _pair.type;
+                let sfiles: any = [{R1: _f as ILaxyFile}];
                 if (pair != null) {
-                    sfiles = [{R1: f, R2: pair}];
+                    sfiles = [{R1: _f as ILaxyFile, R2: _pair as ILaxyFile}];
                 }
                 cart_samples.push({
                     name: sname,
                     files: sfiles,
                     metadata: {condition: ""},
                 } as Sample);
-                added_files.push(f);
-                if (pair != null) added_files.push(pair);
+                added_files.push(_f);
+                if (pair != null) added_files.push(_pair);
             }
             this.$store.commit(ADD_SAMPLES, cart_samples);
             let count = this.selectedFiles.length;

@@ -1,4 +1,5 @@
 # from __future__ import absolute_import
+from collections import OrderedDict
 from datetime import datetime
 
 import unittest
@@ -27,7 +28,9 @@ from ..jwt_helpers import (get_jwt_user_header_dict,
 
 # from ..models import User
 from django.contrib.auth import get_user_model
+
 User = get_user_model()
+
 
 # from ..authorization import JWTAuthorizedClaimPermission
 
@@ -223,33 +226,57 @@ class FileSetModelTest(TestCase):
 
 class SampleSetTest(TestCase):
     def setUp(self):
-        self.csv_text = """SampleA,ftp://bla_lane1_R1.fastq.gz,ftp://bla_lane1_R2.fastq.gz
-SampleA, ftp://bla_lane2_R1.fastq.gz, ftp://bla_lane2_R2.fastq.gz
-SampleB,ftp://bla2_R1_001.fastq.gz,ftp://bla2_R2_001.fastq.gz
-       ,ftp://bla2_R1_002.fastq.gz,ftp://bla2_R2_002.fastq.gz
-SampleC,ftp://foo2_lane4_1.fastq.gz,ftp://foo2_lane4_2.fastq.gz
-SampleC,ftp://foo2_lane5_1.fastq.gz,ftp://foo2_lane5_2.fastq.gz
+        self.csv_text = """SampleA,ftp://ftp.example.com/pub/bla_lane1_R1.fastq.gz,ftp://ftp.example.com/pub/bla_lane1_R2.fastq.gz
+SampleA, ftp://ftp.example.com/pub/bla_lane2_R1.fastq.gz, ftp://ftp.example.com/pub/bla_lane2_R2.fastq.gz
+SampleB,ftp://ftp.example.com/pub/bla2_R1_001.fastq.gz,ftp://ftp.example.com/pub/bla2_R2_001.fastq.gz
+       ,ftp://ftp.example.com/pub/bla2_R1_002.fastq.gz,ftp://ftp.example.com/pub/bla2_R2_002.fastq.gz
+SampleC,ftp://ftp.example.com/pub/foo2_lane4_1.fastq.gz,ftp://ftp.example.com/pub/foo2_lane4_2.fastq.gz
+SampleC,ftp://ftp.example.com/pub/foo2_lane5_1.fastq.gz,ftp://ftp.example.com/pub/foo2_lane5_2.fastq.gz
 
 """
 
         self.sample_list = [
             {'name': 'SampleA', 'files': [
-                {'R1': 'ftp://bla_lane1_R1.fastq.gz', 'R2': 'ftp://bla_lane1_R2.fastq.gz'},
-                {'R1': 'ftp://bla_lane2_R1.fastq.gz', 'R2': 'ftp://bla_lane2_R2.fastq.gz'}]},
+                OrderedDict(
+                    R1={'location': 'ftp://ftp.example.com/pub/bla_lane1_R1.fastq.gz',
+                        'name': 'bla_lane1_R1.fastq.gz'},
+                    R2={'location': 'ftp://ftp.example.com/pub/bla_lane1_R2.fastq.gz',
+                        'name': 'bla_lane1_R2.fastq.gz'}),
+                OrderedDict(
+                    R1={'location': 'ftp://ftp.example.com/pub/bla_lane2_R1.fastq.gz',
+                        'name': 'bla_lane2_R1.fastq.gz'},
+                    R2={'location': 'ftp://ftp.example.com/pub/bla_lane2_R2.fastq.gz',
+                        'name': 'bla_lane2_R2.fastq.gz'})]},
             {'name': 'SampleB', 'files': [
-                {'R1': 'ftp://bla2_R1_001.fastq.gz', 'R2': 'ftp://bla2_R2_001.fastq.gz'},
-                {'R1': 'ftp://bla2_R1_002.fastq.gz', 'R2': 'ftp://bla2_R2_002.fastq.gz'}]},
+                OrderedDict(
+                    R1={'location': 'ftp://ftp.example.com/pub/bla2_R1_001.fastq.gz',
+                        'name': 'bla2_R1_001.fastq.gz'},
+                    R2={'location': 'ftp://ftp.example.com/pub/bla2_R2_001.fastq.gz',
+                        'name': 'bla2_R2_001.fastq.gz'}),
+                OrderedDict(
+                    R1={'location': 'ftp://ftp.example.com/pub/bla2_R1_002.fastq.gz',
+                        'name': 'bla2_R1_002.fastq.gz'},
+                    R2={'location': 'ftp://ftp.example.com/pub/bla2_R2_002.fastq.gz',
+                        'name': 'bla2_R2_002.fastq.gz'})]},
             {'name': 'SampleC', 'files': [
-                {'R1': 'ftp://foo2_lane4_1.fastq.gz', 'R2': 'ftp://foo2_lane4_2.fastq.gz'},
-                {'R1': 'ftp://foo2_lane5_1.fastq.gz', 'R2': 'ftp://foo2_lane5_2.fastq.gz'}]}
+                OrderedDict(
+                    R1={'location': 'ftp://ftp.example.com/pub/foo2_lane4_1.fastq.gz',
+                        'name': 'foo2_lane4_1.fastq.gz'},
+                    R2={'location': 'ftp://ftp.example.com/pub/foo2_lane4_2.fastq.gz',
+                        'name': 'foo2_lane4_2.fastq.gz'}),
+                OrderedDict(
+                    R1={'location': 'ftp://ftp.example.com/pub/foo2_lane5_1.fastq.gz',
+                        'name': 'foo2_lane5_1.fastq.gz'},
+                    R2={'location': 'ftp://ftp.example.com/pub/foo2_lane5_2.fastq.gz',
+                        'name': 'foo2_lane5_2.fastq.gz'})]}
         ]
 
-        self.from_csv_text = """SampleA,ftp://bla_lane1_R1.fastq.gz,ftp://bla_lane1_R2.fastq.gz
-SampleA,ftp://bla_lane2_R1.fastq.gz,ftp://bla_lane2_R2.fastq.gz
-SampleB,ftp://bla2_R1_001.fastq.gz,ftp://bla2_R2_001.fastq.gz
-SampleB,ftp://bla2_R1_002.fastq.gz,ftp://bla2_R2_002.fastq.gz
-SampleC,ftp://foo2_lane4_1.fastq.gz,ftp://foo2_lane4_2.fastq.gz
-SampleC,ftp://foo2_lane5_1.fastq.gz,ftp://foo2_lane5_2.fastq.gz
+        self.from_csv_text = """SampleA,ftp://ftp.example.com/pub/bla_lane1_R1.fastq.gz,ftp://ftp.example.com/pub/bla_lane1_R2.fastq.gz
+SampleA,ftp://ftp.example.com/pub/bla_lane2_R1.fastq.gz,ftp://ftp.example.com/pub/bla_lane2_R2.fastq.gz
+SampleB,ftp://ftp.example.com/pub/bla2_R1_001.fastq.gz,ftp://ftp.example.com/pub/bla2_R2_001.fastq.gz
+SampleB,ftp://ftp.example.com/pub/bla2_R1_002.fastq.gz,ftp://ftp.example.com/pub/bla2_R2_002.fastq.gz
+SampleC,ftp://ftp.example.com/pub/foo2_lane4_1.fastq.gz,ftp://ftp.example.com/pub/foo2_lane4_2.fastq.gz
+SampleC,ftp://ftp.example.com/pub/foo2_lane5_1.fastq.gz,ftp://ftp.example.com/pub/foo2_lane5_2.fastq.gz
 """
 
     def tearDown(self):

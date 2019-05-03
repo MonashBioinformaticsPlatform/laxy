@@ -1212,6 +1212,13 @@ class SampleSet(Timestamped, UUIDModel):
                        on_delete=models.CASCADE,
                        related_name='samplesets')
 
+    # TODO: Should we put a validator on here to ensure the
+    # basic object shape and required fields are present ?
+    # Maybe with jsonschema:
+    # https://medium.com/@aleemsaadullah/adding-validation-support-for-jsonfield-in-django-2e26779dccc
+    # https://github.com/Julian/jsonschema
+    # Generate JSON Schema from a (type-hinted) Python object: https://pydantic-docs.helpmanual.io/#schema-creation
+    # It might make more sense to create a DRF Serializer and use that as a validator.
     samples = JSONField(default=list)
 
     job = ForeignKey(Job,
@@ -1233,6 +1240,9 @@ class SampleSet(Timestamped, UUIDModel):
     #             {"R1": "R1_lane2", "R2": "R2_lane2"}]}]
 
     # A single 'sampleName' actually corresponds to a Sample+Condition+BiologicalReplicate.
+
+    # *TODO*: Change this to files: [{R1: {location: "http://foo/bla.txt", name: "bla.txt}] form
+    #         shaped like a subset of models.File fields.
 
     # For two samples (R1, R2 paired end) split across two lanes, using File UUIDs
     #
@@ -1321,16 +1331,20 @@ class SampleSet(Timestamped, UUIDModel):
                 samples[sample_name] = []
 
             # TODO: Convert URLs into UUIDs
-            # Files may be specified as (existing) UUIDs or URLs.
-            # If they are URLs, create (or lookup) associated file objects
-            # for that user
+            #       Files may be specified as (existing) UUIDs or URLs.
+            #       If they are URLs, create (or lookup) associated file objects
+            #       for that user
 
             pair = OrderedDict(
-                {f'R{n + 1}': file.strip() for n, file in enumerate(fields[1:])})
+                {f'R{n + 1}': {'location': file.strip(),
+                               'name': find_filename_and_size_from_url(file.strip())[0]}
+                 for n, file in enumerate(fields[1:])})
             samples[sample_name].append(pair)
             prev_sample_name = sample_name
 
-        # We initially create a structure like {sampleName: [{"R1": fileId1, "R2": fileId2}]},
+        # We initially create a structure like:
+        # {sampleName: [{"R1": {"location": fileUrl1, "name": filename1},
+        #                "R2": {"location": fileUrl2, "name": filename2}}]},
         # Then convert to [{name: sampleName, files: [ ... ]},]
         sample_list = []
         for sample_name, files in samples.items():
@@ -1345,7 +1359,16 @@ class SampleSet(Timestamped, UUIDModel):
         for sample in self.samples:
             sample_name = sample.get('name')
             for pair in sample.get('files', {}):
-                lines.append(','.join([sample_name] + list(pair.values())))
+                r1 = pair.get('R1', '')
+                r2 = pair.get('R2', '')
+                # Deal with {R1: str} or {R1: {location: str, name: str}} shapes in database
+                locations = []
+                for p in [r1, r2]:
+                    if isinstance(p, str):
+                        locations.append(p)
+                    if isinstance(p, dict):
+                        locations.append(p.get('location', ''))
+                lines.append(','.join([sample_name] + locations))
 
         # TODO: Optionally convert File UUIDs into URLs
 

@@ -541,12 +541,27 @@ JWT_AUTH = {
 See https://getblimp.github.io/django-rest-framework-jwt/
 '''
 
-# CACHES = {
-#     'default': {
-#         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-#         'LOCATION': 'memory-cache',
-#     }
-# }
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'default-memory-cache',
+    },
+    # For caching results of requests to the ENA REST API
+    'ena-lookups': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'ena-lookups-cache',
+        # 'TIMEOUT': 24*60*60,
+    },
+    # For cache_memoize usage on small miscellaneous functions
+    # (time consuming functions or those that use HTTP requests to
+    # external services with mostly static responses)
+    'memoize': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'memoize-cache',
+        'OPTIONS': {'MAX_ENTRIES': 1000},
+        # 'TIMEOUT': 3*60*60,
+    },
+}
 
 LOGGING = {
     'version': 1,

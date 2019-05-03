@@ -68,3 +68,7 @@ export function escapeRegExp(str: string) {
 export function basename(path: string): string | undefined {
     return path.split(/[\\/]/).pop();
 }
+
+export function filenameFromUrl(url: string): string | undefined {
+    return basename((new URL(url)).pathname);
+}

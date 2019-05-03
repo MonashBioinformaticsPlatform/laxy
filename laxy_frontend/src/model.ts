@@ -16,7 +16,7 @@ class UUIDModel {
 export class Sample implements ISample {
     public id?: string;
     public name: string;
-    public files: Array<{R1: ILaxyFile, R2: ILaxyFile}>;
+    public files: PairedEndFiles[];
     public metadata: {}; // {condition: '', ena: {}}
     // condition?: string;
 
@@ -60,7 +60,7 @@ export class ComputeJob extends UUIDModel {
     public secret: string;
 }
 
-export class LaxyFile {
+export class LaxyFile implements ILaxyFile {
     public id: string;
     public name: string;
     public path: string;

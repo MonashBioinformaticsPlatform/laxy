@@ -318,7 +318,7 @@ def get_run_table(accessions: List[str], fields: List[str] = None) -> Dict[str, 
     return runs_dict
 
 
-@cache_memoize(timeout=24*60*60)
+@cache_memoize(timeout=24*60*60, cache_alias='ena-lookups')
 def get_organism_from_sample_accession(accession: str) -> Dict:
     """
     :param accession:

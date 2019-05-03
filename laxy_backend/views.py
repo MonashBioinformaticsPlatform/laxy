@@ -1395,8 +1395,8 @@ class SampleSetCreate(SampleSetCreateUpdate):
         -->
         """
 
-        sample_name = request.data.get('name', None)
-        obj = SampleSet(name=sample_name, owner=request.user)
+        sampleset_name = request.data.get('name', None)
+        obj = SampleSet(name=sampleset_name, owner=request.user)
         return self.create_update(request, obj)
 
 

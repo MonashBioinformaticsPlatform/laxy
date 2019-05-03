@@ -158,6 +158,7 @@
 
     import {ENADummySampleList as _dummysampleList} from "../../test-data";
     import {Snackbar} from "../../snackbar";
+    import {filenameFromUrl} from "../../util";
 
     interface DbAccession {
         accession: string;
@@ -273,14 +274,31 @@
             for (let ena of this.selectedSamples) {
 
                 // Turn [{'R1','ftp://bla"}, {'R2': 'ftp://foo'}] into
-                //      [{'R1":'ftp://bla", 'R2': 'ftp://foo'}]
-                let files: any = {};
+                //      [{'R1": {'location':'ftp://bla", 'name': 'bla', 'checksum':'md5:ab-cd-ef-gh..'},
+                //        'R2': {'location':'ftp://foo", 'name': 'foo', 'checksum':'md5:a0-c0-e0-g0..'}}]
+                let files: PairedEndFiles[] = [];
                 if (ena.fastq_ftp) {
-                    for (let f of ena.fastq_ftp) {
-                        Object.assign(files, f);
+                    let pair: PairedEndFiles = {'R1': ''};
+                    for (let i in ena.fastq_ftp) {
+                        const f = ena.fastq_ftp[i];
+                        const Rn: string = Object.keys(f)[0]; // first and only key (R1 or R2)
+                        const location: string = f[Rn];  // FTP url
+                        if (ena.fastq_md5) {
+                            const md5sum = ena.fastq_md5[i];
+                            pair[Rn] = {
+                                'location': location,
+                                'name': filenameFromUrl(location),
+                                'type_tags': ['ena'],
+                                'checksum': `md5:${md5sum}`} as ILaxyFile;
+                        } else {
+                            pair[Rn] = {
+                                'location': location,
+                                'type_tags': ['ena'],
+                                'name': filenameFromUrl(location)} as ILaxyFile;
+                        }
                     }
+                    files.push(pair);
                 }
-                files = [files];
 
                 cart_samples.push({
                     name: ena.sample_accession,
