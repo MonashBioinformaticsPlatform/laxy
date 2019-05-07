@@ -39,7 +39,7 @@ def render_page(url: str, backend=None) -> str:
         raise ValueError(f"Unknown HTML rendering backend: {backend}")
 
 
-def render_simple(url: str, max_size: int = 10*1024*1024):
+def render_simple(url: str, max_size: int = 10 * 1024 * 1024):
     from .tasks.download import request_with_retries
 
     try:
@@ -163,9 +163,13 @@ def parse_links(text: str, url=None) -> List[str]:
 
 def is_apache_index_page(url, text):
     soup = BeautifulSoup(text, 'html.parser')
-    title = soup.select('title')[0]
-    footer = soup.select('address')[0]
-    if title.startswith('Index of') and footer.string.startswith('Apache/'):
+    title = soup.select('title')
+    footer = soup.select('address')
+    logger.info(f"{title}, {footer}")
+    if (title and footer and
+            len(title) and len(footer) and
+            title[0].text.startswith('Index of') and
+            footer[0].text.startswith('Apache/')):
         return True
 
     return False
