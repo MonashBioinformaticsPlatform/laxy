@@ -233,7 +233,8 @@ function update_laxydl() {
      # CONDA_PREFIX is set when the conda environment is activated
      local pip="${CONDA_PREFIX}/bin/pip"
      # "${pip}" install -U --process-dependency-links "git+https://github.com/MonashBioinformaticsPlatform/laxy#egg=laxy_downloader&subdirectory=laxy_downloader"
-     ${pip} install -U "laxy_downloader @ git+https://github.com/MonashBioinformaticsPlatform/laxy#egg=laxy_downloader&subdirectory=laxy_downloader"
+     ${pip} install --upgrade --ignore-installed --force-reinstall \
+            "laxy_downloader @ git+https://github.com/MonashBioinformaticsPlatform/laxy#egg=laxy_downloader&subdirectory=laxy_downloader"
 }
 
 function get_reference_data_aws() {
