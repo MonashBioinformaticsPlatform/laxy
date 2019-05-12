@@ -127,3 +127,6 @@ services:
       # Let's Encrypt the http-01 challenge
       - static_assets:/usr/share/nginx/html
       - certs:/certs
+  splash:
+    networks:
+      - private
