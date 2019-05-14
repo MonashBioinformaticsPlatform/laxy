@@ -33,7 +33,16 @@
                     </div>
 
                     <div id="url_form" v-if="selected_source == 'URL'">
-                        <remote-files-select :show-about-box="false" :show-buttons="true"></remote-files-select>
+                        <remote-files-select :show-about-box="false" :show-buttons="true"
+                                             placeholder="https://bioinformatics.erc.monash.edu/home/andrewperry/test/sample_data/">
+
+                        </remote-files-select>
+                    </div>
+                    <div id="cloudstor_public_form" v-if="selected_source == 'CLOUDSTOR_PUBLIC'">
+                        <remote-files-select :show-about-box="false" :show-buttons="true"
+                                             placeholder="https://cloudstor.aarnet.edu.au/plus/s/lnSmyyug1fexY8l">
+
+                        </remote-files-select>
                     </div>
                     <div id="csv_form" v-if="selected_source == 'CSV'">
                         <CSVSampleListUpload :show-about-box="false"></CSVSampleListUpload>
@@ -112,6 +121,18 @@
                     <ENASearchAboutBox v-if="selected_source == 'ENA'" ref="aboutENA"></ENASearchAboutBox>
                     <RemoteFileSelectAboutBox v-if="selected_source == 'URL'"></RemoteFileSelectAboutBox>
                     <CSVAboutBox v-if="selected_source == 'CSV'"></CSVAboutBox>
+                    <div v-if="selected_source == 'CLOUDSTOR_PUBLIC'">
+
+                            <h2>Importing files from CloudStor</h2>
+                            <p>
+                                Files can be imported from a publicly shared CloudStor folder.
+                                Create a public link to a folder in CloudStor and paste the link here
+                                (see <a href="https://support.aarnet.edu.au/hc/en-us/articles/227469547-CloudStor-Getting-Started-Guide" target="_blank">
+                                the CloudStor documentation</a>).
+                            </p>
+                            <h2>Example:</h2>
+                            <code>https://cloudstor.aarnet.edu.au/plus/s/lnSmyyug1fexY8l</code>
+                    </div>
                 </md-dialog-content>
 
                 <md-dialog-actions>
@@ -130,6 +151,8 @@
     import Vue, {ComponentOptions} from 'vue';
     import Component from 'vue-class-component';
     import {Emit, Inject, Model, Prop, Provide, Watch} from 'vue-property-decorator'
+    import VueMarkdown from 'vue-markdown';
+
     import ENAFileSelect from "./ENA/ENAFileSelect";
     import ENASearchAboutBox from "./ENA/ENASearchAboutBox";
     import RemoteFilesSelect from "./RemoteSelect/RemoteFilesSelect";
@@ -143,6 +166,7 @@
 
     @Component({
         components: {
+            'vue-markdown': VueMarkdown,
             ENASearchAboutBox, 'ena-file-select': ENAFileSelect,
             RemoteFilesSelect, RemoteFileSelectAboutBox,
             CSVSampleListUpload,
@@ -155,8 +179,8 @@
         sources: object = [
             {type: 'ENA', text: 'Public data from ENA or SRA'},
             {type: 'URL', text: 'Files on a web or FTP server (URL)'},
+            {type: 'CLOUDSTOR_PUBLIC', text: 'Public CloudStor Share'},
             {type: 'CSV', text: 'Sample list from CSV / Excel'},
-            // {type: 'CLOUDSTOR', text: 'CloudStor'},
             // {type: 'SFTP_UPLOAD', text: 'SFTP upload'},
         ];
         selected_source: string = 'ENA';

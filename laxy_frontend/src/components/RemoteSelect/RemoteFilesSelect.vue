@@ -24,7 +24,7 @@
                             </span>
                         </label>
                         <md-input v-model="url"
-                                  placeholder="https://bioinformatics.erc.monash.edu/home/andrewperry/test/sample_data/">
+                                  :placeholder="placeholder">
                         </md-input>
                         <md-button class="md-icon-button"
                                    @click="submitUrl(url)">
@@ -143,6 +143,9 @@
         filters: {}
     })
     export default class RemoteFileSelect extends Vue {
+        @Prop({default: "https://example.com/my-files/page-of-links/", type: String})
+        public placeholder: string;
+
         @Prop({default: true, type: Boolean})
         public showButtons: boolean;
 
