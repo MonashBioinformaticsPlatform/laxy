@@ -99,7 +99,7 @@
         </md-card-content>
 
         <md-card-actions>
-            <md-button v-if="job.status !== 'running'"
+            <md-button v-if="showRunAgainButton && job.status !== 'running'"
                        @click="cloneJob(job.id)">
                 <md-icon>content_copy</md-icon>
                 Run again
@@ -148,6 +148,9 @@
 
         @Prop({default: true, type: Boolean})
         showCancelButton: boolean;
+
+        @Prop({default: true, type: Boolean})
+        showRunAgainButton: boolean;
 
         @Prop({default: () => [], type: Array})
         public extraTableRows: string[][] | null;

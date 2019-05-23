@@ -166,6 +166,7 @@
                                    :md-row-large="true">
                             <job-status-card :job="job"
                                              :show-cancel-button="false"
+                                             :show-run-again-button="isJobOwner"
                                              :extra-table-rows="jobParamRows"
                                              v-on:cancel-job-clicked="onAskCancelJob"
                                              v-on:clone-job-clicked="cloneJob"></job-status-card>

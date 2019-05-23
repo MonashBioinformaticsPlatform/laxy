@@ -67,7 +67,8 @@
                                         </md-table-cell>
                                         <md-table-cell md-numeric>
                                             <md-toolbar class="md-dense md-transparent">
-                                                <md-button class="md-icon-button"
+                                                <md-button v-if="job.owner == userId"
+                                                           class="md-icon-button"
                                                            @click="cloneJob(job.id)">
                                                     <md-tooltip md-direction="top">Run again</md-tooltip>
                                                     <md-icon>content_copy</md-icon>
@@ -77,7 +78,7 @@
                                                     <md-tooltip md-direction="top">View job</md-tooltip>
                                                     <md-icon>remove_red_eye</md-icon>
                                                 </md-button>
-                                                <md-button v-if="job.status === 'running'"
+                                                <md-button v-if="job.owner == userId && job.status === 'running'"
                                                            class="md-icon-button"
                                                            @click="askCancelJob(job.id)">
                                                     <md-tooltip md-direction="top">Cancel</md-tooltip>
@@ -188,6 +189,10 @@
 
         routeTo(name: string, params: any = {}) {
             this.$router.push({name: name, params: params});
+        }
+
+        get userId(): string | null {
+            return this.$store.getters.userId;
         }
 
         getStatusColor(status: string) {
