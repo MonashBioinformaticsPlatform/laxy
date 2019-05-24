@@ -252,40 +252,66 @@ function get_reference_data_aws() {
     fi
 }
 
-function get_ensembl_grch38() {
+function curl_gunzip_check {
+     local url="${1}"
+     local gunziped_file="${2}"
+     local md5="${3}"
+
+     curl "${url}" \
+          --silent --retry 10 | gunzip -c > "${gunziped_file}"
+     DL_EXIT_CODE=$?
+     checksum=$(md5sum "${gunziped_file}" | cut -f 1 -d ' ')
+     if [[ "${checksum}" != "${md5}" ]]; then
+         return 1
+     fi
+
+     return ${DL_EXIT_CODE}
+}
+
+# TODO: This should probably be handled by laxydl to prevent simultaneous downloads by concurrent jobs
+function download_ref_urls() {
+     local fasta_url="${1}"
+     local gtf_url="${2}"
+     local fasta_md5="${3}"
+     local gtf_md5="${4}"
      local fasta="${REFERENCE_BASE}/${REF_ID}/Sequence/WholeGenomeFasta/genome.fa"
      local gtf="${REFERENCE_BASE}/${REF_ID}/Annotation/Genes/genes.gtf"
-     local fasta_checksum="6ee1ec578b2b6495eb7da26885d0a496"
-     local gtf_checksum="cfe6daf315889981b6c22789127232ef"
-
-     mkdir -p "${REFERENCE_BASE}/${REF_ID}/Sequence/WholeGenomeFasta"
-     mkdir -p "${REFERENCE_BASE}/${REF_ID}/Annotation/Genes"
 
      if [[ ! -f "${fasta}" ]]; then
-         curl ftp://ftp.ensembl.org/pub/release-95/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna_sm.primary_assembly.fa.gz \
-              --silent --retry 10 | gunzip -c > "${fasta}"
-         checksum=$(md5sum "${fasta}" | cut -f 1 -d ' ')
-         if [[ "${checksum}" != "${fasta_checksum}" ]]; then
-             exit -1
-         fi
+         mkdir -p "${REFERENCE_BASE}/${REF_ID}/Sequence/WholeGenomeFasta"
+         curl_gunzip_check "${fasta_url}" \
+                           "${fasta}" \
+                           "${fasta_md5}" || exit 1
      fi
      if [[ ! -f "${gtf}" ]]; then
-         curl ftp://ftp.ensembl.org/pub/release-95/gtf/homo_sapiens/Homo_sapiens.GRCh38.95.gtf.gz \
-              --silent --retry 10 | gunzip -c > "${gtf}"
-         checksum=$(md5sum "${gtf}" | cut -f 1 -d ' ')
-         if [[ "${checksum}" != "${gtf_checksum}" ]]; then
-             exit -1
-         fi
+         mkdir -p "${REFERENCE_BASE}/${REF_ID}/Annotation/Genes"
+         curl_gunzip_check "${gtf_url}" \
+                           "${gtf}" \
+                           "${gtf_md5}" || exit 1
      fi
 }
 
+# TODO: Downloads here should probably be handled by laxydl to prevent simultaneous downloads by concurrent jobs
 function get_igenome_aws() {
      local REF_ID=$1
 
      send_event "JOB_INFO" "Getting reference genome (${REF_ID})."
 
      if [[ "${REF_ID}" == "Homo_sapiens/Ensembl/GRCh38" ]]; then
-         get_ensembl_grch38
+         download_urls "ftp://ftp.ensembl.org/pub/release-95/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna_sm.primary_assembly.fa.gz" \
+                       "ftp://ftp.ensembl.org/pub/release-95/gtf/homo_sapiens/Homo_sapiens.GRCh38.95.gtf.gz" \
+                       "6ee1ec578b2b6495eb7da26885d0a496" \
+                       "cfe6daf315889981b6c22789127232ef"
+         return 0
+     fi
+
+     # https://www.ncbi.nlm.nih.gov/genome/?term=Chelonia%20mydas
+     if [[ "${REF_ID}" == "Chelonia_mydas/NCBI/CheMyd_1.0" ]]; then
+         download_ref_urls \
+                      "ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/344/595/GCF_000344595.1_CheMyd_1.0/GCF_000344595.1_CheMyd_1.0_genomic.fna.gz" \
+                      "ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/344/595/GCF_000344595.1_CheMyd_1.0/GCF_000344595.1_CheMyd_1.0_genomic.gff.gz" \
+                      "4d4ea95ed027d5cdc44b71c7a6587376" \
+                      "069b82e9d71870d724f89c0ba4a31242"
          return 0
      fi
 

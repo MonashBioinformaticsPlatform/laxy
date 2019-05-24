@@ -122,6 +122,20 @@ DRF CoreAPI docs: http://localhost:8000/coreapi/
 
 See notes on [running under Docker Compose](docs/docker.md)
 
+### Customising
+
+#### Adding a new reference genome
+
+Reference genomes currently follow the naming and path layout used by iGenomes eg `Homo_sapiens/Ensembl/GRCh38`.
+This is currently both the internal genome ID used by Laxy and the relative path where the downloaded genome is stored.
+
+* Add the genome to the frontend in `laxy_frontend/src/config/genomics/genomes.ts`
+* Add the genome to the backend in `laxy_backend/data/genomics/genomes.py`
+* (Optional but recommended): Add on-demand downloading of the genome to the appropriate `run_job.sh` script 
+  (eg via the `download_ref_urls` bash function). Otherwise pre-install it at the correct path.
+  
+This is documented here in the hopes it can be streamlined in the future (eg via simple genome 'service').
+
 #### Creating the UML diagram(s) for the Django models
 
 ```bash

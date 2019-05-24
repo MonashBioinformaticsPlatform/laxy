@@ -56,6 +56,9 @@ const available_genomes: ReferenceGenome[] = [
     // {'id': 'Canis_familiaris/UCSC/canFam2', 'organism': 'Canis familiaris'},
     // {'id': 'Canis_familiaris/UCSC/canFam3', 'organism': 'Canis familiaris'},
 
+    // A turtle: https://www.ncbi.nlm.nih.gov/genome/?term=Chelonia%20mydas
+    {'id': 'Chelonia_mydas/NCBI/CheMyd_1.0', 'organism': 'Chelonia mydas'},
+
     {'id': 'Danio_rerio/Ensembl/GRCz10', 'organism': 'Danio rerio'},
     // {'id': 'Danio_rerio/Ensembl/Zv9', 'organism': 'Danio rerio'},
     {'id': 'Danio_rerio/NCBI/GRCz10', 'organism': 'Danio rerio'},
