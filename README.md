@@ -42,7 +42,7 @@ It is based on Django and Celery.
 
 Dependencies:
 
-* Python 3.6+
+  * Python 3.6+
 
 ```bash
 # Create a Python virtual environment, install package dependencies
@@ -113,8 +113,8 @@ FLOWER_BASIC_AUTH=user:pass celery -A laxy flower --port=5555
 ```
 
 OpenAPI / Swagger API (via drf_openapi): 
-* Docs: http://localhost:8000/swagger/v1/
-* JSON: http://localhost:8000/swagger/v1/?format=openapi
+  * Docs: http://localhost:8000/swagger/v1/
+  * JSON: http://localhost:8000/swagger/v1/?format=openapi
 
 DRF CoreAPI docs: http://localhost:8000/coreapi/
 
@@ -129,10 +129,10 @@ See notes on [running under Docker Compose](docs/docker.md)
 Reference genomes currently follow the naming and path layout used by iGenomes eg `Homo_sapiens/Ensembl/GRCh38`.
 This is currently both the internal genome ID used by Laxy and the relative path where the downloaded genome is stored.
 
-* Add the genome to the frontend in `laxy_frontend/src/config/genomics/genomes.ts`
-* Add the genome to the backend in `laxy_backend/data/genomics/genomes.py`
-* (Optional but recommended): Add on-demand downloading of the genome to the appropriate `run_job.sh` script 
-  (eg via the `download_ref_urls` bash function). Otherwise pre-install it at the correct path.
+  * Add the genome to the frontend in `laxy_frontend/src/config/genomics/genomes.ts`
+  * Add the genome to the backend in `laxy_backend/data/genomics/genomes.py`
+  * (Optional but recommended): Add on-demand downloading of the genome to the appropriate `run_job.sh` script 
+    (eg via the `download_ref_urls` bash function). Otherwise pre-install it at the correct path.
   
 This is documented here in the hopes it can be streamlined in the future (eg via simple genome 'service').
 
