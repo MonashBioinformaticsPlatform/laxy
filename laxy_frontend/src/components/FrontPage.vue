@@ -5,8 +5,6 @@
                        md-vertical-align="stretch" md-column>
                 <md-whiteframe md-elevation="2" class="pad-32">
 
-                    <callout-box></callout-box>
-
                     <div class="pad-32">
                         <h1 class="md-display-2"><span class="logo-text">Laxy</span> &nbsp;&nbsp; <span
                                 class="md-subheading"><em>Genomics Pipelines for Humans</em></span>
