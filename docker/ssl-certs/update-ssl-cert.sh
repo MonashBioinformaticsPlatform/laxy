@@ -10,13 +10,15 @@ ACME_EXTRA_ARGS="${ACME_EXTRA_ARGS- }" # -s = staging, -F = force renewal
 AGREEMENT_URL="https://letsencrypt.org/documents/LE-SA-v1.2-November-15-2017.pdf"
 
 mkdir -p /usr/share/nginx/html/.well-known/acme-challenge
+rm -rf /var/log/ssl-certs-cron.log /var/log/ssl-certs-cron.err
 
 # If there is no key, nginx won't start, so create a temporary self-signed one. acme-client will replace it.
 if [ ! -f /certs/domain.key ]; then
   openssl req -x509 -newkey rsa:4096 \
               -keyout /certs/domain.key \
               -out /certs/fullchain.pem \
-              -days 1 -nodes -subj '/CN=localhost'
+              -days 1 -nodes -subj '/CN=localhost' \
+              >>/var/log/ssl-certs-cron.log 2>>/var/log/ssl-certs-cron.err
 fi
 
 /usr/bin/acme-client \
@@ -27,4 +29,5 @@ fi
             -k /certs/domain.key \
             -Nnmev \
             $ACME_EXTRA_ARGS \
-            $ACME_SSL_DOMAINS
+            $ACME_SSL_DOMAINS \
+            >>/var/log/ssl-certs-cron.log 2>>/var/log/ssl-certs-cron.err
