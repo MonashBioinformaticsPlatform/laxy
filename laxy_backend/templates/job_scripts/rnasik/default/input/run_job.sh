@@ -306,6 +306,15 @@ function get_igenome_aws() {
      fi
 
      # https://www.ncbi.nlm.nih.gov/genome/?term=Chelonia%20mydas
+     # TODO: This is a GFF3 but we are saving with a .gtf extension ! Bad.
+     #       Need to either deal with gtf/gff alternatives (eg file discovery in Chelonia_mydas/NCBI/CheMyd_1.0/Annoation/Genes
+     #       Or automatically convert all GFFs to GTF format (or vice versa). Yeck.
+     # TODO: This genome contains many small contigs that tend to break the RAM budget when generating a STAR index.
+     #       We need to make a custom version where we drop the contigs without any annotated exons like:
+     #         samtools faidx \
+     #           "${REFERENCE_BASE}/${REF_ID}/Sequence/WholeGenomeFasta/genome.fa" \
+     #           $(grep '\texon\t' "${REFERENCE_BASE}/${REF_ID}/Annotation/Genes/genes.gtf" \
+     #              |cut -f1 | sort | uniq | xargs) >"${REFERENCE_BASE}/${REF_ID}-exon-contigs/Sequence/WholeGenomeFasta/genome.fa"
      if [[ "${REF_ID}" == "Chelonia_mydas/NCBI/CheMyd_1.0" ]]; then
          download_ref_urls \
                       "ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/344/595/GCF_000344595.1_CheMyd_1.0/GCF_000344595.1_CheMyd_1.0_genomic.fna.gz" \
