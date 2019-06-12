@@ -303,7 +303,7 @@
                 this.$store.commit(SET_PIPELINE_DESCRIPTION, pipelinerun.description);
 
                 // TODO: make a prop on RNASeqSetup to allow a jump to second or last step immediately
-                this.$router.push({name: 'rnaseq'});
+                this.$router.push({name: 'rnaseq', params: {allowSkipping: 'true'}});
 
             } catch (error) {
                 console.log(error)

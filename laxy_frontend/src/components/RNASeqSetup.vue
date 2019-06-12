@@ -52,16 +52,17 @@
     @Component({})
     export default class RNASeqSetup extends Vue {
 
-        @Prop({type: Boolean, default: true})
-        public allowSkipping: boolean;
+        // This is a string since vue-router only allows strings to be passed as params
+        @Prop({type: String, default: 'false'})
+        public allowSkipping: string;
 
-        get dataSource_stepComplete() {
-            return this.$store.getters.sample_cart_count > 0 || this.allowSkipping;
+        get dataSource_stepComplete(): boolean {
+            return this.$store.getters.sample_cart_count > 0 || this.allowSkipping === 'true';
         }
 
         _describeSamples_stepComplete: boolean = false;
-        get describeSamples_stepComplete() {
-            return this._describeSamples_stepComplete || this.allowSkipping;
+        get describeSamples_stepComplete(): boolean {
+            return this._describeSamples_stepComplete || this.allowSkipping === 'true';
         }
 
         set describeSamples_stepComplete(state: boolean) {
@@ -69,7 +70,7 @@
         }
 
         get pipelineSettings_stepComplete(): boolean {
-            return this.$store.state.pipelineParams_valid || this.allowSkipping;
+            return this.$store.state.pipelineParams_valid;
         }
 
 //        enableStep() {
@@ -110,6 +111,7 @@
         async startJob() {
             try {
                 const response = await (this.$refs['pipelineParams'] as any).run();
+                if (response == null) throw Error();
                 if (response && response.data && response.data.id) {
                     this.$router.push({name: 'job', params: {jobId: response.data.id}});
                 } else {

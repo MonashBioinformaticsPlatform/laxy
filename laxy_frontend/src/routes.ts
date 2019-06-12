@@ -96,12 +96,6 @@ export const router = new VueRouter({
             props: true,
             beforeEnter: requireAuth,
         },
-        // {
-        //     path: '/enaselect',
-        //     name: 'enaselect',
-        //     component: ENAFileSelect,
-        //     props: true,
-        // },
         {
             path: '/remoteselect',
             name: 'remoteselect',
@@ -116,12 +110,6 @@ export const router = new VueRouter({
             props: true,
             beforeEnter: requireAuth,
         },
-        // {
-        //     path: '/setupRun',
-        //     name: 'setupRun',
-        //     component: PipelineParams,
-        //     props: true,
-        // },
         {
             path: '/jobs',
             name: 'jobs',

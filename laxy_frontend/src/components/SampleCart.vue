@@ -317,7 +317,9 @@
         async saveAndContinue() {
             try {
                 await this.submit();
-                this.routeTo("setupRun");
+                // TODO: We should fire an event here to let the parent component do something
+                //  (eg catch event in index.ts, do toggleSidenav('rightSidenav') )
+                // this.routeTo("rnaseq");
             } catch (error) {
                 throw error;
             }

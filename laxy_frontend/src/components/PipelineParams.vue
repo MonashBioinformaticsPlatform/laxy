@@ -3,7 +3,12 @@
         <md-dialog-alert :md-content-html="error_alert_message"
                          :md-content="error_alert_message" ref="error_dialog">
         </md-dialog-alert>
-
+        <banner-notice v-if="!isValid_samples_added" type="error" :show-close-button="false">
+            Please add some samples before submitting your job.
+        </banner-notice>
+        <banner-notice v-if="!isValid_reference_genome" type="error" :show-close-button="false">
+            Selected reference genome is invalid.
+        </banner-notice>
         <md-layout md-column>
             <md-whiteframe style="padding: 32px;">
                 <h2>RNAsik</h2>
@@ -62,7 +67,8 @@
 
             <md-whiteframe style="padding: 32px;">
                 <h3>Sample summary</h3>
-                <sample-cart :samples="samples"
+                <sample-cart v-if="samples.items.length > 0"
+                             :samples="samples"
                              :fields="['name', 'metadata.condition', 'R1', 'R2']"
                              :show-toolbar="false"
                              :show-add-menu="false"
@@ -70,12 +76,15 @@
                              :editable-set-name="false"
                              :selectable="false"
                              @selected="onSelect"></sample-cart>
+                <div v-if="samples.items.length === 0">
+                    No samples in cart.
+                </div>
             </md-whiteframe>
             <md-layout v-if="showButtons">
                 <md-button class="md-primary md-raised" @click="save">
                     Save
                 </md-button>
-                <md-button class="md-primary md-raised" @click="run">
+                <md-button :disabled="isValid_params" class="md-primary md-raised" @click="run">
                     Run the pipeline
                 </md-button>
             </md-layout>
@@ -127,9 +136,12 @@
     import {DummySampleList as _dummySampleList} from "../test-data";
     import {DummyPipelineConfig as _dummyPipelineConfig} from "../test-data";
     import {Snackbar} from "../snackbar";
+    import BannerNotice from "./BannerNotice.vue";
 
     @Component({
-        components: {},
+        components: {
+            BannerNotice,
+        },
         props: {},
         filters: {},
         beforeRouteLeave(to: any, from: any, next: any) {
@@ -170,6 +182,8 @@
         public _samples: SampleCartItems;
         get samples(): SampleCartItems {
             this._samples = cloneDeep(this.$store.state.samples);
+            // We do this so that if samples change validation runs
+            const _ = this.isValid_params;
             return this._samples;
         }
 
@@ -191,7 +205,8 @@
             // let state = Object.assign({}, this.$store.state.pipelineParams);
             // state.genome = id;
             this.$store.commit(SET_PIPELINE_GENOME, id);
-            this.validatePipelineParams();
+
+            //this.validatePipelineParams();
         }
 
         get pipeline_version() {
@@ -263,9 +278,19 @@
             return data;
         }
 
-        validatePipelineParams() {
+        get isValid_reference_genome() {
+            return map(this.available_genomes, 'id').includes(this.reference_genome);
+        }
+
+        get isValid_samples_added() {
+            // return (this.samples.items.length != 0);
+            return this.$store.getters.sample_cart_count > 0;
+        }
+
+        get isValid_params() {
             let is_valid = false;
-            if (map(this.available_genomes, 'id').includes(this.reference_genome)) {
+            if (this.isValid_reference_genome &&
+                this.isValid_samples_added) {
                 is_valid = true;
             }
             this.$store.commit(SET_PIPELINE_PARAMS_VALID, is_valid);
@@ -301,10 +326,19 @@
             try {
                 await this.save();
 
-                if (!this.validatePipelineParams()) {
-                    Snackbar.flashMessage("Please select a reference genome.");
-                    return;
+                if (!this.isValid_params) {
+                    Snackbar.flashMessage("Please correct errors before submitting.");
+                    return null;
                 }
+
+                // if (this.samples.items.length == 0) {
+                //     console.log("NO samples !!");
+                //     // Snackbar.flashMessage("Please add some samples to the sample cart first !");
+                //     this.error_alert_message = "Please add some samples to the sample cart first !";
+                //     this.openDialog("error_dialog");
+                //     // throw Error( "Please add some samples to the sample cart first !");
+                //     return null;
+                // }
 
                 try {
                     this.submitting = true;
