@@ -29,7 +29,7 @@ sentry-sdk==0.6.8
 git+https://github.com/pansapiens/webdav-client-python.git@master#egg=webdavclient
 
 # Base Django packages
-django==2.1.7
+django==2.1.9
 django-reversion
 django-cors-headers
 django-extensions
