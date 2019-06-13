@@ -109,8 +109,8 @@ class JobAdmin(Timestamped, VersionAdmin):
                     '_owner_email',
                     '_status')
     ordering = ('-created_time', '-completed_time', '-modified_time', '-expiry_time')
-    search_fields = ('id', 'status', 'remote_id',)
-    list_filter = ('status',)
+    search_fields = ('id', 'status', 'remote_id', 'owner_id__exact', 'owner__email__exact',)
+    list_filter = ('status', 'expired',)
     actions = ('trigger_file_ingestion',
                'expire_job',
                'estimate_job_tarball_size',)
