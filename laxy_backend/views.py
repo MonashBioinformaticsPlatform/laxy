@@ -2261,7 +2261,8 @@ class SendFileToDegust(JSONView):
          }
         ```
         """
-        degust_api_url = 'http://degust.erc.monash.edu'
+
+        degust_api_url = getattr(settings, 'DEGUST_URL', 'http://degust.erc.monash.edu')
 
         counts_file: File = self.get_object()
         job = counts_file.fileset.jobs_as_output.first()

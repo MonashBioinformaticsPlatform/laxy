@@ -82,6 +82,7 @@ default_env = PrefixedEnv(
     DEFAULT_JOB_EXPIRY=(int, 30*24*60*60),
     WEB_SCRAPER_BACKEND=(str, 'simple'),
     WEB_SCRAPER_SPLASH_HOST=(str, 'http://localhost:8050'),
+    DEGUST_URL=(str, 'http://degust.erc.monash.edu'),
 )
 
 
@@ -191,6 +192,12 @@ WEB_SCRAPER_SPLASH_HOST = env('WEB_SCRAPER_SPLASH_HOST')
 """
 The URL to a Splash scraping server (eg https://splash.readthedocs.io/en/stable/api.html#render-html).
 When running under docker-compose this might be 'http://splash:8050'.
+"""
+
+DEGUST_URL = env('DEGUST_URL')
+"""
+The base URL to the Degust instance you'd like to use (eg, could be changed to 
+"http://degust-training.erc.monash.edu" or a dev instance of Degust)
 """
 
 ALLOWED_HOSTS = env('ALLOWED_HOSTS')
