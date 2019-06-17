@@ -65,6 +65,7 @@ setup(
         'backoff',
         'attrdict',
         'trio==0.8.0',
+        'psutil',
         'python-magic',
         "pyaria2 @ git+https://github.com/pansapiens/pyaria2.git#egg=pyaria2-0.2.1.2",
     ],

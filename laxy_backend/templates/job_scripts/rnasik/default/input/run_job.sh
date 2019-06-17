@@ -621,6 +621,8 @@ function download_input_data() {
            --event-notification-url "${JOB_EVENT_URL}" \
            --event-notification-auth-file "${AUTH_HEADER_FILE}" \
            --pipeline-config "${JOB_PATH}/input/pipeline_config.json" \
+           --create-missing-directories \
+           --skip-existing \
            --destination-path "${JOB_PATH}/input"
 
         DL_EXIT_CODE=$?

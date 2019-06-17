@@ -5,6 +5,8 @@ import os
 import logging
 import argparse
 import tarfile
+import xmlrpc
+import psutil
 
 import trio
 
@@ -68,16 +70,20 @@ def add_commandline_args(parser: argparse.ArgumentParser) -> argparse.ArgumentPa
                            help="Rather than block waiting for downloads to finish, exit after queuing."
                                 "Aria2 daemon will continue downloading in the background.",
                            action="store_true")
-
     dl_parser.add_argument("--copy-from-cache",
                            help="When using a file from the local cache, copy it to the download location rather than "
                                 "symlinking.",
                            action="store_true")
-
     dl_parser.add_argument("--destination-path",
                            help="Symlink / copy downloaded files to this directory.",
                            default=None,
                            type=str)
+    dl_parser.add_argument("--skip-existing",
+                           help="If a destination filename already exists, skip downloading it.",
+                           action="store_true")
+    dl_parser.add_argument("--create-missing-directories",
+                           help="If the destination path directories are missing, recursively create them.",
+                           action="store_true")
     dl_parser.add_argument("--proxy",
                            help="Specify the HTTP (and FTP) proxy to use in the format: "
                                 "[http://][USER:PASSWORD@]HOST[:PORT]",
@@ -147,7 +153,7 @@ def _run_download_cli(args, rpc_secret):
         logging.error("Can't mix --pipeline-config with URLs specified as command line args.")
         sys.exit(1)
 
-    urls = args.urls
+    urls = set(args.urls)
     if config_urls is not None:
         urls = config_urls
 
@@ -159,7 +165,25 @@ def _run_download_cli(args, rpc_secret):
     verify_ssl_certificate = not args.ignore_self_signed_ssl_certificate
 
     if urls:
-        if not args.no_aria2c:
+        # Find filenames for each URL, optionally skip any existing files
+        if args.destination_path is not None:
+            skip_urls = set()
+            for url in urls:
+                # TODO: should the filename come from pipeline_config.json, if provided ?
+                filename, _ = find_filename_and_size_from_url(url)
+                filepath = os.path.join(args.destination_path, filename)
+
+                if args.skip_existing and os.path.isfile(filepath):
+                    logger.info(f'{filename} exists, skipping download.')
+                    skip_urls.add(url)
+                    continue
+
+            urls.difference_update(skip_urls)
+
+        if args.create_missing_directories:
+            os.makedirs(args.destination_path, exist_ok=True)
+
+        if urls and not args.no_aria2c:
             daemon = aria.get_daemon(secret=rpc_secret)
 
             async def aria_dl_and_poll():
@@ -195,7 +219,7 @@ def _run_download_cli(args, rpc_secret):
                 aria.purge_results()
 
             trio.run(aria_dl_and_poll)
-        else:
+        elif urls:
             # trio.run(download, urls)
             notify_event(api_url,
                          "INPUT_DATA_DOWNLOAD_STARTED",
@@ -212,11 +236,16 @@ def _run_download_cli(args, rpc_secret):
                          message="Input data download finished.",
                          auth_headers=api_auth_headers,
                          verify_ssl_certificate=verify_ssl_certificate)
+        else:
+            logger.info(f'All files are already downloaded.')
 
         if args.destination_path is not None:
             for url in urls:
                 cached = get_url_cached_path(url, args.cache_path)
+
+                # TODO: should the filename come from pipeline_config.json, if provided ?
                 filename, _ = find_filename_and_size_from_url(url)
+
                 if is_tar_url_with_fragment(url) and is_tarfile(cached) and args.unpack:
                     # TODO: It's probably more efficient to group all URLs for the same tar file
                     # and extract all #fragment files from their archive at once. But this works for now.
@@ -271,6 +300,8 @@ def main():
     rpc_secret_path = os.path.join(args.cache_path, '.aria2_rpc_secret')
     rpc_secret = get_secret_key(rpc_secret_path)
 
+    logger.debug(f"RPC secret is at: {rpc_secret_path}")
+
     if args.command == 'kill_aria':
         logger.info("Stopping all downloads and shuttting down Aria2c.")
         daemon = aria.get_daemon(secret=rpc_secret)
@@ -290,7 +321,17 @@ def main():
             parser.print_help()
             sys.exit(1)
 
-        _run_download_cli(args, rpc_secret)
+        try:
+            _run_download_cli(args, rpc_secret)
+        except xmlrpc.client.Fault as ex:
+
+            def get_processes_by_name(name):
+                return [p for p in psutil.process_iter(attrs=['name']) if p.info['name'] == name]
+
+            logger.error(f"Error communicating with aria2c backend: {ex.faultString} (code {ex.faultCode})")
+            logger.error("You may want to try:  laxydl kill-aria")
+            aria_pids = ' '.join([str(p.pid) for p in get_processes_by_name('aria2c')])
+            logger.error(f"Or if that fails, try killing the aria2c process(es):  kill {aria_pids}")
 
 
 if __name__ == '__main__':

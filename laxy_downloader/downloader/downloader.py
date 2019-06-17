@@ -23,6 +23,7 @@ from functools import partial
 import concurrent.futures
 from http.client import responses as response_codes
 from base64 import urlsafe_b64encode
+import functools
 
 import requests
 import backoff
@@ -37,6 +38,7 @@ logger = logging.getLogger(__name__)
 # logging.basicConfig(format='%(levelname)s: %(asctime)s -- %(message)s', level=logging.INFO)
 
 asks.init(trio)
+
 
 def get_tmpdir():
     return '/tmp' if platform.system() == 'Darwin' else tempfile.gettempdir()
@@ -330,18 +332,19 @@ def parse_pipeline_config(config_fh):
 
 
 def get_urls_from_pipeline_config(config):
-    urls = []
+    urls = set()
     for sample in config['sample_set']['samples']:
         for f in sample['files']:
             for read_number, url_descriptor in f.items():
                 if isinstance(url_descriptor, str):
-                    urls.append(url_descriptor)
+                    urls.add(url_descriptor)
                 elif isinstance(url_descriptor, dict) and url_descriptor.get('location', False):
-                    urls.append(url_descriptor['location'])
+                    urls.add(url_descriptor['location'])
 
     return urls
 
 
+@functools.lru_cache(maxsize=1024)
 def find_filename_and_size_from_url(url, **kwargs):
     """
     Tries to determine the filename for a given download URL via the
