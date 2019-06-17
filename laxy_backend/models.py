@@ -1,7 +1,8 @@
 import os
 
 from django.core.handlers.wsgi import WSGIRequest
-from typing import List, Union
+import typing
+from typing import List, Union, AnyStr
 from collections import OrderedDict, Sequence
 from datetime import datetime, timedelta
 import math
@@ -985,8 +986,15 @@ class File(Timestamped, UUIDModel):
             return None
 
     @property
-    def file(self):
+    def file(self) -> Union[typing.IO[AnyStr], None]:
         from laxy_backend.tasks.download import request_with_retries
+
+        # assert self.location is not None and str(self.location).strip() != '', \
+        #     f"File {self.id} location is empty. This isn't allowed and shouldn't ever happen."
+        if self.location is None or str(self.location).strip() == '':
+            logger.warning(f"File {self.id} location is empty. "
+                           f"This isn't allowed and shouldn't ever happen.")
+            return None
 
         url = urlparse(self.location)
         scheme = url.scheme
@@ -1015,7 +1023,7 @@ class File(Timestamped, UUIDModel):
             return filelike
 
     @property
-    def size(self):
+    def size(self) -> Union[int, None]:
         """
         Get the file size from metadata or via the storage class, opportunistically caching the value in metadata.
         Assumes the file size never changes once cached.
@@ -1026,9 +1034,11 @@ class File(Timestamped, UUIDModel):
         :rtype:
         """
         size = self.metadata.get('size', None)
-        if size is None and hasattr(self.file, 'size'):
+        if (size is None and
+                self.file is not None and
+                hasattr(self.file, 'size')):
             try:
-                size = self.file.size
+                size = int(self.file.size)
                 # cache on demand
                 self.metadata['size'] = size
                 self.save()

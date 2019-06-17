@@ -659,7 +659,13 @@ def file_should_be_deleted(ff: File, max_size=200):
     if has_always_delete_path:
         return True
 
-    is_large_file = (ff.size / MB) > max_size
+    if ff.size is not None:
+        is_large_file = (ff.size / MB) > max_size
+    else:
+        logger.warning(f"Cannot determine size of file {ff.id} (file_should_be_deleted). "
+                       f"Erring on the side of caution and regarding this file as 'small', but be warned - "
+                       f"if it's large it may hang around even though we'd rather it expired.")
+        is_large_file = False
 
     has_whitelisted_path = any([fnmatch.filter([ff.full_path], pattern)
                                 for pattern in whitelisted_paths])
