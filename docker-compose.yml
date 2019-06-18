@@ -3,6 +3,7 @@ version: '3.7'
 services:
   django:
     image: laxy:latest
+    user: laxy
     working_dir: /app
     environment:
       - LAXY_DATABASE_URL=postgres://postgres:postgres@db:5432/postgres
@@ -49,6 +50,7 @@ services:
 
   celeryd:
     image: laxy:latest
+    user: laxy
     working_dir: /app
     environment:
       - LAXY_DATABASE_URL=postgres://postgres:postgres@db:5432/postgres
@@ -63,6 +65,7 @@ services:
 
   flower:
     image: laxy:latest
+    user: laxy
     environment:
       - LAXY_DEBUG=no
       - LAXY_BROKER_URL=amqp://guest@rabbitmq
