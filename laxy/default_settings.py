@@ -75,6 +75,7 @@ default_env = PrefixedEnv(
     FILE_CACHE_PATH=(str, tempfile.gettempdir()),
     SOCIAL_AUTH_GOOGLE_OAUTH2_KEY=(str, ''),
     SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET=(str, ''),
+    SOCIAL_AUTH_WHITELISTED_DOMAINS=(list, []),
     CORS_ORIGIN_WHITELIST=(list, []),
     CSRF_TRUSTED_ORIGINS=(list, []),
     USE_SSL=(bool, False),
@@ -397,6 +398,13 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_FIELDS = ['email', 'username']
 SOCIAL_AUTH_POSTGRES_JSONFIELD = True
 # SOCIAL_AUTH_REDIRECT_IS_HTTPS = True
 SOCIAL_AUTH_GOOGLE_OAUTH2_USE_UNIQUE_USER_ID = True
+
+# Note: this only applies to django-social-auth logins, not Django local accounts (which may be
+#       created by eg django-registration)
+if env('SOCIAL_AUTH_WHITELISTED_DOMAINS', default=[]):  # only if non-empty list
+    SOCIAL_AUTH_WHITELISTED_DOMAINS = env('SOCIAL_AUTH_WHITELISTED_DOMAINS',
+                                          transform=_cleanup_env_list)
+    # Do we need SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_DOMAINS ??
 
 # https://github.com/st4lk/django-rest-social-auth#settings
 REST_SOCIAL_OAUTH_REDIRECT_URI = '/'  # ''http://localhost:8002/'
