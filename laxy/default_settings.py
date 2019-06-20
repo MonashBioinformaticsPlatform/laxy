@@ -255,12 +255,16 @@ MEDIA_URL = str(env('MEDIA_URL'))
 STATIC_URL = str(env('STATIC_URL'))
 STATIC_ROOT = str(env('STATIC_ROOT'))
 
+# For whitenoise compression and name-mangling caching
+# STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 # Application definition
 
 # Required since Laxy overrides the default Django User model
 AUTH_USER_MODEL = 'laxy_backend.User'
 
 INSTALLED_APPS = [
+    # 'whitenoise.runserver_nostatic',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -291,6 +295,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # 'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
