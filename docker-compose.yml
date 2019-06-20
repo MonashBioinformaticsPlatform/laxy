@@ -62,6 +62,15 @@ services:
       - rabbitmq
 
   flower:
+    # Alternative using public flower image
+    # image: mher/flower:latest
+    #    entrypoint:
+    #      - celery
+    #      - -A
+    #      - laxy
+    #      - flower
+    #      - --port=5556
+    #      - --broker=${LAXY_BROKER_URL}"
     image: laxy:latest
     environment:
       - LAXY_DEBUG=no
