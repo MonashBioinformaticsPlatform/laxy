@@ -40,6 +40,9 @@ services:
                       # python manage.py shell -c \"from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.filter(username='${LAXY_ADMIN_USERNAME}').count() or User.objects.create_superuser('${LAXY_ADMIN_USERNAME}', '${LAXY_ADMIN_EMAIL}', '${LAXY_ADMIN_PASSWORD}');\";"
 
   celeryd:
+    build:
+      context: .
+      dockerfile: ./docker/laxy/Dockerfile
     command: bash -c "celery -A laxy worker -B -E -l info --broker=${LAXY_BROKER_URL}"
     volumes:
       - .:/app

@@ -12,6 +12,7 @@ services:
 
   django:
     image: "${IMAGE_REPO-registry.gitlab.com/pansapiens/laxy}/laxy:latest"
+    user: laxy
     # We must specify the .env file so that it gets sourced - otherwise every variable in .env would
     # need to be explicitly defined like: LAXY_DEBUG=${LAXY_DEBUG} in the environment section below.
     env_file:
@@ -72,6 +73,7 @@ services:
 
   celeryd:
     image: "${IMAGE_REPO-registry.gitlab.com/pansapiens/laxy}/laxy:latest"
+    user: laxy
     # command: bash -c "celery -A laxy worker -B -E -l info --broker=${LAXY_BROKER_URL}"
     env_file:
       - .env
