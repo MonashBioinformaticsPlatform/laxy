@@ -79,6 +79,7 @@ vi .env
 
 Initialize the database, create an admin user:
 ```bash
+./manage.py migrate --no-input --run-syncdb
 # ./manage.py migrate contenttypes
 ./manage.py migrate
 ./manage.py makemigrations django_celery_results

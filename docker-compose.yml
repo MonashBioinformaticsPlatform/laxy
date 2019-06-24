@@ -16,6 +16,11 @@ services:
       - db
       - celeryd
 
+  dev-frontend-server:
+    image: laxy:latest
+    restart: "no"
+    command: echo "Service disabled unless explicitly overridden (eg in docker-compose.local-dev.yml)"
+
   db:
     image: postgres:10-alpine
     environment:
@@ -80,7 +85,7 @@ services:
     ports:
       - "5556:5556"
     working_dir: /app
-    command: bash -c "sleep 10 && celery -A laxy flower --port=5556 --broker=${LAXY_BROKER_URL}"
+    command: bash -c "sleep 30 && celery -A laxy flower --port=5556 --broker=${LAXY_BROKER_URL}"
     depends_on:
       - db
       - rabbitmq

@@ -78,6 +78,13 @@ WHERE datname = 'test_laxy';
 DROP DATABASE test_laxy;
 ```
 
+Dropping all tables (careful !):
+```bash
+ docker-compose -f docker-compose.yml -f docker-compose.${LAXY_ENV}.yml \
+   run db /bin/bash -c \
+   'echo -e "DROP SCHEMA public CASCADE;\n CREATE SCHEMA public;" | PGPASSWORD=postgres psql -h db -p 5432 -w postgres postgres'
+```
+
 ###### Cloning the Postgres data volume
 
 In the Docker Compose setup the Postgres database lives in an attached volume container

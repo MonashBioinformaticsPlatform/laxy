@@ -1,4 +1,10 @@
-import 'file-loader?emitFile=false!../../.env';  // watch .env but DON'T output the file ! (emitFile=false)
+// import 'file-loader?emitFile=false!../../.env';  // watch .env but DON'T output the file ! (emitFile=false)
+try {
+    require('file-loader?emitFile=false!../../.env');  // watch .env but DON'T output the file ! (emitFile=false)
+} catch {
+    // pass
+}
+
 // import 'file-loader?name=[name].[ext]!../index.html';
 import 'file-loader?name=[name].[ext]?[hash]&outputPath=assets/!../assets/favicon.ico';
 import 'vue-material/dist/vue-material.css';

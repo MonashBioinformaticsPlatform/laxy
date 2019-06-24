@@ -103,6 +103,12 @@ services:
       - private
 
   nginx:
+    command: >
+      sh -c "
+        echo -e '#!/bin/sh\n/usr/sbin/nginx -s reload' >/etc/periodic/daily/nginx-reload-config &&
+        chmod +x /etc/periodic/daily/nginx-reload-config &&
+        /usr/sbin/nginx -g 'daemon off;'
+      "
     deploy:
       restart_policy:
         condition: any

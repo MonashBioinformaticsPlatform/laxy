@@ -11,7 +11,7 @@
     "dev": "npm run server && python3 ../manage.py runserver 8001",
     "django": "python3 ../manage.py runserver 8001",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "server": "NODE_ENV=dev NYAN=true GIT_COMMIT=$(git log -1 --format=%h) webpack-dev-server -d --watch --port 8002 --open --content-base ./dist/"
+    "server": "NODE_ENV=dev NYAN=true GIT_COMMIT=$(git log -1 --format=%h) webpack-dev-server -d --watch --hot --host 0.0.0.0 --port 8002 --open --content-base ./dist/"
   },
   "author": "Andrew Perry <Andrew.Perry@monash.edu>",
   "license": "Apache",
