@@ -526,6 +526,14 @@ function detect_pairs() {
       PAIRIDS="_1,_2"
     fi
 
+    # BGI currently uses .fq.gz ?!? This is why we can't have nice things.
+    if stat -t "${JOB_PATH}"/input/*_1.fq.gz >/dev/null 2>&1; then
+      EXTN=".fq.gz"
+      if stat -t "${JOB_PATH}"/input/*_2.fq.gz >/dev/null 2>&1; then
+          PAIRIDS="_1,_2"
+      fi
+    fi
+
     if [[ -z "${PAIRIDS}" ]]; then
         send_event "JOB_INFO" "(Looks like unpaired reads)"
     else
