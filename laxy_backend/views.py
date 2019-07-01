@@ -1,4 +1,5 @@
 import asyncio
+import sys
 from collections import OrderedDict
 
 import json
@@ -15,7 +16,7 @@ import logging
 import os
 import pydash
 
-from paramiko import SSHClient
+from paramiko import SSHClient, ssh_exception
 from paramiko import RSAKey, AutoAddPolicy
 
 from laxy_backend.scraping import render_page, parse_cloudstor_links, parse_simple_index_links, is_apache_index_page, \
@@ -261,8 +262,11 @@ class StreamingFileDownloadRenderer(BaseRenderer):
                renderer_context=None,
                blksize=8192):
         iterable = FileWrapper(filelike, blksize=blksize)
-        for chunk in iterable:
-            yield chunk
+        try:
+            for chunk in iterable:
+                yield chunk
+        except ssh_exception.SSHException as ex:
+            raise IOError(str(ex) + '(paramiko.ssh_exception.SSHException)').with_traceback(sys.exc_info()[2])
 
 
 class RemoteFilesQueryParams(QueryParamFilterBackend):
@@ -470,9 +474,11 @@ class StreamFileMixin(JSONView):
 
     @backoff.on_exception(backoff.expo,
                           (EOFError,
-                           paramiko.ssh_exception.AuthenticationException,
-                           paramiko.ssh_exception.SSHException),
-                          max_tries=2,
+                           IOError,
+                           ssh_exception.SSHException,
+                           ssh_exception.AuthenticationException,
+                           ),
+                          max_tries=3,
                           jitter=backoff.full_jitter)
     def _stream_response(
             self,
@@ -698,8 +704,8 @@ class FileView(StreamFileMixin,
                     return super().download(uuid, filename=filename)
                 else:
                     return super().view(uuid, filename=filename)
-            except (paramiko.ssh_exception.AuthenticationException,
-                    paramiko.ssh_exception.SSHException,
+            except (ssh_exception.AuthenticationException,
+                    ssh_exception.SSHException,
                     EOFError) as ex:
                 return HttpResponse(
                     status=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -843,8 +849,8 @@ class JobFileView(StreamFileMixin,
                 else:
                     logger.debug(f"Attempting view in browser of {file_obj.id}")
                     return super().view(file_obj, filename=fname)
-            except (paramiko.ssh_exception.AuthenticationException,
-                    paramiko.ssh_exception.SSHException,
+            except (ssh_exception.AuthenticationException,
+                    ssh_exception.SSHException,
                     EOFError) as ex:
                 return HttpResponse(
                     status=status.HTTP_503_SERVICE_UNAVAILABLE,
