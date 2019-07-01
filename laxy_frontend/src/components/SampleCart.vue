@@ -226,6 +226,9 @@
 
         created() {
             this._samples = _.cloneDeep(this.$store.state.samples);
+            // fixes DOM re-render in table when editing conditions
+            //  https://github.com/MonashBioinformaticsPlatform/laxy/issues/66
+            this.$store.commit(SET_SAMPLES,  this._samples);
         }
 
         public _samples: SampleCartItems;
