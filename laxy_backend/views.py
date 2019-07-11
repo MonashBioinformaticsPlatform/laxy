@@ -10,6 +10,7 @@ import coreapi
 import coreschema
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
+from django.utils.functional import cached_property
 from django.shortcuts import redirect
 from fnmatch import fnmatch
 import logging
@@ -2044,7 +2045,9 @@ class JobAccessTokenView(JSONView, GetMixin):
     serializer_class = JobAccessTokenRequestSerializer
     permission_classes = (IsSuperuser, IsOwner, HasReadonlyObjectAccessToken,)
 
-    _job_ct = ContentType.objects.get(app_label='laxy_backend', model='job')
+    @cached_property
+    def _job_ct(self) -> ContentType:
+        return ContentType.objects.get(app_label='laxy_backend', model='job')
 
     def _owns_target_object(self, user, obj_id):
         target_obj = ContentType.objects.get(

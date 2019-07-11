@@ -92,7 +92,7 @@ Initialize the database, create an admin user:
 
 ./manage.py createsuperuser
 
-# You may want to prepopulate the database with some data
+# You may want to pre-populate the database with some data
 ./manage.py loaddata laxy_backend/fixtures.json
 ```
 
