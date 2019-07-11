@@ -268,6 +268,8 @@ class StreamingFileDownloadRenderer(BaseRenderer):
                 yield chunk
         except ssh_exception.SSHException as ex:
             raise IOError(str(ex) + '(paramiko.ssh_exception.SSHException)').with_traceback(sys.exc_info()[2])
+        except OSError as ex:
+            raise IOError(str(ex) + '(OSError)').with_traceback(sys.exc_info()[2])
 
 
 class RemoteFilesQueryParams(QueryParamFilterBackend):
