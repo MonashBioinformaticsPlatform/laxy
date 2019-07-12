@@ -103,6 +103,24 @@ Vue.filter('numeral_format', function(value: number | string, format: string = '
     return numeral(value).format(format);
 });
 
+// Based on: https://stackoverflow.com/a/14919494
+Vue.filter('humanize_bytes',  function humanFileSize(bytes: number, si: boolean = true) {
+    const thresh = si ? 1000 : 1024;
+    if (Math.abs(bytes) < thresh) {
+        return bytes + ' B';
+    }
+    const units = si
+        ? ['kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']
+        : ['KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB'];
+    let u = -1;
+    do {
+        bytes /= thresh;
+        ++u;
+    } while (Math.abs(bytes) >= thresh && u < units.length - 1);
+
+    return `${bytes.toFixed(1)} ${units[u]}`;
+});
+
 Vue.filter('deunderscore', function(value: string) {
     if (!value) return '';
     value = value.replace('_', ' ');

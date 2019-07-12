@@ -249,7 +249,7 @@
                                 <md-whiteframe class="pad-32 fill-width">
                                     <div>
                                         <h3 style="display: inline; float: left; margin-top:-8px;">Download all job
-                                            files <span v-if="job.params.tarball_size">(~ {{ (job.params.tarball_size / 1000000).toFixed(1) }} Mb)</span>
+                                            files <span v-if="job.params.tarball_size">(~ {{ job.params.tarball_size | humanize_bytes }})</span>
                                         </h3>
                                         <md-button id="helpButton"
                                                    @click="openDialog('downloadHelpDialog')"
