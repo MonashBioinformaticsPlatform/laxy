@@ -59,6 +59,7 @@ const available_genomes: ReferenceGenome[] = [
     // A turtle: https://www.ncbi.nlm.nih.gov/genome/?term=Chelonia%20mydas
     {'id': 'Chelonia_mydas/NCBI/CheMyd_1.0', 'organism': 'Chelonia mydas'},
 
+    {'id': 'Danio_rerio/Ensembl/GRCz11.97', 'organism': 'Danio rerio', 'recommended': true},
     {'id': 'Danio_rerio/Ensembl/GRCz10', 'organism': 'Danio rerio'},
     // {'id': 'Danio_rerio/Ensembl/Zv9', 'organism': 'Danio rerio'},
     {'id': 'Danio_rerio/NCBI/GRCz10', 'organism': 'Danio rerio'},

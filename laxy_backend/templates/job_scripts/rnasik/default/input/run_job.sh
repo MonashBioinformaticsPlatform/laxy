@@ -298,10 +298,18 @@ function get_igenome_aws() {
      send_event "JOB_INFO" "Getting reference genome (${REF_ID})."
 
      if [[ "${REF_ID}" == "Homo_sapiens/Ensembl/GRCh38" ]]; then
-         download_urls "ftp://ftp.ensembl.org/pub/release-95/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna_sm.primary_assembly.fa.gz" \
+         download_ref_urls "ftp://ftp.ensembl.org/pub/release-95/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna_sm.primary_assembly.fa.gz" \
                        "ftp://ftp.ensembl.org/pub/release-95/gtf/homo_sapiens/Homo_sapiens.GRCh38.95.gtf.gz" \
                        "6ee1ec578b2b6495eb7da26885d0a496" \
                        "cfe6daf315889981b6c22789127232ef"
+         return 0
+     fi
+
+     if [[ "${REF_ID}" == "Danio_rerio/Ensembl/GRCz11.97" ]]; then
+         download_ref_urls "ftp://ftp.ensembl.org/pub/release-97/fasta/danio_rerio/dna/Danio_rerio.GRCz11.dna_sm.toplevel.fa.gz" \
+                       "ftp://ftp.ensembl.org/pub/release-97/gtf/danio_rerio/Danio_rerio.GRCz11.97.gtf.gz" \
+                       "90e7dcb80ab9ca2a4ae4033a4b8d83c4" \
+                       "aaab04e8713b1712ae998e9d045e5270"
          return 0
      fi
 
@@ -680,7 +688,7 @@ init_conda_env "rnasik" "${PIPELINE_VERSION}" || exit 1
 update_laxydl
 
 # get_reference_data_aws
-get_igenome_aws "${REFERENCE_GENOME}"
+get_igenome_aws "${REFERENCE_GENOME}" || exit 1
 
 # Make a copy of the bds.config in the $JOB_PATH, possibly modified for SLURM
 setup_bds_config
