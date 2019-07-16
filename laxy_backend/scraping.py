@@ -65,9 +65,18 @@ def render_simple(url: str, max_size: int = 10 * 1024 * 1024):
         raise e
 
 
-def render_with_splash(url: str, fallback_backend=None, timeout=10, wait=0.5) -> str:
+def render_with_splash(url: str,
+                       fallback_backend = None,
+                       timeout: float = 10,
+                       wait: float = 0.5,
+                       fetch_images: bool = False) -> str:
+    fetch_images = {True: '1', False: '0'}[fetch_images]
     try:
-        text = requests.get(f"{SPLASH_HOST}/render.html?url={url}&timeout={timeout}&wait={wait}").text
+        text = requests.get(f"{SPLASH_HOST}/render.html?"
+                            f"url={url}&"
+                            f"timeout={timeout}&"
+                            f"wait={wait}&"
+                            f"images={fetch_images}").text
     except requests.exceptions.ConnectionError as ex:
         if fallback_backend is not None:
             text = render_page(url, backend=fallback_backend)
