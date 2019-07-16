@@ -684,7 +684,7 @@ def expire_old_job(self, task_data=None, **kwargs):
     _init_fabric_env()
 
     seconds_in_day = 60 * 60 * 24
-    ttl = 30 * seconds_in_day
+    ttl = task_data.get('ttl', 30 * seconds_in_day)
     MB = 1024 * 1024
 
     environment = task_data.get('environment', {})

@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 from django.contrib import admin
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth import get_user_model
@@ -184,7 +186,9 @@ class JobAdmin(Timestamped, VersionAdmin):
     def expire_job(self, request, queryset):
         failed = []
         for obj in queryset:
-            task_data = dict(job_id=obj.id)
+            task_data = dict(job_id=obj.id, ttl=0)
+            obj.expiry_time = datetime.now() - timedelta(seconds=5)
+            obj.save()
             result = job_tasks.expire_old_job.apply_async(args=(task_data,))
             if result.failed():
                 failed.append(obj.id)
