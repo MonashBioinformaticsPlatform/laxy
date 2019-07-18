@@ -313,6 +313,15 @@ function get_igenome_aws() {
          return 0
      fi
 
+     if [[ "${REF_ID}" == "Danio_rerio/Ensembl/GRCz11.97-noalt" ]]; then
+         # TODO: We need to download the proper Danio_rerio/Ensembl/GRCz11.97 then
+         #       drop CHR_ALT contigs by running:
+         #       cd ${REFERENCE_BASE}/${REF_ID}/Sequence/WholeGenomeFasta
+         #       seqmagick mogrify --pattern-exclude CHR_ALT genome.fa genome.fa
+         #
+         return 0
+     fi
+
      # https://www.ncbi.nlm.nih.gov/genome/?term=Chelonia%20mydas
      # TODO: This is a GFF3 but we are saving with a .gtf extension ! Bad.
      #       Need to either deal with gtf/gff alternatives (eg file discovery in Chelonia_mydas/NCBI/CheMyd_1.0/Annoation/Genes
@@ -332,12 +341,16 @@ function get_igenome_aws() {
          return 0
      fi
 
-     aws s3 --no-sign-request --region eu-west-1 sync \
-         s3://ngi-igenomes/igenomes/${REF_ID}/Annotation/Genes/ ${REFERENCE_BASE}/${REF_ID}/Annotation/Genes/ --exclude "*" --include "genes.gtf"
-     aws s3 --no-sign-request --region eu-west-1 sync \
-        s3://ngi-igenomes/igenomes/${REF_ID}/Sequence/WholeGenomeFasta/ ${REFERENCE_BASE}/${REF_ID}/Sequence/WholeGenomeFasta/
-     aws s3 --no-sign-request --region eu-west-1 sync \
-        s3://ngi-igenomes/igenomes/${REF_ID}/Sequence/STARIndex/ ${REFERENCE_BASE}/${REF_ID}/Sequence/STARIndex/
+     if [[ ! -f "${REFERENCE_BASE}/${REF_ID}/Annotation/Genes/genes.gtf" ]]; then
+         aws s3 --no-sign-request --region eu-west-1 sync \
+             s3://ngi-igenomes/igenomes/${REF_ID}/Annotation/Genes/ ${REFERENCE_BASE}/${REF_ID}/Annotation/Genes/ --exclude "*" --include "genes.gtf"
+     fi
+     if [[ ! -f "${REFERENCE_BASE}/${REF_ID}/Sequence/WholeGenomeFasta/genome.fa" ]]; then
+         aws s3 --no-sign-request --region eu-west-1 sync \
+             s3://ngi-igenomes/igenomes/${REF_ID}/Sequence/WholeGenomeFasta/ ${REFERENCE_BASE}/${REF_ID}/Sequence/WholeGenomeFasta/
+         aws s3 --no-sign-request --region eu-west-1 sync \
+             s3://ngi-igenomes/igenomes/${REF_ID}/Sequence/STARIndex/ ${REFERENCE_BASE}/${REF_ID}/Sequence/STARIndex/
+     fi
 }
 
 function add_to_manifest() {

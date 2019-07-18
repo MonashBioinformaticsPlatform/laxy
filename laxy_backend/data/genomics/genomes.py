@@ -43,7 +43,8 @@ REFERENCE_GENOME_MAPPINGS = {
 
     "Chelonia_mydas/NCBI/CheMyd_1.0": "Chelonia_mydas/NCBI/CheMyd_1.0",
 
-    "Danio_rerio/Ensembl/GRCz11.97": "Danio_rerio/Ensembl/GRCz11.97",
+    "Danio_rerio/Ensembl/GRCz11.97-noalt": "Danio_rerio/Ensembl/GRCz11.97-noalt",
+    # "Danio_rerio/Ensembl/GRCz11.97": "Danio_rerio/Ensembl/GRCz11.97",
     "Danio_rerio/Ensembl/GRCz10": "Danio_rerio/Ensembl/GRCz10",
     "Danio_rerio/Ensembl/Zv9": "Danio_rerio/Ensembl/Zv9",
     "Danio_rerio/NCBI/GRCz10": "Danio_rerio/NCBI/GRCz10",
