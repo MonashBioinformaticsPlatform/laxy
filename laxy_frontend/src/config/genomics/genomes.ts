@@ -21,6 +21,9 @@ const available_genomes: ReferenceGenome[] = [
     {'id': 'Mus_musculus/UCSC/mm10', 'organism': 'Mus musculus'},
     // {'id': 'Mus_musculus/UCSC/mm9', 'organism': 'Mus musculus'},
 
+    // TODO: Remove this. Temporary Acinetobacter genome until better mechanism for custom genomes is added
+    {'id': 'Acinetobacter_baumannii/Custom/ATCC19606', 'organism': 'Acinetobacter baumannii (strain ATCC 19606)'},
+
     {'id': 'Arabidopsis_thaliana/Ensembl/TAIR10', 'organism': 'Arabidopsis thaliana'},
     // {'id': 'Arabidopsis_thaliana/Ensembl/TAIR9', 'organism': 'Arabidopsis thaliana'},
     {'id': 'Arabidopsis_thaliana/NCBI/TAIR10', 'organism': 'Arabidopsis thaliana'},
