@@ -100,6 +100,17 @@ def stop_all():
     __aria2daemon__ = None
 
 
+def stop_url_download(url: str):
+    aria = get_daemon()
+    statuses = aria.tellActive() + aria.tellWaiting(0, 999) + aria.tellStopped(0, 999)
+
+    for active in statuses:
+        if active["files"][0]["uris"][0]["uri"] == url:
+            aria.remove(active['gid'])
+
+    aria.shutdown()
+
+
 @backoff.on_exception(backoff.expo,
                       (ConnectionRefusedError,),
                       max_tries=8,

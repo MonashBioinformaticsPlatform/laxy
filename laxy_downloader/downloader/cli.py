@@ -47,6 +47,9 @@ def add_commandline_args(parser: argparse.ArgumentParser) -> argparse.ArgumentPa
                                               "WARNING: Assumes the --cache-path only contains cache files - "
                                               "any file in this path may be DELETED.")
 
+    cache_parser.add_argument('urls', nargs='*', default=list(),
+                              help="URL(s) to remove from cache. --cache-age is ignored in this case.")
+
     killaria_parser = subparsers.add_parser('kill-aria',
                                             help="Stop all downloads and shutdown the download daemon (Aria2c).")
 
@@ -289,18 +292,33 @@ def main():
         logging.basicConfig(format='%(levelname)s: %(asctime)s -- %(message)s', level=logging.DEBUG)
         logger.setLevel(logging.DEBUG)
 
-    if args.command == 'expire-cache':
-        try:
-            clean_cache(args.cache_path, cache_age=args.cache_age)
-        except Exception as ex:
-            logger.exception(ex)
-            sys.exit(1)
-        sys.exit()
-
     rpc_secret_path = os.path.join(args.cache_path, '.aria2_rpc_secret')
     rpc_secret = get_secret_key(rpc_secret_path)
 
     logger.debug(f"RPC secret is at: {rpc_secret_path}")
+
+    if args.command == 'expire-cache':
+        if args.urls:
+            daemon = aria.get_daemon(secret=rpc_secret)
+            for url in args.urls:
+                filepath = get_url_cached_path(url, args.cache_path)
+                try:
+                    aria.stop_url_download(url)
+                    if os.path.exists(filepath) and os.path.isfile(filepath):
+                        os.remove(filepath)
+                        logger.info(f"Removed cached download: ")
+                    else:
+                        logger.info(f"Not deleting - cached file does not exist: {filepath} ({url})")
+                except Exception as ex:
+                    logger.exception(ex)
+                    sys.exit(1)
+        else:
+            try:
+                clean_cache(args.cache_path, cache_age=args.cache_age)
+            except Exception as ex:
+                logger.exception(ex)
+                sys.exit(1)
+        sys.exit()
 
     if args.command == 'kill_aria':
         logger.info("Stopping all downloads and shuttting down Aria2c.")
