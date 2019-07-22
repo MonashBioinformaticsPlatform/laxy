@@ -258,6 +258,15 @@ class StreamingFileDownloadRenderer(BaseRenderer):
     charset = None
     render_style = 'binary'
 
+    @backoff.on_exception(backoff.expo,
+                          (EOFError,
+                           IOError,
+                           OSError,
+                           ssh_exception.SSHException,
+                           ssh_exception.AuthenticationException,
+                           ),
+                          max_tries=3,
+                          jitter=backoff.full_jitter)
     def render(self, filelike,
                media_type=None,
                renderer_context=None,
@@ -478,6 +487,7 @@ class StreamFileMixin(JSONView):
     @backoff.on_exception(backoff.expo,
                           (EOFError,
                            IOError,
+                           OSError,
                            ssh_exception.SSHException,
                            ssh_exception.AuthenticationException,
                            ),
