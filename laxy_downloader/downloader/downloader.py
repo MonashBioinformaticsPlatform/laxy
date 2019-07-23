@@ -299,8 +299,41 @@ def download_concurrent(urls: List[str], cache_path, proxy=None, concurrent_down
     #     result.check_returncode()
 
 
+def init_cache(cache_path):
+    """
+    Create a flag file .laxydl_cache in the cache path.
+    This is used as a sanity check to ensure we don't accidentally expire files in a non-cache path.
+
+    :param cache_path: The path to the download cache to initialize.
+    :type cache_path: str
+    :return:
+    :rtype:
+    """
+    if os.path.exists(cache_path) and os.path.isdir(cache_path):
+        flagfile_path = os.path.join(cache_path, '.laxydl_cache')
+        open(flagfile_path, 'a').close()  # == touch
+    else:
+        logger.error(f"{cache_path} does not exist.")
+        raise OSError(f"{cache_path} does not exist.")
+
+
+def is_cache_path(cache_path):
+    """
+    Check that a flag file .laxydl_cache exists in the cache path, to ensure we aren't
+    using some other non-cache path (as this may result in accidental file deletion).
+
+    :param cache_path: The path to check.
+    :type cache_path: str
+    :return: True if the .laxydl_cache file exists in the cache path.
+    :rtype: bool
+    """
+    flagfile_path = os.path.join(cache_path, '.laxydl_cache')
+    return os.path.exists(flagfile_path) and os.path.isfile(flagfile_path)
+
+
 def clean_cache(cache_path, cache_age: int = 30):
     """
+    Delete files older than cache_age days from cache_path.
 
     :param cache_path: Path to the cache.
     :type cache_path: str
@@ -309,9 +342,11 @@ def clean_cache(cache_path, cache_age: int = 30):
     :return:
     :rtype:
     """
-    cmd = ['find', cache_path, '-type', 'f', '-mtime', f'+{cache_age}', '-delete']
+    cmd = ['find', cache_path,
+           '-name', '".*"', '-prune', '-o',  # this part ignores .hidden files and dirs
+           '-type', 'f', '-mtime', f'+{cache_age}', '-print', '-delete']
     logger.info("Cleaning cache - running: %s" % ' '.join(cmd))
-    return subprocess.run(cmd)
+    return subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 
 async def trio_wait_with_progress(delay, progress_every, finish_char='\n', quiet=False):

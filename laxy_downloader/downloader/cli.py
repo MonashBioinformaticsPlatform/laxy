@@ -13,6 +13,8 @@ import trio
 from .secrets import get_secret_key
 from .downloader import (get_default_cache_path,
                          trio_wait_with_progress,
+                         init_cache,
+                         is_cache_path,
                          clean_cache,
                          parse_pipeline_config,
                          get_urls_from_pipeline_config,
@@ -108,7 +110,7 @@ def add_commandline_args(parser: argparse.ArgumentParser) -> argparse.ArgumentPa
                        default=get_default_cache_path(),
                        type=str)
         p.add_argument("--cache-age",
-                       help="Remove local cached files older than this (in seconds) when downloader runs",
+                       help="Remove local cached files older than this (in days) when downloader runs",
                        type=int,
                        default=30)
         p.add_argument("--event-notification-url",
@@ -168,8 +170,14 @@ def _run_download_cli(args, rpc_secret):
     verify_ssl_certificate = not args.ignore_self_signed_ssl_certificate
 
     if urls:
+        if args.cache_path:
+            init_cache(args.cache_path)
+
         # Find filenames for each URL, optionally skip any existing files
         if args.destination_path is not None:
+            if args.create_missing_directories:
+                os.makedirs(args.destination_path, exist_ok=True)
+
             skip_urls = set()
             for url in urls:
                 # TODO: should the filename come from pipeline_config.json, if provided ?
@@ -182,9 +190,6 @@ def _run_download_cli(args, rpc_secret):
                     continue
 
             urls.difference_update(skip_urls)
-
-        if args.create_missing_directories:
-            os.makedirs(args.destination_path, exist_ok=True)
 
         if urls and not args.no_aria2c:
             daemon = aria.get_daemon(secret=rpc_secret)
@@ -292,12 +297,22 @@ def main():
         logging.basicConfig(format='%(levelname)s: %(asctime)s -- %(message)s', level=logging.DEBUG)
         logger.setLevel(logging.DEBUG)
 
+    if args.cache_path:
+        if not (os.path.exists(args.cache_path) and os.path.isdir(args.cache_path)):
+            logger.error(f"--cache-path was specified but {args.cache_path} does not exist.")
+            sys.exit(1)
+
     rpc_secret_path = os.path.join(args.cache_path, '.aria2_rpc_secret')
     rpc_secret = get_secret_key(rpc_secret_path)
 
     logger.debug(f"RPC secret is at: {rpc_secret_path}")
 
     if args.command == 'expire-cache':
+        if not is_cache_path(args.cache_path):
+            logger.info(f"Path {args.cache_path} doesn't look like a laxydl download cache directory "
+                        f"(there's no .laxydl_cache file). "
+                        f"If you are REALLY sure, you can `touch {os.path.join(args.cache_path, '.laxydl_cache')}` "
+                        f"and try again, AT YOUR OWN RISK.")
         if args.urls:
             daemon = aria.get_daemon(secret=rpc_secret)
             for url in args.urls:
@@ -314,7 +329,10 @@ def main():
                     sys.exit(1)
         else:
             try:
-                clean_cache(args.cache_path, cache_age=args.cache_age)
+                result = clean_cache(args.cache_path, cache_age=args.cache_age)
+                result.check_returncode()
+                num_deleted = len(result.stdout.decode('utf-8').split('\n')) - 1
+                logger.info(f"Deleted {num_deleted} cached files.")
             except Exception as ex:
                 logger.exception(ex)
                 sys.exit(1)

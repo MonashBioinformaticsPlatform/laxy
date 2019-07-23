@@ -36,13 +36,13 @@ def get_secret_key(filepath=None):
         filepath = os.path.join(filepath, '.secret_key')
 
     secret_key = _generate_secret_key()
-    if os.path.exists(filepath):
+    if os.path.exists(filepath) and os.path.isfile(filepath):
         with open(filepath, 'r') as f:
             secret_key = f.read()
     else:
         try:
             secret_key = _generate_secret_key_file(filepath)
-        except (OSError, IOError):
-            pass
+        except (OSError, IOError) as ex:
+            raise ex
 
     return secret_key
