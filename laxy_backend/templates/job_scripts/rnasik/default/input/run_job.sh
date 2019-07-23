@@ -71,6 +71,11 @@ if [[ ${QUEUE_TYPE} == "local" ]]; then
         MEM=16000 # yeast (uses ~ 8Gb)
         CPUS=4
     fi
+
+    if [[ "${REFERENCE_GENOME}" == *"Acinetobacter"* ]]; then
+        MEM=16000
+        CPUS=4
+    fi
 else
     # system=generic or system=slurm in bds.config - BDS will run sbatch tasks
     MEM=4000
@@ -79,15 +84,16 @@ fi
 
 # We use sbatch --wait --wrap rather than srun, since it seems more reliable
 # and jobs appear pending on the queue immediately
-readonly SLURM_OPTIONS="--cpus-per-task=${CPUS} \
-                       --mem=${MEM} \
-                       -t 1-0:00 \
-                       --ntasks-per-node=1 \
-                       --ntasks=1 \
-                       {% if SLURM_ACCOUNT %}
-                       --account=${SLURM_ACCOUNT} \
-                       {% endif %}
-                       --job-name=laxy:${JOB_ID}"
+readonly SLURM_OPTIONS="--parsable \
+                        --cpus-per-task=${CPUS} \
+                        --mem=${MEM} \
+                        -t 1-0:00 \
+                        --ntasks-per-node=1 \
+                        --ntasks=1 \
+                        {% if SLURM_ACCOUNT %}
+                        --account=${SLURM_ACCOUNT} \
+                        {% endif %}
+                        --job-name=laxy:${JOB_ID}"
 
 # For default QUEUE_TYPE=='local'
 PREFIX_JOB_CMD="/usr/bin/env bash -l -c "
@@ -114,6 +120,10 @@ function add_sik_config() {
 
     # special lower resource sik.config for yeast
     if [[ "${REFERENCE_GENOME}" == *"Saccharomyces_cerevisiae"* ]] && [[ -f "${JOB_PATH}/../sik.yeast.config" ]]; then
+        echo "Using low resource yeast specific sik.config."
+        SIK_CONFIG="${JOB_PATH}/../sik.yeast.config"
+    fi
+    if [[ "${REFERENCE_GENOME}" == *"Acinetobacter"* ]] && [[ -f "${JOB_PATH}/../sik.yeast.config" ]]; then
         echo "Using low resource yeast specific sik.config."
         SIK_CONFIG="${JOB_PATH}/../sik.yeast.config"
     fi
@@ -508,6 +518,9 @@ function setup_bds_config() {
         default_bds_config="${JOB_PATH}/../bds.local.config"
     # special lower resource bds.config for yeast
     elif [[ "${REFERENCE_GENOME}" == *"Saccharomyces_cerevisiae"* ]] && [[ -f "${JOB_PATH}/../bds.yeast.config" ]]; then
+        echo "Using low resource yeast specific bds.config."
+        default_bds_config="${JOB_PATH}/../bds.yeast.config"
+    elif [[ "${REFERENCE_GENOME}" == *"Acinetobacter"* ]] && [[ -f "${JOB_PATH}/../bds.yeast.config" ]]; then
         echo "Using low resource yeast specific bds.config."
         default_bds_config="${JOB_PATH}/../bds.yeast.config"
     fi
