@@ -782,7 +782,8 @@ while [[ "${EXIT_CODE}" -ne 0 ]] && [[ ${RETRY_COUNT} -le ${MAX_RETRIES} ]]; do
                -gtfFile ${GENOME_GTF} \
                -all \
                -extn ${EXTN} \
-               >>rnasik.out 2>>rnasik.err"
+               >>rnasik.out 2>>rnasik.err" \
+        >>"${JOB_PATH}/slurm.jids"
     else
         ${PREFIX_JOB_CMD} \
            "RNAsik \
@@ -797,7 +798,8 @@ while [[ "${EXIT_CODE}" -ne 0 ]] && [[ ${RETRY_COUNT} -le ${MAX_RETRIES} ]]; do
                -paired \
                -extn ${EXTN} \
                -pairIds ${PAIRIDS} \
-               >>rnasik.out 2>>rnasik.err"
+               >>rnasik.out 2>>rnasik.err" \
+        >>"${JOB_PATH}/slurm.jids"
     fi
 
     # Capture the exit code of the important process, to be returned
