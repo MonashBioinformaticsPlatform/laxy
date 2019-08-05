@@ -300,16 +300,16 @@ export class WebAPI {
         return url;
     }
 
-    public static async getSampleSet(fileset_id: string): Promise<AxiosResponse> {
+    public static async getSampleCart(fileset_id: string): Promise<AxiosResponse> {
         try {
             return await this.fetcher.get(
-                `/api/v1/sampleset/${fileset_id}/`) as AxiosResponse;
+                `/api/v1/samplecart/${fileset_id}/`) as AxiosResponse;
         } catch (error) {
             throw error;
         }
     }
 
-    public static async createSampleset(csvFormData: FormData): Promise<AxiosResponse> {
+    public static async createSampleCart(csvFormData: FormData): Promise<AxiosResponse> {
         try {
             // copy config
             const config = Object.assign({}, WebAPI.axiosConfig);
@@ -320,7 +320,7 @@ export class WebAPI {
             // we need to create a new fetcher, if we attempt to reuse the static one with this new config
             // it  won't work (results in empty form POST !)
             const formPostfetcher = axios.create(config);
-            return await formPostfetcher.post('/api/v1/sampleset/', csvFormData, config) as AxiosResponse;
+            return await formPostfetcher.post('/api/v1/samplecart/', csvFormData, config) as AxiosResponse;
         } catch (error) {
             throw error;
         }

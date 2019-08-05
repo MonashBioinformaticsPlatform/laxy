@@ -5,7 +5,7 @@
     "genome": "Saccharomyces_cerevisiae/Ensembl/R64-1-1"
   },
   "pipeline": "rnasik",
-  "sample_set": {
+  "sample_cart": {
     "id": "7I2kR9PFaIogwYFEl3fCgj",
     "name": "CSV uploaded on 2018-09-25T04:51:13.987203",
     "owner": "6FXt16IEZHsz430rClvy5q",

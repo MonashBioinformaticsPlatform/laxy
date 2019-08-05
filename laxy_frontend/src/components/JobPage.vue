@@ -831,18 +831,18 @@
             try {
                 const response = await WebAPI.cloneJob(id);
                 const pipelinerun_id = response.data.pipelinerun_id;
-                const sampleset_id = response.data.sampleset_id;
+                const samplecart_id = response.data.samplecart_id;
 
                 const p_response = await WebAPI.getPipelineRun(pipelinerun_id);
-                const s_response = await WebAPI.getSampleSet(sampleset_id);
+                const s_response = await WebAPI.getSampleCart(samplecart_id);
 
                 const pipelinerun = p_response.data;
-                const sampleset = s_response.data;
+                const samplecart = s_response.data;
 
                 let samples = new SampleCartItems();
-                samples.id = sampleset.id;
-                samples.items = sampleset.samples;
-                samples.name = sampleset.name;
+                samples.id = samplecart.id;
+                samples.items = samplecart.samples;
+                samples.name = samplecart.name;
                 this.$store.commit(SET_SAMPLES, samples as SampleCartItems);
 
                 this.$store.commit(SET_PIPELINE_PARAMS, pipelinerun.params);

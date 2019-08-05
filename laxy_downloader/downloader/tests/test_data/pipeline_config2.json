@@ -6,7 +6,7 @@
     "pipeline_version": "1.5.3"
   },
   "pipeline": "rnasik",
-  "sample_set": {
+  "sample_cart": {
     "id": "1i97hkRn2RXSriboCDjOOF",
     "name": "Sample set created on 2019-05-02T05:10:27.971994",
     "owner": "3n0KJX6w5XBqIlbmgJeAKK",

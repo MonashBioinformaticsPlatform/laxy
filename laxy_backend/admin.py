@@ -21,7 +21,7 @@ from .models import (Job,
                      ComputeResource,
                      File,
                      FileSet,
-                     SampleSet,
+                     SampleCart,
                      PipelineRun,
                      EventLog,
                      UserProfile,
@@ -282,7 +282,7 @@ class FileSetAdmin(Timestamped, VersionAdmin):
     inlines = (JobInputFilesInline, JobOutputFilesInline, FilesInline,)
 
 
-class SampleSetAdmin(Timestamped, VersionAdmin):
+class SampleCartAdmin(Timestamped, VersionAdmin):
     pass
 
 
@@ -326,7 +326,7 @@ admin.site.register(Job, JobAdmin)
 admin.site.register(ComputeResource, ComputeResourceAdmin)
 admin.site.register(File, FileAdmin)
 admin.site.register(FileSet, FileSetAdmin)
-admin.site.register(SampleSet, SampleSetAdmin)
+admin.site.register(SampleCart, SampleCartAdmin)
 admin.site.register(PipelineRun, PipelineRunAdmin)
 admin.site.register(EventLog, EventLogAdmin)
 admin.site.register(AccessToken, AccessTokenAdmin)

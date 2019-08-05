@@ -1114,6 +1114,8 @@ class FileSet(Timestamped, UUIDModel):
 
         :param files: A single File object or a list of File objects.
         :type files: File | Sequence[File]
+        :param save: If True, save this FileSet after adding files.
+        :type save: bool
         :return: None
         :rtype: NoneType
         """
@@ -1148,6 +1150,8 @@ class FileSet(Timestamped, UUIDModel):
 
         :param files: A single File object or a list of File objects.
         :type files: File | Sequence[File]
+        :param save: If True, save this FileSet after removing files.
+        :type save: bool
         :param delete: Delete the Files after removing them from this FileSet
                        (doesn't check if other FileSets or database objects still
                         hold a reference to this file, in the case that they are
@@ -1205,7 +1209,7 @@ class FileSet(Timestamped, UUIDModel):
 
 
 @reversion.register()
-class SampleSet(Timestamped, UUIDModel):
+class SampleCart(Timestamped, UUIDModel):
     """
     A set of samples for a pipeline run. This often reflects the state of the 'sample cart'
     when setting up a job via the web frontend.
@@ -1220,7 +1224,7 @@ class SampleSet(Timestamped, UUIDModel):
                        blank=True,
                        null=True,
                        on_delete=models.CASCADE,
-                       related_name='samplesets')
+                       related_name='samplecarts')
 
     # TODO: Should we put a validator on here to ensure the
     # basic object shape and required fields are present ?
@@ -1235,7 +1239,7 @@ class SampleSet(Timestamped, UUIDModel):
                      blank=True,
                      null=True,
                      on_delete=models.CASCADE,
-                     related_name='samplesets')
+                     related_name='samplecarts')
 
     # 'samples' is a dictionary keyed by sample name, with a list of files grouped by
     # merge_group and pair (a merge_group could be a set of equivalent lanes the sample
@@ -1387,16 +1391,16 @@ class SampleSet(Timestamped, UUIDModel):
 
 # NOTE: We could bypass this signal in special cases using:
 #       https://github.com/RobertKolner/django-signal-disabler
-@receiver(pre_save, sender=SampleSet)
-def prevent_sampleset_update_after_job_assigned(sender, instance: SampleSet,
-                                                raw, using, update_fields, **kwargs):
+@receiver(pre_save, sender=SampleCart)
+def prevent_samplecart_update_after_job_assigned(sender, instance: SampleCart,
+                                                 raw, using, update_fields, **kwargs):
     """
-    Prevents a SampleSet being updated once it has been attached to a Job.
+    Prevents a SampleCart being updated once it has been attached to a Job.
     """
     try:
-        obj: SampleSet = sender.objects.get(pk=instance.pk)
+        obj: SampleCart = sender.objects.get(pk=instance.pk)
         if obj.job:
-            raise RuntimeError("Updating a SampleSet once the job field is set is not allowed.")
+            raise RuntimeError("Updating a SampleCart once the job field is set is not allowed.")
     except sender.DoesNotExist:
         pass
 
@@ -1415,11 +1419,17 @@ class PipelineRun(Timestamped, UUIDModel):
     #        ComputeResource)
     pipeline = CharField(max_length=256, blank=True, null=True)
 
-    sample_set = ForeignKey(SampleSet,
-                            blank=True,
-                            null=True,
-                            on_delete=models.SET_NULL,
-                            related_name='pipeline_runs')
+    sample_cart = ForeignKey(SampleCart,
+                             blank=True,
+                             null=True,
+                             on_delete=models.SET_NULL,
+                             related_name='pipeline_runs')
+
+    # input_fileset = ForeignKey(FileSet,
+    #                            blank=True,
+    #                            null=True,
+    #                            on_delete=models.SET_NULL,
+    #                            related_name='pipeline_runs')
 
     # Sample metadata, keyed by sample name
     # - eg, mapping sample names to conditions

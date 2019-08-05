@@ -91,7 +91,7 @@ from .models import (Job,
                      ComputeResource,
                      File,
                      FileSet,
-                     SampleSet,
+                     SampleCart,
                      PipelineRun,
                      EventLog,
                      AccessToken)
@@ -104,7 +104,7 @@ from .serializers import (PatchSerializerResponse,
                           FileSerializerPostRequest,
                           FileSetSerializer,
                           FileSetSerializerPostRequest,
-                          SampleSetSerializer,
+                          SampleCartSerializer,
                           PipelineRunSerializer,
                           PipelineRunCreateSerializer,
                           SchemalessJsonResponseSerializer,
@@ -1113,14 +1113,14 @@ class FileSetView(GetMixin,
         return super(FileSetView, self).patch(request, uuid)
 
 
-class SampleSetCreateUpdate(JSONView):
-    queryset = SampleSet.objects.all()
-    serializer_class = SampleSetSerializer
+class SampleCartCreateUpdate(JSONView):
+    queryset = SampleCart.objects.all()
+    serializer_class = SampleCartSerializer
     parser_classes = (JSONParser, MultiPartParser, CSVTextParser,)
 
     def create_update(self, request, obj):
         """
-        Replaces an existing SampleSet with new content, or creates a new one if `uuid` is None.
+        Replaces an existing SampleCart with new content, or creates a new one if `uuid` is None.
 
         :param obj:
         :type obj:
@@ -1164,15 +1164,15 @@ class SampleSetCreateUpdate(JSONView):
             return Response(None, status=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
 
 
-class SampleSetCreate(SampleSetCreateUpdate):
+class SampleCartCreate(SampleCartCreateUpdate):
 
     # permission_classes = (DjangoObjectPermissions,)
 
-    @view_config(request_serializer=SampleSetSerializer,
-                 response_serializer=SampleSetSerializer)
+    @view_config(request_serializer=SampleCartSerializer,
+                 response_serializer=SampleCartSerializer)
     def post(self, request: Request, version=None):
         """
-        Create a new SampleSet. UUIDs are autoassigned.
+        Create a new SampleCart. UUIDs are autoassigned.
 
         `samples` is an object keyed by sample name, with a list of files
         grouped by 'merge group' and pair (a 'merge group' could be a set of
@@ -1254,18 +1254,18 @@ class SampleSetCreate(SampleSetCreateUpdate):
         -->
         """
 
-        sampleset_name = request.data.get('name', None)
-        obj = SampleSet(name=sampleset_name, owner=request.user)
+        samplecart_name = request.data.get('name', None)
+        obj = SampleCart(name=samplecart_name, owner=request.user)
         return self.create_update(request, obj)
 
 
-class SampleSetView(GetMixin,
-                    DeleteMixin,
-                    SampleSetCreateUpdate):
+class SampleCartView(GetMixin,
+                     DeleteMixin,
+                     SampleCartCreateUpdate):
 
     # permission_classes = (DjangoObjectPermissions,)
 
-    @view_config(response_serializer=SampleSetSerializer)
+    @view_config(response_serializer=SampleCartSerializer)
     @etag_headers
     def get(self, request: Request, uuid, version=None):
         """
@@ -1280,9 +1280,9 @@ class SampleSetView(GetMixin,
         :rtype: rest_framework.response.Response
         -->
         """
-        return super(SampleSetView, self).get(request, uuid)
+        return super(SampleCartView, self).get(request, uuid)
 
-    @view_config(request_serializer=SampleSetSerializer,
+    @view_config(request_serializer=SampleCartSerializer,
                  response_serializer=PutSerializerResponse)
     def put(self, request, uuid, version=None):
         obj = self.get_object()
@@ -1296,14 +1296,14 @@ class SampleSetView(GetMixin,
 
         return self.create_update(request, obj)
 
-    # TODO: CSV upload doesn't append/merge, it aways creates a new SampleSet.
+    # TODO: CSV upload doesn't append/merge, it aways creates a new SampleCart.
     #       Implement PATCH method so we can append/merge an uploaded CSV rather
     #       than just replace wholesale
     #
-    # @view_config(request_serializer=SampleSetSerializer,
+    # @view_config(request_serializer=SampleCartSerializer,
     #              response_serializer=PatchSerializerResponse)
     # def patch(self, request, uuid, version=None):
-    #     return super(SampleSetView, self).patch(request, uuid)
+    #     return super(SampleCartView, self).patch(request, uuid)
 
 
 class ComputeResourceView(GetMixin,
@@ -1650,12 +1650,12 @@ class JobCreate(JSONView):
         # setattr(request, '_dont_enforce_csrf_checks', True)
 
         pipeline_run_id = request.query_params.get('pipeline_run_id', None)
-        sampleset_id = None
+        input_fileset_id = None
         if pipeline_run_id:
             try:
                 pipelinerun_obj = PipelineRun.objects.get(id=pipeline_run_id)
                 pipelinerun = PipelineRunSerializer(pipelinerun_obj).data
-                sampleset_id = pipelinerun.get('sample_set', {}).get('id', None)
+                input_fileset_id = pipelinerun.get('input_fileset', {}).get('id', None)
                 pipelinerun['pipelinerun_id'] = str(pipelinerun['id'])
                 del pipelinerun['id']
                 request.data['params'] = json.dumps(pipelinerun)
@@ -1679,12 +1679,12 @@ class JobCreate(JSONView):
 
             job = serializer.save()  # owner=request.user)
 
-            # We associate the previously created SampleSet with our new Job object
-            # (SampleSets effectively should be readonly once associated with a Job).
-            if sampleset_id:
-                sampleset = SampleSet.objects.get(id=sampleset_id)
-                sampleset.job = job
-                sampleset.save()
+            # We associate the previously created SampleCart with our new Job object
+            # (SampleCarts effectively should be readonly once associated with a Job).
+            # if samplecart_id:
+            #     samplecart = SampleCart.objects.get(id=samplecart_id)
+            #     sampleCart.job = job
+            #     sampleCart.save()
 
             if not job.compute_resource:
                 default_compute = _get_default_compute_resource()
@@ -2177,27 +2177,37 @@ class JobClone(JSONView):
         """
         job = self.get_object()
 
-        sampleset_id = job.params.get('sample_set', {}).get('id', None)
-        if sampleset_id is None:
-            return HttpResponse(status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                                reason=f'Cannot find sampleset associated with job {job.id}')
-        pipelinerun = PipelineRun.objects.filter(sample_set=sampleset_id).first()
-        sampleset = pipelinerun.sample_set
+        samplecart_id = job.params.get('sample_cart', {}).get('id', None)
+        # TODO: This should actually be a migration that modifies Job.params to conform to the new
+        #       shape. We should probably start versioning our JSON blobs, or including a link to
+        #       a JSON Schema (eg generated via marshmallow-jsonschema and linked to in the JSON blob
+        #       something like {"schema": "https://laxy.io/api/v1/schemas/job.params/version-2"}).
+        #       Advantage of this is we can then automatically generate TypeScript types in the
+        #       frontend too using: https://www.npmjs.com/package/json-schema-to-typescript
+        #
+        if samplecart_id is None:
+            samplecart_id = job.params.get('sample_set', {}).get('id', None)
 
-        sampleset.pk = None
-        sampleset.id = None
-        # SampleSet is being cloned in order to be used for a new Job, so unset this
-        sampleset.job = None
-        sampleset.save()
-        new_sampleset = sampleset
+        if samplecart_id is None:
+            return HttpResponse(status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                reason=f'Cannot find samplecart associated with job {job.id}')
+        pipelinerun = PipelineRun.objects.filter(sample_cart=samplecart_id).first()
+        samplecart = pipelinerun.sample_cart
+
+        samplecart.pk = None
+        samplecart.id = None
+        # SampleCart is being cloned in order to be used for a new Job, so unset this
+        samplecart.job = None
+        samplecart.save()
+        new_samplecart = samplecart
 
         pipelinerun.pk = None
         pipelinerun.id = None
-        pipelinerun.sample_set = new_sampleset
+        pipelinerun.sample_cart = new_samplecart
         pipelinerun.save()
         new_pipelinerun = pipelinerun
 
-        return JsonResponse({'pipelinerun_id': new_pipelinerun.id, 'sampleset_id': new_sampleset.id})
+        return JsonResponse({'pipelinerun_id': new_pipelinerun.id, 'samplecart_id': new_samplecart.id})
 
 
 # TODO: This should really be POST, since it has side effects,
@@ -2287,8 +2297,8 @@ class SendFileToDegust(JSONView):
 
         counts_file: File = self.get_object()
         job = counts_file.fileset.jobs_as_output.first()
-        sample_set = job.params.get('sample_set', {})
-        samples = sample_set.get('samples', [])
+        sample_cart = job.params.get('sample_cart', {})
+        samples = sample_cart.get('samples', [])
         conditions = list(set([sample['metadata'].get('condition') for sample in samples]))
         # {'some_condition': []} dict of empty lists
         degust_conditions = OrderedDict([(condition, []) for condition in conditions])

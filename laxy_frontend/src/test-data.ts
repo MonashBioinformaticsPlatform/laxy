@@ -101,7 +101,7 @@ export const DummySampleList: SampleCartItems = {
 } as SampleCartItems;
 
 export const DummyPipelineConfig = {
-    'sample_set': '3NNIIOt8skAuS1w2ZfgOq',
+    'sample_cart': '3NNIIOt8skAuS1w2ZfgOq',
     'sample_metadata': {
         'kazd4mZvmYX0OXw07dGfnV': {'condition': 'wildtype'},
         'lezd4mZvmYX0OXw07dGfnV': {'condition': 'mutant'},
@@ -155,7 +155,7 @@ export const DummyJobList: ComputeJob[] = [
                 'genome': 'hg19'
             },
             'pipeline': 'rnasik',
-            'sample_set': {
+            'sample_cart': {
                 'id': '461UrmNeZaVe64pJYG9S5q',
                 'name': 'CSV uploaded on 2018-04-24T05:00:10.531287',
                 'owner': '3Cx3N2QmRw3WCSuI65qfkw',
@@ -305,7 +305,7 @@ export const DummyJobList: ComputeJob[] = [
                 'genome': 'R64-1-1'
             },
             'pipeline': 'rnasik',
-            'sample_set': {
+            'sample_cart': {
                 'id': '13kkLzwmPt0QehRE5FfqGd',
                 'name': 'CSV uploaded on 2018-05-02T06:53:12.655648',
                 'owner': '3Cx3N2QmRw3WCSuI65qfkw',

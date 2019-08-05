@@ -270,7 +270,7 @@
 
         prepareData() {
             let data = {
-                "sample_set": this.$store.state.samples.id,
+                "sample_cart": this.$store.state.samples.id,
                 "params": this.$store.getters.pipelineParams,
                 "pipeline": "rnasik",
                 "description": this.description,

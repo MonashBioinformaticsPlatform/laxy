@@ -368,7 +368,12 @@ def parse_pipeline_config(config_fh):
 
 def get_urls_from_pipeline_config(config):
     urls = set()
-    for sample in config['sample_set']['samples']:
+    samples = config.get('sample_cart', {}).get('samples', [])
+    # TODO: Remove the sample_set alternative in the future
+    # Deprecated: old sample cart name
+    if not samples:
+        samples = config.get('sample_set', {}).get('samples', [])
+    for sample in samples:
         for f in sample['files']:
             for read_number, url_descriptor in f.items():
                 if isinstance(url_descriptor, str):

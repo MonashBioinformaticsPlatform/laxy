@@ -8,7 +8,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 
 from .. import util
-from ..models import Job, File, FileSet, SampleSet, ComputeResource, EventLog
+from ..models import Job, File, FileSet, SampleCart, ComputeResource, EventLog
 from django.contrib.auth import get_user_model
 
 User = get_user_model()

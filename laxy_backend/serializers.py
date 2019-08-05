@@ -16,7 +16,7 @@ from typing import Sequence
 from drf_openapi.entities import VersionedSerializers
 from http.client import responses as response_code_messages
 
-from laxy_backend.models import SampleSet, PipelineRun, File, FileSet
+from laxy_backend.models import SampleCart, PipelineRun, File, FileSet
 from laxy_backend.util import unique
 from . import models
 
@@ -254,13 +254,13 @@ class InputOutputFilesResponse(serializers.Serializer):
                                   required=False, allow_null=True)
 
 
-class SampleSetSerializer(BaseModelSerializer):
+class SampleCartSerializer(BaseModelSerializer):
     # samples = serializers.JSONField(required=True)
     # samples = SchemalessJsonResponseSerializer(required=True)
     samples = serializers.ListField(required=True)
 
     class Meta:
-        model = models.SampleSet
+        model = models.SampleCart
         fields = ('id', 'name', 'owner', 'samples')
         read_only_fields = ('id', 'owner',)
         error_status_codes = status_codes()
@@ -330,7 +330,7 @@ class JobSerializerResponse(JobSerializerBase):
 
 
 # TODO: modify this to trim down unnecessary output,
-#       eg, we don't need the full nested sample_set etc
+#       eg, we don't need the full nested sample_cart etc
 class JobListSerializerResponse(JobSerializerResponse):
     latest_event = serializers.CharField(source='latest_event.event',
                                          default='')
@@ -449,7 +449,7 @@ class PipelineRunSerializer(BaseModelSerializer):
         # default=serializers.CurrentUserDefault()
     )
 
-    sample_set = SampleSetSerializer()
+    sample_cart = SampleCartSerializer()
     # sample_metadata = SchemalessJsonResponseSerializer(required=False)  # becomes OpenAPI 'object' type
     params = SchemalessJsonResponseSerializer(required=False)  # becomes OpenAPI 'object' type
 
@@ -461,9 +461,10 @@ class PipelineRunSerializer(BaseModelSerializer):
         error_status_codes = status_codes()
 
 
-# TODO: Should we convert File UUIDs from the associated SampleSet into URLs here ?
+# TODO: Should we convert File UUIDs from the associated SampleCart into URLs here ?
 class PipelineRunCreateSerializer(PipelineRunSerializer):
-    sample_set = serializers.PrimaryKeyRelatedField(queryset=SampleSet.objects.all())
+    sample_cart = serializers.PrimaryKeyRelatedField(queryset=SampleCart.objects.all())
+    # input_fileset = serializers.PrimaryKeyRelatedField(queryset=FileSet.objects.all())
 
     class Meta(PipelineRunSerializer.Meta):
         depth = 0
@@ -484,7 +485,7 @@ class PipelineRunCreateSerializer(PipelineRunSerializer):
         instance.save()
         return instance
 
-        # FIXME: This fails due to not validating the sample_set primary key.
+        # FIXME: This fails due to not validating the sample_cart primary key.
         #        Unclear why PrimaryKeyRelatedField isn't doing it's job
         # serializer = PipelineRunCreateSerializer(instance,
         #                                          data=validated_data)

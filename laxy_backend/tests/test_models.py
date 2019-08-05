@@ -21,7 +21,7 @@ from rest_framework.test import APIClient
 from laxy_backend import models
 from ..util import ordereddicts_to_dicts, laxy_sftp_url
 from ..util import reverse_querystring
-from ..models import Job, File, FileSet, SampleSet, ComputeResource
+from ..models import Job, File, FileSet, SampleCart, ComputeResource
 from ..jwt_helpers import (get_jwt_user_header_dict,
                            make_jwt_header_dict,
                            create_jwt_user_token)
@@ -224,7 +224,7 @@ class FileSetModelTest(TestCase):
         self.assertIn(self.file_d_unsaved, list(fileset.files.all()))
 
 
-class SampleSetTest(TestCase):
+class SampleCartTest(TestCase):
     def setUp(self):
         self.csv_text = """SampleA,ftp://ftp.example.com/pub/bla_lane1_R1.fastq.gz,ftp://ftp.example.com/pub/bla_lane1_R2.fastq.gz
 SampleA, ftp://ftp.example.com/pub/bla_lane2_R1.fastq.gz, ftp://ftp.example.com/pub/bla_lane2_R2.fastq.gz
@@ -283,15 +283,15 @@ SampleC,ftp://ftp.example.com/pub/foo2_lane5_1.fastq.gz,ftp://ftp.example.com/pu
         pass
 
     def test_from_csv(self):
-        sampleset = SampleSet()
-        sampleset.from_csv(self.csv_text, save=False)
+        samplecart = SampleCart()
+        samplecart.from_csv(self.csv_text, save=False)
 
-        self.assertListEqual(sampleset.samples, self.sample_list)
+        self.assertListEqual(samplecart.samples, self.sample_list)
 
     def test_to_csv(self):
-        sampleset = SampleSet()
-        sampleset.from_csv(self.csv_text, save=False)
-        csv_txt = sampleset.to_csv()
+        samplecart = SampleCart()
+        samplecart.from_csv(self.csv_text, save=False)
+        csv_txt = samplecart.to_csv()
         self.assertListEqual(self.from_csv_text.splitlines(), csv_txt.splitlines())
 
 

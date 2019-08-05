@@ -6,7 +6,7 @@
     "pipeline_version": "1.5.3"
   },
   "pipeline": "rnasik",
-  "sample_set": {
+  "sample_cart": {
     "id": "1i97hkRn2RXSriboCDjOOF",
     "name": "Sample set with duplicate URLs",
     "owner": "1n0KJX6w5XBqIlbmgJeAKK",

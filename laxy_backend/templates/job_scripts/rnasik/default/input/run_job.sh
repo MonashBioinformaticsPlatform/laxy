@@ -580,7 +580,7 @@ function setup_bds_config() {
 function get_input_data_urls() {
     # Output is one URL one per line
     local urls
-    urls=$(jq '.sample_set.samples[].files[][]' <${PIPELINE_CONFIG} | sed s'/"//g')
+    urls=$(jq '.sample_cart.samples[].files[][]' <${PIPELINE_CONFIG} | sed s'/"//g')
     echo "${urls}"
 }
 

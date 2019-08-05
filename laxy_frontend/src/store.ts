@@ -277,13 +277,13 @@ export const Store = new Vuex.Store({
                 };
                 try {
                     if (samples.id == null) {
-                        const response = await WebAPI.fetcher.post('/api/v1/sampleset/', data) as AxiosResponse;
+                        const response = await WebAPI.fetcher.post('/api/v1/samplecart/', data) as AxiosResponse;
                         // samples.id = response.data.id;
                         // commit(SET_SAMPLES, samples);
                         commit(SET_SAMPLES_ID, response.data.id);
                     } else {
                         const response = await WebAPI.fetcher.put(
-                            `/api/v1/sampleset/${samples.id}/`, data) as AxiosResponse;
+                            `/api/v1/samplecart/${samples.id}/`, data) as AxiosResponse;
                     }
                 } catch (error) {
                     // rollback to saved copy if server update fails

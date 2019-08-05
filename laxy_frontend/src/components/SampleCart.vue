@@ -196,7 +196,7 @@
         public snackbar_duration: number = 2000;
         public csv_file: string = "";
 
-        // public sampleset_uuid: string | null = null;
+        // public samplecart_uuid: string | null = null;
 
         //public sample_list_name: string = "";
 
@@ -237,9 +237,9 @@
             return this._samples;
         }
 
-        set samples(sampleset: SampleCartItems) {
-            this._samples = sampleset;
-            this.$store.commit(SET_SAMPLES, sampleset as SampleCartItems);
+        set samples(samplecart: SampleCartItems) {
+            this._samples = samplecart;
+            this.$store.commit(SET_SAMPLES, samplecart as SampleCartItems);
         }
 
         async submit() {
@@ -267,17 +267,17 @@
             try {
                 this.closeDialog("csv_file_select_dialog");
                 this.submitting = true;
-                const response = await WebAPI.fetcher.post("/api/v1/sampleset/", data) as AxiosResponse;
-                // TODO: CSV upload doesn't append/merge, it aways creates a new SampleSet.
+                const response = await WebAPI.fetcher.post("/api/v1/samplecart/", data) as AxiosResponse;
+                // TODO: CSV upload doesn't append/merge, it aways creates a new SampleCart.
                 //       Implement backend PATCH method so we can append/merge an uploaded CSV
                 //       (or parse and merge CSV clientside - probably a bad idea since we really
                 //        want to be able to validate CSV serverside before allowing it to be accepted)
                 // let response = null;
                 // if (this.samples.id == null) {
-                //     const response = await WebAPI.fetcher.post("/api/v1/sampleset/", data) as AxiosResponse;
+                //     const response = await WebAPI.fetcher.post("/api/v1/samplecart/", data) as AxiosResponse;
                 //     this._samples.id = response.data.id;
                 // } else {
-                //     const response = await WebAPI.fetcher.patch(`/api/v1/sampleset/{this.samples.id}`, data) as AxiosResponse;
+                //     const response = await WebAPI.fetcher.patch(`/api/v1/samplecart/{this.samples.id}`, data) as AxiosResponse;
                 // }
                 this.submitting = false;
                 Snackbar.flashMessage("Saved !");

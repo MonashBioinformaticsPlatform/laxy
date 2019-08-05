@@ -61,7 +61,7 @@ declare interface ISample {
     metadata: any;
 }
 
-declare interface ILaxySampleSet {
+declare interface ILaxySampleCart {
     id: string;
     name: string;
     owner: string;

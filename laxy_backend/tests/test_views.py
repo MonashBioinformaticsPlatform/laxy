@@ -18,7 +18,7 @@ from rest_framework.test import APIClient, RequestsClient
 from laxy_backend import util
 from ..util import ordereddicts_to_dicts, laxy_sftp_url
 from ..util import reverse_querystring
-from ..models import Job, File, FileSet, SampleSet, ComputeResource
+from ..models import Job, File, FileSet, SampleCart, ComputeResource
 from ..jwt_helpers import (get_jwt_user_header_dict,
                            make_jwt_header_dict,
                            create_jwt_user_token)
