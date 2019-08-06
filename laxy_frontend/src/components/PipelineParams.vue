@@ -177,7 +177,7 @@
             this.$store.commit(SET_PIPELINE_GENOME, id);
         }
 
-        public pipeline_versions = ['1.5.3', '1.5.2'];
+        public pipeline_versions = ['1.5.3', '1.5.2', '1.5.3-laxydev'];
 
         public _samples: SampleCartItems;
         get samples(): SampleCartItems {
