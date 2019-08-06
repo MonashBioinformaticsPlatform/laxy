@@ -30,6 +30,7 @@ readonly REFERENCE_BASE="${PWD}/../references/iGenomes"
 readonly DOWNLOAD_CACHE_PATH="${PWD}/../cache"
 readonly AUTH_HEADER_FILE="${JOB_PATH}/.private_request_headers"
 readonly IGNORE_SELF_SIGNED_CERTIFICATE="{{ IGNORE_SELF_SIGNED_CERTIFICATE }}"
+readonly LAXYDL_BRANCH=master
 
 # These are applied via chmod to all files and directories in the run, upon completion
 readonly JOB_FILE_PERMS='ug+rw-s'
@@ -243,10 +244,9 @@ function update_laxydl() {
      # CONDA_PREFIX is set when the conda environment is activated
      local pip="${CONDA_PREFIX}/bin/pip"
      # "${pip}" install -U --process-dependency-links "git+https://github.com/MonashBioinformaticsPlatform/laxy#egg=laxy_downloader&subdirectory=laxy_downloader"
-     local LAXYDL_BRANCH=master
      # local LAXYDL_BRANCH=develop
      ${pip} install --upgrade --ignore-installed --force-reinstall \
-            "laxy_downloader @ git+https://github.com/MonashBioinformaticsPlatform/laxy#@${LAXYDL_BRANCH}egg=laxy_downloader&subdirectory=laxy_downloader"
+            "laxy_downloader @ git+https://github.com/MonashBioinformaticsPlatform/laxy@${LAXYDL_BRANCH}#egg=laxy_downloader&subdirectory=laxy_downloader"
 }
 
 function get_reference_data_aws() {
