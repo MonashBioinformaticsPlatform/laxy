@@ -205,15 +205,27 @@ function init_conda_env() {
     source "${CONDA_BASE}/etc/profile.d/conda.sh"
 
     if [[ ! -d "${CONDA_BASE}/envs/${env_name}" ]]; then
+        send_event "JOB_INFO" "Installing dependencies (conda environment ${env_name})"
+
         # First we update conda itself
         conda update --yes -n base conda || return 1
 
         # Create an empty environment
         # conda create --yes -m -n "${env_name}" || return 1
 
+##       TODO: Also consider `conda-pack` support to find and use pre-packaged environment tarballs
+##       https://conda.github.io/conda-pack/ - less likely to break than an enviroment.yml (on a single arch)
+#        CONDA_PACK_PATH="${JOB_PATH}/../conda-pack"
+#        if [[ -f "${CONDA_PACK_PATH}/${env_name}.tar.gz" ]]; then
+#          mkdir -p "${CONDA_BASE}/envs/${env_name}"
+#          tar -xzf  "${CONDA_PACK_PATH}/${env_name}.tar.gz" -C "${CONDA_BASE}/envs/${env_name}"
+#          conda activate "${CONDA_BASE}/envs/${env_name}" || return 1
+#          conda-unpack || return 1
+#        fi
+
         if [[ -f "${JOB_PATH}/input/conda_environment_explicit.txt" ]]; then
             # Create environment with explicit dependencies
-            conda create --name "${env_name}" --file "${JOB_PATH}/input/conda_environment_explicit.txt"
+            conda create --name "${env_name}" --file "${JOB_PATH}/input/conda_environment_explicit.txt" || return 1
         else
             # Create from an environment (yml) file
             conda env create --name "${env_name}" --file "${JOB_PATH}/input/conda_environment.yml" || return 1
@@ -228,8 +240,10 @@ function init_conda_env() {
     conda activate "${CONDA_BASE}/envs/${env_name}" || return 1
 
     # Capture environment files if they weren't provided
-    [[ ! -f "${JOB_PATH}/input/conda_environment.yml" ]] || conda env export >"${JOB_PATH}/input/conda_environment.yml" || return 1
-    [[ ! -f "${JOB_PATH}/input/conda_environment_explicit.txt" ]] || conda list --explicit >"${JOB_PATH}/input/conda_environment_explicit.txt" || return 1
+    [[ ! -f "${JOB_PATH}/input/conda_environment.yml" ]] || \
+      conda env export >"${JOB_PATH}/input/conda_environment.yml" || return 1
+    [[ ! -f "${JOB_PATH}/input/conda_environment_explicit.txt" ]] || \
+      conda list --explicit >"${JOB_PATH}/input/conda_environment_explicit.txt" || return 1
 
     # We can't use send_event BEFORE the env is activated since we rely on a recent
     # version of curl (>7.55)
@@ -625,7 +639,7 @@ function run_mash_screen() {
 #SBATCH --qos=shortq
 #SBATCH --ntasks-per-node=1
 #SBATCH --ntasks=1
-#SBATCH --job-name="laxy:mash_${JOB_ID}"
+#SBATCH --job-name="laxy:mash:${JOB_ID}"
 #SBATCH --error="${JOB_PATH}/output/mash_screen.err"
 {% if SLURM_ACCOUNT %}
 #SBATCH --account={{ SLURM_ACCOUNT }}
