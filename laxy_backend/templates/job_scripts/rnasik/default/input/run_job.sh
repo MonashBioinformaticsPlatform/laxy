@@ -658,8 +658,8 @@ function run_mash_screen() {
 {% endif %}
 
 ${cmd} | sort -gr >${mash_outfile} && \
-grep _ViralProj ${mash_outfile} >${JOB_PATH}/output/mash_screen_virus.tab && \
-grep -v _ViralProj ${mash_outfile} >${JOB_PATH}/output/mash_screen_nonvirus.tab
+grep '_ViralProj\|_ViralMultiSegProj' ${mash_outfile} >${JOB_PATH}/output/mash_screen_virus.tab && \
+grep -v '_ViralProj\|_ViralMultiSegProj' ${mash_outfile} >${JOB_PATH}/output/mash_screen_nonvirus.tab
 EOM
         sbatch --parsable "${JOB_PATH}/input/run_mash.sh" >>"${JOB_PATH}/slurm.jids"
     else
