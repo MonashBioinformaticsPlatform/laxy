@@ -365,6 +365,18 @@ function get_igenome_aws() {
          return 0
      fi
 
+     # This genome also contains many small contigs (~2300 total, where ~1500 are without exons).
+     # I experimented with dropping contigs that don't contain exons, as per Chelonia_mydas/NCBI/CheMyd_1.0,
+     # however this wasn't necessary since the STAR index for the unmodified reference builds using ~30Gb RAM.
+     if [[ "${REF_ID}" == "Aedes_aegypti/NCBI/GCF_002204515.2_AaegL5.0" ]]; then
+         download_ref_urls \
+                      "ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/002/204/515/GCF_002204515.2_AaegL5.0/GCF_002204515.2_AaegL5.0_genomic.fna.gz" \
+                      "ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/002/204/515/GCF_002204515.2_AaegL5.0/GCF_002204515.2_AaegL5.0_genomic.gff.gz" \
+                      "64c3dec8867dd2c96f0e67655ea144c5" \
+                      "8419ba1da70d832eefadf467cf697031"
+         return 0
+     fi
+
      if [[ ! -f "${REFERENCE_BASE}/${REF_ID}/Annotation/Genes/genes.gtf" ]]; then
          aws s3 --no-sign-request --region eu-west-1 sync \
              s3://ngi-igenomes/igenomes/${REF_ID}/Annotation/Genes/ ${REFERENCE_BASE}/${REF_ID}/Annotation/Genes/ --exclude "*" --include "genes.gtf"
