@@ -1650,12 +1650,12 @@ class JobCreate(JSONView):
         # setattr(request, '_dont_enforce_csrf_checks', True)
 
         pipeline_run_id = request.query_params.get('pipeline_run_id', None)
-        input_fileset_id = None
+        samplecart_id = None
         if pipeline_run_id:
             try:
                 pipelinerun_obj = PipelineRun.objects.get(id=pipeline_run_id)
                 pipelinerun = PipelineRunSerializer(pipelinerun_obj).data
-                input_fileset_id = pipelinerun.get('input_fileset', {}).get('id', None)
+                samplecart_id = pipelinerun.get('sample_cart', {}).get('id', None)
                 pipelinerun['pipelinerun_id'] = str(pipelinerun['id'])
                 del pipelinerun['id']
                 request.data['params'] = json.dumps(pipelinerun)
@@ -1681,10 +1681,10 @@ class JobCreate(JSONView):
 
             # We associate the previously created SampleCart with our new Job object
             # (SampleCarts effectively should be readonly once associated with a Job).
-            # if samplecart_id:
-            #     samplecart = SampleCart.objects.get(id=samplecart_id)
-            #     sampleCart.job = job
-            #     sampleCart.save()
+            if samplecart_id:
+                samplecart = SampleCart.objects.get(id=samplecart_id)
+                samplecart.job = job
+                samplecart.save()
 
             if not job.compute_resource:
                 default_compute = _get_default_compute_resource()
