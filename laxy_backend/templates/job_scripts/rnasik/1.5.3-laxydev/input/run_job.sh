@@ -214,6 +214,16 @@ function init_conda_env() {
         # Create an empty environment
         # conda create --yes -m -n "${env_name}" || return 1
 
+##       TODO: Also consider `conda-pack` support to find and use pre-packaged environment tarballs
+##       https://conda.github.io/conda-pack/ - less likely to break than an enviroment.yml (on a single arch)
+#        CONDA_PACK_PATH="${JOB_PATH}/../conda-pack"
+#        if [[ -f "${CONDA_PACK_PATH}/${env_name}.tar.gz" ]]; then
+#          mkdir -p "${CONDA_BASE}/envs/${env_name}"
+#          tar -xzf  "${CONDA_PACK_PATH}/${env_name}.tar.gz" -C "${CONDA_BASE}/envs/${env_name}"
+#          conda activate "${CONDA_BASE}/envs/${env_name}" || return 1
+#          conda-unpack || return 1
+#        fi
+
         if [[ -f "${JOB_PATH}/input/conda_environment_explicit.txt" ]]; then
             # Create environment with explicit dependencies
             conda create --name "${env_name}" --file "${JOB_PATH}/input/conda_environment_explicit.txt" || return 1
@@ -286,11 +296,20 @@ function curl_gunzip_check {
 # TODO: This should probably be handled by laxydl to prevent simultaneous downloads by concurrent jobs
 function download_ref_urls() {
      local fasta_url="${1}"
-     local gtf_url="${2}"
+     local annotation_file_url="${2}"
      local fasta_md5="${3}"
-     local gtf_md5="${4}"
+     local annotation_file_md5="${4}"
+     local annotation_format="${5:-gtf}"
      local fasta="${REFERENCE_BASE}/${REF_ID}/Sequence/WholeGenomeFasta/genome.fa"
-     local gtf="${REFERENCE_BASE}/${REF_ID}/Annotation/Genes/genes.gtf"
+     local annotation_ext="gtf"
+
+     if [[ "${annotation_format}" == "gff" ]] || \
+        [[ "${annotation_file_url}" == *.gff.gz ]] || \
+        [[ "${annotation_file_url}" == *.gff3.gz ]]; then
+        annotation_ext="gff"
+     fi
+
+     local annotation_file="${REFERENCE_BASE}/${REF_ID}/Annotation/Genes/genes.${annotation_ext}"
 
      if [[ ! -f "${fasta}" ]]; then
          mkdir -p "${REFERENCE_BASE}/${REF_ID}/Sequence/WholeGenomeFasta"
@@ -298,11 +317,11 @@ function download_ref_urls() {
                            "${fasta}" \
                            "${fasta_md5}" || exit 1
      fi
-     if [[ ! -f "${gtf}" ]]; then
+     if [[ ! -f "${annotation_file}" ]]; then
          mkdir -p "${REFERENCE_BASE}/${REF_ID}/Annotation/Genes"
-         curl_gunzip_check "${gtf_url}" \
-                           "${gtf}" \
-                           "${gtf_md5}" || exit 1
+         curl_gunzip_check "${annotation_file_url}" \
+                           "${annotation_file}" \
+                           "${annotation_file_md5}" || exit 1
      fi
 }
 
@@ -354,6 +373,28 @@ function get_igenome_aws() {
                       "4d4ea95ed027d5cdc44b71c7a6587376" \
                       "069b82e9d71870d724f89c0ba4a31242"
          return 0
+     fi
+
+     # This genome also contains many small contigs (~2300 total, where ~1500 are without exons).
+     # I experimented with dropping contigs that don't contain exons, as per Chelonia_mydas/NCBI/CheMyd_1.0,
+     # however this wasn't necessary since the STAR index for the unmodified reference builds using ~30Gb RAM.
+     if [[ "${REF_ID}" == "Aedes_aegypti/NCBI/GCF_002204515.2_AaegL5.0" ]]; then
+         download_ref_urls \
+                      "ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/002/204/515/GCF_002204515.2_AaegL5.0/GCF_002204515.2_AaegL5.0_genomic.fna.gz" \
+                      "ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/002/204/515/GCF_002204515.2_AaegL5.0/GCF_002204515.2_AaegL5.0_genomic.gff.gz" \
+                      "64c3dec8867dd2c96f0e67655ea144c5" \
+                      "8419ba1da70d832eefadf467cf697031"
+         return 0
+     fi
+
+     if [[ "${REF_ID}" == "Aedes_aegypti/VectorBase/AaegL5.2" ]]; then
+        download_ref_urls \
+         "https://www.vectorbase.org/download/aedes-aegypti-lvpagwgchromosomesaaegl5fagz" \
+         "https://www.vectorbase.org/download/aedes-aegypti-lvpagwgbasefeaturesaaegl52gff3gz" \
+         "eb5da4f1fb261be460bf21d194f0b3d8" \
+         "61761ee9dae134c105d80811c0913c8b" \
+         "gff"
+        return 0
      fi
 
      if [[ ! -f "${REFERENCE_BASE}/${REF_ID}/Annotation/Genes/genes.gtf" ]]; then
@@ -587,6 +628,20 @@ function set_genome_index_arg() {
     fi
 }
 
+function set_annotation_file() {
+    ANNOTATION_FILE="${REFERENCE_BASE}/${REFERENCE_GENOME}/Annotation/Genes/genes"
+
+    if [[ -f "${ANNOTATION_FILE}.gtf" ]]; then
+        ANNOTATION_FILE="${ANNOTATION_FILE}.gtf"
+    elif [[ -f "${ANNOTATION_FILE}.gff" ]]; then
+        ANNOTATION_FILE="${ANNOTATION_FILE}.gff"
+    else
+        send_event "JOB_INFO" "This isn't going so well. Unable to find annotation file"
+        send_job_finished 1
+        exit 1
+    fi
+}
+
 function update_permissions() {
     send_event "JOB_INFO" "Updating Unix file permissions for job outputs on compute node."
 
@@ -698,14 +753,14 @@ function capture_environment_variables() {
 #    echo "${ena_urls}"
 #}
 
-
-####
-#### Pull in reference data from S3
-####
-
 mkdir -p "${TMP}"
 mkdir -p input
 mkdir -p output
+
+GENOME_FASTA="${REFERENCE_BASE}/${REFERENCE_GENOME}/Sequence/WholeGenomeFasta/genome.fa"
+
+# Set the ANNOTATION_FILE global variable based on presence of genes.gtf vs. genes.gff
+set_annotation_file
 
 ####
 #### Setup and import a Conda environment
@@ -740,9 +795,6 @@ cd "${JOB_PATH}/output"
 ####
 #### Job happens in here
 ####
-
-GENOME_FASTA="${REFERENCE_BASE}/${REFERENCE_GENOME}/Sequence/WholeGenomeFasta/genome.fa"
-GENOME_GTF="${REFERENCE_BASE}/${REFERENCE_GENOME}/Annotation/Genes/genes.gtf"
 
 send_event "JOB_PIPELINE_STARTING" "Pipeline starting."
 
@@ -784,7 +836,7 @@ while [[ "${EXIT_CODE}" -ne 0 ]] && [[ ${RETRY_COUNT} -le ${MAX_RETRIES} ]]; do
                ${GENOME_INDEX_ARG} \
                -fqDir ../input \
                -counts \
-               -gtfFile ${GENOME_GTF} \
+               -gtfFile ${ANNOTATION_FILE} \
                -all \
                -extn ${EXTN} \
                >>rnasik.out 2>>rnasik.err" \
@@ -798,7 +850,7 @@ while [[ "${EXIT_CODE}" -ne 0 ]] && [[ ${RETRY_COUNT} -le ${MAX_RETRIES} ]]; do
                ${GENOME_INDEX_ARG} \
                -fqDir ../input \
                -counts \
-               -gtfFile ${GENOME_GTF} \
+               -gtfFile ${ANNOTATION_FILE} \
                -all \
                -paired \
                -extn ${EXTN} \
