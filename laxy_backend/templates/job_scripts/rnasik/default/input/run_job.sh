@@ -295,11 +295,16 @@ function curl_gunzip_check {
 # TODO: This should probably be handled by laxydl to prevent simultaneous downloads by concurrent jobs
 function download_ref_urls() {
      local fasta_url="${1}"
-     local gtf_url="${2}"
+     local annotation_file_url="${2}"
      local fasta_md5="${3}"
-     local gtf_md5="${4}"
+     local annotation_file_md5="${4}"
      local fasta="${REFERENCE_BASE}/${REF_ID}/Sequence/WholeGenomeFasta/genome.fa"
-     local gtf="${REFERENCE_BASE}/${REF_ID}/Annotation/Genes/genes.gtf"
+     local annotation_ext="gtf"
+     if [[ "${annotation_file_url}" == *.gff.gz ]] || [[ "${annotation_file_url}" == *.gff3.gz ]]; then
+        annotation_ext="gff"
+     fi
+
+     local annotation_file="${REFERENCE_BASE}/${REF_ID}/Annotation/Genes/genes.${annotation_ext}"
 
      if [[ ! -f "${fasta}" ]]; then
          mkdir -p "${REFERENCE_BASE}/${REF_ID}/Sequence/WholeGenomeFasta"
@@ -307,11 +312,11 @@ function download_ref_urls() {
                            "${fasta}" \
                            "${fasta_md5}" || exit 1
      fi
-     if [[ ! -f "${gtf}" ]]; then
+     if [[ ! -f "${annotation_file}" ]]; then
          mkdir -p "${REFERENCE_BASE}/${REF_ID}/Annotation/Genes"
-         curl_gunzip_check "${gtf_url}" \
-                           "${gtf}" \
-                           "${gtf_md5}" || exit 1
+         curl_gunzip_check "${annotation_file_url}" \
+                           "${annotation_file}" \
+                           "${annotation_file_md5}" || exit 1
      fi
 }
 
@@ -608,6 +613,20 @@ function set_genome_index_arg() {
     fi
 }
 
+function set_annotation_file() {
+    ANNOTATION_FILE="${REFERENCE_BASE}/${REFERENCE_GENOME}/Annotation/Genes/genes"
+
+    if [[ -f "${ANNOTATION_FILE}.gtf" ]]; then
+        ANNOTATION_FILE="${ANNOTATION_FILE}.gtf"
+    elif [[ -f "${ANNOTATION_FILE}.gff" ]]; then
+        ANNOTATION_FILE="${ANNOTATION_FILE}.gff"
+    else
+        send_event "JOB_INFO" "This isn't going so well. Unable to find annotation file"
+        send_job_finished 1
+        exit 1
+    fi
+}
+
 function update_permissions() {
     send_event "JOB_INFO" "Updating Unix file permissions for job outputs on compute node."
 
@@ -719,14 +738,14 @@ function capture_environment_variables() {
 #    echo "${ena_urls}"
 #}
 
-
-####
-#### Pull in reference data from S3
-####
-
 mkdir -p "${TMP}"
 mkdir -p input
 mkdir -p output
+
+GENOME_FASTA="${REFERENCE_BASE}/${REFERENCE_GENOME}/Sequence/WholeGenomeFasta/genome.fa"
+
+# Set the ANNOTATION_FILE global variable based on presence of genes.gtf vs. genes.gff
+set_annotation_file
 
 ####
 #### Setup and import a Conda environment
@@ -761,9 +780,6 @@ cd "${JOB_PATH}/output"
 ####
 #### Job happens in here
 ####
-
-GENOME_FASTA="${REFERENCE_BASE}/${REFERENCE_GENOME}/Sequence/WholeGenomeFasta/genome.fa"
-GENOME_GTF="${REFERENCE_BASE}/${REFERENCE_GENOME}/Annotation/Genes/genes.gtf"
 
 send_event "JOB_PIPELINE_STARTING" "Pipeline starting."
 
@@ -805,7 +821,7 @@ while [[ "${EXIT_CODE}" -ne 0 ]] && [[ ${RETRY_COUNT} -le ${MAX_RETRIES} ]]; do
                ${GENOME_INDEX_ARG} \
                -fqDir ../input \
                -counts \
-               -gtfFile ${GENOME_GTF} \
+               -gtfFile ${ANNOTATION_FILE} \
                -all \
                -extn ${EXTN} \
                >>rnasik.out 2>>rnasik.err" \
@@ -819,7 +835,7 @@ while [[ "${EXIT_CODE}" -ne 0 ]] && [[ ${RETRY_COUNT} -le ${MAX_RETRIES} ]]; do
                ${GENOME_INDEX_ARG} \
                -fqDir ../input \
                -counts \
-               -gtfFile ${GENOME_GTF} \
+               -gtfFile ${ANNOTATION_FILE} \
                -all \
                -paired \
                -extn ${EXTN} \
