@@ -298,9 +298,13 @@ function download_ref_urls() {
      local annotation_file_url="${2}"
      local fasta_md5="${3}"
      local annotation_file_md5="${4}"
+     local annotation_format="${5}"
      local fasta="${REFERENCE_BASE}/${REF_ID}/Sequence/WholeGenomeFasta/genome.fa"
      local annotation_ext="gtf"
-     if [[ "${annotation_file_url}" == *.gff.gz ]] || [[ "${annotation_file_url}" == *.gff3.gz ]]; then
+
+     if [[ "${annotation_format}" == "gff" ]] || \
+        [[ "${annotation_file_url}" == *.gff.gz ]] || \
+        [[ "${annotation_file_url}" == *.gff3.gz ]]; then
         annotation_ext="gff"
      fi
 
@@ -387,8 +391,9 @@ function get_igenome_aws() {
          "https://www.vectorbase.org/download/aedes-aegypti-lvpagwgchromosomesaaegl5fagz" \
          "https://www.vectorbase.org/download/aedes-aegypti-lvpagwgbasefeaturesaaegl52gff3gz" \
          "eb5da4f1fb261be460bf21d194f0b3d8" \
-         "61761ee9dae134c105d80811c0913c8b"
-         return 0
+         "61761ee9dae134c105d80811c0913c8b" \
+         "gff"
+        return 0
      fi
 
      if [[ ! -f "${REFERENCE_BASE}/${REF_ID}/Annotation/Genes/genes.gtf" ]]; then
