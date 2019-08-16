@@ -9,6 +9,7 @@ REFERENCE_GENOME_MAPPINGS = {
     "Acinetobacter_baumannii/Custom/ATCC19606": "Acinetobacter_baumannii/Custom/ATCC19606",
 
     "Aedes_aegypti/NCBI/GCF_002204515.2_AaegL5.0": "Aedes_aegypti/NCBI/GCF_002204515.2_AaegL5.0",
+    "Aedes_aegypti/VectorBase/AaegL5.2": "Aedes_aegypti/VectorBase/AaegL5.2",
 
     "Arabidopsis_thaliana/Ensembl/TAIR10": "Arabidopsis_thaliana/Ensembl/TAIR10",
     "Arabidopsis_thaliana/Ensembl/TAIR9": "Arabidopsis_thaliana/Ensembl/TAIR9",

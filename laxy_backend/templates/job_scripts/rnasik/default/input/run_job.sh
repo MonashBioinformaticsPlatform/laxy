@@ -382,6 +382,15 @@ function get_igenome_aws() {
          return 0
      fi
 
+     if [[ "${REF_ID}" == "Aedes_aegypti/VectorBase/AaegL5.2" ]]; then
+        download_ref_urls \
+         "https://www.vectorbase.org/download/aedes-aegypti-lvpagwgchromosomesaaegl5fagz" \
+         "https://www.vectorbase.org/download/aedes-aegypti-lvpagwgbasefeaturesaaegl52gff3gz" \
+         "eb5da4f1fb261be460bf21d194f0b3d8" \
+         "61761ee9dae134c105d80811c0913c8b"
+         return 0
+     fi
+
      if [[ ! -f "${REFERENCE_BASE}/${REF_ID}/Annotation/Genes/genes.gtf" ]]; then
          aws s3 --no-sign-request --region eu-west-1 sync \
              s3://ngi-igenomes/igenomes/${REF_ID}/Annotation/Genes/ ${REFERENCE_BASE}/${REF_ID}/Annotation/Genes/ --exclude "*" --include "genes.gtf"

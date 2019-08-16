@@ -21,6 +21,7 @@ const available_genomes: ReferenceGenome[] = [
     {'id': 'Mus_musculus/UCSC/mm10', 'organism': 'Mus musculus'},
     // {'id': 'Mus_musculus/UCSC/mm9', 'organism': 'Mus musculus'},
 
+    {'id': 'Aedes_aegypti/VectorBase/AaegL5.2', 'organism': 'Aedes aegypti', 'recommended': true},
     {'id': 'Aedes_aegypti/NCBI/GCF_002204515.2_AaegL5.0', 'organism': 'Aedes aegypti'},
 
     // TODO: Remove this. Temporary Acinetobacter genome until better mechanism for custom genomes is added
