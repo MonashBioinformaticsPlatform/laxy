@@ -254,6 +254,10 @@ def _run_download_cli(args, rpc_secret):
                 # TODO: should the filename come from pipeline_config.json, if provided ?
                 filename, _ = find_filename_and_size_from_url(url)
 
+                if not os.path.exists(cached):
+                    logger.error(f"Failed to download {url} ({cached}), exiting with error.")
+                    sys.exit(1)
+
                 if is_tar_url_with_fragment(url) and is_tarfile(cached) and args.unpack:
                     # TODO: It's probably more efficient to group all URLs for the same tar file
                     # and extract all #fragment files from their archive at once. But this works for now.
