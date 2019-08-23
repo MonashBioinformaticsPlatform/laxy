@@ -1,4 +1,4 @@
-FROM python:3.6
+FROM python:3.6.8
 
 ARG GIT_COMMIT=unspecified
 LABEL git_commit=$GIT_COMMIT
@@ -13,7 +13,7 @@ RUN groupadd -r --gid 999 laxy && \
 ADD . /app/
 RUN chown -R laxy:laxy /app
 
-RUN pip3 install -U pip && \
+RUN pip3 install -U pip==19.2.2 && \
     pip3 install -U -r requirements.txt
 
 RUN echo "LAXY_VERSION=$LAXY_VERSION" >>/etc/environment
