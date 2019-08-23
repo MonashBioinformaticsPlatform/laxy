@@ -298,7 +298,7 @@ function download_ref_urls() {
      local annotation_file_url="${2}"
      local fasta_md5="${3}"
      local annotation_file_md5="${4}"
-     local annotation_format="${5}"
+     local annotation_format="${5:-gtf}"
      local fasta="${REFERENCE_BASE}/${REF_ID}/Sequence/WholeGenomeFasta/genome.fa"
      local annotation_ext="gtf"
 
