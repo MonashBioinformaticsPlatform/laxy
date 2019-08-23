@@ -163,7 +163,7 @@
                                 </md-table-cell>
                             </template>
                         </md-table-row>
-                        <md-table-row v-if="currentLevel.children === 0">
+                        <md-table-row v-if="currentLevel.children.length === 0">
                             <md-table-cell>No files</md-table-cell>
                         </md-table-row>
                     </md-table-body>

@@ -262,7 +262,7 @@
             try {
                 // const response = await WebAPI.getFileSet(this.filesetId);
                 // this.fileset = response.data as LaxyFileSet;
-                if (force || this.fileset == null) {
+                if (this.filesetId && (force || this.fileset == null)) {
                     this.refreshing = true;
                     await this.$store.dispatch(FETCH_FILESET, this.filesetId);
                     this.$emit("refresh-success", "Updated !");

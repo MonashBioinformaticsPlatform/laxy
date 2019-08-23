@@ -164,7 +164,8 @@
                         <md-layout md-flex="40" md-flex-medium="100"
                                    v-show="showTab === 'summary' || showTab == null" :md-column-medium="true"
                                    :md-row-large="true">
-                            <job-status-card :job="job"
+                            <job-status-card v-if="job && job.params"
+                                             :job="job"
                                              :show-cancel-button="false"
                                              :show-run-again-button="isJobOwner"
                                              :extra-table-rows="jobParamRows"
@@ -175,7 +176,7 @@
                     <transition name="fade">
                         <md-layout md-flex-medium="100"
                                    v-show="showTab === 'summary' || showTab == null" md-column>
-                            <file-list v-if="jobIsDone"
+                            <file-list v-if="job && jobIsDone"
                                        class="shadow"
                                        ref="report-files"
                                        title="Reports"
@@ -185,7 +186,7 @@
                                        :job-id="jobId"
                                        @refresh-error="showErrorDialog">
                             </file-list>
-                            <file-list v-if="jobIsDone"
+                            <file-list v-if="job && jobIsDone"
                                        ref="count-files"
                                        title="Count files"
                                        :fileset-id="job.output_fileset_id"
@@ -195,7 +196,7 @@
                                        @action-error="showErrorDialog"
                                        @refresh-error="showErrorDialog">
                             </file-list>
-                            <file-list v-if="jobIsDone"
+                            <file-list v-if="job && jobIsDone"
                                        ref="alignment-files"
                                        title="Alignment files"
                                        :fileset-id="job.output_fileset_id"
@@ -249,7 +250,7 @@
                                 <md-whiteframe class="pad-32 fill-width">
                                     <div>
                                         <h3 style="display: inline; float: left; margin-top:-8px;">Download all job
-                                            files <span v-if="job.params.tarball_size">(~ {{ job.params.tarball_size | humanize_bytes }})</span>
+                                            files <span v-if="job && job.params && job.params.tarball_size">(~ {{ job.params.tarball_size | humanize_bytes }})</span>
                                         </h3>
                                         <md-button id="helpButton"
                                                    @click="openDialog('downloadHelpDialog')"
@@ -346,6 +347,7 @@
 
     import filter from "lodash-es/filter";
     import find from "lodash-es/find";
+    import get from "lodash-es/get";
     import {Memoize} from "lodash-decorators";
 
     const Clipboard = require('clipboard');
@@ -444,7 +446,10 @@
 
         _DEBUG: boolean = false;
 
-        public job: ComputeJob | null = null;
+        // public job: ComputeJob | null = null;
+        get job(): ComputeJob | null {
+            return this.$store.state.currentViewedJob;
+        }
         // TODO: Put file list / job record in Vuex, make this a read only
         //       computed property derived from the store
         public jobId: string;
@@ -536,9 +541,11 @@
         }
 
         get inputFiles(): LaxyFile[] | null {
-            const fsid = this.input_fileset_id;
-            if (fsid && this.$store.state.filesets[fsid]) {
-                return this.$store.state.filesets[fsid].files;
+            if (this.job) {
+                const fsid = this.job.input_fileset_id;
+                if (fsid && this.$store.state.filesets[fsid]) {
+                    return this.$store.state.filesets[fsid].files;
+                }
             }
             return null;
         }
@@ -549,9 +556,11 @@
         }
 
         get outputFiles(): LaxyFile[] | null {
-            const fsid = this.output_fileset_id;
-            if (fsid && this.$store.state.filesets[fsid]) {
-                return this.$store.state.filesets[fsid].files;
+            if (this.job) {
+                const fsid = this.job.output_fileset_id;
+                if (fsid && this.$store.state.filesets[fsid]) {
+                    return this.$store.state.filesets[fsid].files;
+                }
             }
             return null;
         }
@@ -593,7 +602,7 @@
             await this.refresh(null);
 
             //if (this.job && !this.jobIsDone) {
-            this.refreshPollerId = setInterval(() => {
+            this.refreshPollerId = window.setInterval(() => {
                 this.refresh(null);
             }, 10000);  // ms
             //}
@@ -652,7 +661,7 @@
         // TODO: This may be better shifted to a dedicated JobParamsCard rather than including it as a row in
         // the generic JobStatusCard
         get genomeDescription(): string | null {
-            const genome_id = (this.job as ComputeJob).params.params.genome;
+            const genome_id = get(this.job, 'params.params.genome', null);
             find(AVAILABLE_GENOMES, {id: genome_id});
             const genome = find(AVAILABLE_GENOMES, {id: genome_id});
             if (genome) {
@@ -687,13 +696,15 @@
 
         get jobParamRows() {
             let rows = [];
-            if (this.job && this.job.params && this.job.params.params) {
-                if (this.job.params.params.pipeline_version) {
+            if (this.job) {
+                const pipeline_version = get(this.job, 'params.params.pipeline_version', null);
+                if (pipeline_version != null) {
                     rows.push(['Pipeline', `${this.job.params.pipeline} ${this.job.params.params.pipeline_version}`]);
                 }
-            }
-            if (this.genomeDescription != null) {
-                rows.push(['Reference genome', this.genomeDescription]);
+
+                if (this.genomeDescription != null) {
+                    rows.push(['Reference genome', this.genomeDescription]);
+                }
             }
             return rows;
         }
@@ -737,7 +748,7 @@
                     job_id: this.jobId,
                     access_token: this.access_token
                 });
-                this.job = this.$store.state.currentViewedJob;
+                // this.job = this.$store.state.currentViewedJob;
                 if (this.job) {
                     this.input_fileset_id = this.job.input_fileset_id;
                     this.output_fileset_id = this.job.output_fileset_id;
