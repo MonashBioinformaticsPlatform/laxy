@@ -1,4 +1,5 @@
-FROM python:3.6.8
+FROM python@sha256:f20a9bfddd87c238c3d2316b4179222f219090cbb25d5b6975070d4dd4b75004
+# FROM python:3.6
 
 ARG GIT_COMMIT=unspecified
 LABEL git_commit=$GIT_COMMIT
