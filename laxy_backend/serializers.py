@@ -475,6 +475,25 @@ class PipelineRunSerializer(BaseModelSerializer):
         # default=serializers.CurrentUserDefault()
     )
 
+    # TODO: We'd rather this be a FileSet generated from the sample cart, and just store the samplecart_id
+    #       in params for reference.
+    #       Alternatively, create the Job.input_files FileSet in views.JobCreate based on the content of
+    #       sample_cart, only serialize the input_fileset here for use in pipeline_config.json
+    #       (and downstream, laxydl) ?
+    #       Rework the backend the v1/samplecart API to actually only manipulate a FileSet under the hood ?
+    # Plan: * Change PipelineRun to point to a FileSet (input_files) or job.
+    #       * Remove sample_cart from PipelineRun, put sample_cart_id in PipelineRun.params
+    #       * In views.JobCreate, grab the PipelineRun in the usual way (via POST query param)
+    #         extract the sample_cart_id (eg, from PipelineRun.params).
+    #         THEN - write a function that takes a SampleCart and creates a FileSet (input_files).
+    #       * Set PipelineRun.input_files to the new FileSet, ensure it serializes to something
+    #         that laxydl can ingest from pipeline_config.json.
+    #       * Future: get rid of SampleCart altogether, just put the SampleCart JSON blob in PipelineRun.params.
+    #                 In this case, we should associate PipelineRun.job with the Job (if its null we can clean up
+    #                 old PipelineRuns that might represent carts filled but never run as jobs).
+
+    # job = serializers.PrimaryKeyRelatedField()
+
     sample_cart = SampleCartSerializer()
     # sample_metadata = SchemalessJsonResponseSerializer(required=False)  # becomes OpenAPI 'object' type
     params = SchemalessJsonResponseSerializer(required=False)  # becomes OpenAPI 'object' type

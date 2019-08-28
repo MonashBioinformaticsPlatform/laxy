@@ -26,7 +26,7 @@ from django.core.serializers import serialize
 from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError
 from django.db.models import Model, Manager, CharField, URLField, ForeignKey, BooleanField, IntegerField, DateTimeField, \
-    QuerySet
+    QuerySet, OneToOneField
 from django.contrib.postgres.fields import ArrayField
 # from django.contrib.auth.models import User
 from django.contrib.auth.models import AbstractUser
@@ -760,6 +760,15 @@ class File(Timestamped, UUIDModel):
     # filesystems is 4096, hence max_length.
     path = CharField(max_length=4096, blank=True, null=True)
 
+    # TODO: For checksums, we should consider using the multihash specification
+    #       here to store checksum values (eg base64 or base58 encoded, or as
+    #       raw bytes in a BinaryField, or just use https://github.com/multiformats/multibase
+    #       for self-identifying base-encoding):
+    #       https://github.com/multiformats/multihash
+    #       https://github.com/ivilata/pymultihash
+    #       We could do this in a new field and keep the behaviour of the 'checksum' field
+    #       the same via a property
+
     # Any hash supported by hashlib, and xxhash, in the format:
     # hashtype:th3actualh4shits3lf
     # eg: md5:11fca9c1f654078189ad040b1132654c
@@ -1440,6 +1449,12 @@ class PipelineRun(Timestamped, UUIDModel):
                              null=True,
                              on_delete=models.SET_NULL,
                              related_name='pipeline_runs')
+
+    # job = OneToOneField(Job,
+    #                     blank=True,
+    #                     null=True,
+    #                     on_delete=models.CASCADE,
+    #                     related_name='pipeline_run')
 
     # input_fileset = ForeignKey(FileSet,
     #                            blank=True,
