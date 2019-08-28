@@ -2352,7 +2352,25 @@ class SendFileToDegust(JSONView):
 
         # First POST the counts file, get a new Degust session ID
         form['filename'].value = filelike
-        browser.submit_form(form)
+
+        # TODO: This is to deal with SFTPStorage backend timeouts etc
+        #       Ideally we would fork / subclass SFTPStorage and SFTPStorageFile
+        #       and add some built-in backoff / retry functionality
+        #       eg: https://github.com/MonashBioinformaticsPlatform/laxy/issues/52
+        @backoff.on_exception(backoff.expo,
+                              (EOFError,
+                               IOError,
+                               OSError,
+                               ssh_exception.SSHException,
+                               ssh_exception.AuthenticationException,
+                               ),
+                              max_tries=3,
+                              jitter=backoff.full_jitter)
+        def submit_form(form):
+            browser.submit_form(form)
+
+        submit_form(form)
+
         degust_config_url = browser.url.replace('/compare.html?', '/config.html?', 1)
         degust_id = parse_qs(urlparse(degust_config_url).query).get('code', [None]).pop()
 
