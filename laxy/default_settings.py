@@ -76,6 +76,7 @@ default_env = PrefixedEnv(
     SOCIAL_AUTH_GOOGLE_OAUTH2_KEY=(str, ''),
     SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET=(str, ''),
     SOCIAL_AUTH_WHITELISTED_DOMAINS=(list, []),
+    SOCIAL_AUTH_WHITELISTED_EMAILS=(list, []),
     CORS_ORIGIN_WHITELIST=(list, []),
     CSRF_TRUSTED_ORIGINS=(list, []),
     USE_SSL=(bool, False),
@@ -410,6 +411,10 @@ if env('SOCIAL_AUTH_WHITELISTED_DOMAINS', default=[]):  # only if non-empty list
     SOCIAL_AUTH_WHITELISTED_DOMAINS = env('SOCIAL_AUTH_WHITELISTED_DOMAINS',
                                           transform=_cleanup_env_list)
     # Do we need SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_DOMAINS ??
+
+if env('SOCIAL_AUTH_WHITELISTED_EMAILS', default=[]):  # only if non-empty list
+    SOCIAL_AUTH_WHITELISTED_EMAILS = env('SOCIAL_AUTH_WHITELISTED_EMAILS',
+                                          transform=_cleanup_env_list)
 
 # https://github.com/st4lk/django-rest-social-auth#settings
 REST_SOCIAL_OAUTH_REDIRECT_URI = '/'  # ''http://localhost:8002/'
