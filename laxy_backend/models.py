@@ -1214,7 +1214,7 @@ class SampleCart(Timestamped, UUIDModel):
     A set of samples for a pipeline run. This often reflects the state of the 'sample cart'
     when setting up a job via the web frontend.
 
-    name - A short friendly name for the sample set.
+    name - A short friendly name for the sample cart.
     samples - A JSON blob representing each 'sample' and the associated URLs or File IDs.
     owner - The User who owns this object.
     """
