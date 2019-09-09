@@ -759,9 +759,6 @@ mkdir -p output
 
 GENOME_FASTA="${REFERENCE_BASE}/${REFERENCE_GENOME}/Sequence/WholeGenomeFasta/genome.fa"
 
-# Set the ANNOTATION_FILE global variable based on presence of genes.gtf vs. genes.gff
-set_annotation_file
-
 ####
 #### Setup and import a Conda environment
 ####
@@ -775,6 +772,9 @@ update_laxydl
 
 # get_reference_data_aws
 get_igenome_aws "${REFERENCE_GENOME}" || exit 1
+
+# Set the ANNOTATION_FILE global variable based on presence of genes.gtf vs. genes.gff
+set_annotation_file
 
 # Make a copy of the bds.config in the $JOB_PATH, possibly modified for SLURM
 setup_bds_config
