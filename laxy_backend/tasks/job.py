@@ -11,10 +11,11 @@ import random
 import time
 import json
 import base64
-from io import BytesIO
+from io import BytesIO, StringIO
 from copy import copy
 from contextlib import closing
 from django.conf import settings
+from paramiko.config import SSHConfig
 
 from celery.result import AsyncResult
 from django.contrib.contenttypes.models import ContentType
@@ -42,6 +43,10 @@ from ..util import laxy_sftp_url
 
 logger = get_task_logger(__name__)
 
+# For debugging - paramiko logs to seperate file
+# import paramiko
+# logging.getLogger("paramiko").setLevel(logging.DEBUG)
+# paramiko.util.log_to_file("/app/paramiko.log", level="DEBUG")
 
 def _init_fabric_env():
     env = fabric_env
@@ -57,6 +62,17 @@ def _init_fabric_env():
     # env.warn_only = getattr(settings, 'DEBUG', False)
     env.warn_only = False
     env.use_ssh_config = False
+    env.load_ssh_configs = False
+    # ssh_config = SSHConfig().parse(
+    #     [
+    #         "Host *\n",
+    #         "    PasswordAuthentication no\n"
+    #         "    PubkeyAuthentication yes\n"
+    #         "    PreferredAuthentications publickey\n"
+    #         "    IdentitiesOnly yes\n"
+    #     ]
+    # )
+    # env.ssh_config = ssh_config
     env.abort_on_prompts = True
     env.reject_unknown_hosts = False
     env.forward_agent = False
