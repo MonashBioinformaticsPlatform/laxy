@@ -1,4 +1,5 @@
 django-extensions  # apt: graphviz graphviz-dev
 docker-compose
+# pydevd-pycharm~=192.6262.63  # needs to match your PyCharm version exactly
 # mercurial  # Python 2.7 only
 # pip-chill  # nice idea that is broken ?
