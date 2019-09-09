@@ -17,4 +17,7 @@ RUN chown -R laxy:laxy /app
 RUN pip3 install -U pip==19.2.2 && \
     pip3 install -U -r requirements.txt
 
+# Temporary workaround for paramiko new OpenSSH key format (PR https://github.com/paramiko/paramiko/pull/1343)
+RUN PARAMIKO_REPLACE=1 pip install --force https://github.com/ploxiln/paramiko-ng/archive/2.7.2.tar.gz#egg=paramiko
+
 RUN echo "LAXY_VERSION=$LAXY_VERSION" >>/etc/environment

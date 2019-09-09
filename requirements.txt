@@ -75,7 +75,10 @@ numpy==1.15.1
 oauthlib==2.0.6
 openapi-codec==1.3.2
 pandas==0.23.4
-paramiko==2.4.2
+paramiko==2.6.0
+# Temporary version of paramiko that merges PR (OpenSSH key format): https://github.com/paramiko/paramiko/pull/1343
+# Install with PARAMIKO_REPLACE=1 environment variable set
+# git+https://github.com/ploxiln/paramiko-ng.git@2.7.2#egg=paramiko-ng
 pluggy==0.6.0
 psycopg2==2.7.3.2
 psycopg2-binary==2.7.6.1

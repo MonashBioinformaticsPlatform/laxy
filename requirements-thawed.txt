@@ -28,6 +28,11 @@ fs  # PyFilesystem
 sentry-sdk==0.6.8
 git+https://github.com/pansapiens/webdav-client-python.git@master#egg=webdavclient
 
+# paramiko
+# Temporary version of paramiko that merges PR (OpenSSH key format): https://github.com/paramiko/paramiko/pull/1343
+# Install with PARAMIKO_REPLACE=1 environment variable set
+git+https://github.com/ploxiln/paramiko-ng.git@2.7.2#egg=paramiko-ng
+
 # Base Django packages
 django==2.1.10
 django-reversion
