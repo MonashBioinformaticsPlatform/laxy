@@ -31,6 +31,7 @@ readonly DOWNLOAD_CACHE_PATH="${PWD}/../cache"
 readonly AUTH_HEADER_FILE="${JOB_PATH}/.private_request_headers"
 readonly IGNORE_SELF_SIGNED_CERTIFICATE="{{ IGNORE_SELF_SIGNED_CERTIFICATE }}"
 readonly LAXYDL_BRANCH=master
+readonly LAXYDL_USE_ARIA2C=yes
 
 # These are applied via chmod to all files and directories in the run, upon completion
 readonly JOB_FILE_PERMS='ug+rw-s'
@@ -712,19 +713,36 @@ function download_input_data() {
         readonly urls=$(get_input_data_urls)
 
         mkdir -p "${JOB_PATH}/../cache"
-        laxydl download \
-           ${LAXYDL_INSECURE} \
-           -vvv \
-           --cache-path "${DOWNLOAD_CACHE_PATH}" \
-           --no-progress \
-           --unpack \
-           --parallel-downloads "${PARALLEL_DOWNLOADS}" \
-           --event-notification-url "${JOB_EVENT_URL}" \
-           --event-notification-auth-file "${AUTH_HEADER_FILE}" \
-           --pipeline-config "${JOB_PATH}/input/pipeline_config.json" \
-           --create-missing-directories \
-           --skip-existing \
-           --destination-path "${JOB_PATH}/input"
+        if [[ "${LAXYDL_USE_ARIA2C}" == "yes" ]]; then
+            laxydl download \
+               ${LAXYDL_INSECURE} \
+               -vvv \
+               --cache-path "${DOWNLOAD_CACHE_PATH}" \
+               --no-progress \
+               --unpack \
+               --parallel-downloads "${PARALLEL_DOWNLOADS}" \
+               --event-notification-url "${JOB_EVENT_URL}" \
+               --event-notification-auth-file "${AUTH_HEADER_FILE}" \
+               --pipeline-config "${JOB_PATH}/input/pipeline_config.json" \
+               --create-missing-directories \
+               --skip-existing \
+               --destination-path "${JOB_PATH}/input"
+        else
+             laxydl download \
+               ${LAXYDL_INSECURE} \
+               -vvv \
+               --no-aria2c \
+               --cache-path "${DOWNLOAD_CACHE_PATH}" \
+               --no-progress \
+               --unpack \
+               --parallel-downloads "${PARALLEL_DOWNLOADS}" \
+               --event-notification-url "${JOB_EVENT_URL}" \
+               --event-notification-auth-file "${AUTH_HEADER_FILE}" \
+               --pipeline-config "${JOB_PATH}/input/pipeline_config.json" \
+               --create-missing-directories \
+               --skip-existing \
+               --destination-path "${JOB_PATH}/input"
+        fi
 
         DL_EXIT_CODE=$?
         if [[ $DL_EXIT_CODE != 0 ]]; then
