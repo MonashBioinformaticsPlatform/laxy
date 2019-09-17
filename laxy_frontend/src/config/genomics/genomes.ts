@@ -26,6 +26,7 @@ const available_genomes: ReferenceGenome[] = [
 
     // TODO: Remove this. Temporary Acinetobacter genome until better mechanism for custom genomes is added
     {'id': 'Acinetobacter_baumannii/Custom/ATCC19606', 'organism': 'Acinetobacter baumannii (strain ATCC 19606)'},
+    {'id': 'Acinetobacter_baumannii/Custom/AB307-0294', 'organism': 'Acinetobacter baumannii (strain Ab307)'},
 
     {'id': 'Arabidopsis_thaliana/Ensembl/TAIR10', 'organism': 'Arabidopsis thaliana'},
     // {'id': 'Arabidopsis_thaliana/Ensembl/TAIR9', 'organism': 'Arabidopsis thaliana'},
