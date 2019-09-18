@@ -2504,8 +2504,9 @@ class RemoteBrowseView(JSONView):
 
         try:
             # We need to check the URL given is actually accessible
-            resp = requests.head(url)
-            resp.raise_for_status()
+            if scheme in ['http', 'https']:
+                resp = requests.head(url)
+                resp.raise_for_status()
         except BaseException as exx:
             return JsonResponse({'remote_server_response': {'url': url,
                                                             'status': resp.status_code,
@@ -2544,7 +2545,20 @@ class RemoteBrowseView(JSONView):
         elif scheme == 'ftp':
             from fs import open_fs
             try:
-                ftp_fs = open_fs(url)
+                try:
+                    # may raise fs.errors.RemoteConnectionError if FTP connection fails
+                    ftp_fs = open_fs(url)
+                except BaseException as exx:
+                    msg = getattr(exx, 'msg', '')
+                    return JsonResponse({'remote_server_response':
+                                             {'url': url,
+                                              'status': 500,
+                                              'reason': msg}},
+                                        # TODO: When frontend interprets this better, use status 400 and let the
+                                        #       frontend report third-party response from the JSON blob
+                                        # status=status.HTTP_400_BAD_REQUEST,
+                                        status=500,
+                                        reason=msg)
 
                 for step in ftp_fs.walk(filter=[fileglob], search='breadth', max_depth=1):
                     listing.extend([dict(type='directory',
