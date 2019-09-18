@@ -400,6 +400,9 @@ function get_igenome_aws() {
      if [[ ! -f "${REFERENCE_BASE}/${REF_ID}/Annotation/Genes/genes.gtf" ]]; then
          aws s3 --no-sign-request --region eu-west-1 sync \
              s3://ngi-igenomes/igenomes/${REF_ID}/Annotation/Genes/ ${REFERENCE_BASE}/${REF_ID}/Annotation/Genes/ --exclude "*" --include "genes.gtf"
+         # Grab the README.txt too (contains release information), if present
+         aws s3 --no-sign-request --region eu-west-1 cp \
+             "s3://ngi-igenomes/igenomes/${REF_ID}/Annotation/README.txt" "${REFERENCE_BASE}/${REF_ID}/Annotation/README.txt" || true
      fi
      if [[ ! -f "${REFERENCE_BASE}/${REF_ID}/Sequence/WholeGenomeFasta/genome.fa" ]]; then
          aws s3 --no-sign-request --region eu-west-1 sync \
