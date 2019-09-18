@@ -664,10 +664,16 @@ def file_should_be_deleted(ff: File, max_size=200):
     whitelisted_extensions = ['.txt', '.html', '.log']
     whitelisted_paths = ['**/sikRun/multiqc_data/**', '**/sikRun/fastqcReport/**']
     whitelisted_type_tags = ['report', 'counts', 'degust']
-    always_delete_extenstions = ['.bam', '.bai']
-    always_delete_paths = ['**/sikRun/refFiles/**']
+    always_delete_extensions = ['.bam', '.bai']
+    always_delete_paths = ['**/sikRun/refFiles/**',
+                           'input/*.fastq.gz',
+                           'input/*.fastq',
+                           'input/*.fq.gz'
+                           'input/**/*.fastq.gz',
+                           'input/**/*.fastq',
+                           'input/**/*.fq.gz']
 
-    if extension in always_delete_extenstions:
+    if extension in always_delete_extensions:
         return True
 
     has_always_delete_path = any([fnmatch.filter([ff.full_path], pattern)
@@ -742,12 +748,19 @@ def expire_old_job(self, task_data=None, **kwargs):
         for f in old_files:
             try:
                 if file_should_be_deleted(f):
-                    logger.info(f"Deleting {job.id} {f.full_path} ({f.size / MB:.1f}MB)")
-                    f.delete_file()
-                    # _delete_file_fabric(f)
-                    f.deleted_time = datetime.now()
-                    f.save()
-                    count += 1
+                    if f.size is not None:
+                        logger.info(f"Deleting {job.id} {f.full_path} ({f.size / MB:.1f}MB)")
+                    try:
+                        f.delete_file()
+                        count += 1
+                    except NotImplementedError:
+                        logger.warning(f"Unable to delete {job.id} {f.full_path} "
+                                       f"(NotImplementedError for this file location)")
+
+            # TODO: This isn't ideal - for laxy+sftp:// locations, when the SFTP server is down, f.size raises
+            #       FileNotFoundError rather than IOError. But the file may still exist, we are just are (temporarily)
+            #       unable to access it. We need a way to differentiate between actually missing and
+            #       'storage backend is down'.
             except FileNotFoundError as ex:
                 logger.info(f"File is missing on backend storage: {job.id} {f.full_path} - marking as expired")
                 f.deleted_time = datetime.now()
