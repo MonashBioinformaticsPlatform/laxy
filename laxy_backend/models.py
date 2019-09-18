@@ -21,7 +21,7 @@ from django.conf import settings
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.db import models, transaction
-from django.core.files.storage import get_storage_class
+from django.core.files.storage import get_storage_class, Storage
 from django.core.serializers import serialize
 from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError
@@ -57,7 +57,6 @@ SCHEME_STORAGE_CLASS_MAPPING = {
     'file': 'django.core.files.storage.FileSystemStorage',
     'sftp': 'storages.backends.sftpstorage.SFTPStorage',
     'laxy+sftp': 'storages.backends.sftpstorage.SFTPStorage',
-
 }
 """
 Maps URL schemes to Django storage backends that can handle them.
@@ -941,7 +940,7 @@ class File(Timestamped, UUIDModel):
 
         return file_path
 
-    def _get_storage_class(self):
+    def _get_storage_class(self) -> Union[Storage, None]:
         url = urlparse(self.location)
         scheme = url.scheme
         storage_class = get_storage_class(
@@ -967,6 +966,7 @@ class File(Timestamped, UUIDModel):
                           pkey=RSAKey.from_private_key(StringIO(private_key)))
             # storage = SFTPStorage(host=host, params=params)
             storage = storage_class(host=host, params=params)
+            storage._connect()  # Do this to ensure we can connect before caching the SFTPStorage class
             CACHED_SFTP_STORAGE_CLASS_INSTANCES[compute.id] = storage
 
             return storage
@@ -1058,6 +1058,8 @@ class File(Timestamped, UUIDModel):
         if scheme == 'laxy+sftp':
             storage = self._get_storage_class()
             storage.delete(self._abs_path_on_compute())
+            self.deleted_time = datetime.now()
+            self.save()
         else:
             raise NotImplementedError("Only laxy+sftp:// internal URLs can be deleted at this time.")
 
