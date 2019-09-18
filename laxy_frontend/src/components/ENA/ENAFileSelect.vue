@@ -226,7 +226,7 @@
         ];
 
         public ena_ids: DbAccession[] = [{accession: ""} as DbAccession];
-        public accession_input: string = "SRR5963435, SRR5963441";  // paired-end yeast example
+        public accession_input: string = "SRR4020122, SRR4020124";  // tiny paired-end yeast example
         public hoveredSampleDetails: string = "";
 
         public submitting: boolean = false;
