@@ -222,6 +222,7 @@ class FileAdmin(Timestamped, VersionAdmin):
                     'modified')
     ordering = ('-created_time', '-modified_time',)
     search_fields = ('id', 'path', 'name',)
+    actions = ('fix_metadata',)
     form = FileAdminForm
 
     truncate_to = 32
@@ -238,6 +239,28 @@ class FileAdmin(Timestamped, VersionAdmin):
         return format_html('<a href="{}">{}</a>',
                            url,
                            truncatechars(obj.name, self.truncate_to))
+
+    @takes_instance_or_queryset
+    def fix_metadata(self, request, queryset):
+        """
+        In the (rare) case that a set of Files end up with non-JSON data in the metadata field,
+        nuke all those and replace with an empty JSON object.
+
+        This is more for cleaning up when something unexpected occurred (since Postgres JSONB appears
+        to still allow non-JSON strings .. :/) and shouldn't replace data migrations if (for instance) the
+        File.metadata field JSON shape/schema changed.
+        """
+        count = 0
+        last_msg = ''
+        for obj in queryset:
+            if isinstance(obj.metadata, str):
+                obj.metadata = dict()
+                obj.save()
+                count += 1
+                last = f" (last was for File {obj.id})"
+        self.message_user(request, f"Fix {count} metadata fields{last_msg}")
+
+    fix_metadata.short_description = "Fix invalid file metadata"
 
 
 class JobInputFilesInline(admin.TabularInline):
