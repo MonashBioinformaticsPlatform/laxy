@@ -34,6 +34,7 @@
 
                     <div id="url_form" v-if="selected_source == 'URL'">
                         <remote-files-select :show-about-box="false" :show-buttons="true"
+                                             @files-added="addToCart"
                                              placeholder="https://bioinformatics.erc.monash.edu/home/andrewperry/test/sample_data/">
 
                         </remote-files-select>
@@ -145,6 +146,10 @@
 
 <script lang="ts">
     import * as _ from 'lodash';
+    import map from "lodash-es/map";
+    import filter from "lodash-es/filter";
+    import * as pluralize from "pluralize";
+
     import 'es6-promise';
 
     import axios, {AxiosResponse} from 'axios';
@@ -159,6 +164,23 @@
     import RemoteFileSelectAboutBox from "./RemoteSelect/RemoteFileSelectAboutBox";
     import CSVSampleListUpload from "./CSVSampleListUpload/CSVSampleListUpload";
     import CSVAboutBox from "./CSVSampleListUpload/CSVAboutBox";
+    import {Snackbar} from "../snackbar";
+
+    import {LaxyFile, Sample} from "../model";
+
+    import {
+        EMPTY_TREE_ROOT, FileListItem,
+        fileListToTree,
+        findPair,
+        flattenTree, is_archive_url, objListToTree,
+        simplifyFastqName,
+        TreeNode
+    } from "../file-tree-util";
+
+    import {longestCommonPrefix} from "../prefix";
+    import {escapeRegExp, reverseString} from "../util";
+
+    import {ADD_SAMPLES} from "../store";
 
     interface DbAccession {
         accession: string;
@@ -262,6 +284,61 @@
         closeDialog(refName: string) {
             // console.log('Closed: ' + refName);
             ((this.$refs as any)[refName] as any).close();
+        }
+
+        addToCart(selectedFiles: FileListItem[]) {
+            // console.log(this.selectedFiles);
+            const cart_samples: Sample[] = [];
+            const added_files: FileListItem[] = [];
+
+            const names: string[] = map(selectedFiles, (i) => {
+                return reverseString(simplifyFastqName(i.name));
+            });
+            // console.dir(names);
+            // actually longest common SUFFIX of (simplified) file names, since we reversed names above
+            const lcp = longestCommonPrefix(names);
+            // console.dir(lcp);
+            const commonSuffix = lcp.length > 0 ? reverseString(lcp) : '';
+            // console.dir(commonSuffix);
+
+            for (let f of selectedFiles) {
+                if (f.name === '..') {
+                    continue;
+                }
+                if (added_files.includes(f)) continue;
+                const pair = findPair(f, selectedFiles);
+
+                let sname = f.name;
+                if (pair != null) {
+                    sname = simplifyFastqName(f.name);
+                }
+                sname = sname.replace(commonSuffix, '');
+                if (sname === '') sname = commonSuffix;
+
+                // copy and drop 'type' prop (ILaxyFile doesn't want 'type')
+                const _f = Object.assign({}, f) as FileListItem;
+                delete _f.type;
+                let sfiles: any = [{R1: _f as ILaxyFile}];
+                if (pair != null) {
+                    const _pair = Object.assign({}, pair) as FileListItem;
+                    delete _pair.type;
+                    sfiles = [{R1: _f as ILaxyFile, R2: _pair as ILaxyFile}];
+                }
+                cart_samples.push({
+                    name: sname,
+                    files: sfiles,
+                    metadata: {condition: ""},
+                } as Sample);
+
+                added_files.push(f);
+                if (pair != null) added_files.push(pair);
+            }
+            this.$store.commit(ADD_SAMPLES, cart_samples);
+            let count = selectedFiles.length;
+            Snackbar.flashMessage(`Added ${count} ${pluralize("file", count)} to cart.`);
+
+            //this.remove(this.selectedFiles);
+            //this.selectedFiles = [];
         }
 
         @Watch('selected_source')

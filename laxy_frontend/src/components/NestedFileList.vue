@@ -261,16 +261,19 @@
         @Prop({default: () => ['file'], type: Array})
         public selectableTypes: string[];
 
-        @Prop({default: true})
+        @Prop({default: false, type: Boolean})
+        public singleSelect: boolean;
+
+        @Prop({default: true, type: Boolean})
         public hideSearch: boolean;
 
-        @Prop({default: false})
+        @Prop({default: false, type: Boolean})
         public hideActions: boolean;
 
-        @Prop({default: false})
+        @Prop({default: false, type: Boolean})
         public showBackArrow: boolean;
 
-        @Prop({default: true})
+        @Prop({default: true, type: Boolean})
         public autoSelectPair: boolean;
 
         @Prop({default: 2, type: Number})
@@ -392,15 +395,17 @@
             // console.dir(rows);
         }
 
-        // checks / unchecks the mdTableRow checkbox, based on finding the
-        // rows associated (file) object
-        _setRowCheckboxState(file: LaxyFile, state: boolean): void {
+        // checks / unchecks the mdTableRow checkboxes, based on finding the
+        // rows associated with a list of file objects
+        _setRowsCheckboxState(files: LaxyFile[], state: boolean): void {
             const table = this.$refs["file-table"] as MdTable;
             // skip header row(s)
             const rows = filter(table.$children, (r) => !r.headRow);
-            const row = rows[table.data.indexOf(file)];
-            table.setRowSelection(state, file);
-            row.checkbox = state;
+            for (let file of files) {
+                const row = rows[table.data.indexOf(file)];
+                table.setRowSelection(state, file);
+                row.checkbox = state;
+            }
 
             // we need to re-emit the md-table @select event since we've auto-selected rows
             // (MdTable.setRowSelection doesn't do this itself)
@@ -408,10 +413,15 @@
         }
 
         onSelectedRow(file: LaxyFile) {
+            if (this.singleSelect && this.currentLevelFiles != null) {
+                this._setRowsCheckboxState(this.currentLevelFiles as LaxyFile[], false);
+                this._setRowsCheckboxState([file], true);
+            }
+
             if (this.autoSelectPair && this.files && file) {
                 const pair = findPair(file, this.files);
                 if (pair != null) {
-                    this._setRowCheckboxState(pair, true);
+                    this._setRowsCheckboxState([pair], true);
                 }
                 // console.log([file, pair]);
             }
@@ -423,7 +433,7 @@
             if (this.autoSelectPair && this.files && file) {
                 const pair = findPair(file, this.files);
                 if (pair != null) {
-                    this._setRowCheckboxState(pair, false);
+                    this._setRowsCheckboxState([pair], false);
                 }
                 // console.log([file, pair]);
             }

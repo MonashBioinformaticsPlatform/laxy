@@ -24,6 +24,7 @@ readonly JOB_INPUT_STAGED="{{ JOB_INPUT_STAGED }}"
 readonly REFERENCE_GENOME="{{ REFERENCE_GENOME }}"
 readonly PIPELINE_VERSION="{{ PIPELINE_VERSION }}"
 readonly JOB_PATH=${PWD}
+readonly INPUT_READS_PATH="${JOB_PATH}/input/reads"
 readonly PIPELINE_CONFIG="${JOB_PATH}/input/pipeline_config.json"
 readonly CONDA_BASE="${JOB_PATH}/../miniconda3"
 readonly REFERENCE_BASE="${PWD}/../references/iGenomes"
@@ -32,6 +33,7 @@ readonly AUTH_HEADER_FILE="${JOB_PATH}/.private_request_headers"
 readonly IGNORE_SELF_SIGNED_CERTIFICATE="{{ IGNORE_SELF_SIGNED_CERTIFICATE }}"
 readonly LAXYDL_BRANCH=master
 readonly LAXYDL_USE_ARIA2C=yes
+readonly LAXYDL_PARALLEL_DOWNLOADS=8
 
 # These are applied via chmod to all files and directories in the run, upon completion
 readonly JOB_FILE_PERMS='ug+rw-s'
@@ -42,6 +44,11 @@ export SLURM_ACCOUNT="{{ SLURM_ACCOUNT }}"
 {% endif %}
 readonly QUEUE_TYPE="{{ QUEUE_TYPE }}"
 # readonly QUEUE_TYPE="local"
+
+if [[ ! -f "${AUTH_HEADER_FILE}" ]]; then
+    echo "No auth token file (${AUTH_HEADER_FILE}) - exiting."
+    exit 1
+fi
 
 if [[ ${IGNORE_SELF_SIGNED_CERTIFICATE} == "yes" ]]; then
     readonly CURL_INSECURE="--insecure"
@@ -281,30 +288,20 @@ function update_laxydl() {
             "laxy_downloader @ git+https://github.com/MonashBioinformaticsPlatform/laxy@${LAXYDL_BRANCH}#egg=laxy_downloader&subdirectory=laxy_downloader"
 }
 
-function get_reference_data_aws() {
-    # TODO: Be smarter about what we pull in - eg only the reference required,
-    #       not the whole lot. Assume reference is present if appropriate
-    #       directory is there
-    if [[ ! -d "${REFERENCE_BASE}" ]]; then
-        prev="${PWD}"
-        mkdir -p "${REFERENCE_BASE}"
-        cd "${REFERENCE_BASE}"
-        aws s3 sync s3://bioinformatics-au/iGenomes .
-        cd "${prev}"
-    fi
-}
-
 function curl_gunzip_check {
      local url="${1}"
      local gunziped_file="${2}"
-     local md5="${3}"
+     local md5="${3:-}"
 
      curl "${url}" \
           --silent --retry 10 | gunzip -c > "${gunziped_file}"
      DL_EXIT_CODE=$?
-     checksum=$(md5sum "${gunziped_file}" | cut -f 1 -d ' ')
-     if [[ "${checksum}" != "${md5}" ]]; then
-         return 1
+
+     if [[ "${md5}" != '' ]]; then
+         checksum=$(md5sum "${gunziped_file}" | cut -f 1 -d ' ')
+         if [[ "${checksum}" != "${md5}" ]]; then
+             return 1
+        fi
      fi
 
      return ${DL_EXIT_CODE}
@@ -314,8 +311,8 @@ function curl_gunzip_check {
 function download_ref_urls() {
      local fasta_url="${1}"
      local annotation_file_url="${2}"
-     local fasta_md5="${3}"
-     local annotation_file_md5="${4}"
+     local fasta_md5="${3:-}"
+     local annotation_file_md5="${4:-}"
      local annotation_format="${5:-gtf}"
      local fasta="${REFERENCE_BASE}/${REF_ID}/Sequence/WholeGenomeFasta/genome.fa"
      local annotation_ext="gtf"
@@ -343,10 +340,39 @@ function download_ref_urls() {
 }
 
 # TODO: Downloads here should probably be handled by laxydl to prevent simultaneous downloads by concurrent jobs
-function get_igenome_aws() {
+function download_reference_genome() {
      local REF_ID=$1
 
      send_event "JOB_INFO" "Getting reference genome (${REF_ID})."
+
+     # TODO: laxydl should really read `input_files` from pipeline_config.json directly.
+     #       File list in `input_files` should include the relative path reference_genome/
+     if [[ "${REF_ID}" == "__UserSupplied__" ]]; then
+        readonly FASTA_URL=$(jq --raw-output '.params.input_files[] | select(.type_tags[] | contains("reference")) | select(.type_tags[] | contains("fasta")) | .location' "${JOB_PATH}/input/pipeline_config.json")
+        GENOME_FASTA="${JOB_PATH}/input/reference_genome/"$(jq --raw-output '.params.input_files[] | select(.type_tags[] | contains("reference")) | select(.type_tags[] | contains("fasta")) | .name' "${JOB_PATH}/input/pipeline_config.json")
+        readonly ANNOTATION_URL=$(jq --raw-output '.params.input_files[] | select(.type_tags[] | contains("reference")) | select(.type_tags[] | contains("annotation")) | .location' "${JOB_PATH}/input/pipeline_config.json")
+        ANNOTATION_FILE="${JOB_PATH}/input/reference_genome/"$(jq --raw-output '.params.input_files[] | select(.type_tags[] | contains("reference")) | select(.type_tags[] | contains("annotation")) | .name' "${JOB_PATH}/input/pipeline_config.json")
+
+        laxydl download \
+               ${LAXYDL_INSECURE} \
+               -vvv \
+               --copy-from-cache \
+               --cache-path "${DOWNLOAD_CACHE_PATH}" \
+               --no-progress \
+               --parallel-downloads ${LAXYDL_PARALLEL_DOWNLOADS} \
+               --create-missing-directories \
+               --skip-existing \
+               --destination-path "${JOB_PATH}/input/reference_genome" \
+               "${FASTA_URL}" "${ANNOTATION_URL}"
+
+        # Gunzip any compressed references
+        for f in "${JOB_PATH}/input/reference_genome/*"; do
+            if file -L ${f} | grep -q gzip; then
+                gunzip "${JOB_PATH}/input/reference_genome"
+            fi
+        done
+        return 0
+     fi
 
      if [[ "${REF_ID}" == "Homo_sapiens/Ensembl/GRCh38" ]]; then
          download_ref_urls "ftp://ftp.ensembl.org/pub/release-95/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna_sm.primary_assembly.fa.gz" \
@@ -630,28 +656,28 @@ function get_input_data_urls() {
 function detect_pairs() {
     PAIRIDS=""
     EXTN=".fastq.gz"
-    if stat -t "${JOB_PATH}"/input/*_R2_001.fastq.gz >/dev/null 2>&1; then
+    if find "${INPUT_READS_PATH}" -type f -name "*_R2_001.fastq.gz" | grep -q "."; then
       EXTN=".fastq.gz"
       PAIRIDS="_R1_001,_R2_001"
-    elif stat -t "${JOB_PATH}"/input/*_R2.fastq.gz >/dev/null 2>&1; then
+    elif find "${INPUT_READS_PATH}" -type f -name "*_R2.fastq.gz" | grep -q "."; then
       EXTN=".fastq.gz"
       PAIRIDS="_R1,_R2"
-    elif stat -t "${JOB_PATH}"/input/*_2.fastq.gz >/dev/null 2>&1; then
+    elif find "${INPUT_READS_PATH}" -type f -name "*_2.fastq.gz" | grep -q "."; then
       EXTN=".fastq.gz"
       PAIRIDS="_1,_2"
     # Very occasionally, we get FASTA format reads
-    elif stat -t "${JOB_PATH}"/input/*_R2.fasta.gz >/dev/null 2>&1; then
+    elif find "${INPUT_READS_PATH}" -type f -name "*_R2.fasta.gz" | grep -q "."; then
       EXTN=".fasta.gz"
       PAIRIDS="_R1,_R2"
-    elif stat -t "${JOB_PATH}"/input/*_2.fasta.gz >/dev/null 2>&1; then
+    elif find "${INPUT_READS_PATH}" -type f -name "*_2.fasta.gz" | grep -q "."; then
       EXTN=".fasta.gz"
       PAIRIDS="_1,_2"
     fi
 
     # BGI currently uses .fq.gz ?!? This is why we can't have nice things.
-    if stat -t "${JOB_PATH}"/input/*_1.fq.gz >/dev/null 2>&1; then
+    if find "${INPUT_READS_PATH}" -type f -name "*_1.fq.gz" | grep -q "."; then
       EXTN=".fq.gz"
-      if stat -t "${JOB_PATH}"/input/*_2.fq.gz >/dev/null 2>&1; then
+      if find "${INPUT_READS_PATH}" -type f -name "*_2.fq.gz" | grep -q "."; then
           PAIRIDS="_1,_2"
       fi
     fi
@@ -670,18 +696,26 @@ function set_genome_index_arg() {
     fi
 }
 
-function set_annotation_file() {
-    ANNOTATION_FILE="${REFERENCE_BASE}/${REFERENCE_GENOME}/Annotation/Genes/genes"
-
-    if [[ -f "${ANNOTATION_FILE}.gtf" ]]; then
-        ANNOTATION_FILE="${ANNOTATION_FILE}.gtf"
-    elif [[ -f "${ANNOTATION_FILE}.gff" ]]; then
-        ANNOTATION_FILE="${ANNOTATION_FILE}.gff"
-    else
-        send_event "JOB_INFO" "This isn't going so well. Unable to find annotation file"
-        send_job_finished 1
-        exit 1
+function set_reference_locations() {
+    set +o nounset
+    if [[ -z "${GENOME_FASTA}" ]]; then
+        GENOME_FASTA="${REFERENCE_BASE}/${REFERENCE_GENOME}/Sequence/WholeGenomeFasta/genome.fa"
     fi
+
+    if [[ -z "${ANNOTATION_FILE}" ]]; then
+        ANNOTATION_FILE="${REFERENCE_BASE}/${REFERENCE_GENOME}/Annotation/Genes/genes"
+
+        if [[ -f "${ANNOTATION_FILE}.gtf" ]]; then
+            ANNOTATION_FILE="${ANNOTATION_FILE}.gtf"
+        elif [[ -f "${ANNOTATION_FILE}.gff" ]]; then
+            ANNOTATION_FILE="${ANNOTATION_FILE}.gff"
+        else
+            send_event "JOB_INFO" "This isn't going so well. Unable to find annotation file"
+            send_job_finished 1
+            exit 1
+        fi
+    fi
+    set -o nounset
 }
 
 function update_permissions() {
@@ -698,7 +732,7 @@ function run_mash_screen() {
     # This is additional 'pre-pipeline' step - might make sense integrating it as an option to RNAsik
     # in the future.
 
-    #local _globstat_state=$(shopt -p globstar)
+    #local _globstar_state=$(shopt -p globstar)
     #shopt -s globstar
 
     send_event "JOB_INFO" "Starting Mash screen (detects organism/contamination)."
@@ -750,7 +784,6 @@ function download_input_data() {
 
         # send_event "INPUT_DATA_DOWNLOAD_STARTED" "Input data download started."
 
-        readonly PARALLEL_DOWNLOADS=8
         # one URL per line
         readonly urls=$(get_input_data_urls)
 
@@ -762,13 +795,13 @@ function download_input_data() {
                --cache-path "${DOWNLOAD_CACHE_PATH}" \
                --no-progress \
                --unpack \
-               --parallel-downloads "${PARALLEL_DOWNLOADS}" \
+               --parallel-downloads ${LAXYDL_PARALLEL_DOWNLOADS} \
                --event-notification-url "${JOB_EVENT_URL}" \
                --event-notification-auth-file "${AUTH_HEADER_FILE}" \
                --pipeline-config "${JOB_PATH}/input/pipeline_config.json" \
                --create-missing-directories \
                --skip-existing \
-               --destination-path "${JOB_PATH}/input"
+               --destination-path "${INPUT_READS_PATH}"
         else
              laxydl download \
                ${LAXYDL_INSECURE} \
@@ -777,13 +810,13 @@ function download_input_data() {
                --cache-path "${DOWNLOAD_CACHE_PATH}" \
                --no-progress \
                --unpack \
-               --parallel-downloads "${PARALLEL_DOWNLOADS}" \
+               --parallel-downloads ${LAXYDL_PARALLEL_DOWNLOADS} \
                --event-notification-url "${JOB_EVENT_URL}" \
                --event-notification-auth-file "${AUTH_HEADER_FILE}" \
                --pipeline-config "${JOB_PATH}/input/pipeline_config.json" \
                --create-missing-directories \
                --skip-existing \
-               --destination-path "${JOB_PATH}/input"
+               --destination-path "${INPUT_READS_PATH}"
         fi
 
         DL_EXIT_CODE=$?
@@ -816,30 +849,27 @@ mkdir -p "${TMP}"
 mkdir -p input
 mkdir -p output
 
-GENOME_FASTA="${REFERENCE_BASE}/${REFERENCE_GENOME}/Sequence/WholeGenomeFasta/genome.fa"
-
 ####
 #### Setup and import a Conda environment
 ####
 
-install_miniconda
+install_miniconda || exit 1
 
 # We import the environment early to ensure we have a recent version of curl (>=7.55)
 init_conda_env "rnasik" "${PIPELINE_VERSION}" || exit 1
 
-update_laxydl
+update_laxydl || exit 1
 
-# get_reference_data_aws
-get_igenome_aws "${REFERENCE_GENOME}" || exit 1
+download_reference_genome "${REFERENCE_GENOME}" || exit 1
 
 # Set the ANNOTATION_FILE global variable based on presence of genes.gtf vs. genes.gff
-set_annotation_file
+set_reference_locations || exit 1
 
 # Make a copy of the bds.config in the $JOB_PATH, possibly modified for SLURM
-setup_bds_config
+setup_bds_config || exit 1
 
 # Make a copy of the sik.config into $JOB_PATH/input/sik.config
-add_sik_config
+add_sik_config || exit 1
 
 ####
 #### Stage input data ###
@@ -866,9 +896,9 @@ set +o errexit
 # quick and dirty detection of paired-end or not
 PAIRIDS=""
 EXTN=".fastq.gz"
-detect_pairs
+detect_pairs || exit 1
 
-set_genome_index_arg
+set_genome_index_arg || exit 1
 
 send_event "JOB_INFO" "Starting RNAsik."
 

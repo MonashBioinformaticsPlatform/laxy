@@ -299,8 +299,8 @@
                 samples.name = samplecart.name;
                 this.$store.commit(SET_SAMPLES, samples as SampleCartItems);
 
-                this.$store.commit(SET_PIPELINE_PARAMS, pipelinerun.params);
-                this.$store.commit(SET_PIPELINE_DESCRIPTION, pipelinerun.description);
+                this.$store.set('pipelineParams', pipelinerun.params);
+                this.$store.set('pipelineParams@description', pipelinerun.description);
 
                 // TODO: make a prop on RNASeqSetup to allow a jump to second or last step immediately
                 this.$router.push({name: 'rnaseq', params: {allowSkipping: 'true'}});

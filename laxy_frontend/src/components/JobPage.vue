@@ -380,6 +380,8 @@
     // import { State2Way } from 'vuex-class-state2way'
     import {State2Way} from '../vuex/state2way';
 
+    import { Get, Sync, Call } from 'vuex-pathify';
+
     import {NotImplementedError} from "../exceptions";
     import {ComputeJob, LaxyFile, SampleCartItems} from "../model";
     import {WebAPI} from "../web-api";
@@ -449,10 +451,9 @@
 
         _DEBUG: boolean = false;
 
-        // public job: ComputeJob | null = null;
-        get job(): ComputeJob | null {
-            return this.$store.state.currentViewedJob;
-        }
+        @Get('currentViewedJob')
+        job: ComputeJob | null;
+
         // TODO: Put file list / job record in Vuex, make this a read only
         //       computed property derived from the store
         public jobId: string;
@@ -853,8 +854,8 @@
                 samples.name = samplecart.name;
                 this.$store.commit(SET_SAMPLES, samples as SampleCartItems);
 
-                this.$store.commit(SET_PIPELINE_PARAMS, pipelinerun.params);
-                this.$store.commit(SET_PIPELINE_DESCRIPTION, pipelinerun.description);
+                this.$store.set('pipelineParams', pipelinerun.params);
+                this.$store.set('pipelineParams@description', pipelinerun.description);
 
                 // TODO: make a prop on RNASeqSetup to allow a jump to second or last step immediately
                 this.$router.push({name: 'rnaseq'});

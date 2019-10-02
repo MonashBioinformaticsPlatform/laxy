@@ -54,7 +54,7 @@
 
         // This is a string since vue-router only allows strings to be passed as params
         @Prop({type: String, default: 'false'})
-        public allowSkipping: string;
+        public allowSkipping: string = 'true';
 
         get dataSource_stepComplete(): boolean {
             return this.$store.getters.sample_cart_count > 0 || this.allowSkipping === 'true';
@@ -111,7 +111,7 @@
         async startJob() {
             try {
                 const response = await (this.$refs['pipelineParams'] as any).run();
-                if (response == null) throw Error();
+                if (response == null) throw Error('Request to start job failed');
                 if (response && response.data && response.data.id) {
                     this.$router.push({name: 'job', params: {jobId: response.data.id}});
                 } else {
