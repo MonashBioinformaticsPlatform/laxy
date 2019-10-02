@@ -966,7 +966,8 @@ class File(Timestamped, UUIDModel):
                           pkey=RSAKey.from_private_key(StringIO(private_key)))
             # storage = SFTPStorage(host=host, params=params)
             storage = storage_class(host=host, params=params)
-            storage._connect()  # Do this to ensure we can connect before caching the SFTPStorage class
+            # storage._connect()  # Do this to ensure we can connect before caching the SFTPStorage class
+            _ = storage.sftp   # Do this to ensure we can connect before caching the SFTPStorage class
             CACHED_SFTP_STORAGE_CLASS_INSTANCES[compute.id] = storage
 
             return storage
@@ -1033,7 +1034,9 @@ class File(Timestamped, UUIDModel):
         :return:
         :rtype:
         """
-        size = self.metadata.get('size', None)
+        size = None
+        if hasattr(self.metadata, 'get'):
+            size = self.metadata.get('size', None)
         if (size is None and
                 self.file is not None and
                 hasattr(self.file, 'size')):
