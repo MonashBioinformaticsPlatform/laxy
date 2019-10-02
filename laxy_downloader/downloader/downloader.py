@@ -344,7 +344,7 @@ def clean_cache(cache_path, cache_age: int = 30):
     """
     cmd = ['find', cache_path,
            '-name', '".*"', '-prune', '-o',  # this part ignores .hidden files and dirs
-           '-type', 'f', '-mtime', f'+{cache_age}', '-print', '-delete']
+           '-type', 'f', '-mtime', f'+{cache_age}', '-print', '-delete', '-depth']
     logger.info("Cleaning cache - running: %s" % ' '.join(cmd))
     return subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
