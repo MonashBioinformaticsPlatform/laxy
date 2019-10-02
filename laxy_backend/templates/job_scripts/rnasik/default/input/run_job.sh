@@ -80,7 +80,7 @@ if [[ ${QUEUE_TYPE} == "local" ]]; then
     fi
 else
     # system=generic or system=slurm in bds.config - BDS will run sbatch tasks
-    MEM=4000
+    MEM=3850
     CPUS=2
 fi
 
@@ -685,7 +685,6 @@ function run_mash_screen() {
 #SBATCH --mem 16G
 #SBATCH --cpus-per-task=8
 #SBATCH --time=30
-#SBATCH --qos=shortq
 #SBATCH --ntasks-per-node=1
 #SBATCH --ntasks=1
 #SBATCH --job-name="laxy:mash:${JOB_ID}"
@@ -693,6 +692,7 @@ function run_mash_screen() {
 {% if SLURM_ACCOUNT %}
 #SBATCH --account={{ SLURM_ACCOUNT }}
 {% endif %}
+# #SBATCH --qos=shortq
 
 ${cmd} | sort -gr >${mash_outfile} && \
 grep '_ViralProj\|_ViralMultiSegProj' ${mash_outfile} >${JOB_PATH}/output/mash_screen_virus.tab && \
