@@ -1738,7 +1738,8 @@ class JobCreate(JSONView):
 
             # TODO: This ID check should probably move into the PipelineRun
             #       params serializer.
-            if reference_genome_id not in REFERENCE_GENOME_MAPPINGS:
+            if (reference_genome_id not in REFERENCE_GENOME_MAPPINGS and
+                    reference_genome_id != '__UserSupplied__'):
                 job.status = Job.STATUS_FAILED
                 job.save()
                 # job.delete()
@@ -2626,8 +2627,6 @@ def _get_default_compute_resource():
     if not compute:
         raise Exception(f"The default ComputeResource '{default_compute_name}' does not exist "
                         f"(DEFAULT_COMPUTE_RESOURCE setting).")
-
-    compute.save()
     return compute
 
 # def _test_celery_task():
