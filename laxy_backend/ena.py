@@ -20,7 +20,7 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 
 
-# def parse_fastq_table_flatten(table: str) -> Dict[str, Dict]:
+# def parse_fastq_table_flatten(table: str, url_scheme='ftp') -> Dict[str, Dict]:
 #     """
 #     Return a dictionary keyed by url, given the raw text with tab-delimited
 #     fields:
@@ -60,7 +60,7 @@ User = get_user_model()
 #     table = [row for row in csv.DictReader(table.splitlines(), delimiter='\t')]
 #     by_url = OrderedDict()
 #     for rec in table:
-#         rec['fastq_ftp'] = 'ftp://%s' % rec['fastq_ftp']
+#         rec['fastq_ftp'] = f'{url_scheme}://{rec['fastq_ftp']}'
 #         rec['read_count'] = int(rec['read_count'])
 #         rec['fastq_bytes'] = int(rec['fastq_bytes'])
 #
@@ -69,7 +69,7 @@ User = get_user_model()
 #     return by_url
 
 
-def parse_fastq_table(table: str, key_by='run_accession') -> Dict[str, Dict]:
+def parse_fastq_table(table: str, key_by='run_accession', url_scheme='ftp') -> Dict[str, Dict]:
     """
     Return a dictionary keyed by run_accession, given the raw text with tab-delimited
     fields:
@@ -99,10 +99,14 @@ def parse_fastq_table(table: str, key_by='run_accession') -> Dict[str, Dict]:
     fields=run_accession,experiment_accession,study_accession,sample_accession,instrument_platform,library_strategy,
     read_count,fastq_ftp,fastq_md5,fastq_bytes
 
-    :param key_by:
-    :type key_by:
     :param table:
     :type table:
+    :param key_by:
+    :type key_by:
+    :param url_scheme: The URL scheme ('ftp' or 'http') to use first fastq_ftp links
+                       (ENA supports both ftp:// and http:// for these URLs).
+                       The http scheme for these ENA URLs seems undocumented / unsupported / unreliable ?
+    :type url_scheme: str
     :return:
     :rtype:
     """
@@ -114,7 +118,7 @@ def parse_fastq_table(table: str, key_by='run_accession') -> Dict[str, Dict]:
         for f in semicol_fields:
             rec[f] = rec[f].split(';')
         rec['read_count'] = int(rec['read_count'])
-        rec['fastq_ftp'] = ['ftp://%s' % l for l in rec['fastq_ftp']]
+        rec['fastq_ftp'] = [f'{url_scheme}://{host_path}' for host_path in rec['fastq_ftp']]
         rec['fastq_bytes'] = [int(s) for s in rec['fastq_bytes']]
 
         # If there is only one item in the list, make it a value not a list.
@@ -270,7 +274,7 @@ def get_fastq_urls(accessions: List[str], fields: List[str] = None) -> Dict[str,
     for accession in accessions:
         table = enasearch.retrieve_run_report(accession=accession, fields=','.join(fields))
         table = flatten_fastq_table(table)
-        urls = parse_fastq_table(table, key_by='fastq_ftp')
+        urls = parse_fastq_table(table, key_by='fastq_ftp', url_scheme='ftp')
         urls_dict.update(urls)
 
     return urls_dict
@@ -306,7 +310,7 @@ def get_run_table(accessions: List[str], fields: List[str] = None) -> Dict[str, 
     for accession in accessions:
         table = enasearch.retrieve_run_report(accession=accession, fields=','.join(fields))
         # table = flatten_fastq_table(table)
-        runs = parse_fastq_table(table, key_by='run_accession')
+        runs = parse_fastq_table(table, key_by='run_accession', url_scheme='ftp')
         runs_dict.update(runs)
 
     # We turn the list of FTP urls into a list of dicts like
