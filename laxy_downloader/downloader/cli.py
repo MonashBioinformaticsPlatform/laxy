@@ -70,7 +70,8 @@ def add_commandline_args(parser: argparse.ArgumentParser) -> argparse.ArgumentPa
                            default=8)
     dl_parser.add_argument("--no-aria2c",
                            help="Download natively without using the Aria2c daemon.",
-                           action="store_true")
+                           dest="use_aria",
+                           action="store_false")
     dl_parser.add_argument("--queue-then-exit",
                            help="Rather than block waiting for downloads to finish, exit after queuing."
                                 "Aria2 daemon will continue downloading in the background.",
@@ -141,11 +142,11 @@ def _parse_auth_header_file(fh):
     return headers
 
 
-def _run_download_cli(args, rpc_secret):
+def _run_download_cli(args, rpc_secret=None):
     _initial_queued_wait_delay = 10  # seconds
     _polling_delay = 30  # seconds
 
-    if not args.no_aria2c:
+    if args.use_aria:
         daemon = aria.get_daemon(secret=rpc_secret)
         aria.log_status()
 
@@ -191,7 +192,7 @@ def _run_download_cli(args, rpc_secret):
 
             urls.difference_update(skip_urls)
 
-        if urls and not args.no_aria2c:
+        if urls and args.use_aria:
             daemon = aria.get_daemon(secret=rpc_secret)
 
             async def aria_dl_and_poll():
@@ -292,6 +293,7 @@ def main():
     if len(sys.argv) == 1:
         parser.print_help()
 
+    rpc_secret = None
     args = parser.parse_args()
 
     if args.quiet:
@@ -306,10 +308,12 @@ def main():
             logger.error(f"--cache-path was specified but {args.cache_path} does not exist.")
             sys.exit(1)
 
-    rpc_secret_path = os.path.join(args.cache_path, '.aria2_rpc_secret')
-    rpc_secret = get_secret_key(rpc_secret_path)
+        if args.use_aria:
+            rpc_secret_path = os.path.join(args.cache_path, '.aria2_rpc_secret')
+            rpc_secret = get_secret_key(rpc_secret_path)
 
-    logger.debug(f"RPC secret is at: {rpc_secret_path}")
+            logger.debug(f"RPC secret is at: {rpc_secret_path}")
+            daemon = aria.get_daemon(secret=rpc_secret)
 
     if args.command == 'expire-cache':
         if not is_cache_path(args.cache_path):
@@ -318,11 +322,11 @@ def main():
                         f"If you are REALLY sure, you can `touch {os.path.join(args.cache_path, '.laxydl_cache')}` "
                         f"and try again, AT YOUR OWN RISK.")
         if args.urls:
-            daemon = aria.get_daemon(secret=rpc_secret)
             for url in args.urls:
                 filepath = get_url_cached_path(url, args.cache_path)
                 try:
-                    aria.stop_url_download(url)
+                    if args.use_aria:
+                        aria.stop_url_download(url)
                     if os.path.exists(filepath) and os.path.isfile(filepath):
                         os.remove(filepath)
                         logger.info(f"Removed cached download: ")
@@ -344,7 +348,6 @@ def main():
 
     if args.command == 'kill_aria':
         logger.info("Stopping all downloads and shuttting down Aria2c.")
-        daemon = aria.get_daemon(secret=rpc_secret)
         try:
             aria.stop_all()
         except Exception as ex:
@@ -362,7 +365,7 @@ def main():
             sys.exit(1)
 
         try:
-            _run_download_cli(args, rpc_secret)
+            _run_download_cli(args, rpc_secret=rpc_secret)
         except xmlrpc.client.Fault as ex:
 
             def get_processes_by_name(name):
