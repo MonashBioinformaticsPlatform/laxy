@@ -1733,7 +1733,7 @@ class JobCreate(JSONView):
             # reference_genome_id = "Saccharomyces_cerevisiae/Ensembl/R64-1-1"
             reference_genome_id = job.params.get('params').get('genome')
 
-            default_pipeline_version = '1.5.3'  # '1.5.1+c53adf6'  # '1.5.1'
+            default_pipeline_version = '1.5.4'  # '1.5.1+c53adf6'  # '1.5.1'
             pipeline_version = job.params.get('params').get('pipeline_version', default_pipeline_version)
 
             # TODO: This ID check should probably move into the PipelineRun

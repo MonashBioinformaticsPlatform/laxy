@@ -1,9 +1,18 @@
 ---
-# A simpler conda env without explicit dependencies.
-name: rnasik-1.5.3-laxydev
+# This environment contains the minimal packages required without listing automatically installed
+# dependencies or specific versions.
+# It can be used as a template for building an environment with a specific version of a pipeline,
+# which is then exported as `conda env export >conda_environment.yml`
+#
+# (We maintain this simplified environment file since while keeping the output of `conda env export`
+#  is great for reproducible environments it makes it difficult to identify just the required
+#  core packages when all their implicit dependencies are also listed)
+#
+# Packages here should generally be unversioned, unless a specific version is known to be required.
+#
+
+name: rnasik
 channels:
-  # Custom channel just for laxytest versions of the pipeline
-  - pansapiens
   - conda-forge
   - bioconda
   - serine
@@ -18,9 +27,9 @@ dependencies:
   # General run_job.sh dependencies. Many of these will already exist on a typical
   # Linux system but we pull them in explicitly to ensure they are available, even on
   # barebones systems (eg slimmed down Docker containers)
-  - python
-  - conda-pack
+  - python=3.6.*
   - pip
+  - conda-pack
   - aria2
   - curl
   - wget
@@ -28,8 +37,9 @@ dependencies:
   - jq
   - parallel
   # Pipeline specific
-  - rnasik=1.5.3.laxydev
+  - rnasik
   - mash
+  - qualimap=2.2.2b=0
   - pip:
     # General run_job.sh dependency, for the laxydl downloader tool
     - git+https://github.com/MonashBioinformaticsPlatform/laxy@master#egg=laxy_downloader&subdirectory=laxy_downloader

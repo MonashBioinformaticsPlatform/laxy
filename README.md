@@ -137,6 +137,19 @@ This is currently both the internal genome ID used by Laxy and the relative path
   
 This is documented here in the hopes it can be streamlined in the future (eg via simple genome 'service').
 
+#### Adding a new pipeline version
+
+Currently only possible for `rnasik`, and ugly around the edges. 
+This process will be refined as pipeline are made more modular/pluggable.
+
+Create a directory `laxy_backend/templates/job_scripts/rnasik/{version}/input`, where `{version}` is the new pipeline version.
+Create a `conda_environment.yml` file in this directory. Follow the examples for other versions, changing the 
+appropriate version numbers for packages and the environment name.
+
+Add the version number to the `pipeline_versions` list in `laxy_frontend/src/components/PipelineParams.vue`.
+Optionally change the default version used in `store.ts`, `pipelineParams.pipeline_version`.
+Optionally change the default value used in `laxy_backend/views.py`, `default_pipeline_version` (local variable in `JobCreate`).
+
 #### Creating the UML diagram(s) for the Django models
 
 ```bash
