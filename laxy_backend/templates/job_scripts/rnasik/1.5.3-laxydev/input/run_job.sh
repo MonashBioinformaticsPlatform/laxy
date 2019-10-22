@@ -404,8 +404,9 @@ function get_igenome_aws() {
      if [[ ! -f "${REFERENCE_BASE}/${REF_ID}/Sequence/WholeGenomeFasta/genome.fa" ]]; then
          aws s3 --no-sign-request --region eu-west-1 sync \
              s3://ngi-igenomes/igenomes/${REF_ID}/Sequence/WholeGenomeFasta/ ${REFERENCE_BASE}/${REF_ID}/Sequence/WholeGenomeFasta/
-         aws s3 --no-sign-request --region eu-west-1 sync \
-             s3://ngi-igenomes/igenomes/${REF_ID}/Sequence/STARIndex/ ${REFERENCE_BASE}/${REF_ID}/Sequence/STARIndex/
+         # AWS-iGenomes pre-generated STAR indices are incompatible with newer versions of STAR (>=2.7.2b)
+         # aws s3 --no-sign-request --region eu-west-1 sync \
+         #     s3://ngi-igenomes/igenomes/${REF_ID}/Sequence/STARIndex/ ${REFERENCE_BASE}/${REF_ID}/Sequence/STARIndex/
      fi
 }
 
