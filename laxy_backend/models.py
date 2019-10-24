@@ -478,6 +478,11 @@ class Job(Expires, Timestamped, UUIDModel):
     # django-jsonfield or native Postgres
     params = JSONField(default=OrderedDict)
 
+    # Intended for non-parameter metadata about the job
+    # - eg, post-run extracted results that might be used in the web frontend
+    # (eg {"results": {"predicted-strandedness": "forward", "strand-bias": 0.98}} )
+    metadata = JSONField(default=OrderedDict)
+
     # A JSON-serializable params class that may be specialized via
     # multiple-table inheritance
     # params = ForeignKey(JobParams,

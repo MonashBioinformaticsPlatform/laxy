@@ -298,6 +298,7 @@ class JobSerializerBase(BaseModelSerializer):
 
     # params = serializers.JSONField(required=False)
     params = SchemalessJsonResponseSerializer(required=False)  # becomes OpenAPI 'object' type
+    metadata = SchemalessJsonResponseSerializer(required=False)
     compute_resource = serializers.CharField(source='compute_resource.id',
                                              required=False,
                                              allow_blank=True,
