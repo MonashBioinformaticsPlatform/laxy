@@ -436,6 +436,9 @@ class ComputeResource(Timestamped, UUIDModel):
 
 @reversion.register()
 class Job(Expires, Timestamped, UUIDModel):
+    class ExtraMeta:
+        patchable_fields = ['params', 'metadata']
+
     """
     Represents a processing job (typically a long running remote job managed
     by a Celery task queue).
@@ -740,6 +743,9 @@ class File(Timestamped, UUIDModel):
 
         # TODO: Enforce unique path/name within a FileSet ?
         # unique_together = ('fileset', 'path', 'name')
+
+    class ExtraMeta:
+        patchable_fields = ['metadata']
 
     """
     File model.

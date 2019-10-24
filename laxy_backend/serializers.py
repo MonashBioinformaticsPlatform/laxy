@@ -161,9 +161,13 @@ class FileSerializer(BaseModelSerializer):
         read_only_fields = ('id', 'owner',)
         error_status_codes = status_codes()
 
+    @transaction.atomic
     def update(self, instance, validated_data):
         instance = self._update_attrs(instance, validated_data)
-        instance.metadata = validated_data.get('metadata', instance.metadata)
+        for field in getattr(self.Meta.model.ExtraMeta, 'patchable_fields', []):
+            if hasattr(instance, field):
+                new_value = validated_data.get(field, getattr(instance, field))
+                setattr(instance, field, new_value)
         instance.save()
         return instance
 
@@ -328,6 +332,16 @@ class JobSerializerResponse(JobSerializerBase):
         exclude = ('input_files', 'output_files',)
         depth = 0
         error_status_codes = status_codes()
+
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        instance = self._update_attrs(instance, validated_data)
+        for field in getattr(self.Meta.model.ExtraMeta, 'patchable_fields', []):
+            if hasattr(instance, field):
+                new_value = validated_data.get(field, getattr(instance, field))
+                setattr(instance, field, new_value)
+        instance.save()
+        return instance
 
 
 # TODO: modify this to trim down unnecessary output,

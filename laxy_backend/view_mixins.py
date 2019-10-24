@@ -274,7 +274,40 @@ class PutMixin:
 
 # TODO: This would be cleaner as a decorator to a patch method, similar to @etag_headers
 class JSONPatchMixin:
-    def _try_json_patch(self, request, field='metadata'):
+    def _is_json_patch_content_type(self, request):
+        content_type = get_content_type(request)
+        return content_type in ['application/merge-patch+json',
+                                'application/json-patch+json']
+
+    def _patch_request(self, request: Request, obj=None, field='metadata'):
+        content_type = get_content_type(request)
+
+        if obj is None:
+            obj = self.get_object()
+
+        metadata = request.data.get(field, None)
+        if metadata is not None:
+            if isinstance(metadata, list):
+                patch = [OrderedDict(op) for op in metadata]
+            else:
+                patch = OrderedDict(metadata)
+
+            # https://tools.ietf.org/html/rfc7386
+            if content_type == 'application/merge-patch+json':
+                request.data[field] = json_merge_patch.merge(
+                    OrderedDict(getattr(obj, field)),
+                    patch)
+            # https://tools.ietf.org/html/rfc6902
+            if content_type == 'application/json-patch+json':
+                request.data[field] = jsonpatch.apply_patch(
+                    OrderedDict(getattr(obj, field)),
+                    patch)
+
+            logger.debug(f"_try_json_patch - patched {field}: {request.data}")
+
+        return request
+
+    def _try_json_patch(self, request: Request, obj=None, field='metadata'):
         """
         Partial update of the 'metadata' field on an object.
 
@@ -310,10 +343,11 @@ class JSONPatchMixin:
         :rtype:
         -->
         """
-        content_type = get_content_type(request)
-        if content_type in ['application/merge-patch+json',
-                            'application/json-patch+json']:
-            obj = self.get_object()
+
+        # content_type = get_content_type(request)
+        if self._is_json_patch_content_type(request):
+            if obj is None:
+                obj = self.get_object()
             if obj is None:
                 return Response(status=status.HTTP_404_NOT_FOUND)
 
@@ -325,27 +359,9 @@ class JSONPatchMixin:
                 return HttpResponse(status=status.HTTP_400_BAD_REQUEST,
                                     reason=f"Invalid field for this object type: {field}")
 
-            metadata = request.data.get(field, None)
-            if metadata is not None:
-                if isinstance(metadata, list):
-                    patch = [OrderedDict(op) for op in metadata]
-                else:
-                    patch = OrderedDict(metadata)
+            request = self._patch_request(request, obj=obj, field=field)
 
-                # https://tools.ietf.org/html/rfc7386
-                if content_type == 'application/merge-patch+json':
-                    request.data[field] = json_merge_patch.merge(
-                        OrderedDict(getattr(obj, field)),
-                        patch)
-                # https://tools.ietf.org/html/rfc6902
-                if content_type == 'application/json-patch+json':
-                    request.data[field] = jsonpatch.apply_patch(
-                        OrderedDict(getattr(obj, field)),
-                        patch)
-
-            logger.debug(f"_try_json_patch - patched {field}: {request.data}")
             if hasattr(self, 'request_serializer'):
-
                 serializer_method = self.request_serializer
             else:
                 serializer_method = self.get_serializer

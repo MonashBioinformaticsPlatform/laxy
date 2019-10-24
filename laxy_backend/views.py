@@ -767,7 +767,9 @@ class FileView(StreamFileMixin,
         -->
         """
 
-        resp = self._try_json_patch(request)
+        for field in File.ExtraMeta.patchable_fields:
+            resp = self._try_json_patch(request, field=field)
+
         if resp is not None:
             return resp
 
@@ -1486,13 +1488,17 @@ class PipelineRunView(GetMixin,
             serializer_class=PipelineRunCreateSerializer)
 
 
-class JobView(JSONView):
+class JobView(JSONPatchMixin,
+              JSONView):
     queryset = Job.objects.all()
     serializer_class = JobSerializerResponse
 
     permission_classes = (IsOwner | IsSuperuser | HasReadonlyObjectAccessToken,)
-
     # permission_classes = (DjangoObjectPermissions,)
+
+    parser_classes = (JSONParser,
+                      JSONPatchRFC7386Parser,
+                      JSONPatchRFC6902Parser)
 
     @view_config(response_serializer=JobSerializerResponse)
     @etag_headers
@@ -1539,6 +1545,9 @@ class JobView(JSONView):
           * "cancelled"
           * "complete"
 
+        Also supports json patching for params and metadata if the `Content-Type`
+        is `application/merge-patch+json` or `application/json-patch+json`.
+
         <!--
         :param request:
         :type request: rest_framework.request.Request
@@ -1548,9 +1557,18 @@ class JobView(JSONView):
         :rtype: rest_framework.response.Response
         -->
         """
-
         job = self.get_object()
         original_status = job.status
+
+        patchable_fields = Job.ExtraMeta.patchable_fields
+        if self._is_json_patch_content_type(request):
+            for field in patchable_fields:
+                request = self._patch_request(request, obj=job, field=field)
+        else:
+            if any([request.data.get(field, None) for field in patchable_fields]):
+                return HttpResponse(status=status.HTTP_400_BAD_REQUEST,
+                                    reason=f"Invalid Content-Type for PATCH on: {', '.join(patchable_fields)}. "
+                                           f"Use application/merge-patch+json or application/json-patch+json")
 
         serializer = self.get_serializer(instance=job,
                                          data=request.data,
