@@ -257,6 +257,11 @@ class FileSetSerializer(BaseModelSerializer):
         error_status_codes = status_codes()
 
 
+# TODO: Fix thies serializer to create new File objects, or associate to existing ones by id,
+#       if specified in the files list. Write some tests - the model has tests but the create serializer doesn't !
+#       Currently fails with:
+#         TypeError: Direct assignment to the reverse side of a related set is prohibited. Use files.set() instead.
+#
 class FileSetSerializerPostRequest(FileSetSerializer):
     class Meta(FileSetSerializer.Meta):
         fields = ('id', 'name', 'files',)
