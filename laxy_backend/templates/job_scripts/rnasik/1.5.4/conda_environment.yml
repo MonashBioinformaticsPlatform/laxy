@@ -40,6 +40,8 @@ dependencies:
   - rnasik=1.5.4
   - mash
   - qualimap=2.2.2b=0
+  # Appears to be missing from dependencies
+  - pandas
   - pip:
     # General run_job.sh dependency, for the laxydl downloader tool
     - git+https://github.com/MonashBioinformaticsPlatform/laxy@master#egg=laxy_downloader&subdirectory=laxy_downloader
