@@ -183,6 +183,23 @@ function send_job_finished() {
          "${JOB_COMPLETE_CALLBACK_URL}"
 }
 
+function send_job_metadata() {
+    local metadata="$1"
+    curl -X PATCH \
+         ${CURL_INSECURE} \
+         -H "Content-Type: application/merge-patch+json" \
+         -H @"${AUTH_HEADER_FILE}" \
+         --silent \
+         -o /dev/null \
+         -w "%{http_code}" \
+         --connect-timeout 10 \
+         --max-time 10 \
+         --retry 8 \
+         --retry-max-time 600 \
+         -d "${metadata}" \
+         "${JOB_COMPLETE_CALLBACK_URL}"
+}
+
 function install_miniconda() {
     send_event "JOB_INFO" "Installing/detecting local conda installation."
 
@@ -505,6 +522,27 @@ with open(manifest_file, "a") as fh:
 ' "$1" "$2" "${3:-}"
 }
 
+function get_strandedness_metadata() {
+    local prediction="unknown"
+    local bias="null"
+    # RNAsik <=1.5.3
+    local strandInfoOld="${JOB_PATH}/output/sikRun/countFiles/strandInfo.txt"
+    # RNAsik >=1.5.4
+    local strandInfoGuess="${JOB_PATH}/output/sikRun/countFiles/strandInfoGuess.txt"
+    local strandInfoFile="${strandInfoGuess}"
+
+    [[ -f  "${strandInfoOld}" ]] && strandInfoFile="${strandInfoOld}"
+    # [[ -f  "${strandInfoGuess}" ]] && local strandInfoFile="${strandInfoGuess}"
+
+    if [[ -f "${strandInfoFile}" ]]; then
+      prediction=$(cut -f 1 -d ',' "${strandInfoFile}")
+      bias=$(cut -f 2 -d ',' "${strandInfoFile}")
+      echo '{"metadata":{"results":{"strandedness":{"predicted":"'${prediction}'","bias":'${bias}'}}}}'
+    else
+      echo '{"metadata":{"results":{"strandedness":{"predicted":"unknown"}}}}'
+    fi
+}
+
 # TODO: This has become complex enough that it probably should be a Python script for file registration,
 #  (pulled into the Conda environment, just like laxydl)
 function register_files() {
@@ -520,7 +558,7 @@ function register_files() {
     add_to_manifest "**/*StrandedCounts-withNames-proteinCoding.txt" "counts,degust,degust-protein-coding"
     add_to_manifest "**/*StrandedCounts.txt" "counts"
     add_to_manifest "**/*StrandedCounts-withNames.txt" "counts,degust,degust-all-biotypes"
-    add_to_manifest "output/sikRun/countFiles/strandInfo.txt" "strand-info"
+    add_to_manifest "output/sikRun/countFiles/strandInfo*.txt" "strand-info"
     # TODO: These two recursive commands to add the remaining files don't seem to be working ?
     add_to_manifest "input/*" ""
     add_to_manifest "output/*" ""
@@ -896,6 +934,8 @@ if [[ ${EXIT_CODE} -ne 0 ]]; then
 else
   send_event "JOB_PIPELINE_COMPLETED" "Pipeline completed." '{"exit_code":'${EXIT_CODE}'}'
 fi
+
+send_job_metadata $(get_strandedness_metadata) || true
 
 update_permissions
 

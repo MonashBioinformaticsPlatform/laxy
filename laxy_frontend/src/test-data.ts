@@ -48,8 +48,14 @@ export const DummySampleList: SampleCartItems = {
             'metadata': {'condition': 'wildtype'},
             'files': [
                 {
-                    'R1': {name: 'sampleA_lane1_R1.fastq.gz', location: 'ftp://example.com/sampleA_lane1_R1.fastq.gz'} as ILaxyFile,
-                    'R2':{name: 'sampleA_lane1_R2.fastq.gz', location: 'ftp://example.com/sampleA_lane1_R2.fastq.gz'} as ILaxyFile,
+                    'R1': {
+                        name: 'sampleA_lane1_R1.fastq.gz',
+                        location: 'ftp://example.com/sampleA_lane1_R1.fastq.gz'
+                    } as ILaxyFile,
+                    'R2': {
+                        name: 'sampleA_lane1_R2.fastq.gz',
+                        location: 'ftp://example.com/sampleA_lane1_R2.fastq.gz'
+                    } as ILaxyFile,
                 },
             ],
         },
@@ -59,12 +65,24 @@ export const DummySampleList: SampleCartItems = {
             'metadata': {'condition': 'mutant'},
             'files': [
                 {
-                    'R1': {name: 'sampleB_lane1_R1.fastq.gz', location: 'ftp://example.com/sampleB_lane1_R1.fastq.gz'} as ILaxyFile,
-                    'R2':{name: 'sampleB_lane1_R2.fastq.gz', location: 'ftp://example.com/sampleB_lane1_R2.fastq.gz'} as ILaxyFile,
+                    'R1': {
+                        name: 'sampleB_lane1_R1.fastq.gz',
+                        location: 'ftp://example.com/sampleB_lane1_R1.fastq.gz'
+                    } as ILaxyFile,
+                    'R2': {
+                        name: 'sampleB_lane1_R2.fastq.gz',
+                        location: 'ftp://example.com/sampleB_lane1_R2.fastq.gz'
+                    } as ILaxyFile,
                 },
                 {
-                    'R1': {name: 'sampleB_lane4_R1.fastq.gz', location: 'ftp://example.com/sampleB_lane4_R1.fastq.gz'} as ILaxyFile,
-                    'R2':{name: 'sampleB_lane4_R2.fastq.gz', location: 'ftp://example.com/sampleB_lane4_R2.fastq.gz'} as ILaxyFile,
+                    'R1': {
+                        name: 'sampleB_lane4_R1.fastq.gz',
+                        location: 'ftp://example.com/sampleB_lane4_R1.fastq.gz'
+                    } as ILaxyFile,
+                    'R2': {
+                        name: 'sampleB_lane4_R2.fastq.gz',
+                        location: 'ftp://example.com/sampleB_lane4_R2.fastq.gz'
+                    } as ILaxyFile,
                 }
 
             ]
@@ -76,7 +94,7 @@ export const DummySampleList: SampleCartItems = {
             'files': [
                 {
                     'R1': {id: '2VSd4mZvmYX0OXw07dGfnV'} as ILaxyFile,
-                    'R2': {id:'3XSd4mZvmYX0OXw07dGfmZ'} as ILaxyFile
+                    'R2': {id: '3XSd4mZvmYX0OXw07dGfmZ'} as ILaxyFile
                 },
                 {
                     'R1': {id: 'Toopini9iPaenooghaquee'} as ILaxyFile,
@@ -148,6 +166,7 @@ export const DummyJobList: ComputeJob[] = [
         'owner': '3Cx3N2QmRw3WCSuI65qfkw',
         'input_fileset_id': '5cUMhEHPl7tusyWQWRdXCV',
         'output_fileset_id': 'lte5G15TXSkfmF6dlP1aj',
+        'metadata': {"results": {"strandedness": {"bias": -0.5961538461538461, "predicted": "NonStrandedCounts"}}},
         'params': {
             'id': '2CjwU7RJtFq8u60DBiORik',
             'owner': '3Cx3N2QmRw3WCSuI65qfkw',
@@ -165,11 +184,11 @@ export const DummyJobList: ComputeJob[] = [
                         'files': [
                             {
                                 'R1': 'ftp://ftp.sra.ebi.ac.uk/vol1/fastq/' +
-                                'SRR181/008/SRR1819888/SRR1819888_1.fastq.gz'
+                                    'SRR181/008/SRR1819888/SRR1819888_1.fastq.gz'
                             },
                             {
                                 'R2': 'ftp://ftp.sra.ebi.ac.uk/vol1/fastq/' +
-                                'SRR181/008/SRR1819888/SRR1819888_2.fastq.gz'
+                                    'SRR181/008/SRR1819888/SRR1819888_2.fastq.gz'
                             }
                         ],
                         'metadata': {
@@ -177,13 +196,13 @@ export const DummyJobList: ComputeJob[] = [
                                 'fastq_ftp': [
                                     {
                                         'R1':
-                                        'ftp://ftp.sra.ebi.ac.uk/vol1/fastq/' +
-                                        'SRR181/008/SRR1819888/SRR1819888_1.fastq.gz'
+                                            'ftp://ftp.sra.ebi.ac.uk/vol1/fastq/' +
+                                            'SRR181/008/SRR1819888/SRR1819888_1.fastq.gz'
                                     },
                                     {
                                         'R2':
-                                        'ftp://ftp.sra.ebi.ac.uk/vol1/fastq/' +
-                                        'SRR181/008/SRR1819888/SRR1819888_2.fastq.gz'
+                                            'ftp://ftp.sra.ebi.ac.uk/vol1/fastq/' +
+                                            'SRR181/008/SRR1819888/SRR1819888_2.fastq.gz'
                                     }
                                 ],
                                 'fastq_md5': [
@@ -222,11 +241,11 @@ export const DummyJobList: ComputeJob[] = [
                         'files': [
                             {
                                 'R1': 'ftp://ftp.sra.ebi.ac.uk/vol1/fastq/' +
-                                'SRR950/SRR950078/SRR950078_1.fastq.gz'
+                                    'SRR950/SRR950078/SRR950078_1.fastq.gz'
                             },
                             {
                                 'R2': 'ftp://ftp.sra.ebi.ac.uk/vol1/fastq/' +
-                                'SRR950/SRR950078/SRR950078_2.fastq.gz'
+                                    'SRR950/SRR950078/SRR950078_2.fastq.gz'
                             }
                         ],
                         'metadata': {
@@ -234,11 +253,11 @@ export const DummyJobList: ComputeJob[] = [
                                 'fastq_ftp': [
                                     {
                                         'R1': 'ftp://ftp.sra.ebi.ac.uk/vol1/' +
-                                        'fastq/SRR950/SRR950078/SRR950078_1.fastq.gz'
+                                            'fastq/SRR950/SRR950078/SRR950078_1.fastq.gz'
                                     },
                                     {
                                         'R2': 'ftp://ftp.sra.ebi.ac.uk/vol1/' +
-                                        'fastq/SRR950/SRR950078/SRR950078_2.fastq.gz'
+                                            'fastq/SRR950/SRR950078/SRR950078_2.fastq.gz'
                                     }
                                 ],
                                 'fastq_md5': [
@@ -284,9 +303,9 @@ export const DummyJobList: ComputeJob[] = [
         'expiry_time': new Date('2018-05-24T05:00:11.985785Z'),
         'expired': false,
         'secret': 'txKZkVWhD7chpPofZet19pTPugKazZ5vx2INVjGZPf34BHRFYkwzlOTs' +
-        '8DLGaOQ3oSRtQIKUun7T3zecgD3PAeTP2kW3DQA5NkQefPgzZK9gJk3ocd6E41oVMkP' +
-        'Ydi8WtkGzpK2CgrA96EK3fnTVjmxwSZswv9VqDPCaKRw5XzcINvAIWVgVkk3HLDPhihF' +
-        'u9L5aPz2imiq9xD4lmBLRC3kAyCZchFLJ3GFZeUozLYpeHNShCC5dHjNnsE7OsBL',
+            '8DLGaOQ3oSRtQIKUun7T3zecgD3PAeTP2kW3DQA5NkQefPgzZK9gJk3ocd6E41oVMkP' +
+            'Ydi8WtkGzpK2CgrA96EK3fnTVjmxwSZswv9VqDPCaKRw5XzcINvAIWVgVkk3HLDPhihF' +
+            'u9L5aPz2imiq9xD4lmBLRC3kAyCZchFLJ3GFZeUozLYpeHNShCC5dHjNnsE7OsBL',
         'status': 'running',
         'latest_event': 'INPUT_DATA_DOWNLOAD_STARTED',
         'exit_code': null,
@@ -298,6 +317,7 @@ export const DummyJobList: ComputeJob[] = [
         'owner': '3Cx3N2QmRw3WCSuI65qfkw',
         'input_fileset_id': '3mcv4wK66q6xwPuLhLSlc0',
         'output_fileset_id': '1ZoPXThJx8zniui7Fg2k1q',
+        'metadata': {"results": {"strandedness": {"bias": 0.99999, "predicted": "ForwardStrandedCounts"}}},
         'params': {
             'id': '4AZpf19PMqDrq9clvID1DY',
             'owner': '3Cx3N2QmRw3WCSuI65qfkw',
@@ -315,11 +335,11 @@ export const DummyJobList: ComputeJob[] = [
                         'files': [
                             {
                                 'R1': 'ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR117/' +
-                                '002/SRR1174042/SRR1174042_1.fastq.gz'
+                                    '002/SRR1174042/SRR1174042_1.fastq.gz'
                             },
                             {
                                 'R2': 'ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR117/' +
-                                '002/SRR1174042/SRR1174042_2.fastq.gz'
+                                    '002/SRR1174042/SRR1174042_2.fastq.gz'
                             }
                         ],
                         'metadata': {
@@ -327,11 +347,11 @@ export const DummyJobList: ComputeJob[] = [
                                 'fastq_ftp': [
                                     {
                                         'R1': 'ftp://ftp.sra.ebi.ac.uk/vol1/' +
-                                        'fastq/SRR117/002/SRR1174042/SRR1174042_1.fastq.gz'
+                                            'fastq/SRR117/002/SRR1174042/SRR1174042_1.fastq.gz'
                                     },
                                     {
                                         'R2': 'ftp://ftp.sra.ebi.ac.uk/vol1/' +
-                                        'fastq/SRR117/002/SRR1174042/SRR1174042_2.fastq.gz'
+                                            'fastq/SRR117/002/SRR1174042/SRR1174042_2.fastq.gz'
                                     }
                                 ],
                                 'fastq_md5': [
@@ -370,11 +390,11 @@ export const DummyJobList: ComputeJob[] = [
                         'files': [
                             {
                                 'R1': 'ftp://ftp.sra.ebi.ac.uk/vol1/fastq/' +
-                                'SRR117/009/SRR1174149/SRR1174149_1.fastq.gz'
+                                    'SRR117/009/SRR1174149/SRR1174149_1.fastq.gz'
                             },
                             {
                                 'R2': 'ftp://ftp.sra.ebi.ac.uk/vol1/fastq/' +
-                                'SRR117/009/SRR1174149/SRR1174149_2.fastq.gz'
+                                    'SRR117/009/SRR1174149/SRR1174149_2.fastq.gz'
                             }
                         ],
                         'metadata': {
@@ -382,11 +402,11 @@ export const DummyJobList: ComputeJob[] = [
                                 'fastq_ftp': [
                                     {
                                         'R1': 'ftp://ftp.sra.ebi.ac.uk/vol1/fastq/' +
-                                        'SRR117/009/SRR1174149/SRR1174149_1.fastq.gz'
+                                            'SRR117/009/SRR1174149/SRR1174149_1.fastq.gz'
                                     },
                                     {
                                         'R2': 'ftp://ftp.sra.ebi.ac.uk/vol1/fastq/' +
-                                        'SRR117/009/SRR1174149/SRR1174149_2.fastq.gz'
+                                            'SRR117/009/SRR1174149/SRR1174149_2.fastq.gz'
                                     }
                                 ],
                                 'fastq_md5': [
@@ -432,9 +452,9 @@ export const DummyJobList: ComputeJob[] = [
         'expiry_time': new Date('2018-05-24T05:00:11.985785Z'),
         'expired': false,
         'secret': 'zltTOkOVjuA9wfPrAtw1oVYxioe9R06mxqzzeQ0whlea2Pvn9QUUbn8TGFmjn' +
-        'sOSetj8DDcbrALpEy2OB4qKHX0Hi6ShQwcXI6DXd3SMgWgZZaozgfqlxKBpkVeIa8xiuZRUz' +
-        'exMMkEMTE26pBGHJrLSB7qNSIvr4YcO6124nfwKLW31U1F4UNedGZ5Yq1TbAIkN5xii7R6DX' +
-        '7OwipZZAfaR0afXmk0ApHff5bpDSY7wlSFfatF83ueNYrFrqTW',
+            'sOSetj8DDcbrALpEy2OB4qKHX0Hi6ShQwcXI6DXd3SMgWgZZaozgfqlxKBpkVeIa8xiuZRUz' +
+            'exMMkEMTE26pBGHJrLSB7qNSIvr4YcO6124nfwKLW31U1F4UNedGZ5Yq1TbAIkN5xii7R6DX' +
+            '7OwipZZAfaR0afXmk0ApHff5bpDSY7wlSFfatF83ueNYrFrqTW',
         'status': 'failed',
         'latest_event': 'JOB_PIPELINE_FAILED',
         'exit_code': 1,

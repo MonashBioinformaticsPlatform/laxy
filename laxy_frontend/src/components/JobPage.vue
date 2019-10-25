@@ -91,10 +91,12 @@
                                      class="fill-width"
                                      stripeColor="primary" icon="dashboard" buttonIcon="" buttonText="">
                             <span slot="title">Send to Degust</span>
-                            <span slot="subtitle">This library appears to be {{ _strandednessGuess }}. See the "Count files" section below for other options.</span>
+                            <span slot="subtitle">This library appears to be {{ strandednessGuess }}
+                                <template v-if="strandBias"> with an overall strand bias of {{ strandBias | numeral_format('0.00') }}</template>.
+                                See the "Count files" section below for other options.</span>
                             <template slot="content" style="list-style-type: none;">
                                 <span v-for="countsFile in filterByTag(outputFiles, ['degust'])">
-                                    <template v-if="countsFile">
+                                    <template v-if="countsFile && countsFile.name.startsWith(strandPredictionPrefix)">
                                         <md-button
                                                 class="md-dense"
                                                 @click="openDegustLink(countsFile.id)"
@@ -682,15 +684,21 @@
             return data;
         }
 
-        // TODO: It would be preferable to add something to Job.params (or new field Job.metadata ?)
-        //       via the run_job.sh script to indicate the predicted strandedness and use that instead
-        //       of detecting via filenames present.
-        get _strandednessGuess(): string {
+        get strandBias(): number | null {
+            return get(this.job, 'metadata.results.strandedness.bias', null);
+        }
+
+        get strandPredictionPrefix(): string | null {
+            return get(this.job, 'metadata.results.strandedness.predicted', null);
+        }
+
+        get strandednessGuess(): string {
+            const bias_threshold = 0.8;
             let strandedness = 'unknown';
-            const countFiles = filterByTag(this.outputFiles || [], ['degust']);
-            if (countFiles && countFiles.length > 0) {
-                strandedness = this._countsFileInfo(countFiles[0].name).strandedness;
-            }
+            const bias = this.strandBias;
+            if (bias && bias > bias_threshold) strandedness = 'forward';
+            if (bias && bias < -1*bias_threshold) strandedness = 'reverse';
+            if (bias && bias > -1*bias_threshold && bias < bias_threshold) strandedness = 'non-stranded';
             return strandedness;
         }
 
