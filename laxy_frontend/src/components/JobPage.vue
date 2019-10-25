@@ -695,9 +695,11 @@
 
         get strandednessGuess(): string {
             let strandedness = 'unknown';
-            if (this.strandPredictionPrefix.startsWith('NonStranded')) strandedness = 'non-stranded';
-            if (this.strandPredictionPrefix.startsWith('Forward')) strandedness = 'forward-stranded';
-            if (this.strandPredictionPrefix.startsWith('Reverse')) strandedness = 'reverse-stranded';
+            if (this.strandPredictionPrefix) {
+                if (this.strandPredictionPrefix.startsWith('NonStranded')) strandedness = 'non-stranded';
+                if (this.strandPredictionPrefix.startsWith('Forward')) strandedness = 'forward-stranded';
+                if (this.strandPredictionPrefix.startsWith('Reverse')) strandedness = 'reverse-stranded';
+            }
             return strandedness;
         }
 
