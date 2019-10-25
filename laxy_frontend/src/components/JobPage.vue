@@ -91,12 +91,13 @@
                                      class="fill-width"
                                      stripeColor="primary" icon="dashboard" buttonIcon="" buttonText="">
                             <span slot="title">Send to Degust</span>
-                            <span slot="subtitle">This library appears to be {{ strandednessGuess }}
-                                <template v-if="strandBias"> with an overall strand bias of {{ strandBias | numeral_format('0.00') }}</template>.
+                            <span slot="subtitle">
+                                <template v-if="strandBias">This library appears to be <strong><em>{{ strandednessGuess }}</em></strong> with an overall strand bias of {{ strandBias | numeral_format('0.00') }}.</template>
+                                <template v-else>This library appears to be <strong><em>{{ strandednessGuess }}</em></strong>.</template>
                                 See the "Count files" section below for other options.</span>
                             <template slot="content" style="list-style-type: none;">
                                 <span v-for="countsFile in filterByTag(outputFiles, ['degust'])">
-                                    <template v-if="countsFile && countsFile.name.startsWith(strandPredictionPrefix)">
+                                    <template v-if="countsFile && countsFile.name.startsWith(strandPredictionPrefix) && countsFile.name.includes('withNames')">
                                         <md-button
                                                 class="md-dense"
                                                 @click="openDegustLink(countsFile.id)"
@@ -693,12 +694,10 @@
         }
 
         get strandednessGuess(): string {
-            const bias_threshold = 0.8;
             let strandedness = 'unknown';
-            const bias = this.strandBias;
-            if (bias && bias > bias_threshold) strandedness = 'forward';
-            if (bias && bias < -1*bias_threshold) strandedness = 'reverse';
-            if (bias && bias > -1*bias_threshold && bias < bias_threshold) strandedness = 'non-stranded';
+            if (this.strandPredictionPrefix.startsWith('NonStranded')) strandedness = 'non-stranded';
+            if (this.strandPredictionPrefix.startsWith('Forward')) strandedness = 'forward-stranded';
+            if (this.strandPredictionPrefix.startsWith('Reverse')) strandedness = 'reverse-stranded';
             return strandedness;
         }
 
