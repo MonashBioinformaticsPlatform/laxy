@@ -463,9 +463,13 @@ class StreamFileMixin(JSONView):
         """
         Convert a File UUID string to a File instance, if required.
         """
-
+        if obj_ref is None:
+            return None
         if isinstance(obj_ref, str):
-            obj = File.objects.get(id=obj_ref)
+            try:
+                obj = File.objects.get(id=obj_ref)
+            except File.DoesNotExist:
+                return None
         else:
             obj = obj_ref
 
@@ -537,12 +541,10 @@ class StreamFileMixin(JSONView):
         return response
 
     def download(self, obj_ref: Union[str, File], filename=None):
-        obj = self._as_file_obj(obj_ref)
-        return self._stream_response(obj, filename, download=True)
+        return self._stream_response(obj_ref, filename, download=True)
 
     def view(self, obj_ref: Union[str, File], filename=None):
-        obj = self._as_file_obj(obj_ref)
-        return self._stream_response(obj, filename, download=False)
+        return self._stream_response(obj_ref, filename, download=False)
 
 
 class FileContentDownload(StreamFileMixin,

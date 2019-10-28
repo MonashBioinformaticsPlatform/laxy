@@ -3,6 +3,7 @@ from collections import OrderedDict
 
 from django.contrib.contenttypes.models import ContentType
 from pathlib import Path
+from urllib.parse import urlparse
 
 import pydash
 from django.db import transaction
@@ -17,7 +18,7 @@ from drf_openapi.entities import VersionedSerializers
 from http.client import responses as response_code_messages
 
 from laxy_backend.models import SampleCart, PipelineRun, File, FileSet
-from laxy_backend.util import unique
+from laxy_backend.util import unique, is_valid_laxy_sftp_url
 from . import models
 
 import logging
@@ -160,6 +161,16 @@ class FileSerializer(BaseModelSerializer):
                   'metadata')
         read_only_fields = ('id', 'owner',)
         error_status_codes = status_codes()
+
+    def create(self, validated_data):
+        location = validated_data.get('location', None)
+        scheme = urlparse(location).scheme.lower()
+        if scheme == 'laxy+sftp' and not is_valid_laxy_sftp_url(location):
+            raise ValidationError("Invalid laxy+ftp:// URL (does ComputeResource exist ?)")
+
+        f = models.File.objects.create(**validated_data)
+        f.save()
+        return f
 
     @transaction.atomic
     def update(self, instance, validated_data):

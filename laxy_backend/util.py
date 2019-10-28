@@ -18,8 +18,9 @@ from cache_memoize import cache_memoize
 from django.urls import reverse
 from django.utils.http import urlencode
 
-
 from rest_framework.request import Request
+
+from . import models
 
 
 def sh_bool(boolean):
@@ -202,6 +203,23 @@ def laxy_sftp_url(job, path: str = None) -> str:
         url = f'{url}/{path}'
 
     return url
+
+def is_valid_laxy_sftp_url(url):
+    try:
+        scheme = urlparse(url).scheme.lower()
+        if scheme != 'laxy+sftp':
+            return False
+        compute_resource_id = urlparse(url).netloc
+        if compute_resource_id:
+            compute = models.ComputeResource.objects.get(id=compute_resource_id)
+            if not compute:
+                return False
+        if urlparse(url).path == '':
+            return False
+    except:
+        return False
+
+    return True
 
 
 def get_content_type(request: Request) -> str:
