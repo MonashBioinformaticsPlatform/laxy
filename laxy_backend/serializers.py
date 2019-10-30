@@ -364,7 +364,7 @@ class JobListSerializerResponse(JobSerializerResponse):
 
     class Meta:
         model = models.Job
-        exclude = ('secret', 'input_files', 'output_files')
+        exclude = ('input_files', 'output_files')
         depth = 0
         error_status_codes = status_codes()
 

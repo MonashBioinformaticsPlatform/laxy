@@ -465,10 +465,7 @@ class Job(Expires, Timestamped, UUIDModel):
                        blank=True,
                        null=True,
                        related_name='jobs')
-    secret = CharField(max_length=255,
-                       blank=True,
-                       null=True,
-                       default=generate_secret_key)
+
     status = CharField(max_length=64,
                        choices=JOB_STATUS_CHOICES,
                        default=STATUS_CREATED)
