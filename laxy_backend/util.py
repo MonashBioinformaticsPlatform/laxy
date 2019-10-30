@@ -206,6 +206,7 @@ def laxy_sftp_url(job, path: str = None) -> str:
 
     return url
 
+
 def is_valid_laxy_sftp_url(url):
     try:
         scheme = urlparse(url).scheme.lower()

@@ -1096,7 +1096,8 @@ class File(Timestamped, UUIDModel):
             # raise NotImplementedError('file:// URLs are currently not supported')
             storage = self._get_storage_class()
             return storage.open(self.full_path)
-        else:
+
+        elif scheme in ['http', 'https', 'ftp', 'ftps', 'data']:
             response = request_with_retries(
                 'GET', self.location,
                 stream=True,
@@ -1105,6 +1106,9 @@ class File(Timestamped, UUIDModel):
             filelike = response.raw
             filelike.decode_content = True
             return filelike
+
+        else:
+            raise NotImplementedError(f'Cannot provide file-like object for scheme: {scheme}')
 
     @property
     def size(self) -> Union[int, None]:

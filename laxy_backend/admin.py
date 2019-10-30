@@ -233,6 +233,8 @@ class FileLocationAdmin(admin.ModelAdmin):
                     'file',
                     'default',
                     '_url',)
+    # raw_id_fields = ('file',)
+    readonly_fields = ('url', 'file',)
 
     ordering = ('-default',)
     search_fields = ('url', 'file__id',)
@@ -241,6 +243,14 @@ class FileLocationAdmin(admin.ModelAdmin):
         return format_html('<a href="{}">{}</a>',
                            obj.url,
                            truncate_middle(obj.url, end=32))
+
+
+class FileLocationAdminForm(django.forms.ModelForm):
+    class Meta:
+        model = FileLocation
+        fields = '__all__'
+
+    url = django.forms.CharField(max_length=2048, validators=[URIValidator()])
 
 
 class FileLocationsInline(admin.TabularInline):
