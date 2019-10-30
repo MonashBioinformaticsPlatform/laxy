@@ -733,6 +733,114 @@ def new_job_event_log(sender, instance, created,
             extra={'from': None, 'to': instance.status})
 
 
+def get_compute_resource_for_location(location) -> Union[ComputeResource, None]:
+    url = urlparse(location)
+    scheme = url.scheme
+    if scheme != 'laxy+sftp':
+        return None
+    if '.' in url.netloc:
+        return None
+    # use netloc not hostname, since hostname forces lowercase
+    compute_id = url.netloc
+    try:
+        compute = ComputeResource.objects.get(id=compute_id)
+    except ComputeResource.DoesNotExist as e:
+        raise e
+
+    return compute
+
+
+def get_storage_class_for_location(location: str) -> Union[Storage, None]:
+    url = urlparse(location)
+    scheme = url.scheme
+    storage_class = get_storage_class(
+        SCHEME_STORAGE_CLASS_MAPPING.get(scheme, None))
+    if scheme == 'laxy+sftp':
+        compute = get_compute_resource_for_location(location)
+        if compute is None:
+            raise Exception(f"Cannot extract ComputeResource ID from: {location}")
+
+        # Return a module-level cached SFTPStorage instance to allow connection
+        # pooling to the same ComputeResource
+        if compute.id in CACHED_SFTP_STORAGE_CLASS_INSTANCES:
+            return CACHED_SFTP_STORAGE_CLASS_INSTANCES[compute.id]
+
+        host = compute.hostname
+        port = compute.port
+        if port is None:
+            port = 22
+        private_key = compute.private_key
+        username = compute.extra.get('username')
+        params = dict(port=port,
+                      username=username,
+                      pkey=RSAKey.from_private_key(StringIO(private_key)))
+        # storage = SFTPStorage(host=host, params=params)
+        storage = storage_class(host=host, params=params)
+        # storage._connect()  # Do this to ensure we can connect before caching the SFTPStorage class
+        _ = storage.sftp   # Do this to ensure we can connect before caching the SFTPStorage class
+        CACHED_SFTP_STORAGE_CLASS_INSTANCES[compute.id] = storage
+
+        return storage
+
+    # TODO: This needs to be carefully reworked or removed. The intention would be to refer to a mountpoint
+    #       relative to the Laxy backend server filesystem (eg an NFS mount), however there is scope for
+    #       reading arbitrary files on the server if implemented incorrectly.
+    elif scheme == 'file':
+        # raise NotImplementedError('file:// URLs are currently not supported')
+        # TODO: location defaults to Djangos MEDIA_ROOT setting. If we were to use mount points local to the
+        # backend filesystem, we need a mechanism to set this location (eg to something equivalent to
+        # `base_dir` in the ComputeResource extra params. Setting location to something like
+        # `/scratch/jobs/{job_id}/` per-job should mitigate some of the risk here (assuming Django's
+        # FileSystemStorage doesn't allow relative/paths/like/../../../this/ outside the base location.
+        return storage_class(location='/')
+    else:
+        return None
+
+
+@reversion.register()
+class FileLocation(UUIDModel):
+    class Meta:
+        unique_together = ('url', 'file',)
+
+    # The URL to the file. Could be file://, https://, s3://, sftp://
+    url = ExtendedURIField(max_length=2048, blank=False, null=False)
+    file = ForeignKey('File',
+                      related_name='locations', null=False, blank=False,
+                      on_delete=models.CASCADE)
+    default = BooleanField(blank=False, null=False, default=False)
+
+    # TODO: For URLs that require some kind of authentication, we could
+    #       store eg, Authorization: header values here. Alternatively,
+    #       this might be a ForeignKey that can point to an AuthCreds object
+    #       (more efficient in the case where many FileLocations will use
+    #       exactly the same authentication values)
+    # authentication = JSONField(default=OrderedDict)
+
+    def set_as_default(self, save=True):
+        """
+        Set this FileLocation record as the 'default', ensuring all others
+        are set to default=False.
+
+        :param save: Automatically save modified objects.
+        :type save: bool
+        :return: A queryset of all FileLocations for this file. If using
+                  save=False, you can explicitly .save() the objects returned
+                  here.
+        :rtype: QuerySet
+        """
+        with transaction.atomic():
+            filelocs = FileLocation.objects.filter(file=self.file)
+            for f in filelocs:
+                if f.id != self.id:
+                    f.default = False
+                    if save:
+                        f.save()
+            self.default = True
+            if save:
+                self.save()
+        return filelocs
+
+
 @reversion.register()
 class File(Timestamped, UUIDModel):
     class Meta:
@@ -768,8 +876,6 @@ class File(Timestamped, UUIDModel):
                        blank=True,
                        null=True,
                        related_name='files')
-    # The URL to the file. Could be file://, https://, s3://, sftp://
-    location = ExtendedURIField(max_length=2048, blank=False, null=False)
 
     fileset = ForeignKey('FileSet', related_name='files', null=True,
                          on_delete=models.SET_NULL)
@@ -793,6 +899,33 @@ class File(Timestamped, UUIDModel):
     # job = ForeignKey(Job,
     #                  on_delete=models.CASCADE,
     #                  related_name='files')
+
+    @property
+    def location(self):
+        return self.locations.filter(default=True).first().url
+
+    @location.setter
+    def location(self, url):
+        # Catch the case where the File doesn't exist yet, ensure it's
+        # created so that FileLocation.file ForeignKey constraint is satisfied
+        if self._state.adding or self.pk is None:
+            self.save()
+
+        # Set the FileLocation with this URL to the default, creating it
+        # if it doesn't yet exist
+        fileloc = self.locations.filter(url=url).first()
+        if fileloc is None:
+            fileloc = FileLocation(url=url, file=self)
+
+        fileloc.set_as_default(save=True)
+
+    def remove_location(self, url):
+        fileloc = self.locations.filter(url=url).first()
+        if fileloc is None:
+            raise FileLocation.DoesNotExist()
+        if fileloc.default:
+            raise ValueError('Cannot remove default FileLocation for this File')
+        fileloc.delete()
 
     def name_from_location(self):
         try:
@@ -924,25 +1057,9 @@ class File(Timestamped, UUIDModel):
     def full_path(self):
         return str(Path(self.path) / Path(self.name))
 
-    def _compute_resource_from_location(self):
-        url = urlparse(self.location)
-        scheme = url.scheme
-        if scheme != 'laxy+sftp':
-            return None
-        if '.' in url.netloc:
-            return None
-        # use netloc not hostname, since hostname forces lowercase
-        compute_id = url.netloc
-        try:
-            compute = ComputeResource.objects.get(id=compute_id)
-        except ComputeResource.DoesNotExist as e:
-            raise e
-
-        return compute
-
     def _abs_path_on_compute(self):
         url = urlparse(self.location)
-        compute = self._compute_resource_from_location()
+        compute = get_compute_resource_for_location(self.location)
         if compute is None:
             raise Exception(f"Cannot extract ComputeResource ID from: {self.location}")
 
@@ -952,50 +1069,7 @@ class File(Timestamped, UUIDModel):
         return file_path
 
     def _get_storage_class(self) -> Union[Storage, None]:
-        url = urlparse(self.location)
-        scheme = url.scheme
-        storage_class = get_storage_class(
-            SCHEME_STORAGE_CLASS_MAPPING.get(scheme, None))
-        if scheme == 'laxy+sftp':
-            compute = self._compute_resource_from_location()
-            if compute is None:
-                raise Exception(f"Cannot extract ComputeResource ID from: {self.location}")
-
-            # Return a module-level cached SFTPStorage instance to allow connection
-            # pooling to the same ComputeResource
-            if compute.id in CACHED_SFTP_STORAGE_CLASS_INSTANCES:
-                return CACHED_SFTP_STORAGE_CLASS_INSTANCES[compute.id]
-
-            host = compute.hostname
-            port = compute.port
-            if port is None:
-                port = 22
-            private_key = compute.private_key
-            username = compute.extra.get('username')
-            params = dict(port=port,
-                          username=username,
-                          pkey=RSAKey.from_private_key(StringIO(private_key)))
-            # storage = SFTPStorage(host=host, params=params)
-            storage = storage_class(host=host, params=params)
-            # storage._connect()  # Do this to ensure we can connect before caching the SFTPStorage class
-            _ = storage.sftp   # Do this to ensure we can connect before caching the SFTPStorage class
-            CACHED_SFTP_STORAGE_CLASS_INSTANCES[compute.id] = storage
-
-            return storage
-
-        # TODO: This needs to be carefully reworked or removed. The intention would be to refer to a mountpoint
-        #       relative to the Laxy backend server filesystem (eg an NFS mount), however there is scope for
-        #       reading arbitrary files on the server if implemented incorrectly.
-        elif scheme == 'file':
-            # raise NotImplementedError('file:// URLs are currently not supported')
-            # TODO: location defaults to Djangos MEDIA_ROOT setting. If we were to use mount points local to the
-            # backend filesystem, we need a mechanism to set this location (eg to something equivalent to
-            # `base_dir` in the ComputeResource extra params. Setting location to something like
-            # `/scratch/jobs/{job_id}/` per-job should mitigate some of the risk here (assuming Django's
-            # FileSystemStorage doesn't allow relative/paths/like/../../../this/ outside the base location.
-            return storage_class(location='/')
-        else:
-            return None
+        return get_storage_class_for_location(self.location)
 
     @property
     def file(self) -> Union[typing.IO[AnyStr], None]:

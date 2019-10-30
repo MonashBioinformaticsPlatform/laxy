@@ -20,6 +20,7 @@ from laxy_backend.tasks import job as job_tasks
 from .models import (Job,
                      ComputeResource,
                      File,
+                     FileLocation,
                      FileSet,
                      SampleCart,
                      PipelineRun,
@@ -30,6 +31,28 @@ from .models import (Job,
 from .models import URIValidator
 
 User = get_user_model()
+
+
+def truncate_middle(text: str, middle='…', length=77, end=8) -> str:
+    """
+    Truncates the 'middle' of a string, leaving `end` characters at the end intact,
+    and replacing some characters in the middle with an ellipsis.
+
+    :param text:
+    :type text:
+    :param middle:
+    :type middle:
+    :param length:
+    :type length:
+    :param end:
+    :type end:
+    :return:
+    :rtype:
+    """
+    if len(text) > length:
+        return text[:(length-8)] + middle + text[(-1*end):]
+    else:
+        return text
 
 
 class Timestamped:
@@ -205,6 +228,32 @@ def do_nothing_validator(value):
     return None
 
 
+class FileLocationAdmin(admin.ModelAdmin):
+    list_display = ('id',
+                    'file',
+                    'default',
+                    '_url',)
+
+    ordering = ('-default',)
+    search_fields = ('url', 'file__id',)
+
+    def _url(self, obj):
+        return format_html('<a href="{}">{}</a>',
+                           obj.url,
+                           truncate_middle(obj.url, end=32))
+
+
+class FileLocationsInline(admin.TabularInline):
+    model = FileLocation
+    readonly_fields = ('id', 'default', 'url',)
+    fields = ('id', 'default', 'url',)
+    ordering = ('-default',)
+    can_delete = False
+    verbose_name_plural = 'File Locations'
+    fk_name = 'file'
+    extra = 0
+
+
 class FileAdminForm(django.forms.ModelForm):
     class Meta:
         model = File
@@ -217,11 +266,13 @@ class FileAdmin(Timestamped, VersionAdmin):
     list_display = ('uuid',
                     '_path',
                     '_name',
-                    '_location',
+                    'location',
                     'created',
                     'modified')
+    readonly_fields = ('location',)
     ordering = ('-created_time', '-modified_time',)
     search_fields = ('id', 'path', 'name',)
+    inlines = (FileLocationsInline, )
     actions = ('fix_metadata',)
     form = FileAdminForm
 
@@ -233,7 +284,7 @@ class FileAdmin(Timestamped, VersionAdmin):
     def _name(self, obj):
         return truncatechars(obj.name, self.truncate_to)
 
-    def _location(self, obj):
+    def location(self, obj):
         url = reverse('laxy_backend:file_download',
                       kwargs={'uuid': obj.uuid(), 'filename': obj.name})
         return format_html('<a href="{}">{}</a>',
@@ -348,6 +399,7 @@ admin.site.register(UserProfile, UserProfileAdmin)
 admin.site.register(Job, JobAdmin)
 admin.site.register(ComputeResource, ComputeResourceAdmin)
 admin.site.register(File, FileAdmin)
+admin.site.register(FileLocation, FileLocationAdmin)
 admin.site.register(FileSet, FileSetAdmin)
 admin.site.register(SampleCart, SampleCartAdmin)
 admin.site.register(PipelineRun, PipelineRunAdmin)
