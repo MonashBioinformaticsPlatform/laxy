@@ -91,6 +91,11 @@
             padding: 32px;
         }
 
+        .pad-32-sides {
+            padding-left: 32px;
+            padding-right: 32px;
+        }
+
         .truncate-text {
             max-width: 90%;
             white-space: nowrap;
@@ -152,6 +157,32 @@
         #rightSideNav > div.md-sidenav-content {
             width: 90%;
         }
+
+        .footer {
+            text-align: right;
+        }
+
+        .footer a:link {
+            color: white !important;
+        }
+
+        .footer a:visited {
+            color: white !important;
+        }
+
+        .footer a:hover {
+            background: #e91e63 !important;
+        }
+
+        .footer img {
+            transition: .5s ease;
+        }
+
+        .footer img:hover {
+            transition: .5s ease;
+            filter: drop-shadow(4px 4px 4px #000000);
+        }
+
     </style>
     <title>Laxy</title>
 </head>
@@ -283,6 +314,19 @@
             <sample-cart></sample-cart>
         </md-sidenav>
         <router-view class="main-router-content"></router-view>
+
+        <md-toolbar class="footer">
+            <template v-if="showFooterMessage">
+                <span style="flex: 1"></span>
+                <div class="pad-32">Supported by the
+                    <a href="https://platforms.monash.edu/bioinformatics" target="_blank">
+                        <strong>Monash Bioinformatics Platform</strong></a> and
+                    <a href="https://monash.edu" target="_blank"><strong>Monash University</strong></a>
+                </div>
+                <div class="pad-32-sides"><a href="https://monash.edu" target="_blank"><img
+                        src="assets/Monash_Big_M_42x96.png"/></a></div>
+            </template>
+        </md-toolbar>
 
         <md-snackbar md-position="bottom center" ref="global_snackbar"
                      :md-duration="snackbar_duration">

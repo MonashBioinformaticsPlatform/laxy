@@ -7,6 +7,7 @@ try {
 
 // import 'file-loader?name=[name].[ext]!../index.html';
 import 'file-loader?name=[name].[ext]?[hash]&outputPath=assets/!../assets/favicon.ico';
+import '../assets/Monash_Big_M_42x96.png';
 import 'vue-material/dist/vue-material.css';
 
 import 'es6-promise';
@@ -142,6 +143,7 @@ const App = new Vue({
     data() {
         return {
             showHeaderMessage: true,  // process.env.LAXY_ENV === 'dev',
+            showFooterMessage: true,
             appVersion: process.env.LAXY_VERSION,
             pingPollerId: -1,
         };
