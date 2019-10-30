@@ -43,6 +43,12 @@ export LAXY_ENV=dev
 docker-compose -f docker-compose.yml -f docker-compose.${LAXY_ENV}.yml run django python manage.py migrate
 ```
 
+Run an ad-hoc data migration script (rare task):
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.${LAXY_ENV}.yml exec django /bin/bash -c \
+  "/app/manage.py shell < /app/scripts/ad-hoc-migrations/add-strandedness-metadata.py"
+```
+
 Dump fixtures (JSON formatted database records):
 ```bash
 docker-compose -f docker-compose.yml -f docker-compose.${LAXY_ENV}.yml run django python manage.py dumpdata --indent 2
