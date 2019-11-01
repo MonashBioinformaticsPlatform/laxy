@@ -31,6 +31,9 @@ dependencies:
   - pip
   - conda-pack
   - aria2
+  # older openssl and icu required to support aria2 on some systems
+  - openssl=1.0.2p
+  - 'icu=58.*'
   - curl
   - wget
   - awscli
