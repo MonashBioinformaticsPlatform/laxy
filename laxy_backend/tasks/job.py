@@ -712,12 +712,6 @@ def expire_old_job(self, task_data=None, **kwargs):
     environment = task_data.get('environment', {})
     job_id = task_data.get('job_id')
     job = Job.objects.get(id=job_id)
-    master_ip = job.compute_resource.host
-    gateway = job.compute_resource.gateway_server
-    private_key = job.compute_resource.private_key
-    remote_username = job.compute_resource.extra.get('username', None)
-
-    working_dir = job.abs_path_on_compute
 
     # def _delete_file(f):
     #     # Just an example of an alternative using fabric ...
