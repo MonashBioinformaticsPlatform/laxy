@@ -229,7 +229,7 @@ class UserProfile(models.Model):
                                 on_delete=models.CASCADE,
                                 blank=False,
                                 related_name='profile')
-    image_url = models.URLField(blank=True, null=True)
+    image_url = models.URLField(max_length=2048, blank=True, null=True)
 
 
 @receiver(post_save, sender=User)
