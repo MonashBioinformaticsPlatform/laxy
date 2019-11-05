@@ -759,8 +759,9 @@ def get_storage_class_for_location(location: str) -> Union[Storage, None]:
 
         # Return a module-level cached SFTPStorage instance to allow connection
         # pooling to the same ComputeResource
-        if compute.id in CACHED_SFTP_STORAGE_CLASS_INSTANCES:
-            return CACHED_SFTP_STORAGE_CLASS_INSTANCES[compute.id]
+        _storage_instance = CACHED_SFTP_STORAGE_CLASS_INSTANCES.get(compute.id, None)
+        if _storage_instance is not None:
+            return _storage_instance
 
         host = compute.hostname
         port = compute.port
