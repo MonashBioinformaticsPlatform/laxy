@@ -1,3 +1,5 @@
+from typing import Union
+import traceback
 import random
 import string
 import uuid
@@ -233,3 +235,16 @@ def get_content_type(request: Request) -> str:
     :rtype: str
     """
     return request.content_type.split(';')[0].strip()
+
+
+def get_traceback_message(ex: BaseException) -> Union[str]:
+    message = ''
+    if hasattr(ex, 'message'):
+        message = ex.message
+    if hasattr(ex, '__traceback__'):
+        tb = ex.__traceback__
+        message = '%s - Traceback: %s' % (message, ''.join(traceback.format_list(traceback.extract_tb(tb))))
+    else:
+        message = repr(ex)
+
+    return message

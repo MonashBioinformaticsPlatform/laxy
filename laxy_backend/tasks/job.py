@@ -39,7 +39,7 @@ from fabric.api import put, run, shell_env, local, cd, show
 # logging.config.fileConfig('logging_config.ini')
 # logger = logging.getLogger(__name__)
 from ..models import Job, File, EventLog
-from ..util import laxy_sftp_url
+from ..util import laxy_sftp_url, get_traceback_message
 
 logger = get_task_logger(__name__)
 
@@ -47,6 +47,7 @@ logger = get_task_logger(__name__)
 # import paramiko
 # logging.getLogger("paramiko").setLevel(logging.DEBUG)
 # paramiko.util.log_to_file("/app/paramiko.log", level="DEBUG")
+
 
 def _init_fabric_env():
     env = fabric_env
@@ -233,13 +234,7 @@ def start_job(self, task_data=None, **kwargs):
         succeeded = result.succeeded
     except BaseException as e:
         succeeded = False
-        if hasattr(e, 'message'):
-            message = e.message
-        if hasattr(e, '__traceback__'):
-            tb = e.__traceback__
-            message = '%s - Traceback: %s' % (message, ''.join(traceback.format_list(traceback.extract_tb(tb))))
-        else:
-            message = repr(e)
+        message = get_traceback_message(e)
 
     if not succeeded and job.compute_resource.disposable:
         job.compute_resource.dispose()
@@ -615,7 +610,18 @@ def estimate_job_tarball_size(self, task_data=None, **kwargs):
                     # We run as 'nice' since this is considered low priority
 
                     result = run(f'nice tar -czf - --directory "{job_path}" . | nice wc --bytes')
+                    tries = 0
+                    while result.succeeded and \
+                            'file changed as we read it' in result.stdout.strip() and \
+                            tries <= 3:
+                        result = run(f'nice tar -czf - --directory "{job_path}" . | nice wc --bytes')
+                        tries += 1
+
                     if result.succeeded:
+                        if 'file changed as we read it' in result.stdout.strip():
+                            raise Exception(f"Files continue to change while calculating tarball size for "
+                                            f"Job: {job.id}")
+
                         tarball_size = int(result.stdout.strip())
                         with transaction.atomic():
                             job = Job.objects.get(id=job_id)
@@ -628,8 +634,7 @@ def estimate_job_tarball_size(self, task_data=None, **kwargs):
                         task_result['stderr'] = result.stderr.strip()
 
     except BaseException as e:
-        if hasattr(e, 'message'):
-            message = e.message
+        message = get_traceback_message(e)
 
         self.update_state(state=states.FAILURE, meta=message)
         raise e
@@ -711,6 +716,7 @@ def expire_old_job(self, task_data=None, **kwargs):
 
     environment = task_data.get('environment', {})
     job_id = task_data.get('job_id')
+    result = {"deleted_count": 0}
     job = Job.objects.get(id=job_id)
 
     # def _delete_file(f):
@@ -760,6 +766,11 @@ def expire_old_job(self, task_data=None, **kwargs):
                 f.deleted_time = datetime.now()
                 f.save()
                 pass
+            except BaseException as ex:
+                # If any file can't be deleted for unknown reasons, ensure we don't mark the job as expired by
+                # raising an exception before that happens. This way rhe scheduled task will try again later.
+                logger.error(f"Unable to delete File {f.id} in Job {job.id}:", get_traceback_message(ex))
+                raise ex
 
         job.expired = True
         job.save()
@@ -772,8 +783,7 @@ def expire_old_job(self, task_data=None, **kwargs):
             pass
 
     except BaseException as e:
-        if hasattr(e, 'message'):
-            message = e.message
+        message = get_traceback_message(e)
 
         self.update_state(state=states.FAILURE, meta=message)
         raise e
