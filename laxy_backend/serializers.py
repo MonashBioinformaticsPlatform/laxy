@@ -133,6 +133,7 @@ class PutSerializerResponse(serializers.Serializer):
 class PingResponseSerializer(serializers.Serializer):
     status = serializers.CharField(max_length=255, required=False)
     version = serializers.CharField(max_length=255, required=False)
+    env = serializers.CharField(max_length=255, required=False)
 
 
 class FileSerializer(BaseModelSerializer):

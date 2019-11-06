@@ -157,7 +157,10 @@ class PingView(APIView):
         Used by clients to poll if the backend is online.
         """
         app_version = getattr(settings, 'VERSION', 'unspecified')
-        return JsonResponse(PingResponseSerializer({'version': app_version, 'status': 'online'}).data)
+        env = getattr(settings, 'ENV', 'unspecified')
+        return JsonResponse(PingResponseSerializer({'version': app_version,
+                                                    'env': env,
+                                                    'status': 'online'}).data)
 
 
 class JobDirectTarDownload(JSONView):

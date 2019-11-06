@@ -9,12 +9,12 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'laxy.settings')
 
 from django.conf import settings
 
-import sentry_sdk
-from sentry_sdk.integrations.celery import CeleryIntegration
-
 if getattr(settings, 'SENTRY_DSN', False):
+    import sentry_sdk
+    from sentry_sdk.integrations.celery import CeleryIntegration
     sentry_sdk.init(dsn=settings.SENTRY_DSN,
                     release=settings.VERSION,
+                    environment=settings.ENV,
                     integrations=[CeleryIntegration()])
 
 app = Celery('laxy')

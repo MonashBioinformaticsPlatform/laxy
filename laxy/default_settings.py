@@ -18,8 +18,6 @@ import subprocess
 from django.core.exceptions import ImproperlyConfigured
 import environ
 from celery.schedules import crontab
-import sentry_sdk
-from sentry_sdk.integrations.django import DjangoIntegration
 
 from laxy.utils import get_secret_key
 
@@ -56,7 +54,7 @@ default_env = PrefixedEnv(
     APP_ENV_PREFIX,
     DEBUG=(bool, False),
     SECRET_KEY=(str, None),
-    VERSION=(str, ''),
+    VERSION=(str, None),
     ENV=(str, ''),
     ADMIN_EMAIL=(str, None),
     ADMIN_USERNAME=(str, None),
@@ -133,32 +131,50 @@ def _cleanup_env_list(l):
 
 
 def get_git_commit():
+    git_commit = None
     try:
         git_commit = subprocess.check_output(['git', 'log', '-1', '--format=%h']).strip().decode('utf-8')
     except:
-        git_commit = None
+        pass
     return git_commit
+
+
+def get_version_txt():
+    versionfilepath = os.path.join(os.getcwd(), 'version.txt')
+    version = None
+    try:
+        if os.path.exists(versionfilepath):
+            version = open(versionfilepath, 'r').read().strip()
+            return version
+    except:
+        pass
+    return version
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
 ENV = env('ENV')
 
-# Take LAXY_VERSION from env vars, if set, else try to get the git commit, else 'unspecified'
+# Take LAXY_VERSION from env vars, if set, else try to get the version.txt file, or git commit, else 'unspecified'
 VERSION = env('VERSION')
+if not VERSION:
+    VERSION = get_version_txt()
 if not VERSION:
     VERSION = get_git_commit()
 if not VERSION:
     VERSION = 'unspecified'
 
+
 SENTRY_DSN = env('SENTRY_DSN')
 if SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+
     SENTRY_RELEASE = f'{VERSION}'
-    if ENV:
-        SENTRY_RELEASE = f'{ENV}:{VERSION}'
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         release=SENTRY_RELEASE,
+        environment=ENV,
         integrations=[DjangoIntegration()]
     )
 
