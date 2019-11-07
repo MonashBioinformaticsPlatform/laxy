@@ -385,18 +385,33 @@ class ComputeResource(Timestamped, UUIDModel):
 
     @property
     def sftp_storage(self) -> Union[Storage, None]:
-        storage_class = get_storage_class(
-            SCHEME_STORAGE_CLASS_MAPPING.get('laxy+sftp', None))
+
+        @backoff.on_exception(backoff.expo,
+                              (socket.gaierror,),
+                              max_tries=3,
+                              jitter=backoff.full_jitter)
+        def _connect(_storage_instance: SFTPStorage):
+            """
+            Attempt to connect to SFTP server, with retries.
+            """
+            # Accessing the .sftp property ensures the connection is still open, reopens it if it's not
+            _ = _storage_instance.sftp
+
+        if not self.available:
+            raise Exception(f"Cannot access storage for ComputeResource {self.id} - status='{self.status}'")
 
         if CACHE_SFTP_CONNECTIONS:
             _storage_instance: SFTPStorage = CACHED_SFTP_STORAGE_CLASS_INSTANCES.get(self.id, None)
             if _storage_instance is not None and _storage_instance._ssh.get_transport() is not None:
                 if _storage_instance._ssh.get_transport().is_active():
-                    # Accessing the .sftp property ensures the connection is still open, reopens it if it's not
-                    _ = _storage_instance.sftp
+                    # This ensures connection is still open, reopens it if it's not
+                    _connect(_storage_instance)
                     return _storage_instance
                 else:
                     _storage_instance.sftp.close()
+
+        storage_class = get_storage_class(
+            SCHEME_STORAGE_CLASS_MAPPING.get('laxy+sftp', None))
 
         host = self.hostname
         port = self.port
@@ -408,8 +423,8 @@ class ComputeResource(Timestamped, UUIDModel):
                       username=username,
                       pkey=RSAKey.from_private_key(StringIO(private_key)))
         # storage = SFTPStorage(host=host, params=params)
-        storage = storage_class(host=host, params=params)
-        _ = storage.sftp  # Do this to ensure we can connect before caching the SFTPStorage class
+        storage: SFTPStorage = storage_class(host=host, params=params)
+        _connect(storage)  # Do this to ensure we can connect before caching the SFTPStorage class
         CACHED_SFTP_STORAGE_CLASS_INSTANCES[self.id] = storage
 
         return storage
@@ -453,6 +468,10 @@ class ComputeResource(Timestamped, UUIDModel):
                 args=({'compute_resource_id': self.id},))
         else:
             return False
+
+    @property
+    def available(self):
+        return self.status == ComputeResource.STATUS_ONLINE
 
     @property
     def private_key(self):
@@ -775,50 +794,6 @@ def new_job_event_log(sender, instance, created,
             extra={'from': None, 'to': instance.status})
 
 
-def get_compute_resource_for_location(location) -> Union[ComputeResource, None]:
-    url = urlparse(location)
-    scheme = url.scheme
-    if scheme != 'laxy+sftp':
-        return None
-    if '.' in url.netloc:
-        return None
-    # use netloc not hostname, since hostname forces lowercase
-    compute_id = url.netloc
-    try:
-        compute = ComputeResource.objects.get(id=compute_id)
-    except ComputeResource.DoesNotExist as e:
-        raise e
-
-    return compute
-
-
-def get_storage_class_for_location(location: str) -> Union[Storage, None]:
-    url = urlparse(location)
-    scheme = url.scheme
-    storage_class = get_storage_class(
-        SCHEME_STORAGE_CLASS_MAPPING.get(scheme, None))
-    if scheme == 'laxy+sftp':
-        compute = get_compute_resource_for_location(location)
-        if compute is None:
-            raise Exception(f"Cannot extract ComputeResource ID from: {location}")
-
-        return compute.sftp_storage
-
-    # TODO: This needs to be carefully reworked or removed. The intention would be to refer to a mountpoint
-    #       relative to the Laxy backend server filesystem (eg an NFS mount), however there is scope for
-    #       reading arbitrary files on the server if implemented incorrectly.
-    elif scheme == 'file':
-        # raise NotImplementedError('file:// URLs are currently not supported')
-        # TODO: location defaults to Djangos MEDIA_ROOT setting. If we were to use mount points local to the
-        # backend filesystem, we need a mechanism to set this location (eg to something equivalent to
-        # `base_dir` in the ComputeResource extra params. Setting location to something like
-        # `/scratch/jobs/{job_id}/` per-job should mitigate some of the risk here (assuming Django's
-        # FileSystemStorage doesn't allow relative/paths/like/../../../this/ outside the base location.
-        return storage_class(location='/')
-    else:
-        return None
-
-
 @reversion.register()
 class FileLocation(UUIDModel):
     class Meta:
@@ -861,6 +836,74 @@ class FileLocation(UUIDModel):
             if save:
                 self.save()
         return filelocs
+
+    @property
+    def path_on_compute(self):
+        """
+        Return the ComputeResource encoded in a URL, if possible.
+
+        :return: The ComputeResource object.
+        :rtype: laxy_backend.models.ComputeResource
+        """
+        compute = get_compute_resource_for_location(self.url)
+        if compute is None:
+            return None
+
+        url = urlparse(self.url)
+        base_dir = compute.extra.get('base_dir', getattr(settings, 'DEFAULT_JOB_BASE_PATH'))
+        file_path = str(Path(base_dir) / Path(url.path).relative_to('/'))
+        return file_path
+
+
+def get_compute_resource_for_location(location: Union[str, FileLocation]) -> Union[ComputeResource, None]:
+    if isinstance(location, FileLocation):
+        location = location.url
+
+    url = urlparse(location)
+    scheme = url.scheme
+    if scheme != 'laxy+sftp':
+        return None
+    if '.' in url.netloc:
+        return None
+    # use netloc not hostname, since hostname forces lowercase
+    compute_id = url.netloc
+    try:
+        compute = ComputeResource.objects.get(id=compute_id)
+    except ComputeResource.DoesNotExist as e:
+        raise e
+
+    return compute
+
+
+def get_storage_class_for_location(location: Union[str, FileLocation]) -> Union[Storage, None]:
+    if isinstance(location, FileLocation):
+        location = location.url
+
+    url = urlparse(location)
+    scheme = url.scheme
+    storage_class = get_storage_class(
+        SCHEME_STORAGE_CLASS_MAPPING.get(scheme, None))
+    if scheme == 'laxy+sftp':
+        compute = get_compute_resource_for_location(location)
+        if compute is None:
+            raise Exception(f"Cannot extract ComputeResource ID from: {location}")
+
+        return compute.sftp_storage
+
+    # TODO: This needs to be carefully reworked or removed. The intention would be to refer to a mountpoint
+    #       relative to the Laxy backend server filesystem (eg an NFS mount), however there is scope for
+    #       reading arbitrary files on the server if implemented incorrectly.
+    elif scheme == 'file':
+        # raise NotImplementedError('file:// URLs are currently not supported')
+        # TODO: location defaults to Djangos MEDIA_ROOT setting. If we were to use mount points local to the
+        # backend filesystem, we need a mechanism to set this location (eg to something equivalent to
+        # `base_dir` in the ComputeResource extra params. Setting location to something like
+        # `/scratch/jobs/{job_id}/` per-job should mitigate some of the risk here (assuming Django's
+        # FileSystemStorage doesn't allow relative/paths/like/../../../this/ outside the base location.
+        return storage_class(location='/')
+    else:
+        raise NotImplementedError(f'Unsupported scheme or storage backend for file location: {location}')
+        # return None
 
 
 @reversion.register()
@@ -962,13 +1005,76 @@ class File(Timestamped, UUIDModel):
             if not self.path:
                 self.path = str(Path(urlparse(url).path).parent)
 
-    def remove_location(self, url):
-        fileloc = self.locations.filter(url=url).first()
+    def delete_at_location(self,
+                           location: Union[str, FileLocation],
+                           allow_delete_default=False):
+        """
+        Delete file content at a particular remote location.
+        Takes a URL string or FileLocation object.
+        To delete the 'default' location, allow_delete_default must be True
+        - this ensures we don't accidentally delete the primary location unless
+        we are explicit about it.
+
+        :param location: The URL location or FileLocation to delete.
+        :type location: Union[str, FileLocation]
+        :param allow_delete_default:
+        :type allow_delete_default: bool
+        :return:
+        :rtype:
+        """
+
+        if isinstance(location, str):
+            fileloc = self.locations.filter(url=location).first()
+        elif isinstance(location, FileLocation):
+            fileloc = location
+        else:
+            raise TypeError(f'location must be a string or FileLocation, not a {type(location)}.')
+
         if fileloc is None:
             raise FileLocation.DoesNotExist()
-        if fileloc.default:
+        if fileloc.default and not allow_delete_default:
             raise ValueError('Cannot remove default FileLocation for this File')
-        fileloc.delete()
+
+        def _do_logical_delete():
+            """
+            Marks the database record as deleted without attempting to remove file
+            content on storage.
+            """
+            fileloc.delete()
+            if self.locations.count() == 0:
+                self.deleted_time = datetime.now()
+                self.save()
+
+        @backoff.on_exception(backoff.expo,
+                              (socket.gaierror,),
+                              max_tries=3,
+                              jitter=backoff.full_jitter)
+        def _delete_with_retries(_storage, _path: str):
+            """Delete with retries upon network connection errors"""
+            _storage.delete(_path)
+
+        url = urlparse(fileloc.url)
+        scheme = url.scheme
+
+        if scheme == 'laxy+sftp':
+            compute = get_compute_resource_for_location(location)
+            if compute.status == ComputeResource.STATUS_DECOMMISSIONED:
+                _do_logical_delete()
+                return
+            if not compute.available:
+                raise Exception(f"Unable to delete file {self.id} at {url} (FileLocation {location.id}) "
+                                f" - ComputeResource {compute.id} is {compute.status}.")
+            try:
+                _delete_with_retries(compute.sftp_storage, self._abs_path_on_compute())
+
+            except BaseException as ex:
+                from .util import get_traceback_message
+                raise Exception(f'Storage backend issue - failed to delete file: '
+                                f'{self.id} at {fileloc.url} (FileLocation {fileloc.id}) :: {ex}')
+        else:
+            raise NotImplementedError("Only laxy+sftp:// internal URLs can be deleted at this time.")
+
+        _do_logical_delete()
 
     def name_from_location(self):
         try:
@@ -1114,6 +1220,49 @@ class File(Timestamped, UUIDModel):
     def _get_storage_class(self) -> Union[Storage, None]:
         return get_storage_class_for_location(self.location)
 
+    # def file_at_location(self, location: Union[str, FileLocation]) -> Union[BufferedRandom, None]:
+    #     from laxy_backend.tasks.download import request_with_retries
+    #
+    #     if isinstance(location, FileLocation):
+    #         location = location.url
+    #
+    #     # assert location is not None and str(location).strip() != '', \
+    #     #     f"File {self.id} location is empty. This isn't allowed and shouldn't ever happen."
+    #     if location is None or str(location).strip() == '':
+    #         logger.warning(f"File {self.id} location is empty. "
+    #                        f"This isn't allowed and shouldn't ever happen.")
+    #         return None
+    #
+    #     url = urlparse(location)
+    #     scheme = url.scheme
+    #     if scheme == 'laxy+sftp':
+    #         storage = self._get_storage_class()
+    #         file_path = self._abs_path_on_compute()
+    #         filelike = storage.open(file_path)
+    #         # setattr(filelike, 'name', self.name)
+    #         return BufferedRandom(filelike)
+    #
+    #     # TODO: This needs to be carefully reworked or removed. The intention would be to refer to a mountpoint
+    #     #       relative to the Laxy backend server filesystem (eg an NFS mount), however there is scope for
+    #     #       reading arbitrary files on the server if implemented incorrectly.
+    #     elif scheme == 'file':
+    #         # raise NotImplementedError('file:// URLs are currently not supported')
+    #         storage = self._get_storage_class()
+    #         return BufferedRandom(storage.open(self.full_path))
+    #
+    #     elif scheme in ['http', 'https', 'ftp', 'ftps', 'data']:
+    #         response = request_with_retries(
+    #             'GET', location,
+    #             stream=True,
+    #             headers={},
+    #             auth=None)
+    #         filelike = response.raw
+    #         filelike.decode_content = True
+    #         return BufferedRandom(filelike)
+    #
+    #     else:
+    #         raise NotImplementedError(f'Cannot provide file-like object for scheme: {scheme}')
+
     @property
     def file(self) -> Union[None, typing.IO[AnyStr]]:
         # return self.file_at_location(self.location)
@@ -1143,7 +1292,7 @@ class File(Timestamped, UUIDModel):
         elif scheme == 'file':
             # raise NotImplementedError('file:// URLs are currently not supported')
             storage = self._get_storage_class()
-            return storage.open(self.full_path)
+            return BufferedRandom(storage.open(self.full_path))
 
         elif scheme in ['http', 'https', 'ftp', 'ftps', 'data']:
             response = request_with_retries(
@@ -1182,6 +1331,9 @@ class File(Timestamped, UUIDModel):
                 self.save(update_fields=["metadata"])
             except NotImplementedError as ex:
                 pass
+            except FileNotFoundError:
+                # Can occur when SFTP backend server is inaccessible
+                pass
 
         return size
 
@@ -1194,16 +1346,8 @@ class File(Timestamped, UUIDModel):
         return bool(self.deleted_time)
 
     def delete_file(self):
-        url = urlparse(self.location)
-        scheme = url.scheme
-
-        if scheme == 'laxy+sftp':
-            storage = self._get_storage_class()
-            storage.delete(self._abs_path_on_compute())
-            self.deleted_time = datetime.now()
-            self.save()
-        else:
-            raise NotImplementedError("Only laxy+sftp:// internal URLs can be deleted at this time.")
+        for location in self.locations.all():
+            self.delete_at_location(location, allow_delete_default=True)
 
     def get_absolute_url(self):
         from django.urls import reverse

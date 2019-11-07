@@ -17,6 +17,8 @@ from django_object_actions import (DjangoObjectActions,
                                    takes_instance_or_queryset)
 
 from laxy_backend.tasks import job as job_tasks
+from laxy_backend.tasks import file as file_tasks
+
 from .models import (Job,
                      ComputeResource,
                      File,
@@ -138,7 +140,9 @@ class JobAdmin(Timestamped, VersionAdmin):
     list_filter = ('status', 'expired',)
     actions = ('trigger_file_ingestion',
                'expire_job',
-               'estimate_job_tarball_size',)
+               'estimate_job_tarball_size',
+               'verify',
+               'copy_to_archive_test')
 
     color_mappings = {
         Job.STATUS_FAILED: 'red',
@@ -223,6 +227,49 @@ class JobAdmin(Timestamped, VersionAdmin):
 
     expire_job.short_description = "Expire job (delete large files)"
 
+    @takes_instance_or_queryset
+    def verify(self, request, queryset):
+        failed = []
+        for obj in queryset:
+            for f in obj.get_files():
+                for loc in f.locations.all():
+                    task_data = dict(file_id=f.id, filelocation_id=loc.id)
+                    result = file_tasks.verify_task.apply_async(args=(task_data,))
+                    if result.failed():
+                        failed.append(loc.id)
+
+        if not failed:
+            self.message_user(request, "Verifying !")
+        else:
+            self.message_user(request, "Errors trying to ingest %s" %
+                              ','.join(failed))
+
+    verify.short_description = "Verify file checksums (all locations)"
+
+    @takes_instance_or_queryset
+    def copy_to_archive_test(self, request, queryset):
+        failed = []
+        for job in queryset:
+            for file in job.get_files():
+                old_compute = job.compute_resource.id
+                new_compute = ComputeResource.objects.get(name='laxy-archive').id
+                old_prefix = f'laxy+sftp://{old_compute}/'
+                new_prefix = f'laxy+sftp://{new_compute}/'
+
+                task_data = dict(file_id=file.id,
+                                 to_location=file.location.replace(old_prefix, new_prefix))
+                result = file_tasks.copy_file_task.apply_async(args=(task_data,))
+                if result.failed():
+                    failed.append(file.id)
+
+            if not failed:
+                self.message_user(request, "Copying !")
+            else:
+                self.message_user(request, "Errors trying to ingest %s" %
+                                  ','.join(failed))
+
+    copy_to_archive_test.short_description = "TEST: Copy file to laxy-archive location."
+
 
 def do_nothing_validator(value):
     return None
@@ -235,14 +282,30 @@ class FileLocationAdmin(admin.ModelAdmin):
                     '_url',)
     # raw_id_fields = ('file',)
     readonly_fields = ('url', 'file',)
-
+    actions = ('verify',)
     ordering = ('-default',)
-    search_fields = ('url', 'file__id',)
+    search_fields = ('id', 'url', 'file__id',)
 
     def _url(self, obj):
         return format_html('<a href="{}">{}</a>',
                            obj.url,
                            truncate_middle(obj.url, end=32))
+
+    @takes_instance_or_queryset
+    def verify(self, request, queryset):
+        failed = []
+        for obj in queryset:
+            task_data = dict(file_id=obj.file.id, location=obj.url)
+            result = file_tasks.verify_task.apply_async(args=(task_data,))
+            if result.failed():
+                failed.append(obj.id)
+        if not failed:
+            self.message_user(request, "Verifying !")
+        else:
+            self.message_user(request, "Errors trying to ingest %s" %
+                              ','.join(failed))
+
+    verify.short_description = "Verify file checksum"
 
 
 class FileLocationAdminForm(django.forms.ModelForm):
@@ -283,7 +346,7 @@ class FileAdmin(Timestamped, VersionAdmin):
     ordering = ('-created_time', '-modified_time',)
     search_fields = ('id', 'path', 'name',)
     inlines = (FileLocationsInline, )
-    actions = ('fix_metadata',)
+    actions = ('fix_metadata', 'verify', 'copy_to_archive_test',)
     form = FileAdminForm
 
     truncate_to = 32
@@ -322,6 +385,48 @@ class FileAdmin(Timestamped, VersionAdmin):
         self.message_user(request, f"Fix {count} metadata fields{last_msg}")
 
     fix_metadata.short_description = "Fix invalid file metadata"
+
+    @takes_instance_or_queryset
+    def verify(self, request, queryset):
+        failed = []
+        for obj in queryset:
+            for loc in obj.locations.all():
+                task_data = dict(file_id=obj.id, filelocation_id=loc.id)
+                result = file_tasks.verify_task.apply_async(args=(task_data,))
+                if result.failed():
+                    failed.append(loc.id)
+
+        if not failed:
+            self.message_user(request, "Verifying !")
+        else:
+            self.message_user(request, "Errors trying to ingest %s" %
+                              ','.join(failed))
+
+    verify.short_description = "Verify file checksums (all locations)"
+
+    @takes_instance_or_queryset
+    def copy_to_archive_test(self, request, queryset):
+        failed = []
+        for file in queryset:
+            job = file.fileset.jobs()[0]
+            old_compute = job.compute_resource.id
+            new_compute = ComputeResource.objects.get(name='laxy-archive').id
+            old_prefix = f'laxy+sftp://{old_compute}/'
+            new_prefix = f'laxy+sftp://{new_compute}/'
+
+            task_data = dict(file_id=file.id,
+                             to_location=file.location.replace(old_prefix, new_prefix))
+            result = file_tasks.copy_file_task.apply_async(args=(task_data,))
+            if result.failed():
+                failed.append(file.id)
+
+        if not failed:
+            self.message_user(request, "Copying !")
+        else:
+            self.message_user(request, "Errors trying to ingest %s" %
+                              ','.join(failed))
+
+    copy_to_archive_test.short_description = "TEST: Copy file to laxy-archive location."
 
 
 class JobInputFilesInline(admin.TabularInline):

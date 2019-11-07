@@ -761,21 +761,21 @@ def expire_old_job(self, task_data=None, **kwargs):
                     if f.size is not None:
                         logger.info(f"Deleting {job.id} {f.full_path} ({f.size / MB:.1f}MB)")
                     try:
+                        # NOTE: There are temporary states where a file will fail to delete (network outage),
+                        #       and permanent states where deletion will fail (ComputeResource no longer exists).
+                        #       A job isn't marked as expired until we've successfully deleted the files that should
+                        #       be deleted - but we need a way to decide that after many attempts over a reasonable
+                        #       time, a file can be marked as deleted because we can't access the storage backend.
                         f.delete_file()
                         count += 1
                     except NotImplementedError:
                         logger.warning(f"Unable to delete {job.id} {f.full_path} "
                                        f"(NotImplementedError for this file location)")
+                    except FileNotFoundError as ex:
+                        logger.info(f"File is missing on backend storage: {job.id} {f.full_path} - marking as expired")
+                        f.deleted_time = datetime.now()
+                        f.save()
 
-            # TODO: This isn't ideal - for laxy+sftp:// locations, when the SFTP server is down, f.size raises
-            #       FileNotFoundError rather than IOError. But the file may still exist, we are just are (temporarily)
-            #       unable to access it. We need a way to differentiate between actually missing and
-            #       'storage backend is down'.
-            except FileNotFoundError as ex:
-                logger.info(f"File is missing on backend storage: {job.id} {f.full_path} - marking as expired")
-                f.deleted_time = datetime.now()
-                f.save()
-                pass
             except BaseException as ex:
                 # If any file can't be deleted for unknown reasons, ensure we don't mark the job as expired by
                 # raising an exception before that happens. This way rhe scheduled task will try again later.

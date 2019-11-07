@@ -45,8 +45,8 @@ django-rest-framework-social-oauth2==1.1.0
 django-rest-swagger==2.1.2
 django-reversion==3.0.2
 
-# Using this commit of django-storages until >1.9.1 release, due to issue #835
-git+https://github.com/jschneier/django-storages.git@867050a222b487dc9a1cbc718b2108fdb22b5154#egg=django-storages
+# Using this commit of django-storages until >1.9.1 release, due to issue #835, and memory usage
+git+https://github.com/pansapiens/django-storages.git@sftp-streaming#egg=django-storages
 # django-storages==1.9.1
 
 django-timezone-field==3.0
