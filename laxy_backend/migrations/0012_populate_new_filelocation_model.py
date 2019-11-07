@@ -30,7 +30,7 @@ def undo_populate_filelocation(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('laxy_backend', '0011_auto_20191029_0526'),
+        ('laxy_backend', '0011_auto_20191105_0248_longer_profile_image_url'),
     ]
 
     operations = [
