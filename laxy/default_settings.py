@@ -331,6 +331,7 @@ TEMPLATES = [
         ,
         'APP_DIRS': True,
         'OPTIONS': {
+            'debug': True,  # to disable template caching
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
@@ -342,6 +343,17 @@ TEMPLATES = [
         },
     },
 ]
+
+# Options for the django_extensions shell_plus Jupyter notebook
+if DEBUG:
+    NOTEBOOK_ARGUMENTS = ['--ip', '0.0.0.0',
+                          '--port', '8999',
+                          '--no-browser', '-y',
+                          '--allow-root',
+                          ]
+    IPYTHON_ARGUMENTS = ['--debug']
+    # SHELL_PLUS_PRINT_SQL = False
+    # SHELL_PLUS_PRINT_SQL_TRUNCATE = 2
 
 # https://github.com/ottoyiu/django-cors-headers#configuration
 CSRF_COOKIE_DOMAIN = env('CSRF_COOKIE_DOMAIN', 'localhost')
