@@ -121,6 +121,8 @@ const available_genomes: ReferenceGenome[] = [
     // {'id': 'PhiX/Illumina/RTA', 'organism': 'PhiX'},
     // {'id': 'PhiX/NCBI/1993-04-28', 'organism': 'PhiX'},
 
+    {'id': 'Plasmodium_falciparum/PlasmoDB/3D7-release-39', 'organism': 'Plasmodium falciparum'},
+
     // {'id': 'Pseudomonas_aeruginosa_PAO1/NCBI/2000-09-13', 'organism': 'Pseudomonas aeruginosa PAO1'},
 
     // {'id': 'Rattus_norvegicus/Ensembl/RGSC3.4', 'organism': 'Rattus norvegicus'},

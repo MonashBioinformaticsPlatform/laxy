@@ -299,8 +299,13 @@ function curl_gunzip_check {
      local gunziped_file="${2}"
      local md5="${3}"
 
-     curl "${url}" \
-          --silent --retry 10 | gunzip -c > "${gunziped_file}"
+     if [[ "${url}" == *gz ]]; then
+         curl "${url}" \
+              --silent --retry 10 | gunzip -c >"${gunziped_file}"
+     else
+         curl "${url}" \
+              --silent --retry 10 >"${gunziped_file}"
+     fi
      DL_EXIT_CODE=$?
      checksum=$(md5sum "${gunziped_file}" | cut -f 1 -d ' ')
      if [[ "${checksum}" != "${md5}" ]]; then
@@ -410,6 +415,16 @@ function get_igenome_aws() {
          "https://www.vectorbase.org/download/aedes-aegypti-lvpagwgbasefeaturesaaegl52gff3gz" \
          "eb5da4f1fb261be460bf21d194f0b3d8" \
          "61761ee9dae134c105d80811c0913c8b" \
+         "gff"
+        return 0
+     fi
+
+     if [[ "${REF_ID}" == "Plasmodium_falciparum/PlasmoDB/3D7-release-39" ]]; then
+        download_ref_urls \
+         "https://plasmodb.org/common/downloads/release-39/Pfalciparum3D7/fasta/data/PlasmoDB-39_Pfalciparum3D7_Genome.fasta" \
+         "https://plasmodb.org/common/downloads/release-39/Pfalciparum3D7/gff/data/PlasmoDB-39_Pfalciparum3D7.gff" \
+         "809039c5aff401fe31035c2e7f0522e6" \
+         "ab664575518980ad51890a67e624b21f" \
          "gff"
         return 0
      fi

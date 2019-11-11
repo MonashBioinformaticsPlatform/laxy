@@ -127,6 +127,8 @@ REFERENCE_GENOME_MAPPINGS = {
     "PhiX/Illumina/RTA": "PhiX/Illumina/RTA",
     "PhiX/NCBI/1993-04-28": "PhiX/NCBI/1993-04-28",
 
+    "Plasmodium_falciparum/PlasmoDB/3D7-release-39": "Plasmodium_falciparum/PlasmoDB/3D7-release-39",
+
     "Pseudomonas_aeruginosa_PAO1/NCBI/2000-09-13": "Pseudomonas_aeruginosa_PAO1/NCBI/2000-09-13",
 
     "Rattus_norvegicus/Ensembl/RGSC3.4": "Rattus_norvegicus/Ensembl/RGSC3.4",
