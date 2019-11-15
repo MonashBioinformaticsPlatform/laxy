@@ -347,7 +347,7 @@ class JobOutputFilesInline(admin.TabularInline):
 class FilesInline(admin.TabularInline):
     model = File
     readonly_fields = ('id',)
-    fields = ('id', 'path', 'name',)
+    fields = ('id', 'path', 'name', 'type_tags',)
     ordering = ('path', 'name',)
     can_delete = False
     verbose_name_plural = 'Files'
