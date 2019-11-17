@@ -92,6 +92,11 @@ def get_template_files(must_contain='/job_scripts/'):
 
     template_dir_list = list(get_app_template_dirs('templates'))
 
+    # Or just for this app ...
+    #       from django.apps import apps
+    #       app = apps.get_app_config(app_name)
+    #       template_dir = os.path.abspath(os.path.join(app.path, 'templates'))
+
     template_list = []
     for template_dir in (template_dir_list + settings.TEMPLATES[0]['DIRS']):
         for base_dir, dirnames, filenames in os.walk(template_dir):
@@ -164,7 +169,9 @@ def start_job(self, task_data=None, **kwargs):
     #       to the equivalent relative path on the compute node (eg input/ and output/).
     #       Possibly using the get_template_files() function. But things might be easier at this point if
     #       we just ignored the Django template system and just worked with os.walk and the laxy_backend/templates path.
+
     job_script = template_filelike(find_job_file('input/run_job.sh'))
+    add_to_manifest_script = template_filelike(find_job_file('input/add_to_manifest.py'))
     kill_script = template_filelike(find_job_file('kill_job.sh'))
 
     # From: conda list --explicit >conda_environment_explicit.txt
@@ -194,6 +201,9 @@ def start_job(self, task_data=None, **kwargs):
                 result = run(f'mkdir -p {d} && chmod 700 {d}')
             result = put(job_script,
                          job_script_path,
+                         mode=0o700)
+            result = put(add_to_manifest_script,
+                         join(input_dir, 'add_to_manifest.py'),
                          mode=0o700)
             result = put(kill_script,
                          kill_script_path,
