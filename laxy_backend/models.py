@@ -900,7 +900,9 @@ class File(Timestamped, UUIDModel):
 
     @property
     def location(self):
-        return self.locations.filter(default=True).first().url
+        fileloc = self.locations.filter(default=True).first()
+        if fileloc:
+            return fileloc.url
 
     @location.setter
     def location(self, url):
