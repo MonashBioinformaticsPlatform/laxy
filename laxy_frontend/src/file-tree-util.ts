@@ -176,6 +176,7 @@ export function truncateFastqFilename(filename: string): string {
     let fn = filename.replace('_001.fastq.gz', ''); // default Illumina
     fn = fn.replace('.fastq.gz', '');  // ENA/SRA
     fn = fn.replace('.fasta.gz', '');  // occasionally we get FASTA format reads
+    fn = fn.replace('.fq.gz', '');  // BGI does this, it seems
     return fn;
 }
 

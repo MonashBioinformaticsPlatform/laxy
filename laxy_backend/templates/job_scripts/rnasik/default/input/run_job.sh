@@ -566,30 +566,22 @@ function get_input_data_urls() {
 function detect_pairs() {
     PAIRIDS=""
     EXTN=".fastq.gz"
-    if stat -t "${JOB_PATH}"/input/*_R2_001.fastq.gz >/dev/null 2>&1; then
-      EXTN=".fastq.gz"
-      PAIRIDS="_R1_001,_R2_001"
-    elif stat -t "${JOB_PATH}"/input/*_R2.fastq.gz >/dev/null 2>&1; then
-      EXTN=".fastq.gz"
-      PAIRIDS="_R1,_R2"
-    elif stat -t "${JOB_PATH}"/input/*_2.fastq.gz >/dev/null 2>&1; then
-      EXTN=".fastq.gz"
-      PAIRIDS="_1,_2"
+
     # Very occasionally, we get FASTA format reads
-    elif stat -t "${JOB_PATH}"/input/*_R2.fasta.gz >/dev/null 2>&1; then
+    if stat -t "${JOB_PATH}"/input/*.fasta.gz >/dev/null 2>&1; then
       EXTN=".fasta.gz"
-      PAIRIDS="_R1,_R2"
-    elif stat -t "${JOB_PATH}"/input/*_2.fasta.gz >/dev/null 2>&1; then
-      EXTN=".fasta.gz"
-      PAIRIDS="_1,_2"
+    fi
+    # BGI currently uses .fq.gz ?!? This is why we can't have nice things.
+    if stat -t "${JOB_PATH}"/input/*.fq.gz >/dev/null 2>&1; then
+      EXTN=".fq.gz"
     fi
 
-    # BGI currently uses .fq.gz ?!? This is why we can't have nice things.
-    if stat -t "${JOB_PATH}"/input/*_1.fq.gz >/dev/null 2>&1; then
-      EXTN=".fq.gz"
-      if stat -t "${JOB_PATH}"/input/*_2.fq.gz >/dev/null 2>&1; then
-          PAIRIDS="_1,_2"
-      fi
+    if stat -t "${JOB_PATH}"/input/*_R2_001${EXTN} >/dev/null 2>&1; then
+      PAIRIDS="_R1_001,_R2_001"
+    elif stat -t "${JOB_PATH}"/input/*_R2${EXTN} >/dev/null 2>&1; then
+      PAIRIDS="_R1,_R2"
+    elif stat -t "${JOB_PATH}"/input/*_2${EXTN} >/dev/null 2>&1; then
+      PAIRIDS="_1,_2"
     fi
 
     if [[ -z "${PAIRIDS}" ]]; then
