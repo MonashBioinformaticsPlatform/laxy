@@ -198,3 +198,4 @@ dependencies:
     - sortedcontainers==2.1.0
     - toolz==0.9.0
     - trio==0.11.0
+    - semver
