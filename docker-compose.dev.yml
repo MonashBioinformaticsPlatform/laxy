@@ -65,6 +65,25 @@ services:
                       pip3 install jupyter ipython django-extensions &&
                       python3 manage.py shell_plus --notebook"
 
+  # NOTE: You may need to change the default Docker container memory to 4Gb when using
+  #       this container, since `conda create` often exceeds 2Gb of RAM
+  # We use port 2222 for OpenSSH so we can easily expose it to the host for debugging
+  # without a port clash with the host SSH server.
+  fake-cluster:
+    image: fake-cluster:latest
+    build:
+      context: ./docker/fake-cluster
+    volumes:
+      - ./.fake-cluster-scratch:/scratch
+    ports:
+      - "2222:2222"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10k"
+        max-file: "1"
+    restart: "unless-stopped"
+
   celeryd:
     build:
       context: .
