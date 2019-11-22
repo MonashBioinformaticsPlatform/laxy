@@ -60,7 +60,6 @@ default_env = PrefixedEnv(
     ADMIN_USERNAME=(str, None),
     AWS_ACCESS_KEY_ID=(str, None),
     AWS_SECRET_ACCESS_KEY=(str, None),
-    DEFAULT_COMPUTE_RESOURCE=(str, 'default'),
     ALLOWED_HOSTS=(list, ['*']),
     BROKER_URL=(str, 'amqp://'),
     EMAIL_HOST_URL=('email_url', ''),
@@ -190,8 +189,6 @@ if ADMIN_EMAIL and ADMIN_USERNAME:
 AWS_ACCESS_KEY_ID = env('AWS_ACCESS_KEY_ID')
 
 AWS_SECRET_ACCESS_KEY = env('AWS_SECRET_ACCESS_KEY')
-
-DEFAULT_COMPUTE_RESOURCE = env('DEFAULT_COMPUTE_RESOURCE')
 
 FILE_CACHE_PATH = env('FILE_CACHE_PATH')
 

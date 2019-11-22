@@ -2643,15 +2643,11 @@ def _get_or_create_drf_token(user):
 
 
 def _get_default_compute_resource():
-    default_compute_name = getattr(settings, 'DEFAULT_COMPUTE_RESOURCE')
-    compute = ComputeResource.objects.filter(
-        name=default_compute_name).first()
+    compute = ComputeResource.get_best_available()
     if not compute:
-        raise Exception(f"The default ComputeResource '{default_compute_name}' does not exist "
-                        f"(DEFAULT_COMPUTE_RESOURCE setting).")
-
-    compute.save()
+        raise Exception(f"Cannot find available ComputeResource. None defined, or all offline.")
     return compute
+
 
 # def _test_celery_task():
 #     from celery import Celery

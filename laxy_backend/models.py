@@ -347,8 +347,9 @@ class ComputeResource(Timestamped, UUIDModel):
 
     host = CharField(max_length=255, blank=True, null=True)
     gateway_server = CharField(max_length=255, blank=True, null=True)
-    disposable = BooleanField(default=True)
+    disposable = BooleanField(default=False)
     name = CharField(max_length=128, blank=True, null=True)
+    priority = IntegerField(default=0)
 
     # QUEUE_TYPE_LOCAL = 'local'  # a regular process (via the shell) on a compute node
     # QUEUE_TYPE_SLURM = 'slurm'  # submit the job to a slurm queue on the compute node
@@ -368,6 +369,36 @@ class ComputeResource(Timestamped, UUIDModel):
     # This contains resource type specific data, eg it may contain
     # ssh keys, queue type
     extra = JSONField(default=OrderedDict)
+
+    @classmethod
+    def get_best_available(cls):
+        return cls.objects.filter(status=cls.STATUS_ONLINE).order_by('-priority').first()
+
+    @property
+    def sftp_storage(self) -> Union[Storage, None]:
+        storage_class = get_storage_class(
+            SCHEME_STORAGE_CLASS_MAPPING.get('laxy+sftp', None))
+        # Return a module-level cached SFTPStorage instance to allow connection
+        # pooling to the same ComputeResource
+        _storage_instance = CACHED_SFTP_STORAGE_CLASS_INSTANCES.get(self.id, None)
+        if _storage_instance is not None:
+            return _storage_instance
+
+        host = self.hostname
+        port = self.port
+        if port is None:
+            port = 22
+        private_key = self.private_key
+        username = self.extra.get('username')
+        params = dict(port=port,
+                      username=username,
+                      pkey=RSAKey.from_private_key(StringIO(private_key)))
+        # storage = SFTPStorage(host=host, params=params)
+        storage = storage_class(host=host, params=params)
+        _ = storage.sftp  # Do this to ensure we can connect before caching the SFTPStorage class
+        CACHED_SFTP_STORAGE_CLASS_INSTANCES[self.id] = storage
+
+        return storage
 
     def running_jobs(self):
         """
@@ -757,28 +788,7 @@ def get_storage_class_for_location(location: str) -> Union[Storage, None]:
         if compute is None:
             raise Exception(f"Cannot extract ComputeResource ID from: {location}")
 
-        # Return a module-level cached SFTPStorage instance to allow connection
-        # pooling to the same ComputeResource
-        _storage_instance = CACHED_SFTP_STORAGE_CLASS_INSTANCES.get(compute.id, None)
-        if _storage_instance is not None:
-            return _storage_instance
-
-        host = compute.hostname
-        port = compute.port
-        if port is None:
-            port = 22
-        private_key = compute.private_key
-        username = compute.extra.get('username')
-        params = dict(port=port,
-                      username=username,
-                      pkey=RSAKey.from_private_key(StringIO(private_key)))
-        # storage = SFTPStorage(host=host, params=params)
-        storage = storage_class(host=host, params=params)
-        # storage._connect()  # Do this to ensure we can connect before caching the SFTPStorage class
-        _ = storage.sftp   # Do this to ensure we can connect before caching the SFTPStorage class
-        CACHED_SFTP_STORAGE_CLASS_INSTANCES[compute.id] = storage
-
-        return storage
+        return compute.sftp_storage
 
     # TODO: This needs to be carefully reworked or removed. The intention would be to refer to a mountpoint
     #       relative to the Laxy backend server filesystem (eg an NFS mount), however there is scope for

@@ -98,10 +98,10 @@ class UserProfileAdmin(admin.ModelAdmin):
 
 
 class ComputeResourceAdmin(Timestamped, VersionAdmin):
-    list_display = ('uuid', 'name', 'address', 'created', 'status_html')
+    list_display = ('uuid', 'name', 'address', 'priority', 'created', 'status_html')
     search_fields = ('id', 'name', 'host', 'status',)
     list_filter = ('status',)
-    ordering = ('-created_time',)
+    ordering = ('-priority', '-created_time',)
 
     color_mappings = {
         ComputeResource.STATUS_ONLINE: 'green',
