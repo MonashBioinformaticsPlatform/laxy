@@ -93,3 +93,4 @@ node_modules
 
 .ignore
 laxy_frontend/dist/backend_static
+.fake-cluster-scratch
