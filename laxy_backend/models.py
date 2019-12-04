@@ -35,6 +35,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 import reversion
 from rest_framework.authtoken.models import Token
+from storages.backends.sftpstorage import SFTPStorage
 
 from .tasks import orchestration
 from .cfncluster import generate_cluster_stack_name
@@ -60,6 +61,14 @@ SCHEME_STORAGE_CLASS_MAPPING = {
 }
 """
 Maps URL schemes to Django storage backends that can handle them.
+"""
+
+CACHE_SFTP_CONNECTIONS = False
+"""
+If True, use CACHED_SFTP_STORAGE_CLASS_INSTANCES to cache SFTPStorage classes
+to allow connection pooling to the same ComputeResource.
+
+Seems buggy, so disabled by default.
 """
 
 CACHED_SFTP_STORAGE_CLASS_INSTANCES = {}
@@ -378,11 +387,13 @@ class ComputeResource(Timestamped, UUIDModel):
     def sftp_storage(self) -> Union[Storage, None]:
         storage_class = get_storage_class(
             SCHEME_STORAGE_CLASS_MAPPING.get('laxy+sftp', None))
-        # Return a module-level cached SFTPStorage instance to allow connection
-        # pooling to the same ComputeResource
-        _storage_instance = CACHED_SFTP_STORAGE_CLASS_INSTANCES.get(self.id, None)
-        if _storage_instance is not None:
-            return _storage_instance
+
+        if CACHE_SFTP_CONNECTIONS:
+            _storage_instance: SFTPStorage = CACHED_SFTP_STORAGE_CLASS_INSTANCES.get(self.id, None)
+            if _storage_instance is not None:
+                # Accessing the .sftp property ensures the connection is still open, reopens it if it's not
+                _ = _storage_instance.sftp
+                return _storage_instance
 
         host = self.hostname
         port = self.port
