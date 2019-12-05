@@ -7,7 +7,7 @@
 
                     <div class="pad-32">
                         <h1 class="md-display-2"><span class="logo-text">Laxy</span> &nbsp;&nbsp; <span
-                                class="md-subheading"><em>Genomics Pipelines for Humans</em></span>
+                                class="md-subheading"><em>Streamlined Genomics Pipelines</em></span>
                         </h1>
                         <md-boards :md-auto="true" :md-infinite="true" :md-duration="5000" :md-swipeable="true">
                             <md-board>
@@ -22,7 +22,16 @@
                                 </div>
                             </md-board>
                             <md-board>
-                                <div class="md-body-1">FASTQ ⤇ Insight !<br></div>
+                                <div class="md-body-1">View QC reports (MultiQC FTW !).<br></div>
+                            </md-board>
+                            <md-board>
+                                <div class="md-body-1">Laxy lets you share analysis results with collaborators.<br></div>
+                            </md-board>
+                            <md-board>
+                                <div class="md-body-1">Laxy can pass results to Degust to visualize differential gene expression.<br></div>
+                            </md-board>
+                            <md-board>
+                                <div class="md-body-1">Want to save the results ? Download a tarball of the whole (reproducible) analysis.<br></div>
                             </md-board>
                         </md-boards>
 
@@ -61,22 +70,49 @@
                                     </md-card-media>
                                     <br/>
                                     <!--<md-card-actions>-->
-                                        <router-link tag="md-button"
-                                                     class="md-primary md-raised fill-width"
-                                                     to="/rnaseq">
-                                            Run an RNA-Seq analysis
-                                        </router-link>
+                                    <router-link tag="md-button"
+                                                 class="md-primary md-raised fill-width"
+                                                 to="/rnaseq">
+                                        Run an RNA-Seq analysis
+                                    </router-link>
                                     <!--</md-card-actions>-->
                                 </md-card-content>
                                 <md-ink-ripple></md-ink-ripple>
                             </md-card>
                         </router-link>
 
-
-                        <md-card md-with-hover id="chipseq">
+                        <md-card md-with-hover id="variants">
                             <md-card-header>
-                                <div class="md-title">ChIP-Seq</div>
+                                <div class="md-title">Variant calls</div>
                                 <div class="md-subhead">using public data from ENA/SRA</div>
+                            </md-card-header>
+
+                            <md-card-content>
+                                <md-card-media>
+                                    <md-layout md-align="center">
+                                        <span class="md-title">
+                                            T ⤇ C<br>
+                                            G ⤇ A<br>
+                                        </span>
+                                    </md-layout>
+                                </md-card-media>
+                                <br/>
+                                <!--<md-card-actions>-->
+                                <router-link tag="md-button"
+                                             disabled="true"
+                                             class="md-primary md-raised fill-width"
+                                             to="variants">
+                                    Coming soon ...
+                                </router-link>
+                                <!--</md-card-actions>-->
+                            </md-card-content>
+                            <md-ink-ripple></md-ink-ripple>
+                        </md-card>
+
+                        <md-card md-with-hover id="nullarbor">
+                            <md-card-header>
+                                <div class="md-title">Bacterial genome assembly and annotation</div>
+                                <div class="md-subhead">"Reads to report" using Nullarbor</div>
                             </md-card-header>
 
                             <md-card-content>
@@ -104,41 +140,12 @@
                                 </md-card-media>
                                 <br/>
                                 <!--<md-card-actions>-->
-                                    <router-link tag="md-button"
-                                                 disabled="true"
-                                                 class="md-primary md-raised fill-width"
-                                                 to="chipseq">
-                                        Coming soon ...
-                                    </router-link>
-                                <!--</md-card-actions>-->
-                            </md-card-content>
-                            <md-ink-ripple></md-ink-ripple>
-                        </md-card>
-
-
-                        <md-card md-with-hover id="variants">
-                            <md-card-header>
-                                <div class="md-title">Variant calls</div>
-                                <div class="md-subhead">using public data from ENA/SRA</div>
-                            </md-card-header>
-
-                            <md-card-content>
-                                <md-card-media>
-                                    <md-layout md-align="center">
-                                        <span class="md-title">
-                                            T ⤇ C<br>
-                                            G ⤇ A<br>
-                                        </span>
-                                    </md-layout>
-                                </md-card-media>
-                                <br/>
-                                <!--<md-card-actions>-->
-                                    <router-link tag="md-button"
-                                                 disabled="true"
-                                                 class="md-primary md-raised fill-width"
-                                                 to="variants">
-                                        Coming soon ...
-                                    </router-link>
+                                <router-link tag="md-button"
+                                             disabled="true"
+                                             class="md-primary md-raised fill-width"
+                                             to="chipseq">
+                                    Coming soon ...
+                                </router-link>
                                 <!--</md-card-actions>-->
                             </md-card-content>
                             <md-ink-ripple></md-ink-ripple>
