@@ -222,6 +222,9 @@ EMAIL_DOMAIN_ALLOWED_COMPUTE = env('EMAIL_DOMAIN_ALLOWED_COMPUTE')
 Maps user email domains to named compute resources they are allowed to use.
 "*" wildcard means any domain or compute resource (this isn't a regex / glob).
 
+Order of the ComputeResource names in the list doesn't matter - which one is chosen depends on
+ComputeResource.priority (and maybe other factors).
+
 Note that if you are using local Django accounts, you should use email address validation
 for this setting to be effective, otherwise users could easily change their email address 
 to one the don't actually own and access compute resources you don't intend them to access.

@@ -2645,11 +2645,13 @@ def _get_or_create_drf_token(user):
 def _get_default_compute_resource(job: Job = None):
     if job is None:
         compute = ComputeResource.get_best_available()
-        if not compute:
-            raise Exception(f"Cannot find available ComputeResource. None defined, or all offline.")
-        return compute
     else:
-        return _get_compute_resources_based_on_rules(job).first()
+        compute = _get_compute_resources_based_on_rules(job).first()
+
+    if not compute:
+        raise Exception(f"Cannot find available ComputeResource. None defined, or all offline.")
+
+    return compute
 
 
 def _get_compute_resources_based_on_rules(job: Job):
@@ -2668,19 +2670,16 @@ def _get_compute_resources_based_on_rules(job: Job):
     if names is None:
         names = email_domain_allowed_compute.get('*', [])
 
-    has_wildcard = False
-    if '*' in names:
-        names.remove('*')
-        has_wildcard = True
-
     available_compute = (ComputeResource.objects
                          .filter(status=ComputeResource.STATUS_ONLINE)
                          .order_by('-priority'))
-    allowed_compute = available_compute.filter(name__in=names)
 
-    if not allowed_compute.exists() and has_wildcard:
-        allowed_compute = available_compute
+    if '*' in names:
+        return available_compute
 
-    if not allowed_compute:
-        raise Exception(f"Cannot find available ComputeResource. None allowed, none defined, or all offline.")
+    allowed_compute = available_compute.filter(name__in=names).order_by('-priority')
+
+    if not allowed_compute.exists():
+        raise Exception(f"Cannot find allowed ComputeResource for this email domain ({domain}).")
+
     return allowed_compute
