@@ -1716,7 +1716,7 @@ class JobCreate(JSONView):
                 samplecart.save()
 
             if not job.compute_resource:
-                default_compute = _get_default_compute_resource()
+                default_compute = _get_default_compute_resource(job)
                 job.compute_resource = default_compute
                 job.save()
 
@@ -2642,26 +2642,45 @@ def _get_or_create_drf_token(user):
     return token
 
 
-def _get_default_compute_resource():
-    compute = ComputeResource.get_best_available()
-    if not compute:
-        raise Exception(f"Cannot find available ComputeResource. None defined, or all offline.")
-    return compute
+def _get_default_compute_resource(job: Job = None):
+    if job is None:
+        compute = ComputeResource.get_best_available()
+        if not compute:
+            raise Exception(f"Cannot find available ComputeResource. None defined, or all offline.")
+        return compute
+    else:
+        return _get_compute_resources_based_on_rules(job).first()
 
 
-# def _test_celery_task():
-#     from celery import Celery
-#     from .tasks import count_words_at_url
-#     from django.conf import settings
-#     url = 'https://archive.org/stream/AtlasShrugged/atlas%20shrugged_djvu.txt'
-#     async_result = count_words_at_url.apply_async(args=(url,),
-#                                                   kwargs={},
-#                                                   countdown=1)
-#     print(async_result.id)
-#
-#     # we can retrieve the result by UUID ('future') from anywhere
-#     app = Celery(settings.BROKER_URL)
-#     print(app.AsyncResult(async_result.id).id)
-#
-#     # an get the result, blocking until ready, or timeout is reached
-#     print(async_result.get(timeout=30))
+def _get_compute_resources_based_on_rules(job: Job):
+    # TODO: This should also incorporate per-user permissions to access specific ComputeResources
+    # (eg with django-guardian and/or django-rules). We should be able to do a similar email domain test
+    # with django-rules (eg write a can_use_compute(user, compute_resource) rule).
+    # Ideally, our {domain: compute} mapping rules would be in the database so we can change them without
+    # a restart.
+
+    email_domain_allowed_compute = getattr(settings,
+                                           'EMAIL_DOMAIN_ALLOWED_COMPUTE',
+                                           {'*': ['*']})
+
+    domain = job.owner.email.split('@')[-1]
+    names = email_domain_allowed_compute.get(domain, None)
+    if names is None:
+        names = email_domain_allowed_compute.get('*', [])
+
+    has_wildcard = False
+    if '*' in names:
+        names.remove('*')
+        has_wildcard = True
+
+    available_compute = (ComputeResource.objects
+                         .filter(status=ComputeResource.STATUS_ONLINE)
+                         .order_by('-priority'))
+    allowed_compute = available_compute.filter(name__in=names)
+
+    if not allowed_compute.exists() and has_wildcard:
+        allowed_compute = available_compute
+
+    if not allowed_compute:
+        raise Exception(f"Cannot find available ComputeResource. None allowed, none defined, or all offline.")
+    return allowed_compute

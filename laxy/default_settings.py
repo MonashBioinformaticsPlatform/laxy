@@ -15,6 +15,7 @@ import os
 from datetime import timedelta
 import tempfile
 import subprocess
+import json
 from django.core.exceptions import ImproperlyConfigured
 import environ
 from celery.schedules import crontab
@@ -82,6 +83,7 @@ default_env = PrefixedEnv(
     WEB_SCRAPER_BACKEND=(str, 'simple'),
     WEB_SCRAPER_SPLASH_HOST=(str, 'http://localhost:8050'),
     DEGUST_URL=(str, 'http://degust.erc.monash.edu'),
+    EMAIL_DOMAIN_ALLOWED_COMPUTE=(json.loads, {"*": ["*"]}),
 )
 
 
@@ -213,6 +215,25 @@ DEGUST_URL = env('DEGUST_URL')
 """
 The base URL to the Degust instance you'd like to use (eg, could be changed to 
 "http://degust-training.erc.monash.edu" or a dev instance of Degust)
+"""
+
+EMAIL_DOMAIN_ALLOWED_COMPUTE = env('EMAIL_DOMAIN_ALLOWED_COMPUTE')
+"""
+Maps user email domains to named compute resources they are allowed to use.
+"*" wildcard means any domain or compute resource (this isn't a regex / glob).
+
+Note that if you are using local Django accounts, you should use email address validation
+for this setting to be effective, otherwise users could easily change their email address 
+to one the don't actually own and access compute resources you don't intend them to access.
+```json
+{
+    "important.edu.au": ["fast_hpc", "other_hpc", "*"],
+    "gmail.com": ["slow_cloud"],
+    "clinicalpeeps.com": ["extra_secure"],
+    "*": ["slow_cloud"]
+}
+```
+
 """
 
 ALLOWED_HOSTS = env('ALLOWED_HOSTS')

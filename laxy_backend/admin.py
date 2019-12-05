@@ -155,7 +155,7 @@ class JobAdmin(Timestamped, VersionAdmin):
     def _compute_resource(self, obj: Job):
         c = obj.compute_resource
         if c is not None:
-            return format_html('%s (%s)' % (c.id, c.host))
+            return format_html('%s (%s)' % (c.name, c.id))
         else:
             return ''
 
