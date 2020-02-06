@@ -68,10 +68,6 @@ def add_commandline_args(parser: argparse.ArgumentParser) -> argparse.ArgumentPa
                            help="The maximum number of files to download concurrently.",
                            type=int,
                            default=8)
-    dl_parser.add_argument("--no-aria2c",
-                           help="Download natively without using the Aria2c daemon.",
-                           dest="use_aria",
-                           action="store_false")
     dl_parser.add_argument("--queue-then-exit",
                            help="Rather than block waiting for downloads to finish, exit after queuing."
                                 "Aria2 daemon will continue downloading in the background.",
@@ -106,6 +102,10 @@ def add_commandline_args(parser: argparse.ArgumentParser) -> argparse.ArgumentPa
 
     # Add common options to the main parser and most subparsers
     for p in [parser, dl_parser, cache_parser]:
+        p.add_argument("--no-aria2c",
+                       help="Download natively without using the Aria2c daemon.",
+                       dest="use_aria",
+                       action="store_false")
         p.add_argument("--cache-path",
                        help="URL to send progress events to",
                        default=get_default_cache_path(),
