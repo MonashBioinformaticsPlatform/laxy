@@ -134,7 +134,7 @@ services:
       # No quotes !
       - ACME_SSL_DOMAINS=${ACME_SSL_DOMAINS-laxy.io api.laxy.io}
     # Run certificate renewel/creation on startup if missing. Then run crond in foreground forever.
-    command: sh -c "[ ! -f /certs/domain.key ] && /etc/periodic/daily/update-ssl-cert.sh; crond -l2 -f"
+    command: sh -c "/etc/periodic/daily/update-ssl-cert.sh; crond -l2 -f"
     volumes:
       # we need to write access to allow /usr/share/nginx/html creation of .well-known/acme-challenge for
       # Let's Encrypt the http-01 challenge
