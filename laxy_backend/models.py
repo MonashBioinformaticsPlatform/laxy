@@ -63,7 +63,7 @@ SCHEME_STORAGE_CLASS_MAPPING = {
 Maps URL schemes to Django storage backends that can handle them.
 """
 
-CACHE_SFTP_CONNECTIONS = False
+CACHE_SFTP_CONNECTIONS = True
 """
 If True, use CACHED_SFTP_STORAGE_CLASS_INSTANCES to cache SFTPStorage classes
 to allow connection pooling to the same ComputeResource.
@@ -390,10 +390,13 @@ class ComputeResource(Timestamped, UUIDModel):
 
         if CACHE_SFTP_CONNECTIONS:
             _storage_instance: SFTPStorage = CACHED_SFTP_STORAGE_CLASS_INSTANCES.get(self.id, None)
-            if _storage_instance is not None:
-                # Accessing the .sftp property ensures the connection is still open, reopens it if it's not
-                _ = _storage_instance.sftp
-                return _storage_instance
+            if _storage_instance is not None and _storage_instance._ssh.get_transport() is not None:
+                if _storage_instance._ssh.get_transport().is_active():
+                    # Accessing the .sftp property ensures the connection is still open, reopens it if it's not
+                    _ = _storage_instance.sftp
+                    return _storage_instance
+                else:
+                    _storage_instance.sftp.close()
 
         host = self.hostname
         port = self.port
