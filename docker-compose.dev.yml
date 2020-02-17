@@ -50,6 +50,7 @@ services:
       - LAXY_DEBUG=yes
       - LAXY_ADMIN_EMAIL=admin@example.com
       - LAXY_ADMIN_USERNAME=admin
+      - LAXY_SENTRY_DSN=
     volumes:
       - .:/app
       - ./laxy_frontend/dist:/usr/share/nginx/html

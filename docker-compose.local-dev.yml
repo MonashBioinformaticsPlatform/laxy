@@ -61,6 +61,7 @@ services:
       - LAXY_ADMIN_USERNAME=admin
       - LAXY_ADMIN_PASSWORD=adminpass
       - LAXY_SECRET_KEY=_do_please_change_this_in_production_
+      - LAXY_SENTRY_DSN=
     volumes:
       - .:/app
     ports:

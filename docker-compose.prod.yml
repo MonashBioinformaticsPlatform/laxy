@@ -156,6 +156,7 @@ services:
 #      dockerfile: ./docker/laxy/Dockerfile
 #    environment:
 #      - LAXY_DEBUG=no
+#      - LAXY_SENTRY_DSN=
 #    env_file:
 #      - .env
 #    ports:
