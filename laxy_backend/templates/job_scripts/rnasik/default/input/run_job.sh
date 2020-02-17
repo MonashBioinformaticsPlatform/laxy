@@ -34,8 +34,8 @@ readonly LAXYDL_BRANCH=master
 readonly LAXYDL_USE_ARIA2C=yes
 
 # These are applied via chmod to all files and directories in the run, upon completion
-readonly JOB_FILE_PERMS='ug+rw-s'
-readonly JOB_DIR_PERMS='ug+rwx-s'
+readonly JOB_FILE_PERMS='ug+rw-s,o='
+readonly JOB_DIR_PERMS='ug+rwx-s,o='
 
 {% if SLURM_ACCOUNT %}
 export SLURM_ACCOUNT="{{ SLURM_ACCOUNT }}"
@@ -748,6 +748,8 @@ function capture_environment_variables() {
 #    done
 #    echo "${ena_urls}"
 #}
+
+update_permissions || true
 
 mkdir -p "${TMP}"
 mkdir -p input
