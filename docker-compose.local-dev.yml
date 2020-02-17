@@ -42,6 +42,7 @@ services:
                     python3 manage.py makemigrations --no-input &&
                     python3 manage.py migrate --no-input &&
                     python3 manage.py shell -c \"from os import environ as env; from django.contrib.auth import get_user_model; username = env.get('LAXY_ADMIN_USERNAME', 'admin'); User = get_user_model(); User.objects.filter(username=username).count() or User.objects.create_superuser(username, env.get('LAXY_ADMIN_EMAIL', None), env.get('LAXY_ADMIN_PASSWORD', None));\" &&
+                    python3 manage.py loaddata --app laxy_backend /app/docker/fake-cluster/fixtures.json &&
                     python3 manage.py runserver 0.0.0.0:8001"
 
   # Examine the logs to find the token to login to the Jupyter notebook
@@ -72,7 +73,7 @@ services:
     depends_on:
       - db
     command: bash -c "sleep 10 &&
-                      pip3 install jupyter ipython django-extensions &&
+                      pip3 install jupyter ipython ipykernel django-extensions &&
                       python3 manage.py shell_plus --notebook"
 
  # This is npm + webpack, automatically rebuilding upon changes and serving on port 8002.
@@ -105,6 +106,9 @@ services:
 
   # NOTE: You may need to change the default Docker container memory to 4Gb when using
   #       this container, since `conda create` often exceeds 2Gb of RAM
+  #       Running with the docker-compose --compatibility flag should allow the
+  #       'deploy.resources.limits.memory' setting in this service to be honoured.
+  #
   # We use port 2222 for OpenSSH so we can easily expose it to the host for debugging
   # without a port clash with the host SSH server.
   fake-cluster:
@@ -123,6 +127,12 @@ services:
         max-size: "10k"
         max-file: "1"
     restart: "unless-stopped"
+    depends_on:
+      - django
+    deploy:
+      resources:
+        limits:
+          memory: "4000M"
 
   splash:
     image: scrapinghub/splash:latest

@@ -170,5 +170,5 @@ services:
 #    networks:
 #      - private
 #    command: bash -c "sleep 10 &&
-#      pip3 install jupyter ipython django-extensions &&
+#      pip3 install jupyter ipython ipykernel django-extensions &&
 #      python3 manage.py shell_plus --notebook"

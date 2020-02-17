@@ -4,8 +4,19 @@ _Laxy_ is a web application designed to simplify launching routine genomic pipel
 
 ![Job Page Screenshot](docs/screenshots/job_page.png)
 
+## Quickstart
+
+Laxy can be run under Docker Compose for local development and testing.
+
 ```bash
 git clone --recurse-submodules https://github.com/MonashBioinformaticsPlatform/laxy.git
+docker-compose -f docker-compose.yml -f docker-compose.local-dev.yml build
+docker-compose --compatibility -f docker-compose.yml -f docker-compose.local-dev.yml up -d
+
+# Wait for services to come online
+# Frontend is at: http://localhost:8002
+# Django admin is at: http://localhost:8001/admin
+# Default username/password is: admin/adminpass
 ```
 
 ## Frontend
