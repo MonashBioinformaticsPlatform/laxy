@@ -1643,6 +1643,15 @@ class JobView(JSONPatchMixin,
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+# Takes a string URL, and may replace the hostname:port with an environment setting
+# Useful when our IP for callbacks is different to the incoming web requests
+def fix_local_url(url_str):
+    my_ip = os.environ.get('LAXY_CALLBACK_IP')
+    if my_ip is not None:
+        url = urlparse(url_str)
+        url = url._replace(netloc=my_ip)
+        url_str = url.geturl()
+    return url_str
 
 class JobCreate(JSONView):
     queryset = Job.objects.all()
@@ -1726,14 +1735,14 @@ class JobCreate(JSONView):
             job_id = job.id
             job = Job.objects.get(id=job_id)
 
-            callback_url = request.build_absolute_uri(
-                reverse('laxy_backend:job', args=[job.id]))
+            callback_url = fix_local_url(request.build_absolute_uri(
+                reverse('laxy_backend:job', args=[job.id])))
 
-            job_event_url = request.build_absolute_uri(
-                reverse('laxy_backend:create_job_eventlog', args=[job.id]))
+            job_event_url = fix_local_url(request.build_absolute_uri(
+                reverse('laxy_backend:create_job_eventlog', args=[job.id])))
 
-            job_file_bulk_url = request.build_absolute_uri(reverse(
-                'laxy_backend:job_file_bulk', args=[job_id]))
+            job_file_bulk_url = fix_local_url(request.build_absolute_uri(reverse(
+                'laxy_backend:job_file_bulk', args=[job_id])))
 
             # port = request.META.get('SERVER_PORT', 8001)
             # # domain = get_current_site(request).domain

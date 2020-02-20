@@ -43,7 +43,7 @@ services:
                     python3 manage.py migrate --no-input &&
                     python3 manage.py shell -c \"from os import environ as env; from django.contrib.auth import get_user_model; username = env.get('LAXY_ADMIN_USERNAME', 'admin'); User = get_user_model(); User.objects.filter(username=username).count() or User.objects.create_superuser(username, env.get('LAXY_ADMIN_EMAIL', None), env.get('LAXY_ADMIN_PASSWORD', None));\" &&
                     python3 manage.py loaddata --app laxy_backend /app/docker/fake-cluster/fixtures.json &&
-                    python3 manage.py runserver 0.0.0.0:8001"
+                    LAXY_CALLBACK_IP=`hostname -i`:8001 python3 manage.py runserver 0.0.0.0:8001"
 
   # Examine the logs to find the token to login to the Jupyter notebook
   # (eg docker-compose logs -f docker-compose.yml -f docker-compose.dev.yml shell-notebook )
