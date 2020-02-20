@@ -89,6 +89,56 @@ class FileModelTest(TestCase):
         #     raise AssertionError("Lists are different lengths.")
         # return self.assertSetEqual(set(list1), set(list2), msg=msg)
 
+    def test_file_location(self):
+        url = "ftp://ftp.sra.ebi.ac.uk.example.com/vol1/fastq/SRR950/SRR950078/SRR950078_1.fastq.gz"
+        a_file = File(
+            location=url,
+            owner_id=self.user.id,
+        )
+
+        self.assertEqual(a_file.location, url)
+        # We shouldn't have any concrete FileLocation records in the db until the File is saved
+        self.assertEqual(a_file.locations.count(), 0)
+        # File.name is auto-populated from location
+        self.assertEqual(a_file.name, 'SRR950078_1.fastq.gz')
+
+        a_file.save()
+        self.assertEqual(a_file.location, url)
+        # After saving we should have an associated FileLocation record in the db
+        self.assertEqual(a_file.locations.count(), 1)
+        self.assertEqual(a_file.locations.all()[0].url, url)
+        self.assertEqual(a_file.name, 'SRR950078_1.fastq.gz')
+
+        # Now set a new location. Post-save, ensure it becomes the default.
+        # The old location should still maintained under File.locations
+        new_url = "ftp://ftp.monash.edu.au.example.com/pub/linux/debian/ls-lR.gz"
+        a_file.location = new_url
+        # Only one location in the database prior to save
+        self.assertEqual(a_file.locations.count(), 1)
+        a_file.save()
+        # Both locations are in the database after save
+        self.assertEqual(a_file.locations.count(), 2)
+        self.assertEqual(a_file.location, new_url)
+        self.assertListEqual(sorted([loc.url for loc in a_file.locations.all()]),
+                             sorted([url, new_url]))
+        self.assertTrue(a_file.locations.filter(url=new_url).first().default)
+
+    def test_file_explicit_name_overrides_inferred_name_from_location(self):
+        url = "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR950/SRR950078/SRR950078_2.fastq.gz"
+        a_file = File(
+            location=url,
+            owner_id=self.user.id,
+            name='a_file.fastq.gz'
+        )
+
+        self.assertEqual(a_file.name, 'a_file.fastq.gz')  # not 'SRR950078_1.fastq.gz'
+        self.assertEqual(a_file.path, '/vol1/fastq/SRR950/SRR950078')  # inferred automatically from location
+
+        # Nothing should change after saving, no weird side-effects
+        a_file.save()
+        self.assertEqual(a_file.name, 'a_file.fastq.gz')
+        self.assertEqual(a_file.path, '/vol1/fastq/SRR950/SRR950078')
+
     def test_filename_guessing(self):
         self.assertEqual(self.file_sra_ftp.name, 'SRR950078_1.fastq.gz')
         self.assertEqual(self.file_ftp.name, 'ls-lR.gz')

@@ -104,8 +104,8 @@ class DownloadTaskTest(TestCase):
         for f in file_objs:
             url = f.location
             md5 = f.checksum
-            self.assertTrue(File.objects.filter(location__exact=url,
-                                                checksum__exact=md5).exists())
+            self.assertTrue(File.objects.filter(locations__url__exact=url, checksum__exact=md5).exists())
+            self.assertIsNotNone(f.size)
 
     def test_ena_create_fileset(self):
         accession = 'PRJNA214799'

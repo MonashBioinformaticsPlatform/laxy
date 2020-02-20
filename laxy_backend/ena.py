@@ -238,14 +238,19 @@ def create_file_objects(urls: dict,
     for url, metadata in urls.items():
         name = Path(urlparse(url).path).name
         md5 = metadata['fastq_md5']
-        size = metadata['fastq_bytes']
+        size = metadata['fastq_bytes'][0]
         f = File(location=url, name=name,
                  checksum=f'md5:{md5}',
                  owner=owner,
                  metadata=metadata)
+        f.size = size
         file_objs.append(f)
 
-    File.objects.bulk_create(file_objs)
+    # we can't do a bulk operation when File.save() is overridden
+    # File.objects.bulk_create(file_objs)
+    with transaction.atomic():
+        for fo in file_objs:
+            fo.save()
 
     return file_objs
 

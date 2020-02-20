@@ -12,7 +12,9 @@ from pathlib import Path
 from urllib.parse import urlparse
 import base64
 from uuid import uuid4
-from io import StringIO, BytesIO
+from io import StringIO, BytesIO, BufferedRandom, BufferedReader
+import backoff
+import socket
 
 import rows
 from paramiko.rsakey import RSAKey
@@ -838,7 +840,7 @@ class FileLocation(UUIDModel):
     #       exactly the same authentication values)
     # authentication = JSONField(default=OrderedDict)
 
-    def set_as_default(self, save=True):
+    def set_as_default(self, save=True) -> 'QuerySet[FileLocation]':
         """
         Set this FileLocation record as the 'default', ensuring all others
         are set to default=False.
@@ -848,7 +850,7 @@ class FileLocation(UUIDModel):
         :return: A queryset of all FileLocations for this file. If using
                   save=False, you can explicitly .save() the objects returned
                   here.
-        :rtype: QuerySet
+        :rtype: QuerySet[FileLocation]
         """
         with transaction.atomic():
             filelocs = FileLocation.objects.filter(file=self.file)
@@ -914,6 +916,9 @@ class File(Timestamped, UUIDModel):
 
     # metadata = JSONField(load_kwargs={'object_pairs_hook': OrderedDict})
 
+    # This stores the location string (URL) when it's updated on the instance, prior to saving
+    _dirty_location: Union[str, None] = None
+
     # There is no direct link from File->Job, instead we use FileSet->Job.
     # This way, Files represent a single unique file (on disk, or at a URL),
     # and FileSets can represent a set of files used
@@ -922,26 +927,42 @@ class File(Timestamped, UUIDModel):
     #                  on_delete=models.CASCADE,
     #                  related_name='files')
 
+    def save(self, *args, **kwargs):
+        if self._dirty_location is not None:
+            with transaction.atomic():
+                fileloc = self.locations.filter(url=self._dirty_location).first()
+                if fileloc is None:
+                    # Catch the case where the File doesn't exist yet, ensure it's
+                    # created so that FileLocation.file ForeignKey constraint is satisfied
+                    super().save(*args, **kwargs)
+                    fileloc = FileLocation(url=self._dirty_location, file=self)
+
+                fileloc.set_as_default(save=True)
+                self._dirty_location = None
+        else:
+            super().save(*args, **kwargs)
+
     @property
     def location(self):
+        if self._dirty_location is not None:
+            return self._dirty_location
+
         fileloc = self.locations.filter(default=True).first()
         if fileloc:
             return fileloc.url
 
+        return None
+
     @location.setter
     def location(self, url):
-        # Catch the case where the File doesn't exist yet, ensure it's
-        # created so that FileLocation.file ForeignKey constraint is satisfied
-        if self._state.adding or self.pk is None:
-            self.save()
+        self._dirty_location = url
 
-        # Set the FileLocation with this URL to the default, creating it
-        # if it doesn't yet exist
-        fileloc = self.locations.filter(url=url).first()
-        if fileloc is None:
-            fileloc = FileLocation(url=url, file=self)
-
-        fileloc.set_as_default(save=True)
+        # If the instance isn't yet
+        if self._state.adding:
+            if not self.name:
+                self.name = str(Path(urlparse(url).path).name)
+            if not self.path:
+                self.path = str(Path(urlparse(url).path).parent)
 
     def remove_location(self, url):
         fileloc = self.locations.filter(url=url).first()
@@ -953,13 +974,13 @@ class File(Timestamped, UUIDModel):
 
     def name_from_location(self):
         try:
-            return Path(urlparse(self.location).path).name
+            return str(Path(urlparse(self.location).path).name)
         except:
             return None
 
     def path_from_location(self):
         try:
-            return Path(urlparse(self.location).path).parent
+            return str(Path(urlparse(self.location).path).parent)
         except:
             return None
 
@@ -1096,12 +1117,14 @@ class File(Timestamped, UUIDModel):
         return get_storage_class_for_location(self.location)
 
     @property
-    def file(self) -> Union[typing.IO[AnyStr], None]:
+    def file(self) -> Union[None, typing.IO[AnyStr], BufferedRandom, BufferedReader]:
+        # return self.file_at_location(self.location)
         from laxy_backend.tasks.download import request_with_retries
 
         # assert self.location is not None and str(self.location).strip() != '', \
         #     f"File {self.id} location is empty. This isn't allowed and shouldn't ever happen."
-        if self.location is None or str(self.location).strip() == '':
+        if ((self.location is None or str(self.location).strip() == '')
+                and not self._state.adding):
             logger.warning(f"File {self.id} location is empty. "
                            f"This isn't allowed and shouldn't ever happen.")
             return None
@@ -1109,11 +1132,12 @@ class File(Timestamped, UUIDModel):
         url = urlparse(self.location)
         scheme = url.scheme
         if scheme == 'laxy+sftp':
+            buffer_size = 8192
             storage = self._get_storage_class()
             file_path = self._abs_path_on_compute()
             filelike = storage.open(file_path)
             # setattr(filelike, 'name', self.name)
-            return filelike
+            return BufferedRandom(filelike, buffer_size=buffer_size)
 
         # TODO: This needs to be carefully reworked or removed. The intention would be to refer to a mountpoint
         #       relative to the Laxy backend server filesystem (eg an NFS mount), however there is scope for
@@ -1131,7 +1155,7 @@ class File(Timestamped, UUIDModel):
                 auth=None)
             filelike = response.raw
             filelike.decode_content = True
-            return filelike
+            return BufferedReader(filelike)
 
         else:
             raise NotImplementedError(f'Cannot provide file-like object for scheme: {scheme}')
@@ -1157,11 +1181,15 @@ class File(Timestamped, UUIDModel):
                 size = int(self.file.size)
                 # cache on demand
                 self.metadata['size'] = size
-                self.save()
+                self.save(update_fields=["metadata"])
             except NotImplementedError as ex:
                 pass
 
         return size
+
+    @size.setter
+    def size(self, value: int):
+        self.metadata['size'] = int(value)
 
     @property
     def deleted(self):
@@ -1191,7 +1219,7 @@ def auto_file_fields(sender, instance, raw, using, update_fields, **kwargs):
     """
     Set name and path on a File based on the location URL, if not specified.
     """
-    if instance._state.adding is True:
+    if instance._state.adding and instance.location is not None:
         # Derive a name and path based on the location URL
         if not instance.name:
             instance.name = instance.name_from_location()
