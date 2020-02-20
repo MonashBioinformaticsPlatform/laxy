@@ -43,7 +43,7 @@ dependencies:
   - rnasik
   - mash
   - qualimap=2.2.2b=0
-  - pandas
+  - pandas<1
   - pip:
     # General run_job.sh dependency, for the laxydl downloader tool
     - git+https://github.com/MonashBioinformaticsPlatform/laxy@master#egg=laxy_downloader&subdirectory=laxy_downloader
