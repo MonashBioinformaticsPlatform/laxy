@@ -1796,8 +1796,15 @@ class JobCreate(JSONView):
             # reference_genome_id = "Saccharomyces_cerevisiae/Ensembl/R64-1-1"
             reference_genome_id = job.params.get('params').get('genome')
 
+            # TODO: Validate that pipeline_version and pipeline_aligner are
+            #       one of the valid values, as per reference_genome_id
+            #       We really need a consistent way / pattern to do this server-side 'form validation'
+            #       maybe with a DRF Serializer.
+            #       (probably the frontend should request valid values from the backend to populate forms,
+            #        and then use the same data to validate serverside, as per REFERENCE_GENOME_MAPPINGS)
             default_pipeline_version = '1.5.4'  # '1.5.1+c53adf6'  # '1.5.1'
             pipeline_version = job.params.get('params').get('pipeline_version', default_pipeline_version)
+            pipeline_aligner = job.params.get('params').get('pipeline_aligner', 'star')
 
             # TODO: This ID check should probably move into the PipelineRun
             #       params serializer.
@@ -1822,6 +1829,7 @@ class JobCreate(JSONView):
                 JOB_INPUT_STAGED=sh_bool(False),
                 REFERENCE_GENOME=shlex.quote(reference_genome_id),
                 PIPELINE_VERSION=shlex.quote(pipeline_version),
+                PIPELINE_ALIGNER=shlex.quote(pipeline_aligner),
                 QUEUE_TYPE=job.compute_resource.queue_type or 'local',
                 # BDS_SINGLE_NODE=sh_bool(False),
                 SLURM_ACCOUNT=slurm_account or '',

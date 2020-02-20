@@ -49,8 +49,8 @@
                 </md-switch>
                 <transition name="fade">
                     <md-layout v-if="show_advanced">
-                        <md-input-container v-if="show_advanced">
-                            <label for="genome">Pipeline version</label>
+                        <md-input-container>
+                            <label for="pipeline_version">Pipeline version</label>
                             <md-select name="pipeline_version"
                                        id="pipeline_version"
                                        v-model="pipeline_version">
@@ -58,6 +58,18 @@
                                            :key="version"
                                            :value="version">
                                     {{ version }}
+                                </md-option>
+                            </md-select>
+                        </md-input-container>
+                        <md-input-container>
+                            <label for="pipeline_aligner">Aligner</label>
+                            <md-select name="pipeline_aligner"
+                                       id="pipeline_aligner"
+                                       v-model="pipeline_aligner">
+                                <md-option v-for="aligner in pipeline_aligners"
+                                           :key="aligner.text"
+                                           :value="aligner.value">
+                                    {{ aligner.text }}
                                 </md-option>
                             </md-select>
                         </md-input-container>
@@ -178,6 +190,10 @@
         }
 
         public pipeline_versions = ['1.5.3', '1.5.2', '1.5.3-laxydev', '1.5.4'];
+        public pipeline_aligners = [
+            {text: 'STAR', value: 'star'},
+            {text: 'BWA-MEM', value: 'bwa'},
+        ];
 
         public _samples: SampleCartItems;
         get samples(): SampleCartItems {
@@ -216,6 +232,16 @@
         set pipeline_version(version: string) {
             let state = Object.assign({}, this.$store.state.pipelineParams);
             state.pipeline_version = version;
+            this.$store.commit(SET_PIPELINE_PARAMS, state);
+        }
+
+        get pipeline_aligner() {
+            return this.$store.getters.pipelineParams.pipeline_aligner;
+        }
+
+        set pipeline_aligner(aligner: string) {
+            let state = Object.assign({}, this.$store.state.pipelineParams);
+            state.pipeline_aligner = aligner;
             this.$store.commit(SET_PIPELINE_PARAMS, state);
         }
 

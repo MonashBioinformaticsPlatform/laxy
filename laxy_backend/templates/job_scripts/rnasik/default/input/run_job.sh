@@ -23,6 +23,7 @@ readonly JOB_FILE_REGISTRATION_URL="{{ JOB_FILE_REGISTRATION_URL }}"
 readonly JOB_INPUT_STAGED="{{ JOB_INPUT_STAGED }}"
 readonly REFERENCE_GENOME="{{ REFERENCE_GENOME }}"
 readonly PIPELINE_VERSION="{{ PIPELINE_VERSION }}"
+readonly PIPELINE_ALIGNER="{{ PIPELINE_ALIGNER }}"
 readonly JOB_PATH=${PWD}
 readonly PIPELINE_CONFIG="${JOB_PATH}/input/pipeline_config.json"
 readonly CONDA_BASE="${JOB_PATH}/../miniconda3"
@@ -860,7 +861,7 @@ while [[ "${EXIT_CODE}" -ne 0 ]] && [[ ${RETRY_COUNT} -le ${MAX_RETRIES} ]]; do
         ${PREFIX_JOB_CMD} \
            "RNAsik \
                -configFile ${JOB_PATH}/input/sik.config \
-               -align star \
+               -align ${PIPELINE_ALIGNER} \
                -fastaRef ${GENOME_FASTA} \
                ${GENOME_INDEX_ARG} \
                -fqDir ../input \
@@ -874,7 +875,7 @@ while [[ "${EXIT_CODE}" -ne 0 ]] && [[ ${RETRY_COUNT} -le ${MAX_RETRIES} ]]; do
         ${PREFIX_JOB_CMD} \
            "RNAsik \
                -configFile ${JOB_PATH}/input/sik.config \
-               -align star \
+               -align ${PIPELINE_ALIGNER} \
                -fastaRef ${GENOME_FASTA} \
                ${GENOME_INDEX_ARG} \
                -fqDir ../input \

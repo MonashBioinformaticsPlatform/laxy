@@ -63,6 +63,7 @@ export const Store = new Vuex.Store({
                 genome: AVAILABLE_GENOMES[0].id,
                 description: '',
                 pipeline_version: '1.5.4',
+                pipeline_aligner: 'star',
             },
             pipelineParams_valid: false,
             jobs: {total: 0, jobs: [] as ComputeJob[]} as JobsPage,
