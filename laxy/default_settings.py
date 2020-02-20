@@ -253,7 +253,7 @@ except ImproperlyConfigured:
 # Database
 # https://docs.djangoproject.com/en/1.11/ref/settings/#databases
 DATABASES = {
-    'default': default_env.db('%sDATABASE_URL' % APP_ENV_PREFIX,
+    'default': default_env.db(f'{APP_ENV_PREFIX}DATABASE_URL',
                               default='postgres:///postgres:postgres@db:5432')
 }
 
