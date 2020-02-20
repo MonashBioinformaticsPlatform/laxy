@@ -17,7 +17,7 @@ EXPOSE 22/tcp
 VOLUME /scratch
 
 RUN apt-get -y update && \
-    apt-get -y install vim curl openssh-server slurm-wlm munge slurm-wlm-doc && \
+    apt-get -y install vim curl openssh-server slurm-wlm munge slurm-wlm-doc git && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -29,6 +29,9 @@ RUN mkdir -p /var/log/slurm /var/run/slurmd /var/lib/slurmd && \
     chmod a+rw /var/run/slurmd /var/log/slurm /var/lib/slurmd
 
 RUN mkdir -p /scratch/laxy
+
+ADD sik.config /scratch/laxy/sik.config
+RUN bash -c 'echo -e "export LC_ALL=C.UTF-8\nexport LANG=C.UTF-8" > /etc/profile.d/00-set-locale.sh'
 
 # CMD service slurmctld start && service slurmd start && tail -F /var/log/slurm/slurmctld.log
 CMD /etc/init.d/ssh start && /etc/init.d/munge start && \
