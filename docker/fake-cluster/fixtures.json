@@ -11,7 +11,7 @@
     "gateway_server": null,
     "disposable": false,
     "name": "fake-cluster",
-    "priority": 1000,
+    "priority": 1,
     "extra": {
       "base_dir": "/scratch/laxy",
       "username": "root",
