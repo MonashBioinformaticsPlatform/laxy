@@ -111,13 +111,13 @@ fi
 function add_sik_config() {
    send_event "JOB_INFO" "Configuring RNAsik (sik.config)."
 
-   # Find that ComputeResource specific sik.config, and if there is none, use the default.
-   # Always copy it to the job input directory so preserve it.
+   # Find the ComputeResource specific sik.config, and if there is none, use the default.
+   # Always copy it to the job input directory to preserve it.
     local SIK_CONFIG
 
     SIK_CONFIG="${JOB_PATH}/../sik.config"
     if [[ ! -f "${SIK_CONFIG}" ]]; then
-        SIK_CONFIG="$(dirname RNAsik)/../opt/rnasik-${PIPELINE_VERSION}/configs/sik.config"
+        SIK_CONFIG="$(dirname $(which RNAsik))/../opt/rnasik-${PIPELINE_VERSION}/configs/sik.config"
     fi
 
     # special lower resource sik.config for yeast
@@ -227,6 +227,8 @@ function init_conda_env() {
 
         # First we update conda itself
         conda update --yes -n base conda || return 1
+        # Put git and curl in the base env, since we generally need them
+        conda install --yes -n base curl git || return 1
 
         # Create an empty environment
         # conda create --yes -m -n "${env_name}" || return 1
