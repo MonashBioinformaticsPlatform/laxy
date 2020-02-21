@@ -12,9 +12,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 import base64
 from uuid import uuid4
-from io import StringIO, BytesIO, BufferedRandom, BufferedReader
-import backoff
-import socket
+from io import StringIO, BytesIO
 
 import rows
 from paramiko.rsakey import RSAKey
@@ -1117,7 +1115,7 @@ class File(Timestamped, UUIDModel):
         return get_storage_class_for_location(self.location)
 
     @property
-    def file(self) -> Union[None, typing.IO[AnyStr], BufferedRandom, BufferedReader]:
+    def file(self) -> Union[None, typing.IO[AnyStr]]:
         # return self.file_at_location(self.location)
         from laxy_backend.tasks.download import request_with_retries
 
@@ -1137,7 +1135,7 @@ class File(Timestamped, UUIDModel):
             file_path = self._abs_path_on_compute()
             filelike = storage.open(file_path)
             # setattr(filelike, 'name', self.name)
-            return BufferedRandom(filelike, buffer_size=buffer_size)
+            return filelike
 
         # TODO: This needs to be carefully reworked or removed. The intention would be to refer to a mountpoint
         #       relative to the Laxy backend server filesystem (eg an NFS mount), however there is scope for
@@ -1155,7 +1153,7 @@ class File(Timestamped, UUIDModel):
                 auth=None)
             filelike = response.raw
             filelike.decode_content = True
-            return BufferedReader(filelike)
+            return filelike
 
         else:
             raise NotImplementedError(f'Cannot provide file-like object for scheme: {scheme}')
