@@ -116,16 +116,23 @@ if (process.env.NYAN === 'true') {
     ]);
 }
 
+// Return the JSONized value of an environment variable if it is truthy,
+// otherwise return the default value
+function get_env(envar, default_value) {
+    const value = process.env[envar];
+    return (value && JSON.stringify(value)) || JSON.stringify(default_value);
+}
+
 module.exports.plugins = (module.exports.plugins || []).concat([
     new webpack.DefinePlugin({
         'process.env': {
             // NODE_ENV is used in some dependencies and breaks things if replaced via webpack DefinePlugin pre-processing.
             // NODE_ENV: JSON.stringify(process.env.NODE_ENV) || JSON.stringify('production'),
             LAXY_ENV: JSON.stringify(process.env.LAXY_ENV) || JSON.stringify(process.env.NODE_ENV) || JSON.stringify('prod'),
-            LAXY_FRONTEND_API_URL: JSON.stringify(process.env.LAXY_FRONTEND_API_URL) || JSON.stringify('http://localhost:8001'),
-            LAXY_FRONTEND_URL: JSON.stringify(process.env.LAXY_FRONTEND_URL) || JSON.stringify('http://localhost:8002'),
-            LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID: JSON.stringify(process.env.LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID) || JSON.stringify(''),
-            LAXY_VERSION: JSON.stringify(process.env.GIT_COMMIT) || JSON.stringify('unspecified'),
+            LAXY_FRONTEND_API_URL: get_env('LAXY_FRONTEND_API_URL', 'http://localhost:8001'),
+            LAXY_FRONTEND_URL: get_env('LAXY_FRONTEND_URL','http://localhost:8002'),
+            LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID: get_env('LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID',''),
+            LAXY_VERSION: get_env('GIT_COMMIT','unspecified'),
         }
     }),
 ]);

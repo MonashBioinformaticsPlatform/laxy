@@ -1644,6 +1644,43 @@ class JobView(JSONPatchMixin,
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+def get_abs_backend_url(path_query_frag: str, request: Union[None, Request] = None) -> str:
+    """
+    Given a path?query=string#and_fragment (eg produced by the django 'reverse' function).
+    return the absolute URL to the API backend.
+
+    Optionally, a request object can be provided to help guess the scheme, FQDN or hostname and port.
+
+    If the FRONTEND_API_URL setting (LAXY_FRONTEND_API_URL environment variable) is defined,
+    this is used as the hostname:port. If no scheme is specified in FRONTEND_API_URL, the
+    USE_SSL setting determines the scheme.
+
+    :param path_query_frag:
+    :type path_query_frag:
+    :param request:
+    :type request:
+    :return:
+    :rtype:
+    """
+    # return urlparse(''.join(settings.LAXY_FRONTEND_API_URL, path_query_frag)).geturl()
+
+    api_baseurl = settings.FRONTEND_API_URL
+    if request is None and not api_baseurl:
+        raise ValueError('LAXY_FRONTEND_API_URL is not set; a request arg must be provided.')
+
+    if request is not None:
+        url = urlparse(request.build_absolute_uri(path_query_frag))
+    if api_baseurl:
+        apiurl = urlparse(api_baseurl)
+        url = url._replace(netloc=apiurl.netloc)
+        if apiurl.scheme:
+            url = url._replace(scheme=apiurl.scheme)
+    if not url.scheme:
+        url = url._replace(scheme='https' if settings.USE_SSL else 'http')
+
+    return url.geturl()
+
+
 class JobCreate(JSONView):
     queryset = Job.objects.all()
     serializer_class = JobSerializerRequest
@@ -1726,14 +1763,17 @@ class JobCreate(JSONView):
             job_id = job.id
             job = Job.objects.get(id=job_id)
 
-            callback_url = request.build_absolute_uri(
-                reverse('laxy_backend:job', args=[job.id]))
+            callback_url = get_abs_backend_url(
+                reverse('laxy_backend:job', args=[job.id]),
+                request)
 
-            job_event_url = request.build_absolute_uri(
-                reverse('laxy_backend:create_job_eventlog', args=[job.id]))
+            job_event_url = get_abs_backend_url(
+                reverse('laxy_backend:create_job_eventlog', args=[job.id]),
+                request)
 
-            job_file_bulk_url = request.build_absolute_uri(reverse(
-                'laxy_backend:job_file_bulk', args=[job_id]))
+            job_file_bulk_url = get_abs_backend_url(
+                reverse('laxy_backend:job_file_bulk', args=[job_id]),
+                request)
 
             # port = request.META.get('SERVER_PORT', 8001)
             # # domain = get_current_site(request).domain

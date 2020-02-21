@@ -43,6 +43,21 @@ class PrefixedEnv(environ.Env):
                             for k, v in scheme.items()])
 
 
+def permissive_json_loads(text: str):
+    """
+    Like json.loads, but returns an empty dict for an empty or whitespace string.
+
+    :param text:
+    :type text:
+    :return:
+    :rtype:
+    """
+    text = text.strip()
+    if text:
+        return json.loads(text)
+    else:
+        return {}
+
 # Build paths inside the project like this: app_root.path('templates')
 app_root = environ.Path(__file__) - 2
 BASE_DIR = str(app_root)
@@ -70,6 +85,7 @@ default_env = PrefixedEnv(
     STATIC_URL=(str, '/static/'),
     MEDIA_ROOT=(str, str(app_root.path('uploads')())),
     MEDIA_URL=(str, 'uploads/'),
+    FRONTEND_API_URL=(str, ''),
     FILE_CACHE_PATH=(str, tempfile.gettempdir()),
     SOCIAL_AUTH_GOOGLE_OAUTH2_KEY=(str, ''),
     SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET=(str, ''),
@@ -83,7 +99,7 @@ default_env = PrefixedEnv(
     WEB_SCRAPER_BACKEND=(str, 'simple'),
     WEB_SCRAPER_SPLASH_HOST=(str, 'http://localhost:8050'),
     DEGUST_URL=(str, 'http://degust.erc.monash.edu'),
-    EMAIL_DOMAIN_ALLOWED_COMPUTE=(json.loads, {"*": ["*"]}),
+    EMAIL_DOMAIN_ALLOWED_COMPUTE=(permissive_json_loads, {"*": ["*"]}),
 )
 
 
@@ -182,6 +198,7 @@ if SENTRY_DSN:
 DEFAULT_JOB_EXPIRY = env('DEFAULT_JOB_EXPIRY')
 
 USE_SSL = env('USE_SSL')
+FRONTEND_API_URL = env('FRONTEND_API_URL')
 
 ADMIN_EMAIL = env('ADMIN_EMAIL')
 ADMIN_USERNAME = env('ADMIN_USERNAME')
