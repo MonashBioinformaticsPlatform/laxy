@@ -228,7 +228,8 @@ function init_conda_env() {
         # First we update conda itself
         conda update --yes -n base conda || return 1
         # Put git and curl in the base env, since we generally need them
-        conda install --yes -n base curl git || return 1
+        # We need gcc to compile some pip dependencies for laxydl, so grab that too :/
+        conda install --yes -n base curl git gcc_linux-64 || return 1
 
         # Create an empty environment
         # conda create --yes -m -n "${env_name}" || return 1

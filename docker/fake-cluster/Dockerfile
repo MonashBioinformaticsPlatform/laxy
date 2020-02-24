@@ -17,7 +17,7 @@ EXPOSE 22/tcp
 VOLUME /scratch
 
 RUN apt-get -y update && \
-    apt-get -y install vim curl openssh-server slurm-wlm munge slurm-wlm-doc git && \
+    apt-get -y install vim curl openssh-server slurm-wlm munge slurm-wlm-doc git build-essential && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
