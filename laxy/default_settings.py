@@ -289,7 +289,6 @@ CELERY_RESULT_BACKEND = 'django-db'
 # CELERY_RESULT_BACKEND = BROKER_URL
 if DEBUG:
     CELERY_ALWAYS_EAGER = True
-    logger.warning("`CELERY_ALWAYS_EAGER = True` seems to prevent tasks from starting ?")
 # CELERY_IGNORE_RESULT = True
 
 CELERYBEAT_SCHEDULE = {
