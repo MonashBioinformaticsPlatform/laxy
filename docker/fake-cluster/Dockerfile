@@ -5,6 +5,7 @@ FROM ubuntu:18.04
 # Start like:
 #   docker run -p 2222:22 -v /tmp/laxy:/scratch/laxy fake-cluster:latest
 # Then:
+#   chmod 600 docker/fake-cluster/id_rsa
 #   ssh -o StrictHostKeyChecking=no -o StrictHostKeyChecking=no \
 #       -i docker/fake-cluster/id_rsa -p 2222 root@localhost
 #   sbatch --wrap="echo bla && sleep 10 && echo foo"
