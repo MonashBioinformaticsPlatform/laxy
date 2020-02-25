@@ -1,13 +1,21 @@
-FROM alpine:3.8
+FROM python:3.6
 
-RUN apk upgrade && apk add --no-cache acme-client openssl
-ADD update-ssl-cert.sh /etc/periodic/daily/update-ssl-cert.sh
-RUN chmod +x /etc/periodic/daily/update-ssl-cert.sh
+RUN apt update && \
+    apt install --yes cron anacron && \
+    apt purge --yes exim4 exim4-base exim4-config exim4-daemon-light && \
+    apt autoremove && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+# This is required for anacron to run. Also remove cron jobs we don't really need
+RUN echo exit 0 > /usr/sbin/policy-rc.d && \
+    rm -f /etc/cron.daily/apt-compat /etc/cron.daily/dpkg
 
-# Better to not do this and leave it up to the cron job, in case
-# the container gets restarted many times in quick succession and exceeds
-# the Let's Encrypt API rate limits
-# CMD ["/etc/periodic/daily/update-ssl-cert.sh"]
+RUN pip3 install -U simp-le-client==0.17.0
+ADD update-ssl-cert.sh /etc/cron.daily/update-ssl-cert.sh
+RUN chmod +x /etc/cron.daily/update-ssl-cert.sh
 
-# Run cron in the foreground
-CMD ["crond", "-l2", "-f"]
+# - Run the cron daemon (which calls anacron periodically)
+# - Run pending anacron jobs immediately
+# - If the key doesn't exist, try to get one immediately
+# - Tail the log
+CMD cron && anacron -n && ([ -f /certs/key.pem ] || /etc/cron.daily/update-ssl-cert.sh) && touch /var/log/ssl-certs-cron.log && tail -f /var/log/ssl-certs-cron.log

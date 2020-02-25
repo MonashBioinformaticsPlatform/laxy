@@ -112,6 +112,12 @@ services:
       sh -c "
         echo -e '#!/bin/sh\n/usr/sbin/nginx -s reload' >/etc/periodic/daily/nginx-reload-config &&
         chmod +x /etc/periodic/daily/nginx-reload-config &&
+
+        until [ -f /certs/fullchain.pem ] && [ -f /certs/key.pem ]; do
+          echo `date`': Waiting for SSL certificates ..';
+          sleep 5;
+        done;
+
         /usr/sbin/nginx -g 'daemon off;'
       "
     deploy:
@@ -121,6 +127,8 @@ services:
       # we need port 80 so nginx can redirect to 443, also for Let's Encrypt http-01 challenge
       - "80:80"
       - "443:443"
+    depends_on:
+      - ssl-certs-cron
     networks:
       - private
     volumes:
@@ -133,8 +141,21 @@ services:
     environment:
       # No quotes !
       - ACME_SSL_DOMAINS=${ACME_SSL_DOMAINS-laxy.io api.laxy.io}
+      - LAXY_ADMIN_EMAIL=${LAXY_ADMIN_EMAIL-}
     # Run certificate renewel/creation on startup if missing. Then run crond in foreground forever.
-    command: sh -c "/etc/periodic/daily/update-ssl-cert.sh; crond -l2 -f"
+#    command: >
+#      /bin/bash -c "
+#        [[ ! -f /certs/key.pem ]] && \
+#        cron && \
+#        anacron && \
+#        touch /var/log/ssl-certs-cron.log && \
+#        tail -f /var/log/ssl-certs-cron.log
+#      "
+    deploy:
+      restart_policy:
+        delay: 5s
+        max_attempts: 3
+        window: 120s
     volumes:
       # we need to write access to allow /usr/share/nginx/html creation of .well-known/acme-challenge for
       # Let's Encrypt the http-01 challenge
