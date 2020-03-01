@@ -108,6 +108,24 @@ if [[ "${QUEUE_TYPE}" == "local" ]]; then
     echo $$ >>"${JOB_PATH}/job.pids"
 fi
 
+# TODO: Maybe this should be a called in a trap statement near the top of the script eg:
+# trap "rm -f ${AUTH_HEADER_FILE}" EXIT
+function remove_secrets() {
+    if [[ ${DEBUG} != "yes" ]]; then
+      rm -f "${AUTH_HEADER_FILE}"
+    fi
+}
+
+function update_permissions() {
+    send_event "JOB_INFO" "Updating Unix file permissions for job outputs on compute node."
+
+    # This can be used to update the permission on files after job completion
+    # (eg if you want to automatically share files locally with a group of users on a compute resource).
+    chmod "${JOB_DIR_PERMS}" "${JOB_PATH}"
+    find "${JOB_PATH}" -type d -exec chmod "${JOB_DIR_PERMS}" {} \;
+    find "${JOB_PATH}" -type f -exec chmod "${JOB_FILE_PERMS}" {} \;
+}
+
 function add_sik_config() {
    send_event "JOB_INFO" "Configuring RNAsik (sik.config)."
 
@@ -167,7 +185,7 @@ function send_event() {
 }
 
 function send_job_finished() {
-    local exit_code=$1
+    local _exit_code=$1
     curl -X PATCH \
          ${CURL_INSECURE} \
          -H "Content-Type: application/json" \
@@ -179,8 +197,28 @@ function send_job_finished() {
          --max-time 10 \
          --retry 8 \
          --retry-max-time 600 \
-         -d '{"exit_code":'${exit_code}'}' \
+         -d '{"exit_code":'${_exit_code}'}' \
          "${JOB_COMPLETE_CALLBACK_URL}"
+}
+
+function send_error() {
+    local _step="$1"
+    local _reason="$2"
+    local _exit_code=${3:-$?}
+    send_event "JOB_ERROR" \
+               "Error - ${_reason} (${_step})" \
+               '{"exit_code":'${_exit_code}',"step":"'${_step}'","reason":"'${_reason}'"}'
+}
+
+function fail_job() {
+    local _step="$1"
+    local _reason="$2"
+    local _exit_code=${3:-$?}
+    send_error "${_step}" "${_reason}" ${_exit_code}
+    send_job_finished ${_exit_code}
+    remove_secrets
+    update_permissions || true
+    exit ${_exit_code}
 }
 
 function send_job_metadata() {
@@ -624,16 +662,6 @@ function set_annotation_file() {
     fi
 }
 
-function update_permissions() {
-    send_event "JOB_INFO" "Updating Unix file permissions for job outputs on compute node."
-
-    # This can be used to update the permission on files after job completion
-    # (eg if you want to automatically share files locally with a group of users on a compute resource).
-    chmod "${JOB_DIR_PERMS}" "${JOB_PATH}"
-    find "${JOB_PATH}" -type d -exec chmod "${JOB_DIR_PERMS}" {} \;
-    find "${JOB_PATH}" -type f -exec chmod "${JOB_FILE_PERMS}" {} \;
-}
-
 function run_mash_screen() {
     # This is additional 'pre-pipeline' step - might make sense integrating it as an option to RNAsik
     # in the future.
@@ -764,32 +792,32 @@ GENOME_FASTA="${REFERENCE_BASE}/${REFERENCE_GENOME}/Sequence/WholeGenomeFasta/ge
 #### Setup and import a Conda environment
 ####
 
-install_miniconda
+install_miniconda || fail_job 'install_miniconda' '' $?
 
 # We import the environment early to ensure we have a recent version of curl (>=7.55)
-init_conda_env "rnasik" "${PIPELINE_VERSION}" || exit 1
+init_conda_env "rnasik" "${PIPELINE_VERSION}" || fail_job 'init_conda_env' '' $?
 
-update_laxydl
+update_laxydl || send_error 'update_laxydl' '' $?
 
 # get_reference_data_aws
-get_igenome_aws "${REFERENCE_GENOME}" || exit 1
+get_igenome_aws "${REFERENCE_GENOME}" || fail_job 'get_igenome_aws' '' $?
 
 # Set the ANNOTATION_FILE global variable based on presence of genes.gtf vs. genes.gff
 set_annotation_file
 
 # Make a copy of the bds.config in the $JOB_PATH, possibly modified for SLURM
-setup_bds_config
+setup_bds_config || send_error 'setup_bds_config' '' $?
 
 # Make a copy of the sik.config into $JOB_PATH/input/sik.config
-add_sik_config
+add_sik_config || send_error 'add_sik_config' '' $?
 
 ####
 #### Stage input data ###
 ####
 
-download_input_data || exit 1
+download_input_data || fail_job 'download_input_data' '' $?
 
-capture_environment_variables
+capture_environment_variables || true
 
 cd "${JOB_PATH}/output"
 
@@ -799,7 +827,7 @@ cd "${JOB_PATH}/output"
 
 send_event "JOB_PIPELINE_STARTING" "Pipeline starting."
 
-run_mash_screen
+run_mash_screen || true
 
 # Don't exit on error, since we want to capture exit code and do an HTTP
 # request with curl upon failure
@@ -808,7 +836,7 @@ set +o errexit
 # quick and dirty detection of paired-end or not
 PAIRIDS=""
 EXTN=".fastq.gz"
-detect_pairs
+detect_pairs || fail_job 'detect_pairs' '' $?
 
 set_genome_index_arg
 
@@ -893,8 +921,4 @@ register_files || true
 send_job_finished "${EXIT_CODE}"
 
 # Extra security: Remove the access token now that we don't need it anymore
-if [[ ${DEBUG} != "yes" ]]; then
-  # TODO: Maybe this should be a trap statement near the top of the script eg:
-  # trap "rm -f ${AUTH_HEADER_FILE}" EXIT
-  rm "${AUTH_HEADER_FILE}"
-fi
+remove_secrets
