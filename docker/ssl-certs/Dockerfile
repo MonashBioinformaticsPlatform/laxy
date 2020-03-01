@@ -1,4 +1,4 @@
-FROM alpine:3.8
+FROM alpine:3.11.3
 
 RUN apk upgrade && apk add --no-cache acme-client openssl
 ADD update-ssl-cert.sh /etc/periodic/daily/update-ssl-cert.sh
