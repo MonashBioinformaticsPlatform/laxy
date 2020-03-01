@@ -52,7 +52,7 @@ git+https://github.com/jschneier/django-storages.git@867050a222b487dc9a1cbc718b2
 django-timezone-field==3.0
 djangorestframework==3.9.1
 djangorestframework-jwt==1.11.0
-docutils==0.14
+docutils==0.16
 enasearch==0.2.0
 ephem==3.7.6.0
 Fabric3==1.14.post1
