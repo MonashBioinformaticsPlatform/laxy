@@ -1,0 +1,72 @@
+version: '3.7'
+
+services:
+
+  db:
+    ports:
+      # postgres accessible on the host at 5433 for debugging
+      - "5433:5432"
+
+  sut:
+    image: laxy:dev
+    build:
+      context: .
+      dockerfile: ./docker/laxy/Dockerfile
+    environment:
+      - LAXY_DEBUG=yes
+      - LAXY_SSL=no
+      - LAXY_DATABASE_URL=postgres://postgres:postgres@db:5432/postgres
+      - LAXY_BROKER_URL=amqp://guest@rabbitmq
+      - LAXY_ADMIN_EMAIL=admin@example.com
+      - LAXY_ADMIN_USERNAME=admin
+      - LAXY_ADMIN_PASSWORD=adminpass
+      - LAXY_SECRET_KEY=_do_please_change_this_in_production_
+      # For pytest
+      - DJANGO_SETTINGS_MODULE=laxy.settings
+    # volumes:
+    #   - .:/app
+    # Django app is publicly accessible without reverse proxy
+    # ports:
+    #   - "8001:8001"
+    depends_on:
+      - db
+    # command: python3 ./manage.py test
+    command: bash -c "pip install -U -r requirements-dev.txt && pytest"
+
+  ##
+  # Disabled services not required for simple local dev, overridden from base docker-compose.yml
+  ##
+
+  # For simple local development, we run in Django debug mode (LAXY_DEBUG=yes) with CELERY_ALWAYS_EAGER=True
+  # so that celery tasks run non-async in the Django process. We don't need the celery daemon in this case.
+  celeryd:
+    image: alpine
+    entrypoint:
+      - /bin/echo
+    command: "Service disabled"
+    restart: "no"
+
+  # We don't need flower if we aren't using celeryd
+  flower:
+    image: alpine
+    entrypoint:
+      - /bin/echo
+    command: "Service disabled"
+    restart: "no"
+
+  nginx:
+    image: alpine
+    entrypoint:
+      - /bin/echo
+    command: "Service disabled"
+    restart: "no"
+    ports:
+      # dev
+      - "9999:80"
+
+  portainer:
+    image: alpine
+    entrypoint:
+      - /bin/echo
+    command: "Service disabled"
+    restart: "no"
