@@ -72,7 +72,7 @@ django-allauth
 # https://github.com/NIF-au/django-rapid-connect-demo
 
 # Django REST Framework, and some optional extra packages
-djangorestframework==3.9.1
+djangorestframework==3.11.0
 markdown
 django-filter>=2,<3
 # django-filter

@@ -50,7 +50,7 @@ git+https://github.com/jschneier/django-storages.git@867050a222b487dc9a1cbc718b2
 # django-storages==1.9.1
 
 django-timezone-field==3.0
-djangorestframework==3.9.1
+djangorestframework==3.11.0
 djangorestframework-jwt==1.11.0
 docutils==0.16
 enasearch==0.2.0
