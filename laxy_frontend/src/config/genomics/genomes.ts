@@ -91,9 +91,15 @@ const available_genomes: ReferenceGenome[] = [
     // {'id': 'Equus_caballus/NCBI/EquCab2.0', 'organism': 'Equus caballus'},
     // {'id': 'Equus_caballus/UCSC/equCab2', 'organism': 'Equus caballus'},
 
-    {'id': 'Escherichia_coli_K_12_DH10B/Ensembl/EB1', 'organism': 'Escherichia coli K 12 DH10B'},
-    {'id': 'Escherichia_coli_K_12_DH10B/NCBI/2008-03-17', 'organism': 'Escherichia coli K 12 DH10B'},
-    {'id': 'Escherichia_coli_K_12_MG1655/NCBI/2001-10-15', 'organism': 'Escherichia coli K 12 MG1655'},
+    // Deprecated iGenomes versions in favor of Ensembl which has gff3 annotations
+    // {'id': 'Escherichia_coli_K_12_DH10B/Ensembl/EB1', 'organism': 'Escherichia coli K 12 DH10B'},
+    // {'id': 'Escherichia_coli_K_12_DH10B/NCBI/2008-03-17', 'organism': 'Escherichia coli K 12 DH10B'},
+    // {'id': 'Escherichia_coli_K_12_MG1655/NCBI/2001-10-15', 'organism': 'Escherichia coli K 12 MG1655'},
+
+    {'id': 'Escherichia_coli/Ensembl/GCA_000019425.1__release-46',
+        'organism': 'Escherichia coli'},
+    {'id': 'Escherichia_coli/Ensembl/GCA_000005845.2__release-46',
+        'organism': 'Escherichia coli'},
 
     {'id': 'Gallus_gallus/Ensembl/Galgal4', 'organism': 'Gallus gallus'},
     // {'id': 'Gallus_gallus/Ensembl/WASHUC2', 'organism': 'Gallus gallus'},

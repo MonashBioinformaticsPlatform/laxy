@@ -453,11 +453,10 @@ function get_igenome_aws() {
 
      if [[ "${REF_ID}" == "Aedes_aegypti/VectorBase/AaegL5.2" ]]; then
         download_ref_urls \
-         "https://www.vectorbase.org/download/aedes-aegypti-lvpagwgchromosomesaaegl5fagz" \
-         "https://www.vectorbase.org/download/aedes-aegypti-lvpagwgbasefeaturesaaegl52gff3gz" \
-         "eb5da4f1fb261be460bf21d194f0b3d8" \
-         "61761ee9dae134c105d80811c0913c8b" \
-         "gff"
+         "https://www.vectorbase.org/sites/default/files/ftp/downloads/Aedes-aegypti-LVP_AGWG_CHROMOSOMES_AaegL5.fa.gz" \
+         "https://www.vectorbase.org/sites/default/files/ftp/downloads/Aedes-aegypti-LVP_AGWG_BASEFEATURES_AaegL5.2.gff3.gz" \
+         "b1182d3854b59f50123b453690bfa657" \
+         "4d1682b6624974040469243abd788774"
         return 0
      fi
 
@@ -468,6 +467,24 @@ function get_igenome_aws() {
          "809039c5aff401fe31035c2e7f0522e6" \
          "ab664575518980ad51890a67e624b21f" \
          "gff"
+        return 0
+     fi
+
+     if [[ "${REF_ID}" == "Escherichia_coli/Ensembl/GCA_000019425.1__release-46" ]]; then
+        download_ref_urls \
+          "ftp://ftp.ensemblgenomes.org/pub/bacteria/release-46/fasta/bacteria_9_collection/escherichia_coli_str_k_12_substr_dh10b/dna/Escherichia_coli_str_k_12_substr_dh10b.ASM1942v1.dna_sm.toplevel.fa.gz" \
+          "ftp://ftp.ensemblgenomes.org/pub/bacteria/release-46/gff3/bacteria_9_collection/escherichia_coli_str_k_12_substr_dh10b/Escherichia_coli_str_k_12_substr_dh10b.ASM1942v1.46.gff3.gz" \
+          "1c17f0cabeb0fe1de64060ea492067dd" \
+          "461d99ce76a42a9ec205df52b16aff83"
+        return 0
+     fi
+
+     if [[ "${REF_ID}" == "Escherichia_coli/Ensembl/GCA_000005845.2__release-46" ]]; then
+        download_ref_urls \
+          "ftp://ftp.ensemblgenomes.org/pub/bacteria/release-46/fasta/bacteria_0_collection/escherichia_coli_str_k_12_substr_mg1655/dna/Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna_sm.toplevel.fa.gz" \
+          "ftp://ftp.ensemblgenomes.org/pub/bacteria/release-46/gff3/bacteria_0_collection/escherichia_coli_str_k_12_substr_mg1655/Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.46.gff3.gz" \
+          "9f96e24975f42df8c398797414edcfcc" \
+          "fc96ca62b7b862690d956ed23fc2e11f"
         return 0
      fi
 

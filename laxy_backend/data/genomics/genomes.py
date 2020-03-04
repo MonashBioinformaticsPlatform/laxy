@@ -75,10 +75,13 @@ REFERENCE_GENOME_MAPPINGS = {
     "Equus_caballus/NCBI/EquCab2.0": "Equus_caballus/NCBI/EquCab2.0",
     "Equus_caballus/UCSC/equCab2": "Equus_caballus/UCSC/equCab2",
 
-    "Escherichia_coli_K_12_DH10B/Ensembl/EB1": "Escherichia_coli_K_12_DH10B/Ensembl/EB1",
-    "Escherichia_coli_K_12_DH10B/NCBI/2008-03-17": "Escherichia_coli_K_12_DH10B/NCBI/2008-03-17",
+    # Deprecated iGenomes versions in favor of Ensembl which has gff3 annotations
+    # "Escherichia_coli_K_12_DH10B/Ensembl/EB1": "Escherichia_coli_K_12_DH10B/Ensembl/EB1",
+    # "Escherichia_coli_K_12_DH10B/NCBI/2008-03-17": "Escherichia_coli_K_12_DH10B/NCBI/2008-03-17",
+    # "Escherichia_coli_K_12_MG1655/NCBI/2001-10-15": "Escherichia_coli_K_12_MG1655/NCBI/2001-10-15",
 
-    "Escherichia_coli_K_12_MG1655/NCBI/2001-10-15": "Escherichia_coli_K_12_MG1655/NCBI/2001-10-15",
+    "Escherichia_coli/Ensembl/GCA_000019425.1__release-46":  "Escherichia_coli/Ensembl/GCA_000019425.1__release-46",
+    "Escherichia_coli/Ensembl/GCA_000005845.2__release-46":  "Escherichia_coli/Ensembl/GCA_000005845.2__release-46",
 
     "Gallus_gallus/Ensembl/Galgal4": "Gallus_gallus/Ensembl/Galgal4",
     "Gallus_gallus/Ensembl/WASHUC2": "Gallus_gallus/Ensembl/WASHUC2",
