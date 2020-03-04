@@ -1,0 +1,66 @@
+name: Docker ssl-certs
+
+on:
+  push:
+    # Publish `master` as Docker `latest` image, `develop` as `dev` image
+    branches:
+      - master
+      - develop
+
+    # Publish `v1.2.3` tags as releases.
+    tags:
+      - v*
+
+  # Run tests for any PRs.
+  pull_request:
+
+env:
+  SSLCERTS_IMAGE_NAME: ssl-certs
+
+jobs:
+  # Push image to GitHub Package Registry.
+  # See also https://docs.docker.com/docker-hub/builds/
+  push:
+    # Ensure test job passes before pushing image.
+    needs: test
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Build images
+        run: |
+          # ssl-certs-cron image
+          docker build docker/ssl-certs/ --file docker/ssl-certs/Dockerfile --tag $SSLCERTS_IMAGE_NAME
+
+      - name: Log into registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u ${{ github.actor }} --password-stdin
+
+      - name: Push images
+        run: |
+          IMAGE_ID=docker.pkg.github.com/${{ github.repository }}/$SSLCERTS_IMAGE_NAME
+
+          # Strip git ref prefix from version
+          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+
+          # Strip "v" prefix from tag name
+          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+
+          # Use Docker `latest` tag convention
+          [ "$VERSION" == "master" ] && VERSION=latest
+          [ "$VERSION" == "develop" ] && VERSION=dev
+
+          GIT_SHORT_COMMIT=$(git log -1 --format=%h)
+          
+          echo IMAGE_ID=$IMAGE_ID
+          echo VERSION=$VERSION
+
+          function to_lower() {
+            echo $1 | tr '[:upper:]' '[:lower:]'
+          }
+
+          # Tag and push Laxy image
+          docker tag $SSLCERTS_IMAGE_NAME $(to_lower $IMAGE_ID:$VERSION)
+          docker tag $SSLCERTS_IMAGE_NAME $(to_lower $IMAGE_ID:$GIT_SHORT_COMMIT)
+          docker push $(to_lower $IMAGE_ID:$VERSION)
