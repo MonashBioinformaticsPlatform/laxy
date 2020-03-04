@@ -94,7 +94,7 @@ py==1.5.2
 pyasn1==0.4.5
 pycodestyle==2.3.1
 pycparser==2.19
-pydash==4.7.4
+pydash==4.7.6
 pyflakes==1.6.0
 Pygments==2.2.0
 PyJWT==1.7.1
@@ -129,7 +129,7 @@ tornado==4.5.3
 typing==3.6.6
 unicodecsv==0.14.1
 uritemplate==3.0.0
-urllib3<1.25,>=1.24.2
+urllib3>=1.24.2,<1.26
 vine==1.1.4
 Werkzeug==0.15.3
 xmltodict==0.11.0
