@@ -1,4 +1,5 @@
 # Laxy
+![Docker test](https://github.com/MonashBioinformaticsPlatform/laxy/workflows/Docker%20test/badge.svg?branch=master)
 
 _Laxy_ is a web application designed to simplify launching routine genomic pipeline analyses.
 
