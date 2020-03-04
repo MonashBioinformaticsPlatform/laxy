@@ -125,7 +125,7 @@ Sphinx==1.6.6
 sphinx-rtd-theme==0.2.4
 sphinxcontrib-websupport==1.0.1
 toolz==0.9.0
-tornado==4.5.3
+tornado==6.0.4
 typing==3.6.6
 unicodecsv==0.14.1
 uritemplate==3.0.0
