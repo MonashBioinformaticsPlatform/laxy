@@ -1,4 +1,4 @@
-name: Docker
+name: Laxy Docker test, build and push
 
 on:
   push:

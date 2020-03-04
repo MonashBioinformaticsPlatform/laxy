@@ -1,4 +1,4 @@
-name: Docker ssl-certs
+name: ssl-certs Docker build and push
 
 on:
   push:
