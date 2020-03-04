@@ -74,6 +74,10 @@ jobs:
           echo IMAGE_ID=$IMAGE_ID
           echo VERSION=$VERSION
 
-          docker tag image $IMAGE_ID:$VERSION
-          docker tag image $IMAGE_ID:$GIT_SHORT_COMMIT
-          docker push $IMAGE_ID:$VERSION
+          function to_lower() {
+            echo $1 | tr '[:upper:]' '[:lower:]'
+          }
+
+          docker tag image $(to_lower $IMAGE_ID:$VERSION)
+          docker tag image $(to_lower $IMAGE_ID:$GIT_SHORT_COMMIT)
+          docker push $(to_lower $IMAGE_ID:$VERSION)
