@@ -11,7 +11,7 @@ volumes:
 services:
 
   django:
-    image: "${IMAGE_REPO-registry.gitlab.com/pansapiens/laxy}/laxy:latest"
+    image: "${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest"
     # user: laxy
     # We must specify the .env file so that it gets sourced - otherwise every variable in .env would
     # need to be explicitly defined like: LAXY_DEBUG=${LAXY_DEBUG} in the environment section below.
@@ -47,7 +47,7 @@ services:
                       gunicorn laxy.wsgi -b 0.0.0.0:8001 --forwarded-allow-ips='*' --worker-class gevent"
 
   dev-frontend-server:
-    image: "${IMAGE_REPO-registry.gitlab.com/pansapiens/laxy}/laxy:latest"
+    image: "${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest"
     restart: "no"
     command: echo "Service disabled in prod (but still required to be defined to override the image name)"
 
@@ -77,7 +77,7 @@ services:
       - private
 
   celeryd:
-    image: "${IMAGE_REPO-registry.gitlab.com/pansapiens/laxy}/laxy:latest"
+    image: "${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest"
     # user: laxy
     # command: bash -c "celery -A laxy worker -B -E -l info --broker=${LAXY_BROKER_URL}"
     env_file:
@@ -93,7 +93,7 @@ services:
       - private
 
   flower:
-    image: "${IMAGE_REPO-registry.gitlab.com/pansapiens/laxy}/laxy:latest"
+    image: "${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest"
     env_file:
       - .env
     environment:
@@ -137,7 +137,7 @@ services:
        - ./nginx.conf:/etc/nginx/nginx.conf:ro
 
   ssl-certs-cron:
-    image: "${IMAGE_REPO-registry.gitlab.com/pansapiens/laxy}/ssl-certs:latest"
+    image: "${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/ssl-certs:latest"
     environment:
       # No quotes !
       - ACME_SSL_DOMAINS=${ACME_SSL_DOMAINS-laxy.io api.laxy.io}
