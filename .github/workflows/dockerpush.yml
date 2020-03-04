@@ -2,9 +2,10 @@ name: Docker
 
 on:
   push:
-    # Publish `master` as Docker `latest` image.
+    # Publish `master` as Docker `latest` image, `develop` as `dev` image
     branches:
       - master
+      - develop
 
     # Publish `v1.2.3` tags as releases.
     tags:
@@ -68,6 +69,7 @@ jobs:
 
           # Use Docker `latest` tag convention
           [ "$VERSION" == "master" ] && VERSION=latest
+          [ "$VERSION" == "develop" ] && VERSION=dev
 
           GIT_SHORT_COMMIT=$(git log -1 --format=%h)
           
