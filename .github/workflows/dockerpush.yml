@@ -48,18 +48,22 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+      - name: Use Node 12.x
+        uses: actions/setup-node@v1
+        with:
+          node-version: 12
+
+      - name: Build frontend with npm
+        run: |
+          cd laxy_frontend
+          npm install
+          [ "$VERSION" == "master" ] npm run build:prod
+          [ "$VERSION" == "develop" ] npm run build:dev
+          cd ..
 
       - name: Build image
         run: |
           GIT_SHORT_COMMIT=$(git log -1 --format=%h)
-
-          apt update --yes && apt install --yes npm
-          cd laxy_frontend
-          npm install
-          [ "$VERSION" == "master" ] npm run build:prod
-          [ "$VERSION" == "develop" ] npm run build:prod
-          cd ..
-
           docker build . --file docker/laxy/Dockerfile --tag image --build-arg GIT_COMMIT=$GIT_SHORT_COMMIT
 
       - name: Log into registry
