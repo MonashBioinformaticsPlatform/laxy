@@ -52,6 +52,14 @@ jobs:
       - name: Build image
         run: |
           GIT_SHORT_COMMIT=$(git log -1 --format=%h)
+
+          apt update --yes && apt install --yes npm
+          cd laxy_frontend
+          npm install
+          [ "$VERSION" == "master" ] npm run build:prod
+          [ "$VERSION" == "develop" ] npm run build:prod
+          cd ..
+
           docker build . --file docker/laxy/Dockerfile --tag image --build-arg GIT_COMMIT=$GIT_SHORT_COMMIT
 
       - name: Log into registry
