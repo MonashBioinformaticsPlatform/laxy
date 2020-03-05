@@ -61,6 +61,11 @@ jobs:
           # Strip "v" prefix from tag name
           [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
 
+          # Some constants that get baked into the frontend
+          LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID=474709025289-vm2t2ikg08ij9mvl3h813l86nng1e4eh.apps.googleusercontent.com
+          LAXY_FRONTEND_URL=https://laxy.io
+          LAXY_FRONTEND_API_URL=https://api.laxy.io
+
           cd laxy_frontend
           npm install
           [[ "$VERSION" == "master" ]] && npm run build:prod
