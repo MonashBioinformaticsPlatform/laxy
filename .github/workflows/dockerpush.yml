@@ -55,21 +55,30 @@ jobs:
 
       - name: Build frontend with npm
         run: |
+          # Do npm install and build with appropriate environment variables
+
           # Strip git ref prefix from version
           VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
 
           # Strip "v" prefix from tag name
           [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
 
-          # Some constants that get baked into the frontend
-          LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID=474709025289-vm2t2ikg08ij9mvl3h813l86nng1e4eh.apps.googleusercontent.com
-          LAXY_FRONTEND_URL=https://laxy.io
-          LAXY_FRONTEND_API_URL=https://api.laxy.io
+          [[ "$VERSION" == "master" ]] && LAXY_ENV=prod
+          [[ "$VERSION" == "develop" ]] && LAXY_ENV=dev
+
+          if [[ "$LAXY_ENV" == "prod" ]]; then
+            # Some constants that get baked into the frontend
+            export LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID=474709025289-vm2t2ikg08ij9mvl3h813l86nng1e4eh.apps.googleusercontent.com
+            export LAXY_FRONTEND_URL=https://laxy.io
+            export LAXY_FRONTEND_API_URL=https://api.laxy.io
+
+            echo "LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID=$LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID" >.env
+            echo "LAXY_FRONTEND_URL=$LAXY_FRONTEND_URL" >>.env
+            echo "LAXY_FRONTEND_API_URL=$LAXY_FRONTEND_API_URL" >>.env
+          fi
 
           cd laxy_frontend
-          npm install
-          [[ "$VERSION" == "master" ]] && npm run build:prod
-          [[ "$VERSION" == "develop" ]] && npm run build:dev
+          npm install && npm run build:$LAXY_ENV
           cd ..
 
       - name: Build image
