@@ -61,12 +61,14 @@ jobs:
           VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
 
           # Strip "v" prefix from tag name
-          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+          [ "${{ github.ref }}" == "refs/tags/"* ] && VERSION=$(echo $VERSION | sed -e 's/^v//')
 
-          [[ "$VERSION" == "master" ]] && LAXY_ENV=prod
-          [[ "$VERSION" == "develop" ]] && LAXY_ENV=dev
+          [ "$VERSION" == "master" ] && LAXY_ENV=prod
+          [ "$VERSION" == "develop" ] && LAXY_ENV=dev
 
-          if [[ "$LAXY_ENV" == "prod" ]]; then
+          echo "environment: $LAXY_ENV"
+
+          if [ "$LAXY_ENV" == "prod" ]; then
             # Some constants that get baked into the frontend
             export LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID=474709025289-vm2t2ikg08ij9mvl3h813l86nng1e4eh.apps.googleusercontent.com
             export LAXY_FRONTEND_URL=https://laxy.io
@@ -76,6 +78,9 @@ jobs:
             echo "LAXY_FRONTEND_URL=$LAXY_FRONTEND_URL" >>.env
             echo "LAXY_FRONTEND_API_URL=$LAXY_FRONTEND_API_URL" >>.env
           fi
+
+          echo ".env file contains"
+          cat .env
 
           cd laxy_frontend
           npm install && npm run build:$LAXY_ENV
