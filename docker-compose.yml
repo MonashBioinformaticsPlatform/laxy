@@ -92,7 +92,7 @@ services:
       - celeryd
 
   nginx:
-    image: nginx:1.15-alpine
+    image: laxy-static-nginx:latest
     # Really, django depends on nginx, however because of the way nginx hostname resolution
     # works during startup, the django service (and associated internal DNS name) must
     # exist BEFORE nginx starts.

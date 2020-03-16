@@ -108,6 +108,7 @@ services:
       - private
 
   nginx:
+    image: "${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy-static-nginx:latest"
     command: >
       sh -c "
         echo -e '#!/bin/sh\n/usr/sbin/nginx -s reload' >/etc/periodic/daily/nginx-reload-config &&

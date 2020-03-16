@@ -7,6 +7,7 @@ services:
       - "5433:5432"
 
   django:
+    image: laxy:latest
     build:
       context: .
       dockerfile: ./docker/laxy/Dockerfile
@@ -117,6 +118,18 @@ services:
       - .:/app
 
   nginx:
+    image: laxy-static-nginx:latest
+    build:
+      context: .
+      dockerfile: ./docker/laxy-static-nginx/Dockerfile
+      # These are required to properly build and come from .env
+      args:
+        LAXY_FRONTEND_URL: "${LAXY_FRONTEND_URL:-http://localhost:8001}"
+        LAXY_FRONTEND_API_URL: "${LAXY_FRONTEND_API_URL:-http://localhost:8002}"
+        LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID: "${LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID:-}"
+        LAXY_ENV: "${LAXY_ENV:-dev}"
+    env_file:
+      - .env
     command: >
       sh -c "
         echo -e '#!/bin/sh\n/usr/sbin/nginx -s reload' >/etc/periodic/daily/nginx-reload-config &&

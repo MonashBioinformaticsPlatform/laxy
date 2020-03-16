@@ -48,15 +48,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - name: Use Node 12.x
-        uses: actions/setup-node@v1
-        with:
-          node-version: 12
 
-      - name: Build frontend with npm
+      - name: Build image
         run: |
-          # Do npm install and build with appropriate environment variables
-
           # Strip git ref prefix from version
           VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
 
@@ -66,38 +60,31 @@ jobs:
           [ "$VERSION" == "master" ] && LAXY_ENV=prod
           [ "$VERSION" == "develop" ] && LAXY_ENV=dev
 
-          echo "environment: $LAXY_ENV"
+          # GIT_SHORT_COMMIT=$(git log -1 --format=%h)
+          GIT_COMMIT="${{ github.sha }}"
+          GIT_SHORT_COMMIT=${GIT_COMMIT:0:8}
+          docker build . --file docker/laxy/Dockerfile --tag laxy --build-arg GIT_COMMIT=$GIT_SHORT_COMMIT
 
-          if [ "$LAXY_ENV" == "prod" ]; then
-            # Some constants that get baked into the frontend
-            export LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID=474709025289-vm2t2ikg08ij9mvl3h813l86nng1e4eh.apps.googleusercontent.com
-            export LAXY_FRONTEND_URL=https://laxy.io
-            export LAXY_FRONTEND_API_URL=https://api.laxy.io
+          if [ "$LAXY_ENV" == "prod"]; then
+            LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID=474709025289-vm2t2ikg08ij9mvl3h813l86nng1e4eh.apps.googleusercontent.com
+            LAXY_FRONTEND_URL=https://laxy.io
+            LAXY_FRONTEND_API_URL=https://api.laxy.io
 
-            echo "LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID=$LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID" >.env
-            echo "LAXY_FRONTEND_URL=$LAXY_FRONTEND_URL" >>.env
-            echo "LAXY_FRONTEND_API_URL=$LAXY_FRONTEND_API_URL" >>.env
+            docker build . --file docker/laxy-static-nginx/Dockerfile --tag laxy-static-nginx \
+                           --build-arg GIT_COMMIT=$GIT_SHORT_COMMIT \
+                           --build-arg LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID=$LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID \
+                           --build-arg LAXY_FRONTEND_URL=$LAXY_FRONTEND_URL \
+                           --build-arg LAXY_FRONTEND_API_URL=$LAXY_FRONTEND_API_URL
+          else
+            docker build . --file docker/laxy-static-nginx/Dockerfile --tag laxy-static-nginx \
+                           --build-arg GIT_COMMIT=$GIT_SHORT_COMMIT
           fi
-
-          echo ".env file contains"
-          cat .env
-
-          cd laxy_frontend
-          npm install && npm run build:$LAXY_ENV
-          cd ..
-
-      - name: Build image
-        run: |
-          GIT_SHORT_COMMIT=$(git log -1 --format=%h)
-          docker build . --file docker/laxy/Dockerfile --tag image --build-arg GIT_COMMIT=$GIT_SHORT_COMMIT
 
       - name: Log into registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u ${{ github.actor }} --password-stdin
 
       - name: Push image
         run: |
-          IMAGE_ID=docker.pkg.github.com/${{ github.repository }}/$IMAGE_NAME
-
           # Strip git ref prefix from version
           VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
 
@@ -108,15 +95,24 @@ jobs:
           [ "$VERSION" == "master" ] && VERSION=latest
           [ "$VERSION" == "develop" ] && VERSION=dev
 
-          GIT_SHORT_COMMIT=$(git log -1 --format=%h)
-          
-          echo IMAGE_ID=$IMAGE_ID
+          # GIT_SHORT_COMMIT=$(git log -1 --format=%h)
+          GIT_COMMIT="${{ github.sha }}"
+          GIT_SHORT_COMMIT=${GIT_COMMIT:0:8}
+
           echo VERSION=$VERSION
 
           function to_lower() {
             echo $1 | tr '[:upper:]' '[:lower:]'
           }
 
-          docker tag image $(to_lower $IMAGE_ID:$VERSION)
-          docker tag image $(to_lower $IMAGE_ID:$GIT_SHORT_COMMIT)
+          IMAGE_NAME=laxy
+          IMAGE_ID=docker.pkg.github.com/${{ github.repository }}/$IMAGE_NAME
+          docker tag $IMAGE_NAME $(to_lower $IMAGE_ID:$VERSION)
+          docker tag $IMAGE_NAME $(to_lower $IMAGE_ID:$GIT_SHORT_COMMIT)
+          docker push $(to_lower $IMAGE_ID:$VERSION)
+
+          IMAGE_NAME=laxy-static-nginx
+          IMAGE_ID=docker.pkg.github.com/${{ github.repository }}/$IMAGE_NAME
+          docker tag $IMAGE_NAME $(to_lower $IMAGE_ID:$VERSION)
+          docker tag $IMAGE_NAME $(to_lower $IMAGE_ID:$GIT_SHORT_COMMIT)
           docker push $(to_lower $IMAGE_ID:$VERSION)
