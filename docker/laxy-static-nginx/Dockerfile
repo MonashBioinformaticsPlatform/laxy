@@ -37,10 +37,17 @@ LABEL git_commit=$GIT_COMMIT
 
 COPY --from=frontend_build /app/laxy_frontend/dist/ /usr/share/nginx/html/
 
-# We've already run collectstatic in during the laxy container build - grab the
-# files from there, put them in the nginx container
+# We've already run collectstatic in during the laxy (django) container build - grab the
+# files from there, put them in the nginx container.
+# (The alternative would be to include a build stage above where we install all the Python
+#  dependencies etc just to run ./manager.py collectstatic - this would
+#  be duplicating code from docker/laxy/Dockerfile, so seems like a bad idea)
 COPY --from=laxy:latest /usr/share/nginx/html/backend_static /usr/share/nginx/html/backend_static
 
 # RUN chmod -R a+r /usr/share/nginx/html
+
+# Reload nginx daily to ensure we get updated ssl certificates
+RUN echo -e '#!/bin/sh\n/usr/sbin/nginx -s reload' >/etc/periodic/daily/nginx-reload-config && \
+    chmod +x /etc/periodic/daily/nginx-reload-config &&
 
 CMD ["nginx", "-g", "daemon off;"]

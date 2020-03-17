@@ -132,9 +132,6 @@ services:
       - .env
     command: >
       sh -c "
-        echo -e '#!/bin/sh\n/usr/sbin/nginx -s reload' >/etc/periodic/daily/nginx-reload-config &&
-        chmod +x /etc/periodic/daily/nginx-reload-config &&
-
         until [ -f /certs/fullchain.pem ] && [ -f /certs/key.pem ]; do
           echo `date`': Waiting for SSL certificates ..';
           sleep 5;

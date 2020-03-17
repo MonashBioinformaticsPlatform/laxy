@@ -28,8 +28,8 @@ services:
       replicas: 3
       restart_policy:
         condition: any
-    volumes:
-      - static_assets:/usr/share/nginx/html
+    # volumes:
+    #   - static_assets:/usr/share/nginx/html
     # Internal Docker network only
     expose:
       - "8001"
@@ -39,11 +39,8 @@ services:
     networks:
       - private
     command: bash -c "sleep 10 &&
-                      mkdir -p '${LAXY_STATIC_ROOT:-/usr/share/nginx/html/backend_static}' &&
-                      cp -r /app/laxy_frontend/dist/* /usr/share/nginx/html/ &&
                       python3 manage.py makemigrations --no-input &&
                       python3 manage.py migrate --no-input &&
-                      python3 manage.py collectstatic --no-input &&
                       gunicorn laxy.wsgi -b 0.0.0.0:8001 --forwarded-allow-ips='*' --worker-class gevent"
 
   dev-frontend-server:
@@ -111,9 +108,6 @@ services:
     image: "${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy-static-nginx:latest"
     command: >
       sh -c "
-        echo -e '#!/bin/sh\n/usr/sbin/nginx -s reload' >/etc/periodic/daily/nginx-reload-config &&
-        chmod +x /etc/periodic/daily/nginx-reload-config &&
-
         until [ -f /certs/fullchain.pem ] && [ -f /certs/key.pem ]; do
           echo `date`': Waiting for SSL certificates ..';
           sleep 5;
@@ -157,11 +151,14 @@ services:
         delay: 5s
         max_attempts: 3
         window: 120s
+#    depends_on:
+#      - nginx
     volumes:
       # we need to write access to allow /usr/share/nginx/html creation of .well-known/acme-challenge for
       # Let's Encrypt the http-01 challenge
       - static_assets:/usr/share/nginx/html
       - certs:/certs
+
   splash:
     networks:
       - private
