@@ -30,10 +30,7 @@ RUN rm -rf node_modules && \
 FROM nginx:1.15-alpine
 LABEL git_commit=$GIT_COMMIT
 
-# TODO: We could add a templated nginx.conf via
-# ADD /app/docker/laxy-static/nginx/nginx.conf /tmp/nginx.conf
-# RUN envsubst '${LAXY_FRONTEND_DOMAIN} ${LAXY_API_DOMAIN}' </tmp/nginx.conf >/etc/nginx/nginx.conf && \
-#     rm /tmp/nginx.conf
+ADD docker/laxy-static-nginx/nginx.conf.template /etc/nginx/nginx.conf.template
 
 COPY --from=frontend_build /app/laxy_frontend/dist/ /usr/share/nginx/html/
 
@@ -44,10 +41,15 @@ COPY --from=frontend_build /app/laxy_frontend/dist/ /usr/share/nginx/html/
 #  be duplicating code from docker/laxy/Dockerfile, so seems like a bad idea)
 COPY --from=laxy:latest /usr/share/nginx/html/backend_static /usr/share/nginx/html/backend_static
 
-# RUN chmod -R a+r /usr/share/nginx/html
-
 # Reload nginx daily to ensure we get updated ssl certificates
 RUN echo -e '#!/bin/sh\n/usr/sbin/nginx -s reload' >/etc/periodic/daily/nginx-reload-config && \
     chmod +x /etc/periodic/daily/nginx-reload-config
 
-CMD ["nginx", "-g", "daemon off;"]
+RUN echo "LAXY_VERSION=$LAXY_VERSION" >>/etc/environment
+
+# We extract the FQDN for the frontend and backend and substitute these values into the nginx.conf template
+# on startup
+CMD export LAXY_FRONTEND_HOST=`echo $LAXY_FRONTEND_URL | cut -f 2 -d ':' | sed 's/\/\///g'` && \
+    export LAXY_API_HOST=`echo $LAXY_FRONTEND_API_URL | cut -f 2 -d ':' | sed 's/\/\///g'` && \
+    (envsubst '${LAXY_FRONTEND_HOST} ${LAXY_API_HOST}' </etc/nginx/nginx.conf.template >/etc/nginx/nginx.conf || true) && \
+    nginx -g 'daemon off;'

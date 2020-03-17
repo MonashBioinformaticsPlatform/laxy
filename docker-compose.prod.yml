@@ -47,6 +47,20 @@ services:
     image: "${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest"
     restart: "no"
     command: echo "Service disabled in prod (but still required to be defined to override the image name)"
+# If we wanted to do a ninja frontend rebuild into static_assets
+#    command: bash -c "curl -sL https://deb.nodesource.com/setup_12.x | bash - &&
+#                      apt install --yes nodejs &&
+#                      cd /app/laxy_frontend &&
+#                      rm -rf node_modules &&
+#                      mkdir node_modules &&
+#                      npm install &&
+#                      npm run build:prod"
+#    env_file:
+#      - .env
+#    volumes:
+#      - static_assets:/app/laxy_frontend/dist
+#      - ./.env:/app/.env
+
 
   db:
     env_file:
@@ -113,6 +127,14 @@ services:
           sleep 5;
         done;
 
+        export LAXY_FRONTEND_HOST=`echo $LAXY_FRONTEND_URL | cut -f 2 -d ':' | sed 's/\/\///g'`
+        export LAXY_API_HOST=`echo $LAXY_FRONTEND_API_URL | cut -f 2 -d ':' | sed 's/\/\///g'`
+
+        if [ ! -f /etc/nginx/nginx.conf ] || [ -w /etc/nginx/nginx.conf ]; then
+          # NOTE: Double dollar sign $$ prevents docker-compose interpolating
+          envsubst '$${LAXY_FRONTEND_HOST} $${LAXY_API_HOST}' </etc/nginx/nginx.conf.template >/etc/nginx/nginx.conf
+        fi
+
         /usr/sbin/nginx -g 'daemon off;'
       "
     deploy:
@@ -129,7 +151,7 @@ services:
     volumes:
        - static_assets:/usr/share/nginx/html:ro
        - certs:/certs:ro
-       - ./nginx.conf:/etc/nginx/nginx.conf:ro
+       # - ./nginx.conf:/etc/nginx/nginx.conf:ro
 
   ssl-certs-cron:
     image: "${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/ssl-certs:latest"

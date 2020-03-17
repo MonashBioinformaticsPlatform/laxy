@@ -1,0 +1,142 @@
+error_log  /var/log/nginx/error.log warn;
+pid        /var/run/nginx.pid;
+
+events {
+    worker_connections  1024;
+}
+
+http {
+    include       /etc/nginx/mime.types;
+    default_type  application/octet-stream;
+
+    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+
+    access_log  /var/log/nginx/access.log  main;
+
+    sendfile        on;
+    #tcp_nopush     on;
+
+    keepalive_timeout  65;
+
+    gzip  on;
+    gzip_proxied  any;
+    gzip_http_version  1.1;
+    gzip_disable      "MSIE [1-6]\.";
+
+    # text/html is there by default
+    gzip_types
+        text/css
+        text/javascript
+        text/xml
+        text/plain
+        text/csv
+        application/javascript
+        application/x-javascript
+        application/json
+        application/atom+xml;
+
+    # include /etc/nginx/conf.d/*.conf;
+
+    # Docker internal DNS
+    resolver 127.0.0.11;
+
+    # Redirect all HTTP to HTTPS
+    # Except paths required for Let's Encrypt/ACME SSL cert renewal
+    server {
+        listen 80 default_server;
+        listen [::]:80 default_server;
+        server_name _;
+
+        # If we wanted to be strict about domains allowed to serve up the acme-challenge, we could instead do:
+        ## server_name laxy.io dev.laxy.io dev-api.laxy.io;
+
+        location ^~ /.well-known/acme-challenge/ {
+            default_type "text/plain";
+            root   /usr/share/nginx/html;
+        }
+
+        location = /.well-known/acme-challenge/ {
+            return 404;
+        }
+
+        # Catch everything else, redirect to HTTPS
+        location / {
+           return 301 https://$host$request_uri;
+        }
+    }
+
+    server {
+      listen       8002 ssl;
+      # server_name  laxy.io;
+      server_name ${LAXY_FRONTEND_HOST};
+
+      ssl_certificate      /certs/fullchain.pem;
+      ssl_certificate_key  /certs/key.pem;
+      ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+      ssl_ciphers 'HIGH:!aNULL:!MD5:!kEDH';
+
+      location / {
+        root   /usr/share/nginx/html;
+        index  index.html index.htm;
+      }
+
+      #error_page  404              /404.html;
+
+      # redirect server error pages to the static page /50x.html
+      #
+      error_page   500 502 503 504  /50x.html;
+      location = /50x.html {
+        root   /usr/share/nginx/html;
+      }
+    }
+
+    upstream api_servers {
+        server django:8001 fail_timeout=0 max_fails=0 weight=10;
+
+        # zone upstream_api_servers 1M;
+        # resolve keyword not available until nginx v1.15.12
+        # server django:8001 resolve fail_timeout=0 max_fails=0 weight=10;
+    }
+
+    server {
+      listen       8001 ssl;
+      # server_name  api.laxy.io;
+      server_name ${LAXY_API_HOST};
+
+      keepalive_timeout 5;
+
+      # Allow clients to download files up to a terabyte
+      client_max_body_size 1024G;
+
+      ssl_certificate      /certs/fullchain.pem;
+      ssl_certificate_key  /certs/key.pem;
+      ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+      ssl_ciphers 'HIGH:!aNULL:!MD5:!kEDH';
+
+      location / {
+        # set $upstream http://django:8001;
+        # proxy_pass  $upstream;
+        proxy_pass http://api_servers;
+
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Host $host:$server_port;
+        proxy_set_header X-Forwarded-Server $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Scheme $scheme;
+        # NOTE: This one should match the header specified by the Django SECURE_PROXY_SSL_HEADER setting
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_redirect off;
+        proxy_redirect http:// $scheme://;
+
+        proxy_connect_timeout 30;
+        proxy_read_timeout 120;
+        proxy_http_version 1.1;
+        # To allow streaming with an async gunicorn worker class (streaming large files, long polling, web sockets, Comet)
+        proxy_buffering off;
+      }
+    }
+}
