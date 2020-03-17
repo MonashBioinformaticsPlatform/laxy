@@ -48,6 +48,6 @@ COPY --from=laxy:latest /usr/share/nginx/html/backend_static /usr/share/nginx/ht
 
 # Reload nginx daily to ensure we get updated ssl certificates
 RUN echo -e '#!/bin/sh\n/usr/sbin/nginx -s reload' >/etc/periodic/daily/nginx-reload-config && \
-    chmod +x /etc/periodic/daily/nginx-reload-config &&
+    chmod +x /etc/periodic/daily/nginx-reload-config
 
 CMD ["nginx", "-g", "daemon off;"]
