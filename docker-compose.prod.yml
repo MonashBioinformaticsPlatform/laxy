@@ -4,9 +4,10 @@ networks:
   private:
 
 volumes:
-  static_assets:
+  # static_assets:
   certs:
   dbdata:
+  ssl-acme-challenge:
 
 services:
 
@@ -127,13 +128,15 @@ services:
           sleep 5;
         done;
 
-        export LAXY_FRONTEND_HOST=`echo $LAXY_FRONTEND_URL | cut -f 2 -d ':' | sed 's/\/\///g'`
-        export LAXY_API_HOST=`echo $LAXY_FRONTEND_API_URL | cut -f 2 -d ':' | sed 's/\/\///g'`
-
-        if [ ! -f /etc/nginx/nginx.conf ] || [ -w /etc/nginx/nginx.conf ]; then
-          # NOTE: Double dollar sign $$ prevents docker-compose interpolating
-          envsubst '$${LAXY_FRONTEND_HOST} $${LAXY_API_HOST}' </etc/nginx/nginx.conf.template >/etc/nginx/nginx.conf
-        fi
+        # Templating the nginx.conf in this way has proven fragile in practise, so disabled for the moment
+        # in favor of an nginx.conf external to to the container (via a host-bind volume)
+        # export LAXY_FRONTEND_HOST=`echo $LAXY_FRONTEND_URL | cut -f 2 -d ':' | sed 's/\/\///g'`
+        # export LAXY_API_HOST=`echo $LAXY_FRONTEND_API_URL | cut -f 2 -d ':' | sed 's/\/\///g'`
+        #
+        # if [ ! -f /etc/nginx/nginx.conf ] || [ -w /etc/nginx/nginx.conf ]; then
+        #   # NOTE: Double dollar sign $$ prevents docker-compose interpolating
+        #   envsubst '$${LAXY_FRONTEND_HOST} $${LAXY_API_HOST}' </etc/nginx/nginx.conf.template >/etc/nginx/nginx.conf
+        # fi
 
         /usr/sbin/nginx -g 'daemon off;'
       "
@@ -149,9 +152,12 @@ services:
     networks:
       - private
     volumes:
-       - static_assets:/usr/share/nginx/html:ro
+       # - static_assets:/usr/share/nginx/html:ro
+       # We need read-only access to /usr/share/nginx/html/.well-known/acme-challenge to serve this for
+       # the Let's Encrypt http-01 challenge
+       - ssl-acme-challenge:/usr/share/nginx/html/.well-known/:ro
        - certs:/certs:ro
-       # - ./nginx.conf:/etc/nginx/nginx.conf:ro
+       - ./nginx.conf:/etc/nginx/nginx.conf:ro
 
   ssl-certs-cron:
     image: "${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/ssl-certs:latest"
@@ -176,9 +182,10 @@ services:
 #    depends_on:
 #      - nginx
     volumes:
-      # we need to write access to allow /usr/share/nginx/html creation of .well-known/acme-challenge for
-      # Let's Encrypt the http-01 challenge
-      - static_assets:/usr/share/nginx/html
+      # we need to write access to /usr/share/nginx/html/.well-known/ for
+      # Let's Encrypt the http-01 challenge (acme-challenge)
+      - ssl-acme-challenge:/usr/share/nginx/html/.well-known/
+      # - static_assets:/usr/share/nginx/html
       - certs:/certs
 
   splash:

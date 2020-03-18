@@ -47,9 +47,15 @@ RUN echo -e '#!/bin/sh\n/usr/sbin/nginx -s reload' >/etc/periodic/daily/nginx-re
 
 RUN echo "LAXY_VERSION=$LAXY_VERSION" >>/etc/environment
 
+##
+# This templating of the nginx.conf seems unreliable in practise, so it's disabled from the moment.
+# Use an external nginx.conf on a host-bind volume instead.
+##
 # We extract the FQDN for the frontend and backend and substitute these values into the nginx.conf template
 # on startup
-CMD export LAXY_FRONTEND_HOST=`echo $LAXY_FRONTEND_URL | cut -f 2 -d ':' | sed 's/\/\///g'` && \
-    export LAXY_API_HOST=`echo $LAXY_FRONTEND_API_URL | cut -f 2 -d ':' | sed 's/\/\///g'` && \
-    (envsubst '${LAXY_FRONTEND_HOST} ${LAXY_API_HOST}' </etc/nginx/nginx.conf.template >/etc/nginx/nginx.conf || true) && \
-    nginx -g 'daemon off;'
+#CMD export LAXY_FRONTEND_HOST=`echo $LAXY_FRONTEND_URL | cut -f 2 -d ':' | sed 's/\/\///g'` && \
+#    export LAXY_API_HOST=`echo $LAXY_FRONTEND_API_URL | cut -f 2 -d ':' | sed 's/\/\///g'` && \
+#    (envsubst '${LAXY_FRONTEND_HOST} ${LAXY_API_HOST}' </etc/nginx/nginx.conf.template >/etc/nginx/nginx.conf || true) && \
+#    nginx -g 'daemon off;'
+
+CMD nginx -g 'daemon off;'
