@@ -1,6 +1,5 @@
 #
 # This images builds the web frontend and packages it with nginx.
-# The nginx config
 # It also grabs the Django admin static files from a pre-build laxy:latest image.
 #
 

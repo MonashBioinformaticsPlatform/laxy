@@ -62,7 +62,6 @@ services:
 #      - static_assets:/app/laxy_frontend/dist
 #      - ./.env:/app/.env
 
-
   db:
     env_file:
       - .env
@@ -110,10 +109,10 @@ services:
       - .env
     environment:
       - LAXY_DEBUG=no
+      # - FLOWER_BASIC_AUTH=${FLOWER_USER:?must_set_FLOWER_USER_env_var}:${FLOWER_PASS:?must_set_FLOWER_PASS_env_var}
     deploy:
       restart_policy:
         condition: any
-      # - FLOWER_BASIC_AUTH=${FLOWER_USER:?must_set_FLOWER_USER_env_var}:${FLOWER_PASS:?must_set_FLOWER_PASS_env_var}
     ports:
       - "5556:5556"
     networks:
@@ -179,8 +178,6 @@ services:
         delay: 5s
         max_attempts: 3
         window: 120s
-#    depends_on:
-#      - nginx
     volumes:
       # we need to write access to /usr/share/nginx/html/.well-known/ for
       # Let's Encrypt the http-01 challenge (acme-challenge)

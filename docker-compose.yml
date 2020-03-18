@@ -47,11 +47,6 @@ services:
 #     - "5672"
 #     - "15672"
 
-#  redis:
-#    image: redis
-##  expose:
-##    - "6379"
-
   celeryd:
     image: laxy:latest
     working_dir: /app
