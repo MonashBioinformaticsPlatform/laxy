@@ -1,15 +1,6 @@
 <template>
     <md-whiteframe md-elevation="8" class="pad-32" style="text-align: center">
-        <slot>
-            <h2>Does <i>Laxy</i> need a new name ? Make your
-                suggestion
-                <span class="nobreak">
-                    <md-icon class="arrow_l">arrow_forward</md-icon>
-                    <a href="https://goo.gl/forms/002RglNIaCbll7uH2" target="_blank">here</a>
-                    <md-icon class="arrow_r">arrow_back</md-icon>
-                </span>
-            </h2>
-        </slot>
+        <slot></slot>
     </md-whiteframe>
 </template>
 

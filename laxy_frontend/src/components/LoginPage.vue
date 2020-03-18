@@ -60,9 +60,6 @@
                 </md-card-content>
             </md-card>
             <md-card v-if="is_authenticated" style="margin-top: 32px;">
-
-                <callout-box></callout-box>
-
                 <md-card-content>
                     <md-layout md-column>
                         <br>
@@ -92,15 +89,10 @@
     import {AUTHENTICATE_USER, SET_GLOBAL_SNACKBAR, SET_USER_PROFILE} from "../store";
     import {WebAPI} from "../web-api";
 
-    import CalloutBox from './CalloutBox';
     import {Snackbar} from "../snackbar";
 
 
-    @Component({
-        components: {
-            'callout-box': CalloutBox
-        }
-    })
+    @Component({})
     export default class LoginPage extends Vue {
 
         @Prop({default: '/', type: String})
