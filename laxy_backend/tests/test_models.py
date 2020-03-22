@@ -122,6 +122,14 @@ class FileModelTest(TestCase):
         self.assertListEqual(sorted([loc.url for loc in a_file.locations.all()]),
                              sorted([url, new_url]))
         self.assertTrue(a_file.locations.filter(url=new_url).first().default)
+        # Old location should no longer be defau;t
+        self.assertFalse(a_file.locations.filter(url=url).first().default)
+
+        # After calling set_as_default, the original location should be the only default
+        a_file.locations.filter(url=url).first().set_as_default(save=True)
+        self.assertTrue(a_file.locations.filter(url=url).first().default)
+        self.assertFalse(a_file.locations.filter(url=new_url).first().default)
+
 
     def test_file_explicit_name_overrides_inferred_name_from_location(self):
         url = "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR950/SRR950078/SRR950078_2.fastq.gz"

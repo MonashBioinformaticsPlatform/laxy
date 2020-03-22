@@ -7,7 +7,9 @@ from django.contrib.auth.admin import UserAdmin
 from django.db.migrations.recorder import MigrationRecorder
 import django.forms
 from django.urls import reverse
+from humanize import naturalsize
 from django.contrib.humanize.templatetags import humanize
+
 from django.template.defaultfilters import truncatechars
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
@@ -134,7 +136,8 @@ class JobAdmin(Timestamped, VersionAdmin):
                     'expires',
                     '_compute_resource',
                     '_owner_email',
-                    '_status')
+                    '_status',
+                    '_size')
     ordering = ('-created_time', '-completed_time', '-modified_time', '-expiry_time')
     search_fields = ('id', 'status', 'remote_id', 'owner_id__exact', 'owner__email__exact',)
     list_filter = ('status', 'expired',)
@@ -142,7 +145,8 @@ class JobAdmin(Timestamped, VersionAdmin):
                'expire_job',
                'estimate_job_tarball_size',
                'verify',
-               'copy_to_archive_test')
+               'copy_to_archive_test',
+               'bulk_copy_to_archive')
 
     color_mappings = {
         Job.STATUS_FAILED: 'red',
@@ -169,6 +173,12 @@ class JobAdmin(Timestamped, VersionAdmin):
             self.color_mappings.get(obj.status, 'black'),
             obj.get_status_display(),
         )
+
+    def _size(self, obj: Job):
+        size = obj.params.get('tarball_size', None)
+        if size is not None:
+            return format_html(naturalsize(size))
+        return format_html('<i>unknown</i>')
 
     def _owner_email(self, obj: Job):
         if obj.owner:
@@ -202,7 +212,7 @@ class JobAdmin(Timestamped, VersionAdmin):
             if result.failed():
                 failed.append(obj.id)
         if not failed:
-            self.message_user(request, "Starting task !")
+            self.message_user(request, "Starting estimate_job_tarball_size task(s) !")
         else:
             self.message_user(request, "Errors trying to estimate tarball size for %s" %
                               ','.join(failed))
@@ -241,8 +251,8 @@ class JobAdmin(Timestamped, VersionAdmin):
         if not failed:
             self.message_user(request, "Verifying !")
         else:
-            self.message_user(request, "Errors trying to ingest %s" %
-                              ','.join(failed))
+            self.message_user(request, "Errors trying to verify %d file locations (%s)" %
+                              (len(failed), ','.join(failed)))
 
     verify.short_description = "Verify file checksums (all locations)"
 
@@ -269,6 +279,24 @@ class JobAdmin(Timestamped, VersionAdmin):
                                   ','.join(failed))
 
     copy_to_archive_test.short_description = "TEST: Copy file to laxy-archive location."
+
+    @takes_instance_or_queryset
+    def bulk_copy_to_archive(self, request, queryset):
+        failed = []
+        archive_compute_id = ComputeResource.objects.get(name='laxy-archive').id
+        for job in queryset:
+            task_data = dict(job_id=job.id, dst_compute_id=archive_compute_id)
+            result = file_tasks.bulk_move_job_task.apply_async(args=(task_data,))
+            if result.failed():
+                failed.append(job.id)
+
+        if not failed:
+            self.message_user(request, "Bulk copying now !")
+        else:
+            self.message_user(request, "Errors trying to initiate transfer of %s" %
+                              ','.join(failed))
+
+    bulk_copy_to_archive.short_description = "TEST: Bulk copy job to laxy-archive, update default location."
 
 
 def do_nothing_validator(value):
@@ -302,8 +330,8 @@ class FileLocationAdmin(admin.ModelAdmin):
         if not failed:
             self.message_user(request, "Verifying !")
         else:
-            self.message_user(request, "Errors trying to ingest %s" %
-                              ','.join(failed))
+            self.message_user(request, "Errors trying to verify %d files (%s)" % 
+                (len(failed), ','.join(failed)))
 
     verify.short_description = "Verify file checksum"
 
@@ -451,13 +479,16 @@ class JobOutputFilesInline(admin.TabularInline):
 
 class FilesInline(admin.TabularInline):
     model = File
-    readonly_fields = ('id',)
-    fields = ('id', 'path', 'name', 'type_tags',)
+    readonly_fields = ('id', 'locations_list',)
+    fields = ('id', 'path', 'name', 'locations_list', 'type_tags',)
     ordering = ('path', 'name',)
     can_delete = False
     verbose_name_plural = 'Files'
     fk_name = 'fileset'
     extra = 0
+
+    def locations_list(self, file):
+        return format_html('<br>'.join([l.url for l in file.locations.all()]))
 
 
 class FileSetAdmin(Timestamped, VersionAdmin):

@@ -1,6 +1,5 @@
 import os
-
-from django.core.handlers.wsgi import WSGIRequest
+import socket
 import typing
 from typing import List, Union, AnyStr
 from collections import OrderedDict, Sequence
@@ -12,15 +11,21 @@ from pathlib import Path
 from urllib.parse import urlparse
 import base64
 from uuid import uuid4
-from io import StringIO, BytesIO
+from io import StringIO, BytesIO, BufferedRandom
 
+import backoff
 import rows
-from paramiko.rsakey import RSAKey
+import paramiko
+from paramiko import (SSHClient,
+                      ssh_exception,
+                      RSAKey,
+                      AutoAddPolicy)
 
 from django.conf import settings
-from django.db.models.signals import pre_save, post_save
-from django.dispatch import receiver
 from django.db import models, transaction
+from django.db.models.signals import pre_save, post_save, post_delete
+from django.dispatch import receiver
+from django.core.handlers.wsgi import WSGIRequest
 from django.core.files.storage import get_storage_class, Storage
 from django.core.serializers import serialize
 from django.core.validators import URLValidator
@@ -88,6 +93,9 @@ def create_auth_token(sender, instance=None, created=False, **kwargs):
     """
     if created:
         Token.objects.create(user=instance)
+
+
+
 
 
 class URIValidator(URLValidator):
@@ -415,8 +423,6 @@ class ComputeResource(Timestamped, UUIDModel):
 
         host = self.hostname
         port = self.port
-        if port is None:
-            port = 22
         private_key = self.private_key
         username = self.extra.get('username')
         params = dict(port=port,
@@ -428,6 +434,34 @@ class ComputeResource(Timestamped, UUIDModel):
         CACHED_SFTP_STORAGE_CLASS_INSTANCES[self.id] = storage
 
         return storage
+
+    def ssh_client(self, *args, **kwargs) -> paramiko.SSHClient:
+        """
+        Return an SSHClient instance connected to the ComputeResource.
+
+        eg.
+        with compute_resource.ssh_client() as client:
+            stdin, stdout, stderr = client.exec_command('ls')
+
+        Be sure to use 'with' so the context manager can close the connection when
+        you are finished with the client.
+
+        :return: A paramiko SSHClient instance connected to the compute resource.
+        :rtype: paramiko.SSHClient
+        """
+        remote_username = self.extra.get('username', 'laxy')
+
+        # TODO: Cache connections to the same ComputeResource
+        client = SSHClient()
+        client.set_missing_host_key_policy(AutoAddPolicy)
+        # client.load_system_host_keys()
+        client.connect(self.hostname,
+                       port=self.port,
+                       username=remote_username,
+                       pkey=RSAKey.from_private_key(StringIO(self.private_key)),
+                       **kwargs)
+
+        return client
 
     def running_jobs(self):
         """
@@ -482,11 +516,28 @@ class ComputeResource(Timestamped, UUIDModel):
         return self.host.split(':')[0]
 
     @property
-    def port(self):
+    def port(self) -> int:
+        """
+        Return the port associated with the host, as a int.
+
+        :return: The port (eg 22)
+        :rtype: int
+        """
         if ':' in self.host:
-            return self.host.split(':').pop()
+            return int(self.host.split(':').pop())
         else:
-            return None
+            return '22'
+
+    @property
+    def jobs_dir(self) -> str:
+        """
+        Return the base path for job storage on the host, eg /scratch/jobs/
+
+        :return: The path where jobs are stored on the ComputeResource.
+        :rtype: str
+        """
+        fallback_base_dir = getattr(settings, 'DEFAULT_JOB_BASE_PATH', '/tmp')
+        return  self.extra.get('base_dir', fallback_base_dir)
 
     @property
     def queue_type(self):
@@ -627,16 +678,17 @@ class Job(Expires, Timestamped, UUIDModel):
     @property
     def abs_path_on_compute(self):
         """
+        DEPRECATED: Use job_path_on_compute directly (or rename this property to
+        something less confusing, given that Job.compute_resource is where the Job ran,
+        not where the files currently reside)
+
         Returns the absolute path to the job directory on it's ComputeResource.
         SSH-centric, but might map to other methods of accessing storage.
 
         :return: An absolute path to the job directory.
         :rtype: str
         """
-
-        fallback_base_dir = getattr(settings, 'DEFAULT_JOB_BASE_PATH', '/tmp')
-        base_dir = self.compute_resource.extra.get('base_dir', fallback_base_dir)
-        return os.path.join(base_dir, self.id)
+        return job_path_on_compute(self, self.compute_resource)
 
     @property
     def done(self):
@@ -826,16 +878,15 @@ class FileLocation(UUIDModel):
         :rtype: QuerySet[FileLocation]
         """
         with transaction.atomic():
-            filelocs = FileLocation.objects.filter(file=self.file)
-            for f in filelocs:
-                if f.id != self.id:
-                    f.default = False
-                    if save:
-                        f.save()
+            for f in self.file.locations.exclude(id=self.id):
+                f.default = False
+                if save:
+                    f.save()
             self.default = True
             if save:
                 self.save()
-        return filelocs
+
+        return self.file.locations
 
     @property
     def path_on_compute(self):
@@ -853,6 +904,18 @@ class FileLocation(UUIDModel):
         base_dir = compute.extra.get('base_dir', getattr(settings, 'DEFAULT_JOB_BASE_PATH'))
         file_path = str(Path(base_dir) / Path(url.path).relative_to('/'))
         return file_path
+
+
+@receiver(post_delete, sender=FileLocation)
+def ensure_one_default_filelocation(sender: typing.Type[FileLocation],
+                                    instance: FileLocation,
+                                    using,
+                                    **kwargs):
+    # Ensure that we always have a default FileLocation after deleting
+    if not instance.file.locations.filter(default=True).exists():
+        firstloc = instance.file.locations.first()
+        if firstloc is not None:
+            firstloc.set_as_default()
 
 
 def get_compute_resource_for_location(location: Union[str, FileLocation]) -> Union[ComputeResource, None]:
@@ -904,6 +967,24 @@ def get_storage_class_for_location(location: Union[str, FileLocation]) -> Union[
     else:
         raise NotImplementedError(f'Unsupported scheme or storage backend for file location: {location}')
         # return None
+
+
+def job_path_on_compute(job: Union[str, Job], compute: ComputeResource) -> str:
+    """
+    Given a Job (or job ID) and a ComputeResource, return the absolute path to
+    that Job on that host.
+
+    :param job: A Job or job ID
+    :type job: Union[str, Job]
+    :param compute: The ComputeResource
+    :type compute: ComputeResource
+    :return: The absolute path to the Job directoty on the ComputeResource
+    :rtype: str
+    """
+    if isinstance(job, Job):
+        job = job.id
+
+    return os.path.normpath(os.path.join(compute.jobs_dir, job))
 
 
 @reversion.register()
@@ -1044,6 +1125,12 @@ class File(Timestamped, UUIDModel):
             if self.locations.count() == 0:
                 self.deleted_time = datetime.now()
                 self.save()
+            # TODO: Should we do this to ensure there is always a default ?
+            #       Should this be in a post_delete signal ?
+            # else:
+            #     if self.locations.filter(default=True).count() == 0:
+            #         self.locations.first().set_as_default()
+
 
         @backoff.on_exception(backoff.expo,
                               (socket.gaierror,),
@@ -1292,7 +1379,7 @@ class File(Timestamped, UUIDModel):
         elif scheme == 'file':
             # raise NotImplementedError('file:// URLs are currently not supported')
             storage = self._get_storage_class()
-            return BufferedRandom(storage.open(self.full_path))
+            return storage.open(self.full_path)
 
         elif scheme in ['http', 'https', 'ftp', 'ftps', 'data']:
             response = request_with_retries(
@@ -1369,6 +1456,42 @@ def auto_file_fields(sender, instance, raw, using, update_fields, **kwargs):
             instance.path = instance.path_from_location()
 
 
+def get_compute_resources_for_files(files: Union[Sequence, QuerySet]) -> typing.Set[Union[ComputeResource, None]]:
+    """
+    Return the set of ComputeResources associated with the primary location of
+    a set of Files. If some files have no primary location, None will be included.
+
+    eg.
+
+    >>> get_compute_resources_for_files(job.get_files())
+    {<ComputeResource: ComputeResource object (Zk4BZgcDDfRZGfXYismNBC)>}
+
+    :param files: A list, sequence or QuerySet of Files.
+    :type files: Union[Sequence, QuerySet]
+    :return: A set of ComputeResource instances, including None.
+    :rtype: Set[Union[ComputeResource, None]]
+    """
+    return set([get_compute_resource_for_location(f.location) for f in files])
+
+
+def get_primary_compute_location_for_files(files: Union[Sequence, QuerySet]) -> Union[ComputeResource, None]:
+    """
+    Given some Files, return the single primary ComputeResource where they are stored, if there is one.
+    If the files are spread across multiple ComputeResource locations (or some are missing locations),
+    returns None.
+
+    :param files: A list, sequence or QuerySet of Files.
+    :type files: Union[Sequence, QuerySet]
+    :return: The ComputeResource where the files reside, or None.
+    :rtype: Union[ComputeResource, None]
+    """
+    stored_at = get_compute_resources_for_files(files)
+    if len(stored_at) == 1:
+        return stored_at.pop()
+
+    return None
+
+
 @reversion.register()
 class FileSet(Timestamped, UUIDModel):
     """
@@ -1401,7 +1524,7 @@ class FileSet(Timestamped, UUIDModel):
         (via File.save()).
 
         :param files: A single File object or a list of File objects.
-        :type files: File | Sequence[File]
+        :type files: File | Sequence
         :param save: If True, save this FileSet after adding files.
         :type save: bool
         :return: None
@@ -1437,7 +1560,7 @@ class FileSet(Timestamped, UUIDModel):
         of Files.
 
         :param files: A single File object or a list of File objects.
-        :type files: File | Sequence[File]
+        :type files: File | Sequence
         :param save: If True, save this FileSet after removing files.
         :type save: bool
         :param delete: Delete the Files after removing them from this FileSet
@@ -1491,9 +1614,29 @@ class FileSet(Timestamped, UUIDModel):
         f = self.get_files().filter(name=fname, path=fpath).first()
         return f
 
-    def jobs(self):
+    def jobs(self) -> Union[QuerySet, None]:
+        """
+        Return all Jobs associated with this FileSet, as a QuerySet.
+        In most cases, this is likely to be a single Job.
+
+        :return: A QuerySet of Jobs that reference this FileSet.
+        :rtype: QuerySet
+        """
         # return Job.objects.filter(Q(input_files=self.id) | Q(output_files=self.id)).all()
-        return self.jobs_as_input.all().union(self.jobs_as_output.all()).all()
+        return self.jobs_as_input.union(self.jobs_as_output.all()).all()
+
+    @property
+    def job(self) -> Union[Job, None]:
+        """
+        Return the oldest Job associated with the FileSet.
+
+        :return: The oldest associated job instance based on created_time.
+        :rtype: Job
+        """
+        j = self.jobs()
+        if j is not None:
+            # Oldest Job first
+            return j.order_by('created_time').first()
 
 
 @reversion.register()

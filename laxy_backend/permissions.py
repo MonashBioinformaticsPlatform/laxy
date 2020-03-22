@@ -51,8 +51,11 @@ class HasReadonlyObjectAccessToken(permissions.BasePermission):
 
         if not token:
             return False
-        logger.info(f'Is token valid ?: {token_is_valid(token, obj.id)}')
-        return token_is_valid(token, obj.id)
+
+        is_valid = token_is_valid(token, obj.id)
+        if not is_valid:
+            logger.error(f'Invalid or expired AccessToken {token} used when attempting to access {obj.id}')
+        return is_valid
 
 
 class HasAccessTokenForEventLogSubject(permissions.BasePermission):

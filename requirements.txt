@@ -62,6 +62,7 @@ fs==2.2.1
 gevent==1.4.0
 greenlet==0.4.15
 gunicorn==19.9.0
+humanize==2.2.0
 idna==2.6
 imagesize==0.7.1
 itypes==1.1.0

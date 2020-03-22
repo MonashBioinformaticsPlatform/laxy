@@ -1,6 +1,6 @@
 import fnmatch
 import traceback
-from django.db import transaction
+import shlex
 from typing import Sequence, Union
 from datetime import datetime
 from pathlib import Path
@@ -19,6 +19,7 @@ from io import (BytesIO, StringIO,
 from copy import copy
 from contextlib import closing
 
+from django.db import transaction
 from django.conf import settings
 
 from celery.result import AsyncResult
@@ -30,31 +31,225 @@ from celery.exceptions import (Ignore,
                                TimeLimitExceeded,
                                SoftTimeLimitExceeded)
 
+from .job import add_file_replica_records, remove_file_replica_records
 from ..models import (Job,
                       File,
                       FileLocation,
                       EventLog,
                       get_compute_resource_for_location,
-                      get_storage_class_for_location)
+                      get_storage_class_for_location, ComputeResource, get_primary_compute_location_for_files,
+                      job_path_on_compute)
 from ..util import get_traceback_message
 
 logger = get_task_logger(__name__)
 
 
-@shared_task(bind=True, track_started=True)
-def bulk_copy_job_task(self, task_data=None, **kwargs):
-    from ..models import File
+def do_pipe_copy(job: Job,
+                 src_compute: ComputeResource,
+                 dst_compute: ComputeResource):
 
+    # This opens two SSH connections, one to the source and one to the destination and pipes data via tar.
+    # The network path is like:
+    #   clientA -> laxy_backend(celery worker) -> clientB
+
+    src_path = job_path_on_compute(job, src_compute)
+    dst_path = job_path_on_compute(job, dst_compute)
+    bytes_transferred = 0
+
+    with src_compute.ssh_client(compress=False) as src_client:
+        cmd_src = f'tar -chzf - --directory "{src_path}" .'
+        print(cmd_src)
+        # NO: Setting bufsize seems to result in an incomplete transfer (but ideally we'd like to tune the bufsize
+        #       for performance)
+        src_stdin, src_stdout, src_stderr, src_chan = src_client.exec_command_channel(cmd_src)  #, bufsize=buffer_size)
+        with dst_compute.ssh_client(compress=False) as dst_client:
+            cmd_dst = f'mkdir -p "{dst_path}" && tar -xzf - --directory "{dst_path}"'
+            print(cmd_dst)
+            dst_stdin, dst_stdout, dst_stderr, dst_chan = dst_client.exec_command_channel(cmd_dst)  #, bufsize=buffer_size)
+            for chunk in src_stdout:
+                dst_stdin.write(chunk)
+                bytes_transferred += len(chunk)
+
+            src_stdout.close()
+            dst_stdin.close()
+
+    return bytes_transferred, src_chan.recv_exit_status(), dst_chan.recv_exit_status()
+
+
+def delete_remote_files(job, compute_resource):
+    job_path = job_path_on_compute(job, compute_resource)
+    out = ''
+    with compute_resource.ssh_client(compress=False) as ssh_client:
+        job_path = shlex.quote(job_path)
+        # Sanity check the path since we are doing rm -rf
+        if job.id not in job_path:
+            raise ValueError(f"Aborting delete_remote_files: job path "
+                             f"{job_path} on {compute_resource.id} looks suspicious.")
+
+        cmd_src = f'find {job_path} -type f | wc -l && rm -rf {job_path}'
+        print(cmd_src)
+        (stdin, stdout, stderr) = ssh_client.exec_command(cmd_src)
+        if not stdout.closed:
+            out = stdout.read().decode()
+        [_.close() for _ in (stdin, stdout, stderr)]
+
+    return out
+
+
+@shared_task(bind=True, track_started=True)
+def bulk_move_job_task(self, task_data=None, **kwargs):
+    """
+    Moves all files in a job from one ComputeResource to another, tunneling via the
+    laxy_backend (celery worker). Verifies any files at the destination that have a
+    File.checksum set. Adds a new location record for each file, setting the copy
+    as the new default, then removes the old location record. Finally, deletes the job
+    directory at the source.
+
+    This task is really only intended as an interim solution until per-file
+    django-storages based transfers are made more reliable.
+
+    Design and Caveats
+    -----------------
+    This task won't work as properly for Jobs where files are not all stored on
+    the same SSH-accessible ComputeResource (eg, if some files are on object storage).
+
+    Under the hood it opens SSH connections to the source (A) and destination (B) hosts and
+    uses `tar` with Unix pipes. Traffic tunnels A->celery worker->B, there is no direct traffic
+    between A and B. While `rsync` would be more desirable, this design was
+    chosen since all the 3-way rsync methods I could find required the source host to have
+    direct SSH access to the destination, either via authorized_keys, or using ssh-agent. This
+    was a potential security issue in the case where Laxy is copying files between hosts that
+    don't trust each other (eg, if user A adds their own ComputeResource which they control, but
+    Laxy wants to transfer files to an archival service that only Laxy controls).
+
+    :param self:
+    :type self:
+    :param task_data:
+    :type task_data:
+    :param kwargs:
+    :type kwargs:
+    :return:
+    :rtype:
+    """
     if task_data is None:
         raise InvalidTaskError("task_data is None")
 
-    job_id = task_data.get('job_id')
-    to_location = task_data.get('new_location')
+    message = None
+    try:
+        job_id = task_data.get('job_id')
+        dst_compute_id = task_data.get('dst_compute_id')
 
-    # TODO: Complete this task - probably should use rsync, verify transfer worked (eg, rsync twice with checksums and
-    # non-zero error code), then update all input_files and output_files default FileLocations in a transaction.
-    # See: scripts/ad-hoc-migrations/update-job-location.py for job location update code
-    raise NotImplementedError()
+        job = Job.objects.get(id=job_id)
+        dst_compute = ComputeResource.objects.get(id=dst_compute_id)
+        # src_compute = get_primary_compute_location_for_files(job.get_files())
+        src_compute = job.compute_resource
+        task_data['src_compute'] = src_compute.id
+
+        # Currently this task only works for moving from the original job location
+        # to somewhere else (eg an archival location). If we aren't in the original
+        # location, assume we've moved already, do nothing.
+        # stored_at = get_primary_compute_location_for_files(job.get_files())
+        # if stored_at.id != src_compute.id:
+        #     result = 'no_move_required'
+        #     return task_data
+
+        n_added = 0
+        n_removed = 0
+        bytes_transferred = 0
+        result = {}
+        try:
+            xfer_started_at = datetime.now()
+            # if stored_at.id != dst_compute.id:
+            #    bytes_transferred = do_pipe_copy(job, src_compute, dst_compute)
+            bytes_transferred, src_exitcode, dst_exitcode = do_pipe_copy(job, src_compute, dst_compute)
+            xfer_finished_at = datetime.now()
+            xfer_walltime = (xfer_finished_at - xfer_started_at).total_seconds()
+            kbps = (bytes_transferred / 1000) / xfer_walltime
+            result['do_pipe_copy'] = {'started_time': xfer_started_at.isoformat(),
+                                      'finished_time': xfer_finished_at.isoformat(),
+                                      'walltime_seconds': xfer_walltime,
+                                      'rate_kbps': kbps,
+                                      'src_exitcode': src_exitcode,
+                                      'dst_exitcode': dst_exitcode}
+        except BaseException as ex:
+            logger.error(f'Failed to copy {job_id} from {src_compute.id} to {dst_compute.id} '
+                         f'(bulk_move_job_task:do_pipe_copy)')
+            message = get_traceback_message(ex)
+            raise ex
+
+        try:
+            # if stored_at.id != dst_compute.id:
+            #     n_added = add_file_replica_records(job.get_files(), dst_compute, set_as_default=True)
+            n_added = add_file_replica_records(job.get_files(), dst_compute, set_as_default=True)
+            result['add_file_replica_records'] = n_added
+        except BaseException as ex:
+            logger.error(f'Failed add file replica records for {job_id}, new ComputeResource {dst_compute.id} '
+                         f'(bulk_move_job_task:add_file_replica_records)')
+            message = get_traceback_message(ex)
+            raise ex
+
+        try:
+            result['verify'] = {'success': False, 'failed_locations': []}
+            for f in job.get_files():
+                exc_name = None
+                try:
+                    ok = verify(f, f.location)
+                except IOError as ex:
+                    ok = False
+                    exc_name = type(ex).__name__
+                if not ok and f.checksum:
+                    detail = {'file': f.id,
+                              'location': f.location,
+                              'exception': exc_name}
+                    result['verify']['failed_locations'].append(detail)
+                    raise Exception('File verification failed:' + str(detail))
+
+            result['verify']['success'] = len(result['verify']['failed_locations']) == 0
+
+        except BaseException as ex:
+            logger.error(f'Unable to verify copied files for {job_id} at '
+                         f'destination {dst_compute.id} not deleting source copy. '
+                         f'(bulk_move_job_task:verify_task)')
+            message = get_traceback_message(ex)
+            raise ex
+
+        try:
+            n_removed = remove_file_replica_records(job.get_files(), src_compute)
+            result['remove_file_replica_records'] = n_removed
+        except BaseException as ex:
+            logger.error(f'Failed remove file replica records for {job_id}, old ComputeResource {src_compute.id} '
+                         f'(bulk_move_job_task:remove_file_replica_records)')
+            message = get_traceback_message(ex)
+            raise ex
+
+        try:
+            delete_stdout = delete_remote_files(job, src_compute)
+            result['delete_remote_files'] = delete_stdout
+        except BaseException as ex:
+            logger.error(f'Failed delete remote files for {job_id}, on ComputeResource {src_compute.id} '
+                         f'(bulk_move_job_task:delete_remote_files)')
+            message = get_traceback_message(ex)
+            raise ex
+
+        result['success'] = True
+        task_data['result'] = result
+        task_succeeded = True
+
+    except BaseException as ex:
+        task_succeeded = False
+        exc_type = type(ex).__name__
+        if message is None:
+            message = get_traceback_message(ex)
+        print(message)
+
+    if not task_succeeded:
+        # self.update_state(state=states.FAILURE,
+        #                   meta={'exc_type': exc_type,
+        #                         'exc_message': message.split('\n'),
+        #                         'result': result})
+        raise Exception('\n'.join([message, str(result)]))
+
+    return task_data
 
 
 def location_path_on_compute(location, compute):
@@ -84,7 +279,7 @@ def get_checksum_and_size(filelike, hash_type='md5', blocksize=8192):
     chunk_size = max(blocksize // hasher.block_size, 1) * hasher.block_size
 
     # We read buffer ahead - this seems to be more reliable for files over the network
-    with BufferedReader(filelike, buffer_size=chunk_size*128).raw as fh:
+    with BufferedReader(filelike, buffer_size=chunk_size * 128).raw as fh:
         byte_count = 0
         for chunk in iter(lambda: fh.read(chunk_size), b''):
             hasher.update(chunk)
@@ -144,7 +339,6 @@ def verify(file: File, location: Union[str, FileLocation, None] = None, set_size
 
 @shared_task(bind=True, track_started=True)
 def verify_task(self, task_data=None, **kwargs):
-
     if task_data is None:
         raise InvalidTaskError("task_data is None")
 
@@ -197,7 +391,6 @@ def copy_file_to(file: File,
                  make_default=False,
                  verification_type='immediate',
                  deleted_failed_destination_copy=True) -> File:
-
     _verification_types = ['immediate', 'async', 'none']
     if verification_type not in _verification_types:
         raise ValueError(f'verification_type must be one of: {", ".join(_verification_types)}')

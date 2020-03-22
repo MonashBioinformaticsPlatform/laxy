@@ -17,8 +17,10 @@ import logging
 import os
 import pydash
 
-from paramiko import SSHClient, ssh_exception
-from paramiko import RSAKey, AutoAddPolicy
+from paramiko import (SSHClient,
+                      ssh_exception,
+                      RSAKey,
+                      AutoAddPolicy)
 
 from laxy_backend.scraping import render_page, parse_cloudstor_links, parse_simple_index_links, is_apache_index_page, \
     parse_cloudstor_webdav
@@ -40,7 +42,7 @@ from django_filters.rest_framework import DjangoFilterBackend, OrderingFilter
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from fs.errors import DirectoryExpected
-from io import BytesIO, StringIO
+from io import BufferedReader, BytesIO, StringIO
 from pathlib import Path
 import paramiko
 from requests import HTTPError
@@ -94,7 +96,7 @@ from .models import (Job,
                      SampleCart,
                      PipelineRun,
                      EventLog,
-                     AccessToken)
+                     AccessToken, get_primary_compute_location_for_files, job_path_on_compute)
 from .serializers import (PatchSerializerResponse,
                           PutSerializerResponse,
                           JobSerializerResponse,
@@ -131,6 +133,7 @@ from .view_mixins import (JSONView, GetMixin, PatchMixin,
 from django.contrib.auth import get_user_model
 
 from .data.genomics.genomes import REFERENCE_GENOME_MAPPINGS
+from contextlib import closing
 
 # This is a mapping of 'matchers' to link parsing functions.
 # The matchers can be simple strings, which are tested as a substring of the URL,
@@ -177,22 +180,18 @@ class JobDirectTarDownload(JSONView):
 
         # must get object this way to correctly enforce permission_classes !
         job = self.get_object()
-        compute = job.compute_resource
-        remote_username = compute.extra.get('username')
-        port = compute.port
-        if port is None:
-            port = 22
-        job_path = job.abs_path_on_compute
 
-        client = SSHClient()
-        client.set_missing_host_key_policy(AutoAddPolicy)
-        # client.load_system_host_keys()
-        client.connect(compute.hostname,
-                       port=port,
-                       username=remote_username,
-                       pkey=RSAKey.from_private_key(StringIO(compute.private_key)))
-        stdin, stdout, stderr = client.exec_command(
-            f'tar -czf - --directory "{job_path}" .')
+        # NOTE: The download method used here will only
+        # work on a job stored in a single SSH-accessible location, not one with
+        # archived files spread across object store etc. The MyTardis-style tarball
+        # download, using django-storages, would be required to do tarball downloads
+        # in that case.
+        # job_path = job.abs_path_on_compute
+        stored_at = get_primary_compute_location_for_files(job.get_files())
+        job_path = job_path_on_compute(job, stored_at)
+
+        client = stored_at.ssh_client()
+        stdin, stdout, stderr = client.exec_command(f'tar -chzf - --directory "{job_path}" .')
 
         if request.path.endswith('.tar.gz'):
             output_fn = f'{job.id}.tar.gz'

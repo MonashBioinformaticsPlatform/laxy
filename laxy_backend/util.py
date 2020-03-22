@@ -240,12 +240,13 @@ def get_content_type(request: Request) -> str:
 
 def get_traceback_message(ex: BaseException) -> Union[str]:
     message = ''
-    if hasattr(ex, 'message'):
+    if hasattr(ex, 'message') and ex.message:
         message = ex.message
+    else:
+        message = str(ex)
+
     if hasattr(ex, '__traceback__'):
         tb = ex.__traceback__
         message = '%s - Traceback: %s' % (message, ''.join(traceback.format_list(traceback.extract_tb(tb))))
-    else:
-        message = repr(ex)
 
     return message

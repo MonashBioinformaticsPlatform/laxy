@@ -11,12 +11,14 @@ from .. import util
 from ..models import Job, File, FileSet, SampleCart, ComputeResource, EventLog
 from django.contrib.auth import get_user_model
 
+from ..util import laxy_sftp_url
+
 User = get_user_model()
 
 from ..tasks.job import (index_remote_files,
                          _index_remote_files_task_err_handler,
                          set_job_status,
-                         file_should_be_deleted)
+                         file_should_be_deleted, add_file_replica_records, remove_file_replica_records)
 
 
 def _create_user_and_login(username='testuser',
@@ -65,7 +67,7 @@ class TasksTest(TestCase):
         self.file_bam = File(
             location="file:///tmp/laxyjobs/some_job_id/output/bigfile.bam",
             owner_id=self.user.id,
-            metadata={'size': 1024*1024*1024})
+            metadata={'size': 1024 * 1024 * 1024})
         self.file_bam.save()
         self.files.append(self.file_bam)
 
@@ -88,7 +90,7 @@ class TasksTest(TestCase):
             location="file:///tmp/laxyjobs/some_job_id/output/counts.txt",
             owner_id=self.user.id,
             type_tags=['counts'],
-            metadata={'size': 1024*1024*1024})
+            metadata={'size': 1024 * 1024 * 1024})
         self.file_counts.save()
 
         self.file_always_delete_path = File(
@@ -101,14 +103,14 @@ class TasksTest(TestCase):
         self.file_must_keep_path = File(
             location="file:///tmp/laxyjobs/some_job_id/output/sikRun/multiqc_data/somedatafile",
             owner_id=self.user.id,
-            metadata={'size': 1024*1024*1024})
+            metadata={'size': 1024 * 1024 * 1024})
         self.file_must_keep_path.save()
         self.files.append(self.file_must_keep_path)
 
         self.file_big = File(
             location="file:///tmp/laxyjobs/some_job_id/output/just_big",
             owner_id=self.user.id,
-            metadata={'size': 1024*1024*1024})
+            metadata={'size': 1024 * 1024 * 1024})
         self.file_big.save()
         self.files.append(self.file_big)
 
@@ -139,7 +141,6 @@ class TasksTest(TestCase):
         self.assertFalse(file_should_be_deleted(self.file_small))
         self.assertFalse(file_should_be_deleted(self.file_must_keep_path))
 
-
     def test_set_job_status_task(self):
         task_data = dict(job_id=self.job_one.id, status=Job.STATUS_COMPLETE)
         result = set_job_status(task_data)
@@ -158,3 +159,63 @@ class TasksTest(TestCase):
         # a JOB_FINALIZE_ERROR event should be generated
         self.assetEqual(finalize_errorlog_count + 1, EventLog.objects.filter(event='JOB_FINALIZE_ERROR').count())
 
+    def test_add_remove_replica_records(self):
+        orig_compute = ComputeResource(owner=self.user,
+                                       host='127.0.0.1',
+                                       disposable=False,
+                                       status=ComputeResource.STATUS_ONLINE,
+                                       name='default',
+                                       extra={'base_dir': get_tmp_dir()})
+        orig_compute.save()
+
+        archive_compute = ComputeResource(owner=self.user,
+                                          host='localhost',
+                                          disposable=False,
+                                          status=ComputeResource.STATUS_ONLINE,
+                                          name='archive',
+                                          extra={'base_dir': get_tmp_dir()})
+        archive_compute.save()
+
+        job = Job(owner=self.user, status=Job.STATUS_COMPLETE,
+                  remote_id='999', exit_code=0, params={},
+                  compute_resource=orig_compute,
+                  completed_time=datetime.now())
+        job.save()
+
+        in_file = File(name='pipeline_config.json',
+                       path='input',
+                       metadata={'size': 512})
+        in_file.location = laxy_sftp_url(job, in_file.full_path)
+        out_file = File(name='alignment.bam',
+                        path='output/bams',
+                        metadata={'size': 1024 * 1024 * 1024})
+        out_file.location = laxy_sftp_url(job, out_file.full_path)
+
+        job.input_files.add(in_file)
+        job.output_files.add(out_file)
+
+        files = job.get_files()
+
+        # First establish that we have only a single default location.
+        for f in files:
+            self.assertEqual(f.locations.count(), 1)
+            self.assertTrue(f.locations.first().default)
+            self.assertTrue(f.location.startswith(f'laxy+sftp://{orig_compute.id}/'))
+
+        add_file_replica_records(files, archive_compute, set_as_default=True)
+
+        # After adding the replica location as the default, check that we have two locations.
+        # The default location should be on archive_compute, non-default should be on orig_compute.
+        for f in job.get_files():
+            self.assertEqual(f.locations.count(), 2)
+            self.assertTrue(f.location.startswith(f'laxy+sftp://{archive_compute.id}/'))
+            self.assertTrue(f.locations.filter(default=False)
+                            .first().url.startswith(f'laxy+sftp://{orig_compute.id}'))
+
+        remove_file_replica_records(files, orig_compute)
+
+        # After removing the original location, we should only have a single location
+        # pointing to archive_compute
+        for f in job.get_files():
+            self.assertTrue(f.location.startswith(f'laxy+sftp://{archive_compute.id}'))
+            self.assertEqual(f.locations.count(), 1)

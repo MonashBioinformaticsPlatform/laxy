@@ -1,7 +1,8 @@
 import fnmatch
+import shlex
 import traceback
 from django.db import transaction
-from typing import Sequence, Union
+from typing import Sequence, Union, Iterable
 from datetime import datetime, timedelta
 from pathlib import Path
 import logging
@@ -15,6 +16,9 @@ from io import BytesIO, StringIO
 from copy import copy
 from contextlib import closing
 from django.conf import settings
+from django.db.models import QuerySet
+from django.db import IntegrityError
+
 from paramiko.config import SSHConfig
 
 from celery.result import AsyncResult
@@ -38,7 +42,8 @@ from fabric.api import put, run, shell_env, local, cd, show
 
 # logging.config.fileConfig('logging_config.ini')
 # logger = logging.getLogger(__name__)
-from ..models import Job, File, EventLog
+from ..models import Job, File, EventLog, ComputeResource, FileLocation, get_primary_compute_location_for_files, \
+    job_path_on_compute, get_compute_resources_for_files
 from ..util import laxy_sftp_url, get_traceback_message
 
 logger = get_task_logger(__name__)
@@ -116,7 +121,7 @@ def start_job(self, task_data=None, **kwargs):
     job_id = task_data.get('job_id')
     job = Job.objects.get(id=job_id)
     result = task_data.get('result')
-    master_ip = job.compute_resource.host
+    host = job.compute_resource.host
     gateway = job.compute_resource.gateway_server
 
     webhook_notify_url = ''
@@ -186,7 +191,7 @@ def start_job(self, task_data=None, **kwargs):
     message = "Failure, without exception."
     try:
         with fabsettings(gateway=gateway,
-                         host_string=master_ip,
+                         host_string=host,
                          user=remote_username,
                          key=private_key,
                          # key_filename=expanduser("~/.ssh/id_rsa"),
@@ -283,6 +288,7 @@ def remote_list_files(path='.'):
     :return: A list of relative paths.
     :rtype: List[str]
     """
+    # path = shlex.quote(path)
     # -L ensures symlinks are followed and output as filenames too
     lslines = run(f"find -L {path} -mindepth 1 -type f -printf '%P\n'")
     if not lslines.succeeded:
@@ -326,7 +332,7 @@ def index_remote_files(self, task_data=None, **kwargs):
 
     compute_resource = job.compute_resource
     if compute_resource is not None:
-        master_ip = compute_resource.host
+        host = compute_resource.host
         gateway = compute_resource.gateway_server
     else:
         logger.info(f"Not indexing files for {job_id}, no compute_resource.")
@@ -395,7 +401,7 @@ def index_remote_files(self, task_data=None, **kwargs):
 
     try:
         with fabsettings(gateway=gateway,
-                         host_string=master_ip,
+                         host_string=host,
                          user=remote_username,
                          key=private_key,
                          # key_filename=expanduser("~/.ssh/id_rsa"),
@@ -493,7 +499,7 @@ def poll_job_ps(self, task_data=None, **kwargs):
 
     job_id = task_data.get('job_id')
     job = Job.objects.get(id=job_id)
-    master_ip = job.compute_resource.host
+    host = job.compute_resource.host
     gateway = job.compute_resource.gateway_server
     _init_fabric_env()
     private_key = job.compute_resource.private_key
@@ -502,7 +508,7 @@ def poll_job_ps(self, task_data=None, **kwargs):
     message = "No message."
     try:
         with fabsettings(gateway=gateway,
-                         host_string=master_ip,
+                         host_string=host,
                          user=remote_username,
                          key=private_key):
             with shell_env():
@@ -541,7 +547,7 @@ def kill_remote_job(self, task_data=None, **kwargs):
     environment = task_data.get('environment', {})
     job_id = task_data.get('job_id')
     job = Job.objects.get(id=job_id)
-    master_ip = job.compute_resource.host
+    host = job.compute_resource.host
     gateway = job.compute_resource.gateway_server
     queue_type = job.compute_resource.queue_type
     private_key = job.compute_resource.private_key
@@ -553,7 +559,7 @@ def kill_remote_job(self, task_data=None, **kwargs):
     message = "No message."
     try:
         with fabsettings(gateway=gateway,
-                         host_string=master_ip,
+                         host_string=host,
                          user=remote_username,
                          key=private_key):
             with cd(working_dir):
@@ -590,19 +596,23 @@ def estimate_job_tarball_size(self, task_data=None, **kwargs):
     environment = task_data.get('environment', {})
     job_id = task_data.get('job_id')
     job = Job.objects.get(id=job_id)
-    master_ip = job.compute_resource.host
-    gateway = job.compute_resource.gateway_server
-    queue_type = job.compute_resource.queue_type
-    private_key = job.compute_resource.private_key
-    remote_username = job.compute_resource.extra.get('username', None)
+    # stored_at = get_primary_compute_location_for_files(job.get_files())
+    compute_locs = [c for c in get_compute_resources_for_files(job.get_files()) if c is not None]
+    stored_at = compute_locs.pop()
+    host = stored_at.host
+    gateway = stored_at.gateway_server
+    queue_type = stored_at.queue_type
+    private_key = stored_at.private_key
+    remote_username = stored_at.extra.get('username', None)
 
-    job_path = job.abs_path_on_compute
+    job_path = job_path_on_compute(job, stored_at)
+    # job_path = job.abs_path_on_compute
 
     message = "No message."
     task_result = dict()
     try:
         with fabsettings(gateway=gateway,
-                         host_string=master_ip,
+                         host_string=host,
                          user=remote_username,
                          key=private_key):
             with cd(job_path):
@@ -612,19 +622,19 @@ def estimate_job_tarball_size(self, task_data=None, **kwargs):
                     # else:
                     #     result = run(f"kill {job.remote_id}")
 
-                    # NOTE: If running tar -czf is too slow / too much extra I/O load,
+                    # NOTE: If running tar -chzf is too slow / too much extra I/O load,
                     #       we could use the placeholder heuristic of
                     #       f`du -bc --max-depth=0 "{job_path}"` * 0.66 for RNAsik runs,
                     #       stored in job metadata. Or add proper sizes to every File.metdata
                     #       and derive it from a query.
                     # We run as 'nice' since this is considered low priority
 
-                    result = run(f'nice tar -czf - --directory "{job_path}" . | nice wc --bytes')
+                    result = run(f'nice tar -chzf - --directory "{job_path}" . | nice wc --bytes')
                     tries = 0
                     while result.succeeded and \
                             'file changed as we read it' in result.stdout.strip() and \
                             tries <= 3:
-                        result = run(f'nice tar -czf - --directory "{job_path}" . | nice wc --bytes')
+                        result = run(f'nice tar -chzf - --directory "{job_path}" . | nice wc --bytes')
                         tries += 1
 
                     if result.succeeded:
@@ -734,7 +744,7 @@ def expire_old_job(self, task_data=None, **kwargs):
     #     # fabsettings and shell_env should be outside this function
     #     # rather than initiating ssh connection for every call
     #     with fabsettings(gateway=gateway,
-    #                      host_string=master_ip,
+    #                      host_string=host,
     #                      user=remote_username,
     #                      key=private_key,
     #                      # key_filename=expanduser("~/.ssh/id_rsa"),
@@ -787,6 +797,15 @@ def expire_old_job(self, task_data=None, **kwargs):
         result = {"deleted_count": count}
 
         try:
+            if count > 0:
+                r = estimate_job_tarball_size.apply_async(args=(dict(job_id=job.id,),))
+            if r.failed():
+                raise r.result
+        except BaseException as ex:
+            logger.error(f'Failed to start estimate_job_tarball_size task after expiring Job ({job.id}) [{get_traceback_message(ex)}]')
+            pass
+
+        try:
             job.log_event('JOB_INFO', 'Job expired, some files may be unavailable.')
         except BaseException:
             # EventLogs are nice but optional, if this fails just forge ahead
@@ -812,3 +831,80 @@ def expire_old_jobs(self, task_data=None, *kwargs):
     for job in expiring_jobs:
         logging.info(f"Expiring job: {job.id}")
         expire_old_job.s(task_data=dict(job_id=job.id)).apply_async()
+
+
+def add_file_replica_records(files: Iterable[File],
+                             compute_resource: Union[str, ComputeResource],
+                             set_as_default=False) -> int:
+    """
+    Adds a new laxy+sftp:// file location to every files in a job, given
+    a ComputeResource. If set_as_default=True, the new replica location becomes the
+    default location.
+
+    NOTE: This task doesn't actually move any data - it's more intended for situations
+    where data has been moved out-of-band (eg, rsynced manually, not via an
+    internal Laxy task) but records in the database need to be updated.
+    """
+
+    if isinstance(compute_resource, str):
+        compute_resource = ComputeResource.objects.get(id=compute_resource)
+
+    # if isinstance(job, str):
+    #     job = Job.objects.get(id=job)
+    # files = job.get_files()
+
+    new_prefix = f'laxy+sftp://{compute_resource.id}'
+
+    n_added = 0
+    with transaction.atomic():
+        for f in files:
+            replica_url = f'{new_prefix}/{f.fileset.job.id}/{f.full_path}'
+            # try:
+            loc, created = FileLocation.objects.get_or_create(file=f, url=replica_url)
+            if set_as_default:
+                loc.set_as_default(save=True)
+            if created:
+                n_added += 1
+            #
+            # except IntegrityError as ex:
+            #     if 'unique constraint' in ex.message:
+            #         pass
+
+    return n_added
+
+
+def remove_file_replica_records(files: QuerySet,
+                                compute_resource: Union[str, ComputeResource],
+                                allow_delete_default=False) -> int:
+    """
+    Removes the laxy+sftp:// file location for the specified ComputeResource for every
+    file in a job, if there is an alternative location in existence.
+
+    This method will raise an exception if trying to delete a FileLocation
+    marked as the 'default', since this is something you probably don't want to do.
+    If really want to do that, set allow_delete_default = True.
+
+    NOTE: This task doesn't actually move any data - it's more intended for situations
+    where data has been moved out-of-band (eg, rsynced manually, not via an
+    internal Laxy task) but records in the database need to be updated.
+    """
+
+    if isinstance(compute_resource, str):
+        compute_resource = ComputeResource.objects.get(id=compute_resource)
+
+    n_deleted = 0
+    with transaction.atomic():
+        old_prefix = f'laxy+sftp://{compute_resource.id}/'
+        oldlocs = FileLocation.objects.filter(file__in=files, url__startswith=old_prefix)
+        # TODO: This safety check seems to be triggering when it shouldn't ??
+        # if not allow_delete_default and oldlocs.filter(default=True).exists():
+        #     raise ValueError(f"The provided ComputeResource ({compute_resource.id}) "
+        #                      f"is used as a default location for at least some of the files in the provided QuerySet. "
+        #                      f"Either set allow_delete_default = True, or ensure no files provided "
+        #                      f"use this ComputeResource in their default location.")
+
+        n_deleted = oldlocs.count()
+        # NOTE: Delete on a QuerySet DOES trigger post_delete signals (eg ensure_one_default_filelocation)
+        oldlocs.delete()
+
+    return n_deleted
