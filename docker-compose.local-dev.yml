@@ -2,6 +2,7 @@ version: '3.7'
 
 volumes:
   fake-cluster-scratch:
+  fake-archive-storage:
 
 services:
 
@@ -29,6 +30,8 @@ services:
     # Django app is publicly accessible without reverse proxy
     ports:
       - "8001:8001"
+      # Debugger port
+      - "21001:21001"
     logging:
       driver: "json-file"
       options:
@@ -37,6 +40,7 @@ services:
     depends_on:
       - db
     command: bash -c "sleep 10 &&
+                      pip3 install -U ptvsd &&
                       python3 manage.py migrate --no-input --run-syncdb &&
                       python3 manage.py migrate --no-input &&
                       python3 manage.py makemigrations --no-input &&
@@ -44,7 +48,6 @@ services:
                       python3 manage.py shell -c \"from os import environ as env; from django.contrib.auth import get_user_model; username = env.get('LAXY_ADMIN_USERNAME', 'admin'); User = get_user_model(); User.objects.filter(username=username).count() or User.objects.create_superuser(username, env.get('LAXY_ADMIN_EMAIL', None), env.get('LAXY_ADMIN_PASSWORD', None));\" &&
                       python3 manage.py loaddata --app laxy_backend /app/docker/fake-cluster/fixtures.json &&
                       LAXY_FRONTEND_API_URL=http://`hostname`:8001 python3 manage.py runserver 0.0.0.0:8001"
-
   # Examine the logs to find the token to login to the Jupyter notebook
   # (eg docker-compose logs -f docker-compose.yml -f docker-compose.dev.yml shell-notebook )
   shell-notebook:
@@ -134,6 +137,25 @@ services:
       resources:
         limits:
           memory: "4000M"
+
+  fake-archival-host:
+    image: fake-cluster:latest
+    build:
+      context: ./docker/fake-cluster
+    volumes:
+      # - ./.fake-cluster-scratch:/scratch
+      # We use a volume here since on OSX conda seems to have issues with host directory mounts
+      - fake-archive-storage:/archive
+    ports:
+      - "2223:2222"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10k"
+        max-file: "1"
+    restart: "unless-stopped"
+    depends_on:
+      - django
 
   splash:
     image: scrapinghub/splash:latest
