@@ -90,6 +90,7 @@ cryptography>=2.5
 pluggy==0.6.0
 psycopg2==2.8.4
 psycopg2-binary==2.7.6.1
+ptvsd==4.3.2
 py==1.5.2
 pyasn1==0.4.5
 pycodestyle==2.3.1

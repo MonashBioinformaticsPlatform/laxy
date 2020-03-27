@@ -27,6 +27,7 @@ Jinja2>=2.10.1
 fs  # PyFilesystem
 sentry-sdk==0.6.8
 git+https://github.com/pansapiens/webdav-client-python.git@master#egg=webdavclient
+ptvsd
 
 # Temporary version of paramiko that merges PR (OpenSSH key format): https://github.com/paramiko/paramiko/pull/1343
 # Alternative workaround - generate PEM format keys like:
