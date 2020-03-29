@@ -368,24 +368,14 @@ class ComputeResource(Timestamped, UUIDModel):
     name = CharField(max_length=128, blank=True, null=True)
     priority = IntegerField(default=0)
 
-    # QUEUE_TYPE_LOCAL = 'local'  # a regular process (via the shell) on a compute node
-    # QUEUE_TYPE_SLURM = 'slurm'  # submit the job to a slurm queue on the compute node
-    #
-    # QUEUE_TYPE_CHOICES = ((QUEUE_TYPE_LOCAL, 'local'),
-    #                       (QUEUE_TYPE_SLURM, 'slurm'),
-    #                       )
-    # queue_type = CharField(max_length=64,
-    #                        choices=QUEUE_TYPE_CHOICES,
-    #                        default=QUEUE_TYPE_LOCAL)
-    '''
-    The host `queue_type` is used for logic around how the host is used 
-    (job submission, monitoring and cancellation).
-    eg, values might be 'local' or 'slurm'.
-    '''
-
-    # This contains resource type specific data, eg it may contain
-    # ssh keys, queue type
     extra = JSONField(default=OrderedDict)
+    '''
+    This contains resource type specific data. For a typical SSH-accessible 
+    ComputeResource, it will contain a base_dir, username, private_key, queue_type 
+    and possibly other configuration values.
+    
+    See views.ComputeResourceCreate.post docs for details.
+    '''
 
     @classmethod
     def get_best_available(cls):

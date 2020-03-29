@@ -1394,9 +1394,10 @@ class ComputeResourceCreate(PostMixin,
           the commandline like `base64 < ~/.ssh/id_rsa`).
           * `base_dir` - the absolute path to where job processing directories
              will be created on the ComputeResource.
-          * `queue_type` - `slurm` or `local`. This is passed to the job script
-             (eg `run_job.sh`), to tell it to either submit long-running tasks
-             to a SLURM queue (via sbatch/srun), or run all processes on the
+          * `queue_type` - `slurm` or `local` - determines to do job submission,
+             monitoring and cancellation for this host. This is passed to the job
+             script (eg `run_job.sh`), to tell it to either submit long-running
+             tasks to a SLURM queue (via sbatch/srun), or run all processes on the
              local compute node.
           * `slurm_account` (optional) - the SLURM account name to use
              (eg for the `sbatch --account=` option).
