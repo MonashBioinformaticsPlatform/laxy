@@ -1,4 +1,9 @@
+# {"conda-pack": {"url": "https://swift.rc.nectar.org.au/v1/AUTH_4e59a3c82eb540599de3b26bc1e16eb2/laxy-assets/conda-pack/rnasik/rnasik-1.5.4_conda-pack_20190326.tar.gz", "checksum": "md5:742d02fd6650e38bb01aa4dfb614db0b"}}
+# When the the first line above is valid JSON, it is used to retrieve a pre-generated conda environment
+# rather than installing this conda_environment.yml. For large environments this is faster, and generally
+# aids reproducibility.
 ---
+
 # This environment contains the minimal packages required without listing automatically installed
 # dependencies or specific versions.
 # It can be used as a template for building an environment with a specific version of a pipeline,

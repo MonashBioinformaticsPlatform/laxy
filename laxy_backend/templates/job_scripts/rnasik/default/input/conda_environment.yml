@@ -6,7 +6,9 @@
 #
 # (We maintain this simplified environment file since while keeping the output of `conda env export`
 #  is great for reproducible environments it makes it difficult to identify just the required
-#  core packages when all their implicit dependencies are also listed)
+#  core packages when all their implicit dependencies are also listed.
+#  The flag `conda env export --from-history` does a similar thing, but doesn't contain specific
+#  overridden package versions and seems to exclude pip installed packages)
 #
 # Packages here should generally be unversioned, unless a specific version is known to be required.
 #
