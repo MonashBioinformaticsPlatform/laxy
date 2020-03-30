@@ -96,6 +96,8 @@ services:
         limits:
           memory: "4000M"
 
+  # TODO: Use watchdog to make celery autoreload on *.py and *.sh changes
+  #       https://www.distributedpython.com/2019/04/23/celery-reload/
   celeryd:
     build:
       context: .
