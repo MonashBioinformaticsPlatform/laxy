@@ -46,7 +46,7 @@ logger = get_task_logger(__name__)
 
 def do_pipe_copy(job: Job,
                  src_compute: ComputeResource,
-                 dst_compute: ComputeResource):
+                 dst_compute: ComputeResource) -> (int, int, int):
 
     # This opens two SSH connections, one to the source and one to the destination and pipes data via tar.
     # The network path is like:
@@ -135,32 +135,40 @@ def bulk_move_job_task(self, task_data=None, **kwargs):
         raise InvalidTaskError("task_data is None")
 
     message = None
+    result = {}
     try:
         job_id = task_data.get('job_id')
-        dst_compute_id = task_data.get('dst_compute_id')
+        dst_compute_id = task_data.get('dst_compute_id', None)
+        src_compute_id = task_data.get('src_compute_id', None)
+        force = task_data.get('force', False)
 
         job = Job.objects.get(id=job_id)
-        dst_compute = ComputeResource.objects.get(id=dst_compute_id)
-        # src_compute = get_primary_compute_location_for_files(job.get_files())
-        src_compute = job.compute_resource
-        task_data['src_compute'] = src_compute.id
 
-        # Currently this task only works for moving from the original job location
-        # to somewhere else (eg an archival location). If we aren't in the original
-        # location, assume we've moved already, do nothing.
-        # stored_at = get_primary_compute_location_for_files(job.get_files())
-        # if stored_at.id != src_compute.id:
-        #     result = 'no_move_required'
-        #     return task_data
+        if src_compute_id is not None:
+            src_compute = ComputeResource.objects.get(id=src_compute_id)
+            if src_compute != get_primary_compute_location_for_files(job.get_files()):
+                raise ValueError(f"{src_compute_id} is not the primary location for this "
+                                 f"job ({job_id}) (all files must be there !)")
 
-        n_added = 0
-        n_removed = 0
-        bytes_transferred = 0
-        result = {}
+        if src_compute_id is None:
+            src_compute = job.compute_resource
+            task_data['src_compute_id'] = src_compute.id
+
+        if dst_compute_id is not None:
+            dst_compute = ComputeResource.objects.get(id=dst_compute_id)
+        elif job.compute_resource.archive_host is not None:
+            dst_compute = src_compute.archive_host
+        else:
+            raise ValueError(f"dst_compute_id not specified, and job.compute_resource has no archive_host.")
+
+        task_data['dst_compute_id'] = dst_compute.id
+
+        if src_compute == dst_compute and not force:
+            result = 'no_move_required'
+            return task_data
+
         try:
             xfer_started_at = datetime.now()
-            # if stored_at.id != dst_compute.id:
-            #    bytes_transferred = do_pipe_copy(job, src_compute, dst_compute)
             bytes_transferred, src_exitcode, dst_exitcode = do_pipe_copy(job, src_compute, dst_compute)
             xfer_finished_at = datetime.now()
             xfer_walltime = (xfer_finished_at - xfer_started_at).total_seconds()
@@ -171,6 +179,17 @@ def bulk_move_job_task(self, task_data=None, **kwargs):
                                       'rate_kbps': kbps,
                                       'src_exitcode': src_exitcode,
                                       'dst_exitcode': dst_exitcode}
+
+            # Because do_pipe_copy uses `tar -cvzf`, bytes_transferred will be the same
+            # (or very close to) the tarball size. To save launching a separate
+            # estimate_job_tarball_size task, we set that value now
+            with transaction.atomic():
+                job = Job.objects.get(id=job_id)
+                if job.params.get('tarball_size', None) is None:
+                    job.params['tarball_size'] = bytes_transferred
+                    job.save(update_fields=['params', 'modified_time'])
+
+            result['tarball_size'] = bytes_transferred
         except BaseException as ex:
             logger.error(f'Failed to copy {job_id} from {src_compute.id} to {dst_compute.id} '
                          f'(bulk_move_job_task:do_pipe_copy)')
@@ -178,8 +197,6 @@ def bulk_move_job_task(self, task_data=None, **kwargs):
             raise ex
 
         try:
-            # if stored_at.id != dst_compute.id:
-            #     n_added = add_file_replica_records(job.get_files(), dst_compute, set_as_default=True)
             n_added = add_file_replica_records(job.get_files(), dst_compute, set_as_default=True)
             result['add_file_replica_records'] = n_added
         except BaseException as ex:

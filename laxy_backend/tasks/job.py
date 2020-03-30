@@ -646,7 +646,7 @@ def estimate_job_tarball_size(self, task_data=None, **kwargs):
                         with transaction.atomic():
                             job = Job.objects.get(id=job_id)
                             job.params['tarball_size'] = tarball_size
-                            job.save()
+                            job.save(update_fields=['params', 'modified_time'])
 
                         task_result['tarball_size'] = tarball_size
                     else:

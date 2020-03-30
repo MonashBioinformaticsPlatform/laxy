@@ -379,6 +379,9 @@ class ComputeResource(Timestamped, UUIDModel):
     See views.ComputeResourceCreate.post docs for details.
     '''
 
+    def __str__(self):
+        return f'{self.name} ({self.id})'
+
     @classmethod
     def get_best_available(cls):
         return cls.objects.filter(status=cls.STATUS_ONLINE).order_by('-priority').first()

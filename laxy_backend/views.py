@@ -86,6 +86,7 @@ from .tasks.job import (start_job,
                         set_job_status,
                         kill_remote_job,
                         estimate_job_tarball_size)
+from .tasks.file import (bulk_move_job_task,)
 
 from .jwt_helpers import (get_jwt_user_header_dict,
                           get_jwt_user_header_str)
@@ -1600,18 +1601,25 @@ class JobView(JSONPatchMixin,
 
                 # We don't update the status yet - an async task will do this after file indexing is complete
                 serializer.save(status=original_status)
-                # job = Job.objects.get(id=uuid)
 
                 task_data = dict(job_id=uuid, status=new_status)
-                # result = =index_remote_files.apply_async(
-                #     args=(task_data,))
-                # link_error=self._task_err_handler.s(job_id))
-                result = celery.chain(index_remote_files.s(task_data),
-                                      set_job_status.s()).apply_async(
-                    link_error=_index_remote_files_task_err_handler.s(job_id=job.id))
 
-                # We fire this off but aren't too concerned if it fails
-                estimate_job_tarball_size.s(task_data).apply_async()
+                if job.compute_resource.archive_host:
+                    task_data['dst_compute_id'] = job.compute_resource.archive_host.id
+                    result = celery.chain(index_remote_files.s(task_data),
+                                          set_job_status.s(),
+                                          bulk_move_job_task.s()).apply_async(
+                        link_error=_index_remote_files_task_err_handler.s(job_id=job.id))
+                else:
+                    result = celery.chain(index_remote_files.s(task_data),
+                                          set_job_status.s()).apply_async(
+                        link_error=_index_remote_files_task_err_handler.s(job_id=job.id))
+
+                    # We aren't too concerned if estimate_job_tarball_size fails here,
+                    # It's considered nice but not critical
+                    # (bulk_move_job_task also finds the tarball size, so this is only
+                    #  required when we aren't running that)
+                    estimate_job_tarball_size.s(task_data).apply_async()
 
             else:
                 serializer.save()

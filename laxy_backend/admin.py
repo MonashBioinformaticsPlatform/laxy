@@ -145,8 +145,8 @@ class JobAdmin(Timestamped, VersionAdmin):
                'expire_job',
                'estimate_job_tarball_size',
                'verify',
-               'copy_to_archive_test',
-               'bulk_copy_to_archive')
+               'copy_to_archive',
+               'bulk_move_to_archive')
 
     color_mappings = {
         Job.STATUS_FAILED: 'red',
@@ -257,15 +257,19 @@ class JobAdmin(Timestamped, VersionAdmin):
     verify.short_description = "Verify file checksums (all locations)"
 
     @takes_instance_or_queryset
-    def copy_to_archive_test(self, request, queryset):
+    def copy_to_archive(self, request, queryset):
         failed = []
         for job in queryset:
-            for file in job.get_files():
-                old_compute = job.compute_resource.id
-                new_compute = ComputeResource.objects.get(name='laxy-archive').id
-                old_prefix = f'laxy+sftp://{old_compute}/'
-                new_prefix = f'laxy+sftp://{new_compute}/'
+            old_compute = job.compute_resource.id
+            if old_compute.archive_host is None:
+                self.message_user(request, f"Unable to copy job {job.id}, ComputeResource "
+                                           f"{old_compute.id} has no archive_host !")
+                return
+            new_compute = old_compute.archive_host.id
+            old_prefix = f'laxy+sftp://{old_compute}/'
+            new_prefix = f'laxy+sftp://{new_compute}/'
 
+            for file in job.get_files():
                 task_data = dict(file_id=file.id,
                                  to_location=file.location.replace(old_prefix, new_prefix))
                 result = file_tasks.copy_file_task.apply_async(args=(task_data,))
@@ -275,28 +279,29 @@ class JobAdmin(Timestamped, VersionAdmin):
             if not failed:
                 self.message_user(request, "Copying !")
             else:
-                self.message_user(request, "Errors trying to ingest %s" %
+                self.message_user(request, "Errors trying to copy %s" %
                                   ','.join(failed))
 
-    copy_to_archive_test.short_description = "TEST: Copy file to laxy-archive location."
+    copy_to_archive.short_description = "Copy files to archive location."
 
     @takes_instance_or_queryset
-    def bulk_copy_to_archive(self, request, queryset):
+    def bulk_move_to_archive(self, request, queryset):
         failed = []
-        archive_compute_id = ComputeResource.objects.get(name='laxy-archive').id
         for job in queryset:
-            task_data = dict(job_id=job.id, dst_compute_id=archive_compute_id)
+            task_data = dict(job_id=job.id)
+            if job.compute_resource.archive_host is not None:
+                task_data['dst_compute_id'] = job.compute_resource.archive_host.id
             result = file_tasks.bulk_move_job_task.apply_async(args=(task_data,))
             if result.failed():
                 failed.append(job.id)
 
         if not failed:
-            self.message_user(request, "Bulk copying now !")
+            self.message_user(request, "Bulk moving now !")
         else:
             self.message_user(request, "Errors trying to initiate transfer of %s" %
                               ','.join(failed))
 
-    bulk_copy_to_archive.short_description = "TEST: Bulk copy job to laxy-archive, update default location."
+    bulk_move_to_archive.short_description = "Bulk move job to archive host (via tar pipe), update default location."
 
 
 def do_nothing_validator(value):
@@ -374,7 +379,7 @@ class FileAdmin(Timestamped, VersionAdmin):
     ordering = ('-created_time', '-modified_time',)
     search_fields = ('id', 'path', 'name',)
     inlines = (FileLocationsInline, )
-    actions = ('fix_metadata', 'verify', 'copy_to_archive_test',)
+    actions = ('fix_metadata', 'verify',)  # 'copy_to_archive_test',)
     form = FileAdminForm
 
     truncate_to = 32
@@ -432,29 +437,29 @@ class FileAdmin(Timestamped, VersionAdmin):
 
     verify.short_description = "Verify file checksums (all locations)"
 
-    @takes_instance_or_queryset
-    def copy_to_archive_test(self, request, queryset):
-        failed = []
-        for file in queryset:
-            job = file.fileset.jobs()[0]
-            old_compute = job.compute_resource.id
-            new_compute = ComputeResource.objects.get(name='laxy-archive').id
-            old_prefix = f'laxy+sftp://{old_compute}/'
-            new_prefix = f'laxy+sftp://{new_compute}/'
-
-            task_data = dict(file_id=file.id,
-                             to_location=file.location.replace(old_prefix, new_prefix))
-            result = file_tasks.copy_file_task.apply_async(args=(task_data,))
-            if result.failed():
-                failed.append(file.id)
-
-        if not failed:
-            self.message_user(request, "Copying !")
-        else:
-            self.message_user(request, "Errors trying to ingest %s" %
-                              ','.join(failed))
-
-    copy_to_archive_test.short_description = "TEST: Copy file to laxy-archive location."
+    # @takes_instance_or_queryset
+    # def copy_to_archive_test(self, request, queryset):
+    #     failed = []
+    #     for file in queryset:
+    #         job = file.fileset.jobs()[0]
+    #         old_compute = job.compute_resource.id
+    #         new_compute = ComputeResource.objects.get(name='laxy-archive').id
+    #         old_prefix = f'laxy+sftp://{old_compute}/'
+    #         new_prefix = f'laxy+sftp://{new_compute}/'
+    #
+    #         task_data = dict(file_id=file.id,
+    #                          to_location=file.location.replace(old_prefix, new_prefix))
+    #         result = file_tasks.copy_file_task.apply_async(args=(task_data,))
+    #         if result.failed():
+    #             failed.append(file.id)
+    #
+    #     if not failed:
+    #         self.message_user(request, "Copying !")
+    #     else:
+    #         self.message_user(request, "Errors trying to ingest %s" %
+    #                           ','.join(failed))
+    #
+    # copy_to_archive_test.short_description = "TEST: Copy file to laxy-archive location."
 
 
 class JobInputFilesInline(admin.TabularInline):
