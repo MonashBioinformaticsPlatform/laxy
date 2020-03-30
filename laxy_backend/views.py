@@ -1604,7 +1604,7 @@ class JobView(JSONPatchMixin,
 
                 task_data = dict(job_id=uuid, status=new_status)
 
-                if job.compute_resource.archive_host:
+                if job.compute_resource and job.compute_resource.archive_host:
                     task_data['dst_compute_id'] = job.compute_resource.archive_host.id
                     result = celery.chain(index_remote_files.s(task_data),
                                           set_job_status.s(),
