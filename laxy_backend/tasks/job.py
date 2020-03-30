@@ -687,9 +687,12 @@ def file_should_be_deleted(ff: File, max_size=200):
     extension = Path(ff.name).suffix
     MB = 1024 * 1024
     whitelisted_extensions = ['.txt', '.html', '.log']
-    whitelisted_paths = ['**/sikRun/multiqc_data/**', '**/sikRun/fastqcReport/**']
+    whitelisted_paths = ['**/sikRun/multiqc_data/**',
+                         '**/sikRun/fastqcReport/**',
+                         '**/sikRun/countFiles/**',
+                         '**/sikRun/logs/**']
     whitelisted_type_tags = ['report', 'counts', 'degust']
-    always_delete_extensions = ['.bam', '.bai']
+    always_delete_extensions = ['.tmp', '.bam', '.bai', '.bw', '.bedGraph']
     always_delete_paths = ['**/sikRun/refFiles/**',
                            'input/*.fastq.gz',
                            'input/*.fastq',
