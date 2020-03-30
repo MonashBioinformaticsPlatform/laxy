@@ -243,6 +243,9 @@ function install_miniconda() {
     send_event "JOB_INFO" "Installing/detecting local conda installation."
 
     if [[ ! -d "${CONDA_BASE}" ]]; then
+         # TODO: On some older systems (eg Centos 7.7, gcc 8.1.0) the latest Miniconda installer seems to segfault
+         #       Miniconda3-4.4.10-Linux-x86_64.sh appears to work, but still segfaults when attempting
+         #       conda update. Maybe a running inside a pre-baked Singularity image is the solution here ?
          wget --directory-prefix "${TMP}" -c "https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh"
          chmod +x "${TMP}"/Miniconda3-latest-Linux-x86_64.sh
          "${TMP}"/Miniconda3-latest-Linux-x86_64.sh -b -p "${CONDA_BASE}"
@@ -874,37 +877,25 @@ while [[ "${EXIT_CODE}" -ne 0 ]] && [[ ${RETRY_COUNT} -le ${MAX_RETRIES} ]]; do
         sleep ${RETRY_DELAY}
     fi
 
+    _PAIR_ARGS=''
     if [[ -z "${PAIRIDS}" ]]; then
-        ${PREFIX_JOB_CMD} \
-           "RNAsik \
-               -configFile ${JOB_PATH}/input/sik.config \
-               -align ${PIPELINE_ALIGNER} \
-               -fastaRef ${GENOME_FASTA} \
-               ${GENOME_INDEX_ARG} \
-               -fqDir ../input \
-               -counts \
-               -gtfFile ${ANNOTATION_FILE} \
-               -all \
-               -extn ${EXTN} \
-               >>rnasik.out 2>>rnasik.err" \
-        >>"${JOB_PATH}/slurm.jids"
-    else
-        ${PREFIX_JOB_CMD} \
-           "RNAsik \
-               -configFile ${JOB_PATH}/input/sik.config \
-               -align ${PIPELINE_ALIGNER} \
-               -fastaRef ${GENOME_FASTA} \
-               ${GENOME_INDEX_ARG} \
-               -fqDir ../input \
-               -counts \
-               -gtfFile ${ANNOTATION_FILE} \
-               -all \
-               -paired \
-               -extn ${EXTN} \
-               -pairIds ${PAIRIDS} \
-               >>rnasik.out 2>>rnasik.err" \
-        >>"${JOB_PATH}/slurm.jids"
+      _PAIR_ARGS=" -paired -pairIds ${PAIRIDS} "
     fi
+
+    ${PREFIX_JOB_CMD} \
+       "RNAsik \
+           -configFile ${JOB_PATH}/input/sik.config \
+           -align ${PIPELINE_ALIGNER} \
+           -fastaRef ${GENOME_FASTA} \
+           ${GENOME_INDEX_ARG} \
+           -fqDir ../input \
+           -counts \
+           -gtfFile ${ANNOTATION_FILE} \
+           -all \
+           -extn ${EXTN} \
+           ${_PAIR_ARGS} \
+           >>rnasik.out 2>>rnasik.err" \
+    >>"${JOB_PATH}/slurm.jids"
 
     # Capture the exit code of the important process, to be returned
     # in the curl request below
