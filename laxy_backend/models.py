@@ -95,9 +95,6 @@ def create_auth_token(sender, instance=None, created=False, **kwargs):
         Token.objects.create(user=instance)
 
 
-
-
-
 class URIValidator(URLValidator):
     """
     A validator for generic URIs that also allows additional schemes not
@@ -367,6 +364,11 @@ class ComputeResource(Timestamped, UUIDModel):
     disposable = BooleanField(default=False)
     name = CharField(max_length=128, blank=True, null=True)
     priority = IntegerField(default=0)
+    archive_host = ForeignKey('self',
+                              blank=True,
+                              null=True,
+                              on_delete=models.SET_NULL,
+                              related_name='source_host')
 
     extra = JSONField(default=OrderedDict)
     '''
@@ -527,7 +529,7 @@ class ComputeResource(Timestamped, UUIDModel):
         :rtype: str
         """
         fallback_base_dir = getattr(settings, 'DEFAULT_JOB_BASE_PATH', '/tmp')
-        return  self.extra.get('base_dir', fallback_base_dir)
+        return self.extra.get('base_dir', fallback_base_dir)
 
     @property
     def queue_type(self):
@@ -566,7 +568,7 @@ class Job(Expires, Timestamped, UUIDModel):
                           )
 
     owner = ForeignKey(User,
-                       on_delete=models.SET_NULL,
+                       on_delete=models.CASCADE,
                        blank=True,
                        null=True,
                        related_name='jobs')
@@ -597,10 +599,10 @@ class Job(Expires, Timestamped, UUIDModel):
 
     input_files = ForeignKey('FileSet', null=True, blank=True,
                              related_name='jobs_as_input',
-                             on_delete=models.CASCADE)
+                             on_delete=models.SET_NULL)
     output_files = ForeignKey('FileSet', null=True, blank=True,
                               related_name='jobs_as_output',
-                              on_delete=models.CASCADE)
+                              on_delete=models.SET_NULL)
 
     compute_resource = ForeignKey(ComputeResource,
                                   blank=True,
@@ -1008,7 +1010,10 @@ class File(Timestamped, UUIDModel):
     # hashtype:th3actualh4shits3lf
     # eg: md5:11fca9c1f654078189ad040b1132654c
     checksum = CharField(max_length=255, blank=True, null=True)
-    owner = ForeignKey(User, on_delete=models.CASCADE,
+    # owner and fileset use on_delete=models.SET_NULL rather than CASCADE,
+    # since we don't want to lose reference to files-on-disk, which will
+    # need to be deleted/moved by an async (eg celery) deletion task.
+    owner = ForeignKey(User, on_delete=models.SET_NULL,
                        blank=True,
                        null=True,
                        related_name='files')
@@ -1120,7 +1125,6 @@ class File(Timestamped, UUIDModel):
             # else:
             #     if self.locations.filter(default=True).count() == 0:
             #         self.locations.first().set_as_default()
-
 
         @backoff.on_exception(backoff.expo,
                               (socket.gaierror,),
