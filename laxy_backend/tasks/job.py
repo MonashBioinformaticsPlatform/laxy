@@ -402,7 +402,7 @@ def index_remote_files(self, task_data=None, **kwargs):
     try:
         if 'results' not in task_data:
             task_data['results'] = {}
-            
+
         with fabsettings(gateway=gateway,
                          host_string=host,
                          user=remote_username,
@@ -637,13 +637,13 @@ def estimate_job_tarball_size(self, task_data=None, **kwargs):
                     result = run(f'nice tar -chzf - --directory "{job_path}" . | nice wc --bytes')
                     tries = 0
                     while result.succeeded and \
-                            'file changed as we read it' in result.stdout.strip() and \
+                            'file changed as we read it' in result.stdout.strip().lower() and \
                             tries <= 3:
                         result = run(f'nice tar -chzf - --directory "{job_path}" . | nice wc --bytes')
                         tries += 1
 
                     if result.succeeded:
-                        if 'file changed as we read it' in result.stdout.strip():
+                        if 'file changed as we read it' in result.stdout.strip().lower():
                             raise Exception(f"Files continue to change while calculating tarball size for "
                                             f"Job: {job.id}")
 
@@ -807,8 +807,8 @@ def expire_old_job(self, task_data=None, **kwargs):
         try:
             if count > 0:
                 r = estimate_job_tarball_size.apply_async(args=(dict(job_id=job.id,),))
-            if r.failed():
-                raise r.result
+                if r.failed():
+                    raise r.result
         except BaseException as ex:
             logger.error(f'Failed to start estimate_job_tarball_size task after expiring Job ({job.id}) [{get_traceback_message(ex)}]')
             pass
