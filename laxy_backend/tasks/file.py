@@ -168,6 +168,7 @@ def bulk_move_job_task(self, task_data=None, **kwargs):
             return task_data
 
         try:
+            self.update_state(state='PROGRESS', meta={'running': 'do_pipe_copy'})
             xfer_started_at = datetime.now()
             bytes_transferred, src_exitcode, dst_exitcode = do_pipe_copy(job, src_compute, dst_compute)
             xfer_finished_at = datetime.now()
@@ -197,6 +198,7 @@ def bulk_move_job_task(self, task_data=None, **kwargs):
             raise ex
 
         try:
+            self.update_state(state='PROGRESS', meta={'running': 'add_file_replica_records'})
             n_added = add_file_replica_records(job.get_files(), dst_compute, set_as_default=True)
             result['add_file_replica_records'] = n_added
         except BaseException as ex:
@@ -206,6 +208,7 @@ def bulk_move_job_task(self, task_data=None, **kwargs):
             raise ex
 
         try:
+            self.update_state(state='PROGRESS', meta={'running': 'verify'})
             result['verify'] = {'success': False, 'failed_locations': []}
             for f in job.get_files():
                 exc_name = None
@@ -231,6 +234,7 @@ def bulk_move_job_task(self, task_data=None, **kwargs):
             raise ex
 
         try:
+            self.update_state(state='PROGRESS', meta={'running': 'remove_file_replica_records'})
             n_removed = remove_file_replica_records(job.get_files(), src_compute)
             result['remove_file_replica_records'] = n_removed
         except BaseException as ex:
@@ -240,6 +244,7 @@ def bulk_move_job_task(self, task_data=None, **kwargs):
             raise ex
 
         try:
+            self.update_state(state='PROGRESS', meta={'running': 'delete_remote_files'})
             delete_stdout = delete_remote_files(job, src_compute)
             result['delete_remote_files'] = delete_stdout
         except BaseException as ex:

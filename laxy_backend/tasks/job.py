@@ -400,6 +400,9 @@ def index_remote_files(self, task_data=None, **kwargs):
         return file_objs
 
     try:
+        if 'results' not in task_data:
+            task_data['results'] = {}
+            
         with fabsettings(gateway=gateway,
                          host_string=host,
                          user=remote_username,
@@ -423,6 +426,7 @@ def index_remote_files(self, task_data=None, **kwargs):
                 job.output_files.remove(job.output_files, delete=True)
 
             job.output_files.add(output_files)
+            task_data['results']['output_files_indexed'] = len(output_files)
 
             # TODO: This should really be done at job start, or once input data
             #       has been staged on the compute node.
@@ -439,6 +443,7 @@ def index_remote_files(self, task_data=None, **kwargs):
                 job.input_files.remove(job.input_files, delete=True)
 
             job.input_files.add(input_files)
+            task_data['results']['input_files_indexed'] = len(input_files)
 
         succeeded = True
     except BaseException as e:
