@@ -871,7 +871,7 @@ while [[ "${EXIT_CODE}" -ne 0 ]] && [[ ${RETRY_COUNT} -le ${MAX_RETRIES} ]]; do
     fi
 
     _PAIR_ARGS=''
-    if [[ -z "${PAIRIDS}" ]]; then
+    if [[ ! -z "${PAIRIDS}" ]]; then
       _PAIR_ARGS=" -paired -pairIds ${PAIRIDS} "
     fi
 
