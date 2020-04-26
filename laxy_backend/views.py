@@ -17,13 +17,15 @@ import logging
 import os
 import pydash
 
-from paramiko import (SSHClient,
-                      ssh_exception,
-                      RSAKey,
-                      AutoAddPolicy)
+from paramiko import SSHClient, ssh_exception, RSAKey, AutoAddPolicy
 
-from laxy_backend.scraping import render_page, parse_cloudstor_links, parse_simple_index_links, is_apache_index_page, \
-    parse_cloudstor_webdav
+from laxy_backend.scraping import (
+    render_page,
+    parse_cloudstor_links,
+    parse_simple_index_links,
+    is_apache_index_page,
+    parse_cloudstor_webdav,
+)
 from . import paramiko_monkeypatch
 
 from toolz import merge as merge_dicts
@@ -50,10 +52,12 @@ from robobrowser import RoboBrowser
 from rest_framework import generics
 from rest_framework import status
 from rest_framework.authtoken.models import Token
-from rest_framework.decorators import (api_view,
-                                       renderer_classes,
-                                       permission_classes,
-                                       authentication_classes)
+from rest_framework.decorators import (
+    api_view,
+    renderer_classes,
+    permission_classes,
+    authentication_classes,
+)
 from rest_framework.filters import BaseFilterBackend
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import JSONParser, MultiPartParser
@@ -69,66 +73,85 @@ from wsgiref.util import FileWrapper
 
 from drf_openapi.utils import view_config
 
-from laxy_backend.storage.http_remote import is_archive_link, _check_content_size_and_resolve_redirects
-from .permissions import (HasReadonlyObjectAccessToken,
-                          IsOwner,
-                          IsSuperuser,
-                          is_owner,
-                          HasAccessTokenForEventLogSubject,
-                          token_is_valid,
-                          FileSetHasAccessTokenForJob,
-                          FileHasAccessTokenForJob)
+from laxy_backend.storage.http_remote import (
+    is_archive_link,
+    _check_content_size_and_resolve_redirects,
+)
+from .permissions import (
+    HasReadonlyObjectAccessToken,
+    IsOwner,
+    IsSuperuser,
+    is_owner,
+    HasAccessTokenForEventLogSubject,
+    token_is_valid,
+    FileSetHasAccessTokenForJob,
+    FileHasAccessTokenForJob,
+)
 from . import bcbio
 from . import ena
-from .tasks.job import (start_job,
-                        index_remote_files,
-                        _index_remote_files_task_err_handler,
-                        set_job_status,
-                        kill_remote_job,
-                        estimate_job_tarball_size)
-from .tasks.file import (bulk_move_job_task,)
+from .tasks.job import (
+    start_job,
+    index_remote_files,
+    _finalize_job_task_err_handler,
+    set_job_status,
+    kill_remote_job,
+    estimate_job_tarball_size,
+)
+from .tasks.file import bulk_move_job_task
 
-from .jwt_helpers import (get_jwt_user_header_dict,
-                          get_jwt_user_header_str)
-from .models import (Job,
-                     ComputeResource,
-                     File,
-                     FileSet,
-                     SampleCart,
-                     PipelineRun,
-                     EventLog,
-                     AccessToken, get_primary_compute_location_for_files, job_path_on_compute)
-from .serializers import (PatchSerializerResponse,
-                          PutSerializerResponse,
-                          JobSerializerResponse,
-                          JobSerializerRequest,
-                          ComputeResourceSerializer,
-                          FileSerializer,
-                          FileSerializerPostRequest,
-                          FileSetSerializer,
-                          FileSetSerializerPostRequest,
-                          SampleCartSerializer,
-                          PipelineRunSerializer,
-                          PipelineRunCreateSerializer,
-                          SchemalessJsonResponseSerializer,
-                          JobListSerializerResponse,
-                          EventLogSerializer,
-                          JobEventLogSerializer,
-                          JobFileSerializerCreateRequest,
-                          InputOutputFilesResponse,
-                          RedirectResponseSerializer,
-                          FileListing,
-                          AccessTokenSerializer, JobAccessTokenRequestSerializer, JobAccessTokenResponseSerializer,
-                          PingResponseSerializer)
-from .util import (sh_bool,
-                   laxy_sftp_url,
-                   generate_uuid,
-                   multikeysort,
-                   get_content_type)
+from .jwt_helpers import get_jwt_user_header_dict, get_jwt_user_header_str
+from .models import (
+    Job,
+    ComputeResource,
+    File,
+    FileSet,
+    SampleCart,
+    PipelineRun,
+    EventLog,
+    AccessToken,
+    get_primary_compute_location_for_files,
+    job_path_on_compute,
+)
+from .serializers import (
+    PatchSerializerResponse,
+    PutSerializerResponse,
+    JobSerializerResponse,
+    JobSerializerRequest,
+    ComputeResourceSerializer,
+    FileSerializer,
+    FileSerializerPostRequest,
+    FileSetSerializer,
+    FileSetSerializerPostRequest,
+    SampleCartSerializer,
+    PipelineRunSerializer,
+    PipelineRunCreateSerializer,
+    SchemalessJsonResponseSerializer,
+    JobListSerializerResponse,
+    EventLogSerializer,
+    JobEventLogSerializer,
+    JobFileSerializerCreateRequest,
+    InputOutputFilesResponse,
+    RedirectResponseSerializer,
+    FileListing,
+    AccessTokenSerializer,
+    JobAccessTokenRequestSerializer,
+    JobAccessTokenResponseSerializer,
+    PingResponseSerializer,
+)
+from .util import sh_bool, laxy_sftp_url, generate_uuid, multikeysort, get_content_type
 from .storage import http_remote
-from .view_mixins import (JSONView, GetMixin, PatchMixin,
-                          DeleteMixin, PostMixin, CSVTextParser,
-                          PutMixin, RowsCSVTextParser, etag_headers, JSONPatchMixin)
+from .view_mixins import (
+    JSONView,
+    GetMixin,
+    PatchMixin,
+    DeleteMixin,
+    PostMixin,
+    CSVTextParser,
+    PutMixin,
+    RowsCSVTextParser,
+    etag_headers,
+    JSONPatchMixin,
+)
 
 # from .models import User
 from django.contrib.auth import get_user_model
@@ -140,10 +163,10 @@ from contextlib import closing
 # The matchers can be simple strings, which are tested as a substring of the URL,
 # or a function like matcher(url, page_text). The matcher function returns True or False.
 LINK_SCRAPER_MAPPINGS = [
-    ('://cloudstor.aarnet.edu.au/plus/s/', parse_cloudstor_webdav),
+    ("://cloudstor.aarnet.edu.au/plus/s/", parse_cloudstor_webdav),
     # ('://cloudstor.aarnet.edu.au/plus/s/', parse_cloudstor_links),
     (is_apache_index_page, parse_simple_index_links),
-    ('://', parse_simple_index_links),
+    ("://", parse_simple_index_links),
 ]
 
 User = get_user_model()
@@ -160,15 +183,17 @@ class PingView(APIView):
         """
         Used by clients to poll if the backend is online.
         """
-        app_version = getattr(settings, 'VERSION', 'unspecified')
-        env = getattr(settings, 'ENV', 'unspecified')
-        return JsonResponse(PingResponseSerializer({'version': app_version,
-                                                    'env': env,
-                                                    'status': 'online'}).data)
+        app_version = getattr(settings, "VERSION", "unspecified")
+        env = getattr(settings, "ENV", "unspecified")
+        return JsonResponse(
+            PingResponseSerializer(
+                {"version": app_version, "env": env, "status": "online"}
+            ).data
+        )
 
 
 class JobDirectTarDownload(JSONView):
-    lookup_url_kwarg = 'job_id'
+    lookup_url_kwarg = "job_id"
     queryset = Job.objects.all()
     permission_classes = (IsOwner | IsSuperuser | HasReadonlyObjectAccessToken,)
 
@@ -192,12 +217,14 @@ class JobDirectTarDownload(JSONView):
         job_path = job_path_on_compute(job, stored_at)
 
         client = stored_at.ssh_client()
-        stdin, stdout, stderr = client.exec_command(f'tar -chzf - --directory "{job_path}" .')
+        stdin, stdout, stderr = client.exec_command(
+            f'tar -chzf - --directory "{job_path}" .'
+        )
 
-        if request.path.endswith('.tar.gz'):
-            output_fn = f'{job.id}.tar.gz'
+        if request.path.endswith(".tar.gz"):
+            output_fn = f"{job.id}.tar.gz"
         else:
-            output_fn = f'laxy_job_{job.id}.tar.gz'
+            output_fn = f"laxy_job_{job.id}.tar.gz"
         return FileResponse(stdout, filename=output_fn, as_attachment=True)
 
 
@@ -234,19 +261,21 @@ class QueryParamFilterBackend(BaseFilterBackend):
 
         for qp in query_params:
             field = coreapi.Field(
-                name=qp.get('name'),
-                location=qp.get('location', qp.get('name')),
-                description=qp.get('description', None),
-                example=qp.get('example', None),
-                required=qp.get('required', True),
-                type=qp.get('type', 'string'),
+                name=qp.get("name"),
+                location=qp.get("location", qp.get("name")),
+                description=qp.get("description", None),
+                example=qp.get("example", None),
+                required=qp.get("required", True),
+                type=qp.get("type", "string"),
                 schema=coreschema.String(
-                    title=force_text(qp.get('title', (qp.get('name', False)
-                                                      or qp.get('name')))),
-                    description=force_text(qp.get('description', '')))
+                    title=force_text(
+                        qp.get("title", (qp.get("name", False) or qp.get("name")))
+                    ),
+                    description=force_text(qp.get("description", "")),
+                ),
             )
 
-            if hasattr(self, 'schema_fields'):
+            if hasattr(self, "schema_fields"):
                 self.schema_fields.append(field)
             else:
                 self.schema_fields = [field]
@@ -256,53 +285,65 @@ class QueryParamFilterBackend(BaseFilterBackend):
 
 
 class StreamingFileDownloadRenderer(BaseRenderer):
-    media_type = 'application/octet-stream'
-    format = 'download'
+    media_type = "application/octet-stream"
+    format = "download"
     charset = None
-    render_style = 'binary'
+    render_style = "binary"
 
-    @backoff.on_exception(backoff.expo,
-                          (EOFError,
-                           IOError,
-                           OSError,
-                           ssh_exception.SSHException,
-                           ssh_exception.AuthenticationException,
-                           ),
-                          max_tries=3,
-                          jitter=backoff.full_jitter)
-    def render(self, filelike,
-               media_type=None,
-               renderer_context=None,
-               blksize=8192):
+    @backoff.on_exception(
+        backoff.expo,
+        (
+            EOFError,
+            IOError,
+            OSError,
+            ssh_exception.SSHException,
+            ssh_exception.AuthenticationException,
+        ),
+        max_tries=3,
+        jitter=backoff.full_jitter,
+    )
+    def render(self, filelike, media_type=None, renderer_context=None, blksize=8192):
         iterable = FileWrapper(filelike, blksize=blksize)
         try:
             for chunk in iterable:
                 yield chunk
         except ssh_exception.SSHException as ex:
-            raise IOError(str(ex) + '(paramiko.ssh_exception.SSHException)').with_traceback(sys.exc_info()[2])
+            raise IOError(
+                str(ex) + "(paramiko.ssh_exception.SSHException)"
+            ).with_traceback(sys.exc_info()[2])
         except OSError as ex:
-            raise IOError(str(ex) + '(OSError)').with_traceback(sys.exc_info()[2])
+            raise IOError(str(ex) + "(OSError)").with_traceback(sys.exc_info()[2])
 
 
 class RemoteFilesQueryParams(QueryParamFilterBackend):
     def __init__(self):
-        super().__init__([
-            dict(name='url',
-                 example='https://bioinformatics.erc.monash.edu/home/andrewperry/test/sample_data/',
-                 description='A URL containing links to input data files'),
-            dict(name='fileglob',
-                 example='*.fastq.gz',
-                 description="A glob (wildcard) expression to filter files returned. Doesn't filter directories"),
-        ])
+        super().__init__(
+            [
+                dict(
+                    name="url",
+                    example="https://bioinformatics.erc.monash.edu/home/andrewperry/test/sample_data/",
+                    description="A URL containing links to input data files",
+                ),
+                dict(
+                    name="fileglob",
+                    example="*.fastq.gz",
+                    description="A glob (wildcard) expression to filter files returned. Doesn't filter directories",
+                ),
+            ]
+        )
 
 
 class ENAQueryParams(QueryParamFilterBackend):
     def __init__(self):
-        super().__init__([
-            dict(name='accessions',
-                 example='PRJNA276493,SRR950078',
-                 description='A comma separated list of ENA/SRA accessions.'),
-        ])
+        super().__init__(
+            [
+                dict(
+                    name="accessions",
+                    example="PRJNA276493,SRR950078",
+                    description="A comma separated list of ENA/SRA accessions.",
+                ),
+            ]
+        )
 
 
 class ENAQueryView(APIView):
@@ -311,7 +352,7 @@ class ENAQueryView(APIView):
     # TODO: Would this be better achieved with a SearchFilter ?
     # http://www.django-rest-framework.org/api-guide/filtering/#searchfilter
     filter_backends = (ENAQueryParams,)
-    api_docs_visible_to = 'public'
+    api_docs_visible_to = "public"
 
     @view_config(response_serializer=SchemalessJsonResponseSerializer)
     def get(self, request, version=None):
@@ -335,9 +376,9 @@ class ENAQueryView(APIView):
         :rtype:
         -->
         """
-        accession_list = request.query_params.get('accessions', None)
+        accession_list = request.query_params.get("accessions", None)
         if accession_list is not None:
-            accessions = accession_list.split(',')
+            accessions = accession_list.split(",")
             ena_result = ena.search_ena_accessions(accessions)
 
             return Response(ena_result, status=status.HTTP_200_OK)
@@ -349,7 +390,7 @@ class ENAFastqUrlQueryView(JSONView):
     renderer_classes = (JSONRenderer,)
     serializer_class = SchemalessJsonResponseSerializer
     filter_backends = (ENAQueryParams,)
-    api_docs_visible_to = 'public'
+    api_docs_visible_to = "public"
 
     @view_config(response_serializer=SchemalessJsonResponseSerializer)
     def get(self, request, version=None):
@@ -371,9 +412,9 @@ class ENAFastqUrlQueryView(JSONView):
         :rtype:
         -->
         """
-        accession_list = request.query_params.get('accessions', None)
+        accession_list = request.query_params.get("accessions", None)
         if accession_list is not None:
-            accessions = accession_list.split(',')
+            accessions = accession_list.split(",")
             # ena_result = ena.get_fastq_urls(accessions)
             ena_result = ena.get_run_table(accessions)
 
@@ -385,7 +426,7 @@ class ENAFastqUrlQueryView(JSONView):
 class ENASpeciesLookupView(APIView):
     renderer_classes = (JSONRenderer,)
     serializer_class = SchemalessJsonResponseSerializer
-    api_docs_visible_to = 'public'
+    api_docs_visible_to = "public"
 
     # permission_classes = (AllowAny,)
 
@@ -430,8 +471,9 @@ class FileCreate(JSONView):
 
     # permission_classes = (DjangoObjectPermissions,)
 
-    @view_config(request_serializer=FileSerializerPostRequest,
-                 response_serializer=FileSerializer)
+    @view_config(
+        request_serializer=FileSerializerPostRequest, response_serializer=FileSerializer
+    )
     def post(self, request: Request, version=None):
         """
         Create a new File. UUIDs are autoassigned.
@@ -453,15 +495,14 @@ class FileCreate(JSONView):
 
 
 class JSONPatchRFC7386Parser(JSONParser):
-    media_type = 'application/merge-patch+json'
+    media_type = "application/merge-patch+json"
 
 
 class JSONPatchRFC6902Parser(JSONParser):
-    media_type = 'application/json-patch+json'
+    media_type = "application/json-patch+json"
 
 
 class StreamFileMixin(JSONView):
-
     def _as_file_obj(self, obj_ref: Union[str, File]):
         """
         Convert a File UUID string to a File instance, if required.
@@ -481,30 +522,31 @@ class StreamFileMixin(JSONView):
     def _add_metalink_headers(self, obj, response):
 
         url = self.request.build_absolute_uri(obj.get_absolute_url())
-        response['Link'] = f'<{url}>; rel=duplicate'
+        response["Link"] = f"<{url}>; rel=duplicate"
 
-        if hasattr(obj, 'checksum') and obj.checksum:
+        if hasattr(obj, "checksum") and obj.checksum:
             hashtype = obj.checksum_type
             b64checksum = obj.checksum_hash_base64
-            response['Digest'] = f'{hashtype.upper()}={b64checksum}'
-            response['Etag'] = f'{obj.checksum}'
+            response["Digest"] = f"{hashtype.upper()}={b64checksum}"
+            response["Etag"] = f"{obj.checksum}"
 
         return response
 
-    @backoff.on_exception(backoff.expo,
-                          (EOFError,
-                           IOError,
-                           OSError,
-                           ssh_exception.SSHException,
-                           ssh_exception.AuthenticationException,
-                           ),
-                          max_tries=3,
-                          jitter=backoff.full_jitter)
+    @backoff.on_exception(
+        backoff.expo,
+        (
+            EOFError,
+            IOError,
+            OSError,
+            ssh_exception.SSHException,
+            ssh_exception.AuthenticationException,
+        ),
+        max_tries=3,
+        jitter=backoff.full_jitter,
+    )
     def _stream_response(
-            self,
-            obj_ref: Union[str, File],
-            filename: str = None,
-            download: bool = True) -> Union[StreamingHttpResponse, Response]:
+        self, obj_ref: Union[str, File], filename: str = None, download: bool = True
+    ) -> Union[StreamingHttpResponse, Response]:
 
         obj = self._as_file_obj(obj_ref)
 
@@ -514,8 +556,8 @@ class StreamFileMixin(JSONView):
         renderer = StreamingFileDownloadRenderer()
         # TODO: For local file:// URLs, django.http.response.FileResponse will probably preform better
         response = StreamingHttpResponse(
-            renderer.render(obj.file),
-            content_type=renderer.media_type)
+            renderer.render(obj.file), content_type=renderer.media_type
+        )
 
         # A filename can optionally be specified in the URL, so that
         # wget will 'just work' without requiring the --content-disposition
@@ -529,15 +571,15 @@ class StreamFileMixin(JSONView):
                 return Response(status=status.HTTP_404_NOT_FOUND)
 
         if download:
-            response['Content-Disposition'] = f'attachment; filename="{obj.name}"'
+            response["Content-Disposition"] = f'attachment; filename="{obj.name}"'
         else:
-            response['Content-Disposition'] = 'inline'
+            response["Content-Disposition"] = "inline"
             # Make the browser guess the Content-Type
-            del response['Content-Type']
+            del response["Content-Type"]
 
-        size = obj.metadata.get('size', None)
+        size = obj.metadata.get("size", None)
         if size is not None:
-            response['Content-Length'] = int(size)
+            response["Content-Length"] = int(size)
 
         self._add_metalink_headers(obj, response)
 
@@ -550,9 +592,7 @@ class StreamFileMixin(JSONView):
         return self._stream_response(obj_ref, filename, download=False)
 
 
-class FileContentDownload(StreamFileMixin,
-                          GetMixin,
-                          JSONView):
+class FileContentDownload(StreamFileMixin, GetMixin, JSONView):
     queryset = File.objects.all()
     serializer_class = FileSerializer
 
@@ -634,24 +674,24 @@ class FileContentDownload(StreamFileMixin,
         -->
         """
         # File view/download is the default when no Content-Type is specified
-        if 'download' in request.query_params:
+        if "download" in request.query_params:
             return super().download(uuid, filename=filename)
         else:
             return super().view(uuid, filename=filename)
 
 
-class FileView(StreamFileMixin,
-               GetMixin,
-               DeleteMixin,
-               PatchMixin,
-               PutMixin,
-               JSONPatchMixin,
-               JSONView):
+class FileView(
+    StreamFileMixin,
+    GetMixin,
+    DeleteMixin,
+    PatchMixin,
+    PutMixin,
+    JSONPatchMixin,
+    JSONView,
+):
     queryset = File.objects.all()
     serializer_class = FileSerializer
-    parser_classes = (JSONParser,
-                      JSONPatchRFC7386Parser,
-                      JSONPatchRFC6902Parser)
+    parser_classes = (JSONParser, JSONPatchRFC7386Parser, JSONPatchRFC6902Parser)
 
     permission_classes = (IsOwner | IsSuperuser | HasReadonlyObjectAccessToken,)
 
@@ -713,24 +753,28 @@ class FileView(StreamFileMixin,
         """
 
         content_type = get_content_type(request)
-        if content_type == 'application/json':
+        if content_type == "application/json":
             return super().get(request, uuid)
         else:
             # File view/download is the default when no Content-Type is specified
             try:
-                if 'download' in request.query_params:
+                if "download" in request.query_params:
                     return super().download(uuid, filename=filename)
                 else:
                     return super().view(uuid, filename=filename)
-            except (ssh_exception.AuthenticationException,
-                    ssh_exception.SSHException,
-                    EOFError) as ex:
+            except (
+                ssh_exception.AuthenticationException,
+                ssh_exception.SSHException,
+                EOFError,
+            ) as ex:
                 return HttpResponse(
                     status=status.HTTP_503_SERVICE_UNAVAILABLE,
-                    reason="Error accessing file via SFTP storage backend")
+                    reason="Error accessing file via SFTP storage backend",
+                )
 
-    @view_config(request_serializer=FileSerializer,
-                 response_serializer=PatchSerializerResponse)
+    @view_config(
+        request_serializer=FileSerializer, response_serializer=PatchSerializerResponse
+    )
     def patch(self, request, uuid=None, version=None):
         """
         Partial update of fields on File.
@@ -780,8 +824,9 @@ class FileView(StreamFileMixin,
 
         return super(FileView, self).patch(request, uuid)
 
-    @view_config(request_serializer=FileSerializerPostRequest,
-                 response_serializer=FileSerializer)
+    @view_config(
+        request_serializer=FileSerializerPostRequest, response_serializer=FileSerializer
+    )
     def put(self, request: Request, uuid: str, version=None):
         """
         Replace the content of an existing File.
@@ -795,14 +840,11 @@ class FileView(StreamFileMixin,
         """
 
         return super(FileView, self).put(
-            request,
-            uuid,
-            serializer_class=FileSerializerPostRequest)
+            request, uuid, serializer_class=FileSerializerPostRequest
+        )
 
 
-class JobFileView(StreamFileMixin,
-                  GetMixin,
-                  JSONView):
+class JobFileView(StreamFileMixin, GetMixin, JSONView):
     queryset = Job.objects.all()
     serializer_class = FileSerializer
     parser_classes = (JSONParser,)
@@ -811,11 +853,7 @@ class JobFileView(StreamFileMixin,
 
     @view_config(response_serializer=FileSerializer)
     @etag_headers
-    def get(self,
-            request: Request,
-            uuid: str,
-            file_path: str,
-            version=None):
+    def get(self, request: Request, uuid: str, file_path: str, version=None):
         """
         Get a `File` by path, associated with this `Job`.
 
@@ -844,48 +882,52 @@ class JobFileView(StreamFileMixin,
 
         job = self.get_object()
         if job is None:
-            return Response({'detail': f'Unknown job ID: {uuid}'},
-                            status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": f"Unknown job ID: {uuid}"}, status=status.HTTP_404_NOT_FOUND
+            )
 
         fname = Path(file_path).name
         fpath = Path(file_path).parent
         file_obj = job.get_files().filter(name=fname, path=fpath).first()
         if file_obj is None:
-            return Response({'detail': f'Cannot find file in job {uuid} by path/filename'},
-                            status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": f"Cannot find file in job {uuid} by path/filename"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
         # serializer = self.get_serializer(instance=file_obj)
         # return Response(serializer.data, status=status.HTTP_200_OK)
 
         content_type = get_content_type(request)
-        if content_type == 'application/json':
+        if content_type == "application/json":
             return super().get(request, file_obj.id)
         else:
             try:
                 # File view/download is the default when no Content-Type is specified
-                if 'download' in request.query_params:
+                if "download" in request.query_params:
                     logger.debug(f"Attempting download of {file_obj.id}")
                     return super().download(file_obj, filename=fname)
                 else:
                     logger.debug(f"Attempting view in browser of {file_obj.id}")
                     return super().view(file_obj, filename=fname)
-            except (ssh_exception.AuthenticationException,
-                    ssh_exception.SSHException,
-                    EOFError) as ex:
+            except (
+                ssh_exception.AuthenticationException,
+                ssh_exception.SSHException,
+                EOFError,
+            ) as ex:
                 return HttpResponse(
                     status=status.HTTP_503_SERVICE_UNAVAILABLE,
-                    reason="Error accessing file via SFTP storage backend")
+                    reason="Error accessing file via SFTP storage backend",
+                )
 
         # return super(FileView, self).get(request, file_obj.id)
 
     @transaction.atomic()
-    @view_config(request_serializer=JobFileSerializerCreateRequest,
-                 response_serializer=FileSerializer)
-    def put(self,
-            request: Request,
-            uuid: str,
-            file_path: str,
-            version=None):
+    @view_config(
+        request_serializer=JobFileSerializerCreateRequest,
+        response_serializer=FileSerializer,
+    )
+    def put(self, request: Request, uuid: str, file_path: str, version=None):
         """
         Create (or replace) a File record by job ID and path. This endpoint
         is generally intended to be called by the job script on a compute node
@@ -921,24 +963,26 @@ class JobFileView(StreamFileMixin,
 
         fileset_path = fpath.parts[0]
 
-        if fileset_path == 'output':
+        if fileset_path == "output":
             fileset = job.output_files
-        elif fileset_path == 'input':
+        elif fileset_path == "input":
             fileset = job.input_files
         else:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
         # Generate a File.location URL if not set explicitly
         data = dict(request.data)
-        data['name'] = fname
-        data['path'] = str(fpath)
-        location = data.get('location', None)
+        data["name"] = fname
+        data["path"] = str(fpath)
+        location = data.get("location", None)
         if not location:
-            data['location'] = laxy_sftp_url(job, f'{fpath}/{fname}')
+            data["location"] = laxy_sftp_url(job, f"{fpath}/{fname}")
 
         elif not urlparse(location).scheme:
-            return HttpResponse(status=status.HTTP_400_BAD_REQUEST,
-                                reason="Location must be a valid URL.")
+            return HttpResponse(
+                status=status.HTTP_400_BAD_REQUEST,
+                reason="Location must be a valid URL.",
+            )
 
         # TODO: consider how best to handle file:// URLs here
         # file:// URLs could be used in the location field if the job
@@ -949,10 +993,11 @@ class JobFileView(StreamFileMixin,
         # there is the potential for a tricky user to create locations
         # that point to anywhere on the server filesystem (eg absolute path to
         # /etc/passwd). For the moment they are disallowed here
-        if urlparse(location).scheme == 'file':
-            return HttpResponse(status=status.HTTP_400_BAD_REQUEST,
-                                reason="file:// locations are not allowed "
-                                       "using this API endpoint.")
+        if urlparse(location).scheme == "file":
+            return HttpResponse(
+                status=status.HTTP_400_BAD_REQUEST,
+                reason="file:// locations are not allowed " "using this API endpoint.",
+            )
 
             # # we make the path relative, even if there is a leading /
             # cleaned = location.lstrip('file://').lstrip('/')
@@ -968,8 +1013,9 @@ class JobFileView(StreamFileMixin,
         if file_obj is None:
             # Create new file. Inferred location based on job+compute
             # We actually use the POST serializer to include name and path etc
-            serializer = FileSerializerPostRequest(data=data,
-                                                   context={'request': request})
+            serializer = FileSerializerPostRequest(
+                data=data, context={"request": request}
+            )
 
             if serializer.is_valid():
                 serializer.save()
@@ -979,14 +1025,14 @@ class JobFileView(StreamFileMixin,
         else:
             # Update existing File
             serializer = self.request_serializer(
-                file_obj,
-                data=request.data,
-                context={'request': request})
+                file_obj, data=request.data, context={"request": request}
+            )
 
             if serializer.is_valid():
                 serializer.save()
-                return Response(status=status.HTTP_200_OK,
-                                data=serializer.validated_data)
+                return Response(
+                    status=status.HTTP_200_OK, data=serializer.validated_data
+                )
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -995,12 +1041,17 @@ class JobFileView(StreamFileMixin,
 class JobFileBulkRegistration(JSONView):
     queryset = Job.objects.all()
     serializer_class = JobSerializerResponse
-    parser_classes = (JSONParser, RowsCSVTextParser,)
+    parser_classes = (
+        JSONParser,
+        RowsCSVTextParser,
+    )
 
     permission_classes = (IsOwner | IsSuperuser,)
 
-    @view_config(request_serializer=JobFileSerializerCreateRequest,
-                 response_serializer=JobSerializerResponse)
+    @view_config(
+        request_serializer=JobFileSerializerCreateRequest,
+        response_serializer=JobSerializerResponse,
+    )
     def post(self, request, uuid, version=None):
         """
         Bulk registration of Job files (input and output filesets).
@@ -1038,7 +1089,7 @@ class JobFileBulkRegistration(JSONView):
         job = self.get_object()
 
         content_type = get_content_type(request)
-        if content_type == 'application/json':
+        if content_type == "application/json":
             serializer = self.request_serializer(data=request.data, many=True)
             if serializer.is_valid():
                 # TODO: accept JSON for bulk file registration
@@ -1047,29 +1098,27 @@ class JobFileBulkRegistration(JSONView):
                 pass
             raise NotImplementedError()
 
-        elif content_type == 'text/csv':
+        elif content_type == "text/csv":
             tsv_table = request.stream.read()
             infiles, outfiles = job.add_files_from_tsv(tsv_table)
 
             i = FileSerializer(infiles, many=True)
             o = FileSerializer(outfiles, many=True)
-            resp_data = {
-                'input_files': i.data,
-                'output_files': o.data
-            }
+            resp_data = {"input_files": i.data, "output_files": o.data}
 
             return Response(resp_data, status=status.HTTP_200_OK)
 
 
-class FileSetCreate(PostMixin,
-                    JSONView):
+class FileSetCreate(PostMixin, JSONView):
     queryset = FileSet.objects.all()
     serializer_class = FileSetSerializer
 
     # permission_classes = (DjangoObjectPermissions,)
 
-    @view_config(request_serializer=FileSetSerializerPostRequest,
-                 response_serializer=FileSetSerializer)
+    @view_config(
+        request_serializer=FileSetSerializerPostRequest,
+        response_serializer=FileSetSerializer,
+    )
     def post(self, request: Request, version=None):
         """
         Create a new FileSet. UUIDs are autoassigned.
@@ -1085,10 +1134,7 @@ class FileSetCreate(PostMixin,
         return super(FileSetCreate, self).post(request)
 
 
-class FileSetView(GetMixin,
-                  DeleteMixin,
-                  PatchMixin,
-                  JSONView):
+class FileSetView(GetMixin, DeleteMixin, PatchMixin, JSONView):
     queryset = FileSet.objects.all()
     serializer_class = FileSetSerializer
 
@@ -1114,8 +1160,10 @@ class FileSetView(GetMixin,
 
         return super(FileSetView, self).get(request, uuid)
 
-    @view_config(request_serializer=FileSetSerializer,
-                 response_serializer=PatchSerializerResponse)
+    @view_config(
+        request_serializer=FileSetSerializer,
+        response_serializer=PatchSerializerResponse,
+    )
     def patch(self, request, uuid, version=None):
         return super(FileSetView, self).patch(request, uuid)
 
@@ -1123,7 +1171,11 @@ class FileSetView(GetMixin,
 class SampleCartCreateUpdate(JSONView):
     queryset = SampleCart.objects.all()
     serializer_class = SampleCartSerializer
-    parser_classes = (JSONParser, MultiPartParser, CSVTextParser,)
+    parser_classes = (
+        JSONParser,
+        MultiPartParser,
+        CSVTextParser,
+    )
 
     def create_update(self, request, obj):
         """
@@ -1138,29 +1190,33 @@ class SampleCartCreateUpdate(JSONView):
         """
 
         if not obj.name:
-            obj.name = 'Sample set created on %s' % datetime.isoformat(datetime.now())
+            obj.name = "Sample set created on %s" % datetime.isoformat(datetime.now())
 
         content_type = get_content_type(request)
-        encoding = 'utf-8'
+        encoding = "utf-8"
 
-        if content_type == 'multipart/form-data':
+        if content_type == "multipart/form-data":
             if not obj.name:
-                obj.name = 'CSV uploaded on %s' % datetime.isoformat(datetime.now())
-            fh = request.data.get('file', None)
+                obj.name = "CSV uploaded on %s" % datetime.isoformat(datetime.now())
+            fh = request.data.get("file", None)
             csv_table = fh.read().decode(encoding)
             obj.from_csv(csv_table)
 
-            return Response(self.get_serializer(instance=obj).data, status=status.HTTP_200_OK)
+            return Response(
+                self.get_serializer(instance=obj).data, status=status.HTTP_200_OK
+            )
 
-        elif content_type == 'text/csv':
+        elif content_type == "text/csv":
             if not obj.name:
-                obj.name = 'CSV uploaded on %s' % datetime.isoformat(datetime.now())
+                obj.name = "CSV uploaded on %s" % datetime.isoformat(datetime.now())
             csv_table = request.data
             obj.from_csv(csv_table)
 
-            return Response(self.get_serializer(instance=obj).data, status=status.HTTP_200_OK)
+            return Response(
+                self.get_serializer(instance=obj).data, status=status.HTTP_200_OK
+            )
 
-        elif content_type == 'application/json':
+        elif content_type == "application/json":
             serializer = self.get_serializer(instance=obj, data=request.data)
             if serializer.is_valid():
                 obj = serializer.save(owner=request.user)
@@ -1175,8 +1231,10 @@ class SampleCartCreate(SampleCartCreateUpdate):
 
     # permission_classes = (DjangoObjectPermissions,)
 
-    @view_config(request_serializer=SampleCartSerializer,
-                 response_serializer=SampleCartSerializer)
+    @view_config(
+        request_serializer=SampleCartSerializer,
+        response_serializer=SampleCartSerializer,
+    )
     def post(self, request: Request, version=None):
         """
         Create a new SampleCart. UUIDs are autoassigned.
@@ -1261,14 +1319,12 @@ class SampleCartCreate(SampleCartCreateUpdate):
         -->
         """
 
-        samplecart_name = request.data.get('name', None)
+        samplecart_name = request.data.get("name", None)
         obj = SampleCart(name=samplecart_name, owner=request.user)
         return self.create_update(request, obj)
 
 
-class SampleCartView(GetMixin,
-                     DeleteMixin,
-                     SampleCartCreateUpdate):
+class SampleCartView(GetMixin, DeleteMixin, SampleCartCreateUpdate):
 
     # permission_classes = (DjangoObjectPermissions,)
 
@@ -1289,15 +1345,18 @@ class SampleCartView(GetMixin,
         """
         return super(SampleCartView, self).get(request, uuid)
 
-    @view_config(request_serializer=SampleCartSerializer,
-                 response_serializer=PutSerializerResponse)
+    @view_config(
+        request_serializer=SampleCartSerializer,
+        response_serializer=PutSerializerResponse,
+    )
     def put(self, request, uuid, version=None):
         obj = self.get_object()
-        if 'id' in request.data:
-            return HttpResponse(status=status.HTTP_400_BAD_REQUEST,
-                                reason="id cannot be updated")
+        if "id" in request.data:
+            return HttpResponse(
+                status=status.HTTP_400_BAD_REQUEST, reason="id cannot be updated"
+            )
 
-        sample_name = request.data.get('name', None)
+        sample_name = request.data.get("name", None)
         if sample_name is not None:
             obj.name = sample_name
 
@@ -1313,9 +1372,7 @@ class SampleCartView(GetMixin,
     #     return super(SampleCartView, self).patch(request, uuid)
 
 
-class ComputeResourceView(GetMixin,
-                          DeleteMixin,
-                          JSONView):
+class ComputeResourceView(GetMixin, DeleteMixin, JSONView):
     queryset = ComputeResource.objects.all()
     serializer_class = ComputeResourceSerializer
     permission_classes = (IsAdminUser,)
@@ -1335,8 +1392,10 @@ class ComputeResourceView(GetMixin,
         """
         return super(ComputeResourceView, self).get(request, uuid)
 
-    @view_config(request_serializer=ComputeResourceSerializer,
-                 response_serializer=PatchSerializerResponse)
+    @view_config(
+        request_serializer=ComputeResourceSerializer,
+        response_serializer=PatchSerializerResponse,
+    )
     def patch(self, request: Request, uuid, version=None):
         """
         Updates a ComputeResource record. Since this is a PATCH request,
@@ -1359,32 +1418,35 @@ class ComputeResourceView(GetMixin,
 
         serializer = self.get_serializer(instance=obj, data=request.data, partial=True)
         if serializer.is_valid():
-            req_status = serializer.validated_data.get('status', None)
-            if (obj.status == ComputeResource.STATUS_STARTING or
-                obj.status == ComputeResource.STATUS_ONLINE) and \
-                    (req_status == ComputeResource.STATUS_DECOMMISSIONED or
-                     req_status == ComputeResource.STATUS_TERMINATING):
+            req_status = serializer.validated_data.get("status", None)
+            if (
+                obj.status == ComputeResource.STATUS_STARTING
+                or obj.status == ComputeResource.STATUS_ONLINE
+            ) and (
+                req_status == ComputeResource.STATUS_DECOMMISSIONED
+                or req_status == ComputeResource.STATUS_TERMINATING
+            ):
                 # remove the status field supplied in the request.
                 # this task will update the status in the database itself
-                serializer.validated_data.pop('status')
+                serializer.validated_data.pop("status")
                 obj.dispose()
 
             serializer.save()
             return Response(status=status.HTTP_204_NO_CONTENT)
             # return Response(serializer.data, status=status.HTTP_200_OK)
 
-        return Response(serializer.errors,
-                        status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ComputeResourceCreate(PostMixin,
-                            JSONView):
+class ComputeResourceCreate(PostMixin, JSONView):
     queryset = ComputeResource.objects.all()
     serializer_class = ComputeResourceSerializer
     permission_classes = (IsAdminUser,)
 
-    @view_config(request_serializer=ComputeResourceSerializer,
-                 response_serializer=ComputeResourceSerializer)
+    @view_config(
+        request_serializer=ComputeResourceSerializer,
+        response_serializer=ComputeResourceSerializer,
+    )
     def post(self, request: Request, version=None):
         """
         Create a new ComputeResource. UUIDs are autoassigned.
@@ -1414,15 +1476,16 @@ class ComputeResourceCreate(PostMixin,
         return super(ComputeResourceCreate, self).post(request)
 
 
-class PipelineRunCreate(PostMixin,
-                        JSONView):
+class PipelineRunCreate(PostMixin, JSONView):
     queryset = PipelineRun.objects.all()
     serializer_class = PipelineRunCreateSerializer
 
     # permission_classes = (DjangoObjectPermissions,)
 
-    @view_config(request_serializer=PipelineRunCreateSerializer,
-                 response_serializer=PipelineRunSerializer)
+    @view_config(
+        request_serializer=PipelineRunCreateSerializer,
+        response_serializer=PipelineRunSerializer,
+    )
     def post(self, request: Request, version=None):
         """
         Create a new PipelineRun. UUIDs are autoassigned.
@@ -1438,11 +1501,7 @@ class PipelineRunCreate(PostMixin,
         return super(PipelineRunCreate, self).post(request)
 
 
-class PipelineRunView(GetMixin,
-                      DeleteMixin,
-                      PutMixin,
-                      PatchMixin,
-                      JSONView):
+class PipelineRunView(GetMixin, DeleteMixin, PutMixin, PatchMixin, JSONView):
     queryset = PipelineRun.objects.all()
     serializer_class = PipelineRunSerializer
 
@@ -1465,13 +1524,17 @@ class PipelineRunView(GetMixin,
         """
         return super(PipelineRunView, self).get(request, uuid)
 
-    @view_config(request_serializer=PipelineRunSerializer,
-                 response_serializer=PipelineRunSerializer)
+    @view_config(
+        request_serializer=PipelineRunSerializer,
+        response_serializer=PipelineRunSerializer,
+    )
     def patch(self, request, uuid, version=None):
         return super(PipelineRunView, self).patch(request, uuid)
 
-    @view_config(request_serializer=PipelineRunCreateSerializer,
-                 response_serializer=PipelineRunSerializer)
+    @view_config(
+        request_serializer=PipelineRunCreateSerializer,
+        response_serializer=PipelineRunSerializer,
+    )
     def put(self, request: Request, uuid: str, version=None):
         """
         Replace the content of an existing PipelineRun.
@@ -1489,22 +1552,18 @@ class PipelineRunView(GetMixin,
         """
 
         return super(PipelineRunView, self).put(
-            request,
-            uuid,
-            serializer_class=PipelineRunCreateSerializer)
+            request, uuid, serializer_class=PipelineRunCreateSerializer
+        )
 
 
-class JobView(JSONPatchMixin,
-              JSONView):
+class JobView(JSONPatchMixin, JSONView):
     queryset = Job.objects.all()
     serializer_class = JobSerializerResponse
 
     permission_classes = (IsOwner | IsSuperuser | HasReadonlyObjectAccessToken,)
     # permission_classes = (DjangoObjectPermissions,)
 
-    parser_classes = (JSONParser,
-                      JSONPatchRFC7386Parser,
-                      JSONPatchRFC6902Parser)
+    parser_classes = (JSONParser, JSONPatchRFC7386Parser, JSONPatchRFC6902Parser)
 
     @view_config(response_serializer=JobSerializerResponse)
     @etag_headers
@@ -1525,8 +1584,10 @@ class JobView(JSONPatchMixin,
         serializer = self.get_serializer(instance=obj)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @view_config(request_serializer=JobSerializerRequest,
-                 response_serializer=PatchSerializerResponse)
+    @view_config(
+        request_serializer=JobSerializerRequest,
+        response_serializer=PatchSerializerResponse,
+    )
     def patch(self, request: Request, uuid, version=None):
         """
 
@@ -1572,18 +1633,18 @@ class JobView(JSONPatchMixin,
                 request = self._patch_request(request, obj=job, field=field)
         else:
             if any([request.data.get(field, None) for field in patchable_fields]):
-                return HttpResponse(status=status.HTTP_400_BAD_REQUEST,
-                                    reason=f"Invalid Content-Type for PATCH on: {', '.join(patchable_fields)}. "
-                                           f"Use application/merge-patch+json or application/json-patch+json")
+                return HttpResponse(
+                    status=status.HTTP_400_BAD_REQUEST,
+                    reason=f"Invalid Content-Type for PATCH on: {', '.join(patchable_fields)}. "
+                    f"Use application/merge-patch+json or application/json-patch+json",
+                )
 
-        serializer = self.get_serializer(instance=job,
-                                         data=request.data,
-                                         partial=True)
+        serializer = self.get_serializer(instance=job, data=request.data, partial=True)
         if serializer.is_valid():
 
             # Providing only an exit_code sets job status
-            job_status = serializer.validated_data.get('status', None)
-            exit_code = serializer.validated_data.get('exit_code', None)
+            job_status = serializer.validated_data.get("status", None)
+            exit_code = serializer.validated_data.get("exit_code", None)
             if job_status is None and exit_code is not None:
                 if exit_code == 0:
                     serializer.validated_data.update(status=Job.STATUS_COMPLETE)
@@ -1593,11 +1654,11 @@ class JobView(JSONPatchMixin,
             if job_status == Job.STATUS_CANCELLED:
                 kill_remote_job.apply_async(args=(dict(job_id=uuid),))
 
-            new_status = serializer.validated_data.get('status')
+            new_status = serializer.validated_data.get("status")
 
-            if (new_status != original_status and
-                    (new_status == Job.STATUS_COMPLETE or
-                     new_status == Job.STATUS_FAILED)):
+            if new_status != original_status and (
+                new_status == Job.STATUS_COMPLETE or new_status == Job.STATUS_FAILED
+            ):
 
                 # We don't update the status yet - an async task will do this after file indexing is complete
                 serializer.save(status=original_status)
@@ -1605,15 +1666,20 @@ class JobView(JSONPatchMixin,
                 task_data = dict(job_id=uuid, status=new_status)
 
                 if job.compute_resource and job.compute_resource.archive_host:
-                    task_data['dst_compute_id'] = job.compute_resource.archive_host.id
-                    result = celery.chain(index_remote_files.s(task_data),
-                                          set_job_status.s(),
-                                          bulk_move_job_task.s()).apply_async(
-                        link_error=_index_remote_files_task_err_handler.s(job_id=job.id))
+                    task_data["dst_compute_id"] = job.compute_resource.archive_host.id
+                    result = celery.chain(
+                        index_remote_files.s(task_data),
+                        set_job_status.s(),
+                        bulk_move_job_task.s(),
+                    ).apply_async(
+                        link_error=_finalize_job_task_err_handler.s(job_id=job.id)
+                    )
                 else:
-                    result = celery.chain(index_remote_files.s(task_data),
-                                          set_job_status.s()).apply_async(
-                        link_error=_index_remote_files_task_err_handler.s(job_id=job.id))
+                    result = celery.chain(
+                        index_remote_files.s(task_data), set_job_status.s()
+                    ).apply_async(
+                        link_error=_finalize_job_task_err_handler.s(job_id=job.id)
+                    )
 
                     # We aren't too concerned if estimate_job_tarball_size fails here,
                     # It's considered nice but not critical
@@ -1627,8 +1693,7 @@ class JobView(JSONPatchMixin,
 
             return Response(status=status.HTTP_204_NO_CONTENT)
 
-        return Response(serializer.errors,
-                        status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request: Request, uuid, version=None):
         """
@@ -1652,7 +1717,9 @@ class JobView(JSONPatchMixin,
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-def get_abs_backend_url(path_query_frag: str, request: Union[None, Request] = None) -> str:
+def get_abs_backend_url(
+    path_query_frag: str, request: Union[None, Request] = None
+) -> str:
     """
     Given a path?query=string#and_fragment (eg produced by the django 'reverse' function).
     return the absolute URL to the API backend.
@@ -1674,7 +1741,9 @@ def get_abs_backend_url(path_query_frag: str, request: Union[None, Request] = No
 
     api_baseurl = settings.FRONTEND_API_URL
     if request is None and not api_baseurl:
-        raise ValueError('LAXY_FRONTEND_API_URL is not set; a request arg must be provided.')
+        raise ValueError(
+            "LAXY_FRONTEND_API_URL is not set; a request arg must be provided."
+        )
 
     if request is not None:
         url = urlparse(request.build_absolute_uri(path_query_frag))
@@ -1684,7 +1753,7 @@ def get_abs_backend_url(path_query_frag: str, request: Union[None, Request] = No
         if apiurl.scheme:
             url = url._replace(scheme=apiurl.scheme)
     if not url.scheme:
-        url = url._replace(scheme='https' if settings.USE_SSL else 'http')
+        url = url._replace(scheme="https" if settings.USE_SSL else "http")
 
     return url.geturl()
 
@@ -1703,8 +1772,10 @@ class JobCreate(JSONView):
         if job.compute_resource and job.compute_resource.disposable:
             job.compute_resource.dispose()
 
-    @view_config(request_serializer=JobSerializerRequest,
-                 response_serializer=JobSerializerResponse)
+    @view_config(
+        request_serializer=JobSerializerRequest,
+        response_serializer=JobSerializerResponse,
+    )
     def post(self, request: Request, version=None):
         """
         Create a new Job. UUIDs are autoassigned.
@@ -1723,33 +1794,36 @@ class JobCreate(JSONView):
 
         # setattr(request, '_dont_enforce_csrf_checks', True)
 
-        pipeline_run_id = request.query_params.get('pipeline_run_id', None)
+        pipeline_run_id = request.query_params.get("pipeline_run_id", None)
         samplecart_id = None
         if pipeline_run_id:
             try:
                 pipelinerun_obj = PipelineRun.objects.get(id=pipeline_run_id)
                 pipelinerun = PipelineRunSerializer(pipelinerun_obj).data
-                samplecart_id = pipelinerun.get('sample_cart', {}).get('id', None)
-                pipelinerun['pipelinerun_id'] = str(pipelinerun['id'])
-                del pipelinerun['id']
-                request.data['params'] = json.dumps(pipelinerun)
+                samplecart_id = pipelinerun.get("sample_cart", {}).get("id", None)
+                pipelinerun["pipelinerun_id"] = str(pipelinerun["id"])
+                del pipelinerun["id"]
+                request.data["params"] = json.dumps(pipelinerun)
 
             except PipelineRun.DoesNotExist:
-                return HttpResponse(reason='pipeline_run %s does not exist'
-                                           % pipeline_run_id,
-                                    status=status.HTTP_400_BAD_REQUEST)
+                return HttpResponse(
+                    reason="pipeline_run %s does not exist" % pipeline_run_id,
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
-        serializer = self.request_serializer(data=request.data,
-                                             context={'request': request})
+        serializer = self.request_serializer(
+            data=request.data, context={"request": request}
+        )
 
         if serializer.is_valid():
 
-            job_status = serializer.validated_data.get('status', '')
-            if job_status != '' and job_status != Job.STATUS_HOLD:
-                return HttpResponse(reason='status can only be set to "%s" '
-                                           'or left unset for job creation'
-                                           % Job.STATUS_HOLD,
-                                    status=status.HTTP_400_BAD_REQUEST)
+            job_status = serializer.validated_data.get("status", "")
+            if job_status != "" and job_status != Job.STATUS_HOLD:
+                return HttpResponse(
+                    reason='status can only be set to "%s" '
+                    "or left unset for job creation" % Job.STATUS_HOLD,
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
             job = serializer.save()  # owner=request.user)
 
@@ -1772,16 +1846,16 @@ class JobCreate(JSONView):
             job = Job.objects.get(id=job_id)
 
             callback_url = get_abs_backend_url(
-                reverse('laxy_backend:job', args=[job.id]),
-                request)
+                reverse("laxy_backend:job", args=[job.id]), request
+            )
 
             job_event_url = get_abs_backend_url(
-                reverse('laxy_backend:create_job_eventlog', args=[job.id]),
-                request)
+                reverse("laxy_backend:create_job_eventlog", args=[job.id]), request
+            )
 
             job_file_bulk_url = get_abs_backend_url(
-                reverse('laxy_backend:job_file_bulk', args=[job_id]),
-                request)
+                reverse("laxy_backend:job_file_bulk", args=[job_id]), request
+            )
 
             # port = request.META.get('SERVER_PORT', 8001)
             # # domain = get_current_site(request).domain
@@ -1802,7 +1876,7 @@ class JobCreate(JSONView):
             # TODO: Maybe use the mappings in templates/genomes.json
             #       Maybe do all genome_id to path resolution in run_job.sh
             # reference_genome_id = "Saccharomyces_cerevisiae/Ensembl/R64-1-1"
-            reference_genome_id = job.params.get('params').get('genome')
+            reference_genome_id = job.params.get("params").get("genome")
 
             # TODO: Validate that pipeline_version and pipeline_aligner are
             #       one of the valid values, as per reference_genome_id
@@ -1810,9 +1884,11 @@ class JobCreate(JSONView):
             #       maybe with a DRF Serializer.
             #       (probably the frontend should request valid values from the backend to populate forms,
             #        and then use the same data to validate serverside, as per REFERENCE_GENOME_MAPPINGS)
-            default_pipeline_version = '1.5.4'  # '1.5.1+c53adf6'  # '1.5.1'
-            pipeline_version = job.params.get('params').get('pipeline_version', default_pipeline_version)
-            pipeline_aligner = job.params.get('params').get('pipeline_aligner', 'star')
+            default_pipeline_version = "1.5.4"  # '1.5.1+c53adf6'  # '1.5.1'
+            pipeline_version = job.params.get("params").get(
+                "pipeline_version", default_pipeline_version
+            )
+            pipeline_aligner = job.params.get("params").get("pipeline_aligner", "star")
 
             # TODO: This ID check should probably move into the PipelineRun
             #       params serializer.
@@ -1820,14 +1896,15 @@ class JobCreate(JSONView):
                 job.status = Job.STATUS_FAILED
                 job.save()
                 # job.delete()
-                return HttpResponse(reason='Unknown reference genome',
-                                    status=status.HTTP_400_BAD_REQUEST)
+                return HttpResponse(
+                    reason="Unknown reference genome",
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
-            slurm_account = job.compute_resource.extra.get('slurm_account', None)
+            slurm_account = job.compute_resource.extra.get("slurm_account", None)
 
             environment = dict(
-                DEBUG=sh_bool(
-                    getattr(settings, 'DEBUG', False)),
+                DEBUG=sh_bool(getattr(settings, "DEBUG", False)),
                 IGNORE_SELF_SIGNED_CERTIFICATE=sh_bool(False),
                 JOB_ID=job_id,
                 JOB_PATH=job.abs_path_on_compute,
@@ -1838,29 +1915,30 @@ class JobCreate(JSONView):
                 REFERENCE_GENOME=shlex.quote(reference_genome_id),
                 PIPELINE_VERSION=shlex.quote(pipeline_version),
                 PIPELINE_ALIGNER=shlex.quote(pipeline_aligner),
-                QUEUE_TYPE=job.compute_resource.queue_type or 'local',
+                QUEUE_TYPE=job.compute_resource.queue_type or "local",
                 # BDS_SINGLE_NODE=sh_bool(False),
-                SLURM_ACCOUNT=slurm_account or '',
+                SLURM_ACCOUNT=slurm_account or "",
             )
 
-            task_data = dict(job_id=job_id,
-                             clobber=False,
-                             # this is job.params
-                             # pipeline_run_config=pipeline_run.to_json(),
-                             # gateway=settings.CLUSTER_MANAGEMENT_HOST,
-
-                             # We don't pass JOB_AUTH_HEADER as 'environment'
-                             # since we don't want it to leak into the shell env
-                             # or any output of the run_job.sh script.
-                             job_auth_header=callback_auth_header,
-                             environment=environment)
+            task_data = dict(
+                job_id=job_id,
+                clobber=False,
+                # this is job.params
+                # pipeline_run_config=pipeline_run.to_json(),
+                # gateway=settings.CLUSTER_MANAGEMENT_HOST,
+                # We don't pass JOB_AUTH_HEADER as 'environment'
+                # since we don't want it to leak into the shell env
+                # or any output of the run_job.sh script.
+                job_auth_header=callback_auth_header,
+                environment=environment,
+            )
 
             # TESTING: Start cluster, run job, (pre-existing data), stop cluster
             # tasks.run_job_chain(task_data)
 
             result = start_job.apply_async(
-                args=(task_data,),
-                link_error=self._task_err_handler.s(job_id))
+                args=(task_data,), link_error=self._task_err_handler.s(job_id)
+            )
             # Non-async for testing
             # result = start_job(task_data)
 
@@ -1882,7 +1960,7 @@ class JobCreate(JSONView):
             # serializer.validated_data.update(id=job_id)
 
             job = Job.objects.get(id=job_id)
-            if result.state == 'FAILURE':
+            if result.state == "FAILURE":
                 raise result.result
                 # return Response({'error': result.traceback},
                 #                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -1895,8 +1973,8 @@ class JobCreate(JSONView):
 
 class JobPagination(PageNumberPagination):
     page_size = 10
-    page_query_param = 'page'
-    page_size_query_param = 'page_size'
+    page_query_param = "page"
+    page_size_query_param = "page_size"
     max_page_size = 100
 
 
@@ -1913,10 +1991,11 @@ class JobListView(generics.ListAPIView):
     pagination_class = JobPagination
 
     def get_queryset(self):
-        return (Job.objects
-                .filter(owner=self.request.user)
-                # .order_by('status')
-                .order_by('-created_time'))
+        return (
+            Job.objects.filter(owner=self.request.user)
+            # .order_by('status')
+            .order_by("-created_time")
+        )
 
     # def list(self, request):
     #     # queryset = Job.objects.filter(owner=request.user).order_by('-created_time')
@@ -1928,8 +2007,8 @@ class JobListView(generics.ListAPIView):
 
 class BigPageNumberPagination(PageNumberPagination):
     page_size = 100
-    page_query_param = 'page'
-    page_size_query_param = 'page_size'
+    page_query_param = "page"
+    page_size_query_param = "page_size"
     max_page_size = 1000
 
 
@@ -1939,32 +2018,34 @@ class EventLogListView(generics.ListAPIView):
 
     `/api/v1/eventlogs/?object_id={job_id}`
     """
-    lookup_field = 'id'
+
+    lookup_field = "id"
     queryset = EventLog.objects.all()
     serializer_class = EventLogSerializer
     filter_backends = (DjangoFilterBackend,)
-    filter_fields = ('user', 'object_id', 'event',)
+    filter_fields = (
+        "user",
+        "object_id",
+        "event",
+    )
     pagination_class = BigPageNumberPagination
 
     permission_classes = (IsAuthenticated | HasAccessTokenForEventLogSubject,)
 
     def get_queryset(self):
         if self.request.user.is_superuser:
-            return (EventLog.objects
-                    .order_by('-timestamp'))
+            return EventLog.objects.order_by("-timestamp")
         else:
             # If access_token is provided in query string, check it is valid for the requested the Job (object_id)
             # and if so return Events for the Job
-            token = self.request.query_params.get('access_token', None)
-            obj_id = self.request.query_params.get('object_id', None)
+            token = self.request.query_params.get("access_token", None)
+            obj_id = self.request.query_params.get("object_id", None)
             if token and obj_id and token_is_valid(token, obj_id):
-                return (EventLog.objects
-                        .filter(object_id=obj_id)
-                        .order_by('-timestamp'))
+                return EventLog.objects.filter(object_id=obj_id).order_by("-timestamp")
             else:
-                return (EventLog.objects
-                        .filter(user=self.request.user)
-                        .order_by('-timestamp'))
+                return EventLog.objects.filter(user=self.request.user).order_by(
+                    "-timestamp"
+                )
 
 
 class EventLogCreate(JSONView):
@@ -2018,12 +2099,12 @@ class EventLogCreate(JSONView):
         -->
         """
 
-        serializer = self.get_serializer(data=request.data,
-                                         context={'request': request})
+        serializer = self.get_serializer(
+            data=request.data, context={"request": request}
+        )
         if serializer.is_valid():
             if subject_obj is not None:
-                event_obj = serializer.save(user=request.user,
-                                            obj=subject_obj)
+                event_obj = serializer.save(user=request.user, obj=subject_obj)
             else:
                 event_obj = serializer.save(user=request.user)
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -2056,9 +2137,9 @@ class JobEventLogCreate(EventLogCreate):
                 return Response(status=status.HTTP_404_NOT_FOUND)
 
         if job.owner == request.user or request.user.is_superuser:
-            return super(JobEventLogCreate, self).post(request,
-                                                       version=version,
-                                                       subject_obj=job)
+            return super(JobEventLogCreate, self).post(
+                request, version=version, subject_obj=job
+            )
 
         return Response(status=status.HTTP_403_FORBIDDEN)
 
@@ -2081,23 +2162,27 @@ class AccessTokenListView(generics.ListAPIView):
     * created_by - filter by user (available only to superusers)
     """
 
-    lookup_field = 'id'
+    lookup_field = "id"
     queryset = AccessToken.objects.all()
     serializer_class = AccessTokenSerializer
     filter_backends = (DjangoFilterBackend,)
-    filter_fields = ('created_by', 'content_type', 'object_id',)
+    filter_fields = (
+        "created_by",
+        "content_type",
+        "object_id",
+    )
 
     permission_classes = (IsAuthenticated & (IsOwner | IsSuperuser),)
 
     # FIXME: Filtering by ?content_type=job fails to return results
     def get_queryset(self):
         qs = self.queryset
-        active = self.request.query_params.get('active', None)
+        active = self.request.query_params.get("active", None)
         # qs = qs.filter(created_by=self.request.user)  # handled by permission_classes
         if active:
             qs = qs.filter(Q(expiry_time__gt=datetime.now()) | Q(expiry_time=None))
 
-        return qs.order_by('-expiry_time')
+        return qs.order_by("-expiry_time")
 
 
 class AccessTokenCreate(JSONView):
@@ -2106,11 +2191,10 @@ class AccessTokenCreate(JSONView):
     permission_classes = (IsAuthenticated & (IsOwner | IsSuperuser),)
 
     def _owns_target_object(self, user, serializer):
-        content_type = serializer.validated_data.get('content_type', 'job')
-        object_id = serializer.validated_data.get('object_id', None)
+        content_type = serializer.validated_data.get("content_type", "job")
+        object_id = serializer.validated_data.get("object_id", None)
         target_obj = ContentType.objects.get(
-            app_label='laxy_backend',
-            model=content_type
+            app_label="laxy_backend", model=content_type
         ).get_object_for_this_type(id=object_id)
 
         return is_owner(user, target_obj)
@@ -2121,8 +2205,9 @@ class AccessTokenCreate(JSONView):
         Can be used like `?access_token={the_token}` in certain URLs to provide
         read-only access.
         """
-        serializer = self.get_serializer(data=request.data,
-                                         context={'request': request})
+        serializer = self.get_serializer(
+            data=request.data, context={"request": request}
+        )
         if serializer.is_valid():
             if not self._owns_target_object(request.user, serializer):
                 return Response(serializer.errors, status=status.HTTP_403_FORBIDDEN)
@@ -2138,19 +2223,23 @@ class JobAccessTokenView(JSONView, GetMixin):
     This view can be used if we want just one token link per job which can be updated with a new expiry or deleted.
     This simplifies the use of token links for users, at the cost of less flexibility.
     """
-    lookup_url_kwarg = 'job_id'
+
+    lookup_url_kwarg = "job_id"
     queryset = AccessToken.objects.all()
     serializer_class = JobAccessTokenRequestSerializer
-    permission_classes = (IsSuperuser, IsOwner, HasReadonlyObjectAccessToken,)
+    permission_classes = (
+        IsSuperuser,
+        IsOwner,
+        HasReadonlyObjectAccessToken,
+    )
 
     @cached_property
     def _job_ct(self) -> ContentType:
-        return ContentType.objects.get(app_label='laxy_backend', model='job')
+        return ContentType.objects.get(app_label="laxy_backend", model="job")
 
     def _owns_target_object(self, user, obj_id):
         target_obj = ContentType.objects.get(
-            app_label='laxy_backend',
-            model=self._job_ct
+            app_label="laxy_backend", model=self._job_ct
         ).get_object_for_this_type(id=obj_id)
 
         return is_owner(user, target_obj) or self.request.user.is_superuser
@@ -2159,9 +2248,9 @@ class JobAccessTokenView(JSONView, GetMixin):
         job_id = self.kwargs.get(self.lookup_url_kwarg, None)
 
         if job_id is not None:
-            qs = (self.queryset
-                  .filter(Q(object_id=job_id) & Q(content_type=self._job_ct))
-                  .order_by('created_time'))
+            qs = self.queryset.filter(
+                Q(object_id=job_id) & Q(content_type=self._job_ct)
+            ).order_by("created_time")
 
             return qs
 
@@ -2188,8 +2277,10 @@ class JobAccessTokenView(JSONView, GetMixin):
         else:
             return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @view_config(request_serializer=JobAccessTokenRequestSerializer,
-                 response_serializer=JobAccessTokenResponseSerializer)
+    @view_config(
+        request_serializer=JobAccessTokenRequestSerializer,
+        response_serializer=JobAccessTokenResponseSerializer,
+    )
     def put(self, request: Request, job_id: str, version=None):
         """
         Create or update the access token for this Job.
@@ -2219,19 +2310,22 @@ class JobAccessTokenView(JSONView, GetMixin):
         obj = self.get_queryset().first()
 
         if obj:
-            serializer = self.request_serializer(obj, data=request.data,
-                                                 context={'request': request})
+            serializer = self.request_serializer(
+                obj, data=request.data, context={"request": request}
+            )
         else:
             data = dict(request.data)
-            data.update(object_id=job_id, content_type='job')
-            serializer = self.request_serializer(data=data,
-                                                 context={'request': request})
+            data.update(object_id=job_id, content_type="job")
+            serializer = self.request_serializer(
+                data=data, context={"request": request}
+            )
 
         if serializer.is_valid():
             obj = serializer.save(created_by=request.user)
 
-            return Response(self.response_serializer(obj).data,
-                            status=status.HTTP_200_OK)
+            return Response(
+                self.response_serializer(obj).data, status=status.HTTP_200_OK
+            )
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -2244,7 +2338,7 @@ class JobClone(JSONView):
 
     # permission_classes = (DjangoObjectPermissions,)
 
-    lookup_url_kwarg = 'job_id'
+    lookup_url_kwarg = "job_id"
 
     @view_config(response_serializer=JobSerializerResponse)
     @etag_headers
@@ -2263,7 +2357,7 @@ class JobClone(JSONView):
         """
         job = self.get_object()
 
-        samplecart_id = job.params.get('sample_cart', {}).get('id', None)
+        samplecart_id = job.params.get("sample_cart", {}).get("id", None)
         # TODO: This should actually be a migration that modifies Job.params to conform to the new
         #       shape. We should probably start versioning our JSON blobs, or including a link to
         #       a JSON Schema (eg generated via marshmallow-jsonschema and linked to in the JSON blob
@@ -2272,11 +2366,13 @@ class JobClone(JSONView):
         #       frontend too using: https://www.npmjs.com/package/json-schema-to-typescript
         #
         if samplecart_id is None:
-            samplecart_id = job.params.get('sample_set', {}).get('id', None)
+            samplecart_id = job.params.get("sample_set", {}).get("id", None)
 
         if samplecart_id is None:
-            return HttpResponse(status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                                reason=f'Cannot find samplecart associated with job {job.id}')
+            return HttpResponse(
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                reason=f"Cannot find samplecart associated with job {job.id}",
+            )
         pipelinerun = PipelineRun.objects.filter(sample_cart=samplecart_id).first()
         samplecart = pipelinerun.sample_cart
 
@@ -2293,12 +2389,14 @@ class JobClone(JSONView):
         pipelinerun.save()
         new_pipelinerun = pipelinerun
 
-        return JsonResponse({'pipelinerun_id': new_pipelinerun.id, 'samplecart_id': new_samplecart.id})
+        return JsonResponse(
+            {"pipelinerun_id": new_pipelinerun.id, "samplecart_id": new_samplecart.id}
+        )
 
 
 # TODO: This should really be POST, since it has side effects,
 #       however GET is easier to trigger manually in the browser
-@api_view(['GET'])
+@api_view(["GET"])
 @renderer_classes([JSONRenderer])
 @permission_classes([IsAdminUser])
 def trigger_file_registration(request, job_id, version=None):
@@ -2308,15 +2406,14 @@ def trigger_file_registration(request, job_id, version=None):
         return HttpResponse(status=404, reason=f"Job {job_id} doesn't exist.")
 
     task_data = dict(job_id=job_id)
-    result = index_remote_files.apply_async(
-        args=(task_data,))
-    return Response(data={'task_id': result.id},
-                    content_type='application/json',
-                    status=200)
+    result = index_remote_files.apply_async(args=(task_data,))
+    return Response(
+        data={"task_id": result.id}, content_type="application/json", status=200
+    )
 
 
 class SendFileToDegust(JSONView):
-    lookup_url_kwarg = 'file_id'
+    lookup_url_kwarg = "file_id"
     queryset = File.objects.all()
     serializer_class = FileSerializer
 
@@ -2379,36 +2476,39 @@ class SendFileToDegust(JSONView):
         ```
         """
 
-        degust_api_url = getattr(settings, 'DEGUST_URL', 'http://degust.erc.monash.edu')
+        degust_api_url = getattr(settings, "DEGUST_URL", "http://degust.erc.monash.edu")
 
         counts_file: File = self.get_object()
         job = counts_file.fileset.jobs_as_output.first()
-        sample_cart = job.params.get('sample_cart', {})
-        samples = sample_cart.get('samples', [])
-        conditions = list(set([sample['metadata'].get('condition') for sample in samples]))
+        sample_cart = job.params.get("sample_cart", {})
+        samples = sample_cart.get("samples", [])
+        conditions = list(
+            set([sample["metadata"].get("condition") for sample in samples])
+        )
         # {'some_condition': []} dict of empty lists
         degust_conditions = OrderedDict([(condition, []) for condition in conditions])
 
         for sample in samples:
-            name = sample['name']
-            condition = sample['metadata'].get('condition')
+            name = sample["name"]
+            condition = sample["metadata"].get("condition")
             degust_conditions[condition].append(name)
 
         if not counts_file:
-            return HttpResponse(status=status.HTTP_404_NOT_FOUND,
-                                reason="File ID does not exist, (or your are not"
-                                       "authorized to access it).")
+            return HttpResponse(
+                status=status.HTTP_404_NOT_FOUND,
+                reason="File ID does not exist, (or your are not"
+                "authorized to access it).",
+            )
 
-        saved_degust_url = counts_file.metadata.get('degust_url', None)
+        saved_degust_url = counts_file.metadata.get("degust_url", None)
         # force_new is mostly for testing, creates a new Degust session overwriting the cached URL in File metadata
-        force_new = request.query_params.get('force_new', False)
+        force_new = request.query_params.get("force_new", False)
         if saved_degust_url and not force_new:
-            data = RedirectResponseSerializer(data={
-                'status': status.HTTP_200_OK,
-                'redirect': saved_degust_url})
+            data = RedirectResponseSerializer(
+                data={"status": status.HTTP_200_OK, "redirect": saved_degust_url}
+            )
             if data.is_valid():
-                return Response(data=data.validated_data,
-                                status=status.HTTP_200_OK)
+                return Response(data=data.validated_data, status=status.HTTP_200_OK)
 
         # TODO: RoboBrowser is still required since while Degust no longer requires a CSRF token upon upload,
         #       an 'upload_token' per-user is required:
@@ -2416,8 +2516,8 @@ class SendFileToDegust(JSONView):
         #       We either need an application level API token for Degust (to create anonymous uploads), or a
         #       trust relationship (eg proper OAuth2 provider or simple shared Google Account ID) that allows
         #       Laxy to retrieve the upload token for a user programmatically
-        url = f'{degust_api_url}/upload'
-        browser = RoboBrowser(history=True, parser='lxml')
+        url = f"{degust_api_url}/upload"
+        browser = RoboBrowser(history=True, parser="lxml")
         loop = asyncio.new_event_loop()
 
         # This does the fetch of the form and the counts file simultaneously
@@ -2431,89 +2531,94 @@ class SendFileToDegust(JSONView):
                 # return filelike
                 return fh
 
-            future_form = loop.run_in_executor(None,
-                                               get_upload_form,
-                                               url)
-            future_file = loop.run_in_executor(None,
-                                               get_counts_file_content,
-                                               fileish)
+            future_form = loop.run_in_executor(None, get_upload_form, url)
+            future_file = loop.run_in_executor(None, get_counts_file_content, fileish)
             form = await future_form
             filelike = await future_file
 
             return form, filelike
 
         form, filelike = loop.run_until_complete(
-            get_form_and_file(url, counts_file.file))
+            get_form_and_file(url, counts_file.file)
+        )
         loop.close()
 
         # First POST the counts file, get a new Degust session ID
-        form['filename'].value = filelike
+        form["filename"].value = filelike
 
         # TODO: This is to deal with SFTPStorage backend timeouts etc
         #       Ideally we would fork / subclass SFTPStorage and SFTPStorageFile
         #       and add some built-in backoff / retry functionality
         #       eg: https://github.com/MonashBioinformaticsPlatform/laxy/issues/52
-        @backoff.on_exception(backoff.expo,
-                              (EOFError,
-                               IOError,
-                               OSError,
-                               ssh_exception.SSHException,
-                               ssh_exception.AuthenticationException,
-                               ),
-                              max_tries=3,
-                              jitter=backoff.full_jitter)
+        @backoff.on_exception(
+            backoff.expo,
+            (
+                EOFError,
+                IOError,
+                OSError,
+                ssh_exception.SSHException,
+                ssh_exception.AuthenticationException,
+            ),
+            max_tries=3,
+            jitter=backoff.full_jitter,
+        )
         def submit_form(form):
             browser.submit_form(form)
 
         submit_form(form)
 
-        degust_config_url = browser.url.replace('/compare.html?', '/config.html?', 1)
-        degust_id = parse_qs(urlparse(degust_config_url).query).get('code', [None]).pop()
+        degust_config_url = browser.url.replace("/compare.html?", "/config.html?", 1)
+        degust_id = (
+            parse_qs(urlparse(degust_config_url).query).get("code", [None]).pop()
+        )
 
-        counts_file.metadata['degust_url'] = degust_config_url
+        counts_file.metadata["degust_url"] = degust_config_url
         counts_file.save()
 
         # Now POST the settings to the Degust session, as per:
         # https://github.com/drpowell/degust/blob/master/FAQ.md#uploading-a-counts-file-from-the-command-line
-        description = job.params.get('params').get('description', '')
+        description = job.params.get("params").get("description", "")
         replicates = list(degust_conditions.items())
         init_select = []
         if len(conditions) >= 2:
             init_select = conditions[0:2]
 
         degust_settings = {
-            'csv_format': False,
-            'replicates': replicates,
-            'fc_columns': [],
-            'info_columns': ['Gene.ID', 'Chrom', 'Gene.Name', 'Biotype'],
-            'analyze_server_side': True,
-            'name': f'{description} (Laxy job: {job.id})',
+            "csv_format": False,
+            "replicates": replicates,
+            "fc_columns": [],
+            "info_columns": ["Gene.ID", "Chrom", "Gene.Name", "Biotype"],
+            "analyze_server_side": True,
+            "name": f"{description} (Laxy job: {job.id})",
             # 'primary_name': '',
-            'init_select': init_select,
+            "init_select": init_select,
             # 'hidden_factor': [],
-            'link_column': 'Gene.ID'
+            "link_column": "Gene.ID",
         }
 
-        degust_settings_url = f'{degust_api_url}/degust/{degust_id}/settings'
-        resp = requests.post(degust_settings_url, files={'settings': (None, json.dumps(degust_settings))})
+        degust_settings_url = f"{degust_api_url}/degust/{degust_id}/settings"
+        resp = requests.post(
+            degust_settings_url, files={"settings": (None, json.dumps(degust_settings))}
+        )
         resp.raise_for_status()
 
-        data = RedirectResponseSerializer(data={
-            'status': browser.response.status_code,
-            'redirect': degust_config_url})
+        data = RedirectResponseSerializer(
+            data={"status": browser.response.status_code, "redirect": degust_config_url}
+        )
         if data.is_valid():
-            return Response(data=data.validated_data,
-                            status=status.HTTP_200_OK)
+            return Response(data=data.validated_data, status=status.HTTP_200_OK)
         else:
-            return HttpResponse(status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                                reason="Error contacting Degust.")
+            return HttpResponse(
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                reason="Error contacting Degust.",
+            )
 
 
 class RemoteBrowseView(JSONView):
     renderer_classes = (JSONRenderer,)
     serializer_class = FileListing
     filter_backends = (RemoteFilesQueryParams,)
-    api_docs_visible_to = 'public'
+    api_docs_visible_to = "public"
 
     # @method_decorator(cache_page(10 * 60))
     @view_config(response_serializer=FileListing)
@@ -2564,12 +2669,14 @@ class RemoteBrowseView(JSONView):
         :rtype:
         -->
         """
-        url = request.query_params.get('url', '').strip()
-        fileglob = request.query_params.get('fileglob', '*')
+        url = request.query_params.get("url", "").strip()
+        fileglob = request.query_params.get("fileglob", "*")
 
-        if url == '':
-            return HttpResponse(status=status.HTTP_400_BAD_REQUEST,
-                                reason="url query parameter is required.")
+        if url == "":
+            return HttpResponse(
+                status=status.HTTP_400_BAD_REQUEST,
+                reason="url query parameter is required.",
+            )
 
         # def _looks_like_archive(fn):
         #     archive_extensions = ['.tar']
@@ -2578,93 +2685,130 @@ class RemoteBrowseView(JSONView):
         listing = []
 
         scheme = urlparse(url).scheme
-        if scheme not in ['ftp', 'http', 'https']:
-            return HttpResponse(status=status.HTTP_400_BAD_REQUEST,
-                                reason=f"Unsupported scheme: {scheme}://")
+        if scheme not in ["ftp", "http", "https"]:
+            return HttpResponse(
+                status=status.HTTP_400_BAD_REQUEST,
+                reason=f"Unsupported scheme: {scheme}://",
+            )
 
         try:
             # We need to check the URL given is actually accessible
-            if scheme in ['http', 'https']:
+            if scheme in ["http", "https"]:
                 resp = requests.head(url)
                 resp.raise_for_status()
         except BaseException as exx:
-            return JsonResponse({'remote_server_response': {'url': url,
-                                                            'status': resp.status_code,
-                                                            'reason': resp.reason}},
-                                # TODO: When frontend interprets this better, use status 400 and let the frontend
-                                #       report third-party response from the JSON blob
-                                # status=status.HTTP_400_BAD_REQUEST,
-                                status=resp.status_code,
-                                reason=resp.reason)
+            return JsonResponse(
+                {
+                    "remote_server_response": {
+                        "url": url,
+                        "status": resp.status_code,
+                        "reason": resp.reason,
+                    }
+                },
+                # TODO: When frontend interprets this better, use status 400 and let the frontend
+                #       report third-party response from the JSON blob
+                # status=status.HTTP_400_BAD_REQUEST,
+                status=resp.status_code,
+                reason=resp.reason,
+            )
 
         fn = Path(urlparse(url).path).name
-        if is_archive_link(url, use_network=True) or fn.endswith('.manifest-md5'):
+        if is_archive_link(url, use_network=True) or fn.endswith(".manifest-md5"):
             try:
                 archive_files = http_remote.get_tar_file_manifest(url)
 
                 # Remove .manifest-md5 if present
                 u = urlparse(url)
-                url = u._replace(path=u.path.rstrip('.manifest-md5')).geturl()
+                url = u._replace(path=u.path.rstrip(".manifest-md5")).geturl()
 
                 for f in archive_files:
-                    filepath = f['filepath']
-                    listing.append(dict(name=filepath,
-                                        location=f'{url}#{filepath}',
-                                        type='file',
-                                        tags=['inside_archive']))
+                    filepath = f["filepath"]
+                    listing.append(
+                        dict(
+                            name=filepath,
+                            location=f"{url}#{filepath}",
+                            type="file",
+                            tags=["inside_archive"],
+                        )
+                    )
             except BaseException as ex:
-                logger.debug(f'Unable to find archive manifest for {url}')
+                logger.debug(f"Unable to find archive manifest for {url}")
                 logger.exception(ex)
 
                 fn = Path(urlparse(url).path).name
-                listing = [dict(name=fn,
-                                location=f'{url}',
-                                type='file',
-                                tags=['archive'])]
+                listing = [
+                    dict(name=fn, location=f"{url}", type="file", tags=["archive"])
+                ]
 
-        elif scheme == 'ftp':
+        elif scheme == "ftp":
             from fs import open_fs
+
             try:
                 try:
                     # may raise fs.errors.RemoteConnectionError if FTP connection fails
                     ftp_fs = open_fs(url)
                 except BaseException as exx:
-                    msg = getattr(exx, 'msg', '')
-                    return JsonResponse({'remote_server_response':
-                                             {'url': url,
-                                              'status': 500,
-                                              'reason': msg}},
-                                        # TODO: When frontend interprets this better, use status 400 and let the
-                                        #       frontend report third-party response from the JSON blob
-                                        # status=status.HTTP_400_BAD_REQUEST,
-                                        status=500,
-                                        reason=msg)
+                    msg = getattr(exx, "msg", "")
+                    return JsonResponse(
+                        {
+                            "remote_server_response": {
+                                "url": url,
+                                "status": 500,
+                                "reason": msg,
+                            }
+                        },
+                        # TODO: When frontend interprets this better, use status 400 and let the
+                        #       frontend report third-party response from the JSON blob
+                        # status=status.HTTP_400_BAD_REQUEST,
+                        status=500,
+                        reason=msg,
+                    )
 
-                for step in ftp_fs.walk(filter=[fileglob], search='breadth', max_depth=1):
-                    listing.extend([dict(type='directory',
-                                         name=i.name,
-                                         location=f'{url.rstrip("/")}/{i.name}',
-                                         tags=[])
-                                    for i in step.dirs])
-                    listing.extend([dict(type='file',
-                                         name=i.name,
-                                         location=f'{url.rstrip("/")}/{i.name}',
-                                         tags=['archive'] if is_archive_link(i.name) else [])
-                                    for i in step.files])
+                for step in ftp_fs.walk(
+                    filter=[fileglob], search="breadth", max_depth=1
+                ):
+                    listing.extend(
+                        [
+                            dict(
+                                type="directory",
+                                name=i.name,
+                                location=f'{url.rstrip("/")}/{i.name}',
+                                tags=[],
+                            )
+                            for i in step.dirs
+                        ]
+                    )
+                    listing.extend(
+                        [
+                            dict(
+                                type="file",
+                                name=i.name,
+                                location=f'{url.rstrip("/")}/{i.name}',
+                                tags=["archive"] if is_archive_link(i.name) else [],
+                            )
+                            for i in step.files
+                        ]
+                    )
             except DirectoryExpected as ex:
                 fn = Path(urlparse(url).path).name
-                listing = [dict(name=fn,
-                                location=f'{url}',
-                                type='file',
-                                tags=['archive'] if is_archive_link(fn) else [])]
+                listing = [
+                    dict(
+                        name=fn,
+                        location=f"{url}",
+                        type="file",
+                        tags=["archive"] if is_archive_link(fn) else [],
+                    )
+                ]
 
-        elif scheme == 'http' or scheme == 'https':
+        elif scheme == "http" or scheme == "https":
             _url = _check_content_size_and_resolve_redirects(url)
 
             try:
                 text = render_page(_url)
             except MemoryError as ex:
-                return HttpResponse(status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, reason=str(ex))
+                return HttpResponse(
+                    status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, reason=str(ex)
+                )
             except ValueError as ex:
                 return HttpResponse(status=status.HTTP_400_BAD_REQUEST, reason=str(ex))
 
@@ -2680,13 +2824,15 @@ class RemoteBrowseView(JSONView):
                     break
 
             if not _matched:
-                return HttpResponse(status=status.HTTP_400_BAD_REQUEST, reason=f"No parser for this url: {_url}")
+                return HttpResponse(
+                    status=status.HTTP_400_BAD_REQUEST,
+                    reason=f"No parser for this url: {_url}",
+                )
 
         # listing = pydash.sort_by(listing, ['type', 'name'])
-        listing = multikeysort(listing, ['type', 'name'])
-        item_list = FileListing({'listing': listing})
-        return Response(item_list.data,
-                        status=status.HTTP_200_OK)
+        listing = multikeysort(listing, ["type", "name"])
+        item_list = FileListing({"listing": listing})
+        return Response(item_list.data, status=status.HTTP_200_OK)
 
 
 def _get_or_create_drf_token(user):
@@ -2706,7 +2852,9 @@ def _get_default_compute_resource(job: Job = None):
         compute = _get_compute_resources_based_on_rules(job).first()
 
     if not compute:
-        raise Exception(f"Cannot find available ComputeResource. None defined, or all offline.")
+        raise Exception(
+            f"Cannot find available ComputeResource. None defined, or all offline."
+        )
 
     return compute
 
@@ -2718,25 +2866,27 @@ def _get_compute_resources_based_on_rules(job: Job):
     # Ideally, our {domain: compute} mapping rules would be in the database so we can change them without
     # a restart.
 
-    email_domain_allowed_compute = getattr(settings,
-                                           'EMAIL_DOMAIN_ALLOWED_COMPUTE',
-                                           {'*': ['*']})
+    email_domain_allowed_compute = getattr(
+        settings, "EMAIL_DOMAIN_ALLOWED_COMPUTE", {"*": ["*"]}
+    )
 
-    domain = job.owner.email.split('@')[-1]
+    domain = job.owner.email.split("@")[-1]
     names = email_domain_allowed_compute.get(domain, None)
     if names is None:
-        names = email_domain_allowed_compute.get('*', [])
+        names = email_domain_allowed_compute.get("*", [])
 
-    available_compute = (ComputeResource.objects
-                         .filter(status=ComputeResource.STATUS_ONLINE)
-                         .order_by('-priority'))
+    available_compute = ComputeResource.objects.filter(
+        status=ComputeResource.STATUS_ONLINE
+    ).order_by("-priority")
 
-    if '*' in names:
+    if "*" in names:
         return available_compute
 
-    allowed_compute = available_compute.filter(name__in=names).order_by('-priority')
+    allowed_compute = available_compute.filter(name__in=names).order_by("-priority")
 
     if not allowed_compute.exists():
-        raise Exception(f"Cannot find allowed ComputeResource for this email domain ({domain}).")
+        raise Exception(
+            f"Cannot find allowed ComputeResource for this email domain ({domain})."
+        )
 
     return allowed_compute
