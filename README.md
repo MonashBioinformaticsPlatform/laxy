@@ -1,5 +1,7 @@
 # Laxy
+
 ![Docker test](https://github.com/MonashBioinformaticsPlatform/laxy/workflows/Docker%20test/badge.svg?branch=master)
+[![DOI](https://zenodo.org/badge/104432675.svg)](https://zenodo.org/badge/latestdoi/104432675)
 
 _Laxy_ is a web application designed to simplify launching routine genomic pipeline analyses.
 
@@ -25,6 +27,7 @@ docker-compose --compatibility -f docker-compose.yml -f docker-compose.local-dev
 The Laxy frontend is a Vue Single-Page Application that runs in the browser and communicates with a Laxy backend server.
 
 ### Development
+
 ```bash
 cp -n .env.example .env
 cd laxy_frontend
@@ -47,14 +50,14 @@ These variables are used by the Webpack (`dotenv-webpack`) build to substitute r
 
 ## Backend
 
-The Laxy backend is a RESTful web service for managing pipeline jobs across various compute resources. 
+The Laxy backend is a RESTful web service for managing pipeline jobs across various compute resources.
 It is based on Django and Celery.
 
 ### Setup
 
 Dependencies:
 
-  * Python 3.6+
+- Python 3.6+
 
 ```bash
 # Create a Python virtual environment, install package dependencies
@@ -66,11 +69,13 @@ pip install -U -r requirements-dev.txt
 ```
 
 Run tests:
+
 ```bash
 ./manage.py test --noinput
 ```
 
 Create a user and database on Postgres (run `psql`):
+
 ```postgresql
 CREATE ROLE laxy WITH LOGIN PASSWORD 'blablafooword';
 CREATE DATABASE laxy;
@@ -80,9 +85,10 @@ GRANT ALL PRIVILEGES ON DATABASE laxy TO laxy;
 
 Configuration is taken from a `.env` file.
 Environment variables (eg `LAXY_*`) will override any variables defined in `.env`.
+
 ```bash
 # Copy the example settings environment and edit as required,
-# including the database name and password above. 
+# including the database name and password above.
 cp -n .env.example .env
 vi .env
 ```
@@ -90,6 +96,7 @@ vi .env
 (To manually source the `.env` file into your login shell for some purpose, do `export $(grep -v '^#' .env | xargs)`).
 
 Initialize the database, create an admin user:
+
 ```bash
 ./manage.py migrate --no-input --run-syncdb
 # ./manage.py migrate contenttypes
@@ -109,25 +116,29 @@ Initialize the database, create an admin user:
 ```
 
 ### Run
+
 ```bash
 source venv/bin/activate
 DEBUG=yes python3.6 manage.py runserver 0.0.0.0:8000
 ```
 
 #### Run Celery
+
 ```bash
 celery -A laxy worker -B -E -Ofair -l info \
        --statedb=laxy_celery_worker.state
 ```
 
 #### Run Celery Flower to monitor work queue
+
 ```bash
 FLOWER_BASIC_AUTH=user:pass celery -A laxy flower --port=5555
 ```
 
-OpenAPI / Swagger API (via drf_openapi): 
-  * Docs: http://localhost:8000/swagger/v1/
-  * JSON: http://localhost:8000/swagger/v1/?format=openapi
+OpenAPI / Swagger API (via drf_openapi):
+
+- Docs: http://localhost:8000/swagger/v1/
+- JSON: http://localhost:8000/swagger/v1/?format=openapi
 
 DRF CoreAPI docs: http://localhost:8000/coreapi/
 
@@ -142,20 +153,20 @@ See notes on [running under Docker Compose](docs/docker.md)
 Reference genomes currently follow the naming and path layout used by iGenomes eg `Homo_sapiens/Ensembl/GRCh38`.
 This is currently both the internal genome ID used by Laxy and the relative path where the downloaded genome is stored.
 
-  * Add the genome to the frontend in `laxy_frontend/src/config/genomics/genomes.ts`
-  * Add the genome to the backend in `laxy_backend/data/genomics/genomes.py`
-  * (Optional but recommended): Add on-demand downloading of the genome to the appropriate `run_job.sh` script 
-    (eg via the `download_ref_urls` bash function). Otherwise pre-install it at the correct path.
-  
+- Add the genome to the frontend in `laxy_frontend/src/config/genomics/genomes.ts`
+- Add the genome to the backend in `laxy_backend/data/genomics/genomes.py`
+- (Optional but recommended): Add on-demand downloading of the genome to the appropriate `run_job.sh` script
+  (eg via the `download_ref_urls` bash function). Otherwise pre-install it at the correct path.
+
 This is documented here in the hopes it can be streamlined in the future (eg via simple genome 'service').
 
 #### Adding a new pipeline version
 
-Currently only possible for `rnasik`, and ugly around the edges. 
+Currently only possible for `rnasik`, and ugly around the edges.
 This process will be refined as pipeline are made more modular/pluggable.
 
 Create a directory `laxy_backend/templates/job_scripts/rnasik/{version}/input`, where `{version}` is the new pipeline version.
-Create a `conda_environment.yml` file in this directory. Follow the examples for other versions, changing the 
+Create a `conda_environment.yml` file in this directory. Follow the examples for other versions, changing the
 appropriate version numbers for packages and the environment name.
 
 Add the version number to the `pipeline_versions` list in `laxy_frontend/src/components/PipelineParams.vue`.
