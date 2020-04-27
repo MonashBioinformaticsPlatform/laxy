@@ -1,4 +1,4 @@
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 
 # Build like:
 #   docker build -t fake-cluster:latest docker/fake-cluster
