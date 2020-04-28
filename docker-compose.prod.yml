@@ -10,9 +10,8 @@ volumes:
   ssl-acme-challenge:
 
 services:
-
   django:
-    image: "${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest"
+    image: '${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest'
     # user: laxy
     # We must specify the .env file so that it gets sourced - otherwise every variable in .env would
     # need to be explicitly defined like: LAXY_DEBUG=${LAXY_DEBUG} in the environment section below.
@@ -33,43 +32,43 @@ services:
     #   - static_assets:/usr/share/nginx/html
     # Internal Docker network only
     expose:
-      - "8001"
+      - '8001'
     # Publicly accessible
     # ports:
     #   - "8001:8001"
     networks:
       - private
     command: bash -c "sleep 10 &&
-                      python3 manage.py makemigrations --no-input &&
-                      python3 manage.py migrate --no-input &&
-                      gunicorn laxy.wsgi -b 0.0.0.0:8001 --forwarded-allow-ips='*' --worker-class gevent"
+      python3 manage.py makemigrations --no-input &&
+      python3 manage.py migrate --no-input &&
+      gunicorn laxy.wsgi -b 0.0.0.0:8001 --forwarded-allow-ips='*' --worker-class gevent --timeout 60"
 
   dev-frontend-server:
-    image: "${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest"
-    restart: "no"
+    image: '${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest'
+    restart: 'no'
     command: echo "Service disabled in prod (but still required to be defined to override the image name)"
-# If we wanted to do a ninja frontend rebuild into static_assets
-#    command: bash -c "curl -sL https://deb.nodesource.com/setup_12.x | bash - &&
-#                      apt install --yes nodejs &&
-#                      cd /app/laxy_frontend &&
-#                      rm -rf node_modules &&
-#                      mkdir node_modules &&
-#                      npm install &&
-#                      npm run build:prod"
-#    env_file:
-#      - .env
-#    volumes:
-#      - static_assets:/app/laxy_frontend/dist
-#      - ./.env:/app/.env
+  # If we wanted to do a ninja frontend rebuild into static_assets
+  #    command: bash -c "curl -sL https://deb.nodesource.com/setup_12.x | bash - &&
+  #                      apt install --yes nodejs &&
+  #                      cd /app/laxy_frontend &&
+  #                      rm -rf node_modules &&
+  #                      mkdir node_modules &&
+  #                      npm install &&
+  #                      npm run build:prod"
+  #    env_file:
+  #      - .env
+  #    volumes:
+  #      - static_assets:/app/laxy_frontend/dist
+  #      - ./.env:/app/.env
 
   db:
     env_file:
       - .env
-#    environment:
-#      - POSTGRES_USER="${POSTGRES_USER}"
-#      - POSTGRES_PASSWORD="${POSTGRES_PASSWORD}"
-#      - POSTGRES_DB="${POSTGRES_DB}"
-#      - PGDATA="${PGDATA}"
+    #    environment:
+    #      - POSTGRES_USER="${POSTGRES_USER}"
+    #      - POSTGRES_PASSWORD="${POSTGRES_PASSWORD}"
+    #      - POSTGRES_DB="${POSTGRES_DB}"
+    #      - PGDATA="${PGDATA}"
     deploy:
       restart_policy:
         condition: any
@@ -88,7 +87,7 @@ services:
       - private
 
   celeryd:
-    image: "${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest"
+    image: '${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest'
     # user: laxy
     # command: bash -c "celery -A laxy worker -B -E -l info --broker=${LAXY_BROKER_URL}"
     env_file:
@@ -104,7 +103,7 @@ services:
       - private
 
   flower:
-    image: "${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest"
+    image: '${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest'
     env_file:
       - .env
     environment:
@@ -114,12 +113,12 @@ services:
       restart_policy:
         condition: any
     ports:
-      - "5556:5556"
+      - '5556:5556'
     networks:
       - private
 
   nginx:
-    image: "${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy-static-nginx:latest"
+    image: '${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy-static-nginx:latest'
     command: >
       sh -c "
         until [ -f /certs/fullchain.pem ] && [ -f /certs/key.pem ]; do
@@ -144,35 +143,35 @@ services:
         condition: any
     ports:
       # we need port 80 so nginx can redirect to 443, also for Let's Encrypt http-01 challenge
-      - "80:80"
-      - "443:443"
+      - '80:80'
+      - '443:443'
     depends_on:
       - ssl-certs-cron
     networks:
       - private
     volumes:
-       # - static_assets:/usr/share/nginx/html:ro
-       # We need read-only access to /usr/share/nginx/html/.well-known/acme-challenge to serve this for
-       # the Let's Encrypt http-01 challenge
-       - ssl-acme-challenge:/usr/share/nginx/html/.well-known/:ro
-       - certs:/certs:ro
-       - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      # - static_assets:/usr/share/nginx/html:ro
+      # We need read-only access to /usr/share/nginx/html/.well-known/acme-challenge to serve this for
+      # the Let's Encrypt http-01 challenge
+      - ssl-acme-challenge:/usr/share/nginx/html/.well-known/:ro
+      - certs:/certs:ro
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
 
   ssl-certs-cron:
-    image: "${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/ssl-certs:latest"
+    image: '${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/ssl-certs:latest'
     environment:
       # No quotes !
       - ACME_SSL_DOMAINS=${ACME_SSL_DOMAINS-laxy.io api.laxy.io}
       - LAXY_ADMIN_EMAIL=${LAXY_ADMIN_EMAIL-}
     # Run certificate renewel/creation on startup if missing. Then run crond in foreground forever.
-#    command: >
-#      /bin/bash -c "
-#        [[ ! -f /certs/key.pem ]] && \
-#        cron && \
-#        anacron && \
-#        touch /var/log/ssl-certs-cron.log && \
-#        tail -f /var/log/ssl-certs-cron.log
-#      "
+    #    command: >
+    #      /bin/bash -c "
+    #        [[ ! -f /certs/key.pem ]] && \
+    #        cron && \
+    #        anacron && \
+    #        touch /var/log/ssl-certs-cron.log && \
+    #        tail -f /var/log/ssl-certs-cron.log
+    #      "
     deploy:
       restart_policy:
         delay: 5s
@@ -188,13 +187,12 @@ services:
   splash:
     networks:
       - private
-
 ##
 ##  shell-notebook is disabled by default on prod, but can be enabled here
 ##  temporarily if required for specific debugging or manual data migration tasks
 ##
-  # Examine the logs to find the token to login to the Jupyter notebook
-  # (eg docker-compose logs -f docker-compose.yml -f docker-compose.dev.yml shell-notebook )
+# Examine the logs to find the token to login to the Jupyter notebook
+# (eg docker-compose logs -f docker-compose.yml -f docker-compose.dev.yml shell-notebook )
 #  shell-notebook:
 #    build:
 #      context: .
