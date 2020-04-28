@@ -1,7 +1,7 @@
 import fnmatch
 import traceback
 import shlex
-from typing import Sequence, Union
+from typing import Sequence, Union, Iterable
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
@@ -14,39 +14,45 @@ import random
 import time
 import json
 import base64
-from io import (BytesIO, StringIO,
-                BufferedRandom, BufferedReader)
+from io import BytesIO, StringIO, BufferedRandom, BufferedReader
 from copy import copy
 from contextlib import closing
 
 from django.db import transaction
 from django.conf import settings
+from django.db.models import QuerySet
 
 from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
 from celery import shared_task
 from celery import Celery, states, chain, group
-from celery.exceptions import (Ignore,
-                               InvalidTaskError,
-                               TimeLimitExceeded,
-                               SoftTimeLimitExceeded)
+from celery.exceptions import (
+    Ignore,
+    InvalidTaskError,
+    TimeLimitExceeded,
+    SoftTimeLimitExceeded,
+)
 
-from .job import add_file_replica_records, remove_file_replica_records
-from ..models import (Job,
-                      File,
-                      FileLocation,
-                      EventLog,
-                      get_compute_resource_for_location,
-                      get_storage_class_for_location, ComputeResource, get_primary_compute_location_for_files,
-                      job_path_on_compute)
+# from .job import add_file_replica_records, remove_file_replica_records
+from ..models import (
+    Job,
+    File,
+    FileLocation,
+    EventLog,
+    get_compute_resource_for_location,
+    get_storage_class_for_location,
+    ComputeResource,
+    get_primary_compute_location_for_files,
+    job_path_on_compute,
+)
 from ..util import get_traceback_message
 
 logger = get_task_logger(__name__)
 
 
-def do_pipe_copy(job: Job,
-                 src_compute: ComputeResource,
-                 dst_compute: ComputeResource) -> (int, int, int):
+def do_pipe_copy(
+    job: Job, src_compute: ComputeResource, dst_compute: ComputeResource
+) -> (int, int, int):
 
     # This opens two SSH connections, one to the source and one to the destination and pipes data via tar.
     # The network path is like:
@@ -61,11 +67,20 @@ def do_pipe_copy(job: Job,
         print(cmd_src)
         # NO: Setting bufsize seems to result in an incomplete transfer (but ideally we'd like to tune the bufsize
         #       for performance)
-        src_stdin, src_stdout, src_stderr, src_chan = src_client.exec_command_channel(cmd_src)  #, bufsize=buffer_size)
+        src_stdin, src_stdout, src_stderr, src_chan = src_client.exec_command_channel(
+            cmd_src
+        )  # , bufsize=buffer_size)
         with dst_compute.ssh_client(compress=False) as dst_client:
             cmd_dst = f'mkdir -p "{dst_path}" && tar -xzf - --directory "{dst_path}"'
             print(cmd_dst)
-            dst_stdin, dst_stdout, dst_stderr, dst_chan = dst_client.exec_command_channel(cmd_dst)  #, bufsize=buffer_size)
+            (
+                dst_stdin,
+                dst_stdout,
+                dst_stderr,
+                dst_chan,
+            ) = dst_client.exec_command_channel(
+                cmd_dst
+            )  # , bufsize=buffer_size)
             for chunk in src_stdout:
                 dst_stdin.write(chunk)
                 bytes_transferred += len(chunk)
@@ -78,15 +93,17 @@ def do_pipe_copy(job: Job,
 
 def delete_remote_files(job, compute_resource):
     job_path = job_path_on_compute(job, compute_resource)
-    out = ''
+    out = ""
     with compute_resource.ssh_client(compress=False) as ssh_client:
         job_path = shlex.quote(job_path)
         # Sanity check the path since we are doing rm -rf
         if job.id not in job_path:
-            raise ValueError(f"Aborting delete_remote_files: job path "
-                             f"{job_path} on {compute_resource.id} looks suspicious.")
+            raise ValueError(
+                f"Aborting delete_remote_files: job path "
+                f"{job_path} on {compute_resource.id} looks suspicious."
+            )
 
-        cmd_src = f'find {job_path} -type f | wc -l && rm -rf {job_path}'
+        cmd_src = f"find {job_path} -type f | wc -l && rm -rf {job_path}"
         print(cmd_src)
         (stdin, stdout, stderr) = ssh_client.exec_command(cmd_src)
         if not stdout.closed:
@@ -137,79 +154,96 @@ def bulk_move_job_task(self, task_data=None, **kwargs):
     message = None
     result = {}
     try:
-        job_id = task_data.get('job_id')
-        dst_compute_id = task_data.get('dst_compute_id', None)
-        src_compute_id = task_data.get('src_compute_id', None)
-        force = task_data.get('force', False)
+        job_id = task_data.get("job_id")
+        dst_compute_id = task_data.get("dst_compute_id", None)
+        src_compute_id = task_data.get("src_compute_id", None)
+        force = task_data.get("force", False)
 
         job = Job.objects.get(id=job_id)
 
         if src_compute_id is not None:
             src_compute = ComputeResource.objects.get(id=src_compute_id)
             if src_compute != get_primary_compute_location_for_files(job.get_files()):
-                raise ValueError(f"{src_compute_id} is not the primary location for this "
-                                 f"job ({job_id}) (all files must be there !)")
+                raise ValueError(
+                    f"{src_compute_id} is not the primary location for this "
+                    f"job ({job_id}) (all files must be there !)"
+                )
 
         if src_compute_id is None:
             src_compute = job.compute_resource
-            task_data['src_compute_id'] = src_compute.id
+            task_data["src_compute_id"] = src_compute.id
 
         if dst_compute_id is not None:
             dst_compute = ComputeResource.objects.get(id=dst_compute_id)
         elif job.compute_resource.archive_host is not None:
             dst_compute = src_compute.archive_host
         else:
-            raise ValueError(f"dst_compute_id not specified, and job.compute_resource has no archive_host.")
+            raise ValueError(
+                f"dst_compute_id not specified, and job.compute_resource has no archive_host."
+            )
 
-        task_data['dst_compute_id'] = dst_compute.id
+        task_data["dst_compute_id"] = dst_compute.id
 
         if src_compute == dst_compute and not force:
-            result = 'no_move_required'
+            result = "no_move_required"
+            task_data["result"] = result
             return task_data
 
         try:
-            self.update_state(state='PROGRESS', meta={'running': 'do_pipe_copy'})
+            self.update_state(state="PROGRESS", meta={"running": "do_pipe_copy"})
             xfer_started_at = datetime.now()
-            bytes_transferred, src_exitcode, dst_exitcode = do_pipe_copy(job, src_compute, dst_compute)
+            bytes_transferred, src_exitcode, dst_exitcode = do_pipe_copy(
+                job, src_compute, dst_compute
+            )
             xfer_finished_at = datetime.now()
             xfer_walltime = (xfer_finished_at - xfer_started_at).total_seconds()
             kbps = (bytes_transferred / 1000) / xfer_walltime
-            result['do_pipe_copy'] = {'started_time': xfer_started_at.isoformat(),
-                                      'finished_time': xfer_finished_at.isoformat(),
-                                      'walltime_seconds': xfer_walltime,
-                                      'rate_kbps': kbps,
-                                      'src_exitcode': src_exitcode,
-                                      'dst_exitcode': dst_exitcode}
+            result["do_pipe_copy"] = {
+                "started_time": xfer_started_at.isoformat(),
+                "finished_time": xfer_finished_at.isoformat(),
+                "walltime_seconds": xfer_walltime,
+                "rate_kbps": kbps,
+                "src_exitcode": src_exitcode,
+                "dst_exitcode": dst_exitcode,
+            }
 
             # Because do_pipe_copy uses `tar -cvzf`, bytes_transferred will be the same
             # (or very close to) the tarball size. To save launching a separate
             # estimate_job_tarball_size task, we set that value now
             with transaction.atomic():
                 job = Job.objects.get(id=job_id)
-                if job.params.get('tarball_size', None) is None:
-                    job.params['tarball_size'] = bytes_transferred
-                    job.save(update_fields=['params', 'modified_time'])
+                if job.params.get("tarball_size", None) is None:
+                    job.params["tarball_size"] = bytes_transferred
+                    job.save(update_fields=["params", "modified_time"])
 
-            result['tarball_size'] = bytes_transferred
+            result["tarball_size"] = bytes_transferred
         except BaseException as ex:
-            logger.error(f'Failed to copy {job_id} from {src_compute.id} to {dst_compute.id} '
-                         f'(bulk_move_job_task:do_pipe_copy)')
+            logger.error(
+                f"Failed to copy {job_id} from {src_compute.id} to {dst_compute.id} "
+                f"(bulk_move_job_task:do_pipe_copy)"
+            )
             message = get_traceback_message(ex)
             raise ex
 
         try:
-            self.update_state(state='PROGRESS', meta={'running': 'add_file_replica_records'})
-            n_added = add_file_replica_records(job.get_files(), dst_compute, set_as_default=True)
-            result['add_file_replica_records'] = n_added
+            self.update_state(
+                state="PROGRESS", meta={"running": "add_file_replica_records"}
+            )
+            n_added = add_file_replica_records(
+                job.get_files(), dst_compute, set_as_default=True
+            )
+            result["add_file_replica_records"] = n_added
         except BaseException as ex:
-            logger.error(f'Failed add file replica records for {job_id}, new ComputeResource {dst_compute.id} '
-                         f'(bulk_move_job_task:add_file_replica_records)')
+            logger.error(
+                f"Failed add file replica records for {job_id}, new ComputeResource {dst_compute.id} "
+                f"(bulk_move_job_task:add_file_replica_records)"
+            )
             message = get_traceback_message(ex)
             raise ex
 
         try:
-            self.update_state(state='PROGRESS', meta={'running': 'verify'})
-            result['verify'] = {'success': False, 'failed_locations': []}
+            self.update_state(state="PROGRESS", meta={"running": "verify"})
+            result["verify"] = {"success": False, "failed_locations": []}
             for f in job.get_files():
                 exc_name = None
                 try:
@@ -218,43 +252,53 @@ def bulk_move_job_task(self, task_data=None, **kwargs):
                     ok = False
                     exc_name = type(ex).__name__
                 if not ok and f.checksum:
-                    detail = {'file': f.id,
-                              'location': f.location,
-                              'exception': exc_name}
-                    result['verify']['failed_locations'].append(detail)
-                    raise Exception('File verification failed:' + str(detail))
+                    detail = {
+                        "file": f.id,
+                        "location": f.location,
+                        "exception": exc_name,
+                    }
+                    result["verify"]["failed_locations"].append(detail)
+                    raise Exception("File verification failed:" + str(detail))
 
-            result['verify']['success'] = len(result['verify']['failed_locations']) == 0
+            result["verify"]["success"] = len(result["verify"]["failed_locations"]) == 0
 
         except BaseException as ex:
-            logger.error(f'Unable to verify copied files for {job_id} at '
-                         f'destination {dst_compute.id} not deleting source copy. '
-                         f'(bulk_move_job_task:verify_task)')
+            logger.error(
+                f"Unable to verify copied files for {job_id} at "
+                f"destination {dst_compute.id} not deleting source copy. "
+                f"(bulk_move_job_task:verify_task)"
+            )
             message = get_traceback_message(ex)
             raise ex
 
         try:
-            self.update_state(state='PROGRESS', meta={'running': 'remove_file_replica_records'})
+            self.update_state(
+                state="PROGRESS", meta={"running": "remove_file_replica_records"}
+            )
             n_removed = remove_file_replica_records(job.get_files(), src_compute)
-            result['remove_file_replica_records'] = n_removed
+            result["remove_file_replica_records"] = n_removed
         except BaseException as ex:
-            logger.error(f'Failed remove file replica records for {job_id}, old ComputeResource {src_compute.id} '
-                         f'(bulk_move_job_task:remove_file_replica_records)')
+            logger.error(
+                f"Failed remove file replica records for {job_id}, old ComputeResource {src_compute.id} "
+                f"(bulk_move_job_task:remove_file_replica_records)"
+            )
             message = get_traceback_message(ex)
             raise ex
 
         try:
-            self.update_state(state='PROGRESS', meta={'running': 'delete_remote_files'})
+            self.update_state(state="PROGRESS", meta={"running": "delete_remote_files"})
             delete_stdout = delete_remote_files(job, src_compute)
-            result['delete_remote_files'] = delete_stdout
+            result["delete_remote_files"] = delete_stdout
         except BaseException as ex:
-            logger.error(f'Failed delete remote files for {job_id}, on ComputeResource {src_compute.id} '
-                         f'(bulk_move_job_task:delete_remote_files)')
+            logger.error(
+                f"Failed delete remote files for {job_id}, on ComputeResource {src_compute.id} "
+                f"(bulk_move_job_task:delete_remote_files)"
+            )
             message = get_traceback_message(ex)
             raise ex
 
-        result['success'] = True
-        task_data['result'] = result
+        result["success"] = True
+        task_data["result"] = result
         task_succeeded = True
 
     except BaseException as ex:
@@ -269,27 +313,175 @@ def bulk_move_job_task(self, task_data=None, **kwargs):
         #                   meta={'exc_type': exc_type,
         #                         'exc_message': message.split('\n'),
         #                         'result': result})
-        raise Exception('\n'.join([message, str(result)]))
+        raise Exception("\n".join([message, str(result)]))
 
     return task_data
 
 
-def location_path_on_compute(location, compute):
+def _conservative_exp_backoff(n_retries):
+    # From ~16 min to 70 hours, exponential backoff
+    return round(random.uniform(10, 12) ** (n_retries + 2))
+
+
+@shared_task(
+    bind=True,
+    track_started=True,
+    default_retry_delay=60 * 60,
+    max_retries=5,
+    # autoretry_for=(IOError, OSError,),
+    # We are using a custom exponential backoff instead of these
+    # retry_backoff=600,  # 10 min, doubling each retry
+    # retry_backoff_max=60*60*48,  # 48 hours
+)
+def move_file_task(self, task_data=None, **kwargs):
+    """
+    Moves a file from one location to another.
+
+    Should run on a different celery queue to the default used for starting jobs.
+
+    Steps:
+
+      - Copy file from from_location to to_location
+      - Verify transfer
+      - Set file at to_location as the default
+      - Delete file at from_location and remove from_location FileLocation record
+
+    """
+    from ..models import File
+
+    if task_data is None:
+        raise InvalidTaskError("task_data is None")
+
+    file_id = task_data.get("file_id")
+    from_location = task_data.get("from_location")
+    to_location = task_data.get("to_location")
+    make_default = True
+    clobber = task_data.get("clobber", False)
+    verification_type = task_data.get("verification_type", "immediate")
+    verify_on = task_data.get("verify_on", "checksum_if_set")
+    deleted_failed = True
+
+    start_time = None
+    end_time = None
+    message = None
+    result = {}
+    task_succeeded = False
+    retry = True  # this is set to False when the failure is considered permanent
+    try:
+        file = File.objects.get(id=file_id)
+
+        if not file.locations.filter(url=from_location).exists():
+            retry = False
+            raise ValueError(f"File {file.id} does not have location: {from_location}")
+
+        try:
+            self.update_state(state="PROGRESS", meta={"running": "copy_and_verify"})
+            if from_location != to_location:
+                start_time = datetime.utcnow()
+                # TODO: Upon task retries, this will clobber and retransfer even if the copy on
+                #       earlier tries was successful (but a later step failed).
+                #       Add a clobber='always' and clobber='size' option, that will do a file size
+                #       check and only clobber if the sizes don't match.
+                file = copy_file_to(
+                    file,
+                    from_location,
+                    to_location,
+                    make_default=make_default,
+                    clobber=clobber,
+                    verification_type=verification_type,
+                    verify_on=verify_on,
+                    delete_failed_destination_copy=deleted_failed,
+                )
+                end_time = datetime.utcnow()
+                wall_time = (end_time - start_time).total_seconds()
+
+                result["copy"] = {
+                    "file_id": file.id,
+                    "operation": "copy",
+                    "to": to_location,
+                    "from": from_location,
+                    "start_time": start_time.isoformat(),
+                    "end_time": end_time.isoformat(),
+                    "walltime_seconds": wall_time,
+                }
+            else:
+                result["copy"] = {
+                    "file_id": file.id,
+                    "operation": "copy",
+                    "to": to_location,
+                    "from": from_location,
+                    "skipped": True,
+                }
+        except BaseException as ex:
+            logger.error(
+                f"Failed to copy {file_id} from {from_location} to {to_location} (move_file:copy_and_verify)"
+            )
+            message = get_traceback_message(ex)
+            raise ex
+
+        try:
+            self.update_state(state="PROGRESS", meta={"running": "delete_old_copy"})
+            # TODO: Empty directories don't get removed when the last file is gone (do we care ?)
+            file.delete_at_location(from_location, allow_delete_default=make_default)
+            result["deleted_old_copy"] = True
+
+        except BaseException as ex:
+            logger.error(
+                f"Failed delete remote file ({file.id}) at location {from_location} "
+                f"(move_file:delete_old_copy)"
+            )
+            message = get_traceback_message(ex)
+            raise ex
+
+        task_succeeded = True
+        result["success"] = True
+        task_data["result"] = result
+
+    except BaseException as ex:
+        if retry:
+            self.retry(
+                exc=ex, countdown=_conservative_exp_backoff(self.request.retries)
+            )
+        task_succeeded = False
+        exc_type = type(ex).__name__
+        if message is None:
+            message = get_traceback_message(ex)
+        print(message)
+
+    if not task_succeeded:
+        raise Exception("\n".join([message, str(result)]))
+
+    return task_data
+
+
+def location_path_on_compute(
+    location: str, compute: Union[None, ComputeResource] = None
+) -> str:
+    """
+    Return the filesystem absolute path to a file on a (laxy+sftp://) ComputeResource.
+    If compute is omitted, the ComputeResource is taken from the location url.
+    If compute is provided, the path to the file as it would exist on that ComputeResource is returned.
+    """
+
     url = urlparse(location)
+
+    if compute is None and url.scheme == "laxy+sftp":
+        compute_id = url.netloc
+        compute = ComputeResource.objects.get(id=compute_id)
+
     if compute is None:
         raise Exception(f"Cannot extract ComputeResource ID from: {location}")
-    base_dir = compute.extra.get('base_dir', getattr(settings, 'DEFAULT_JOB_BASE_PATH'))
+
+    base_dir = compute.extra.get("base_dir", getattr(settings, "DEFAULT_JOB_BASE_PATH"))
     # TODO: Path(url.path).relative_to('/') isn't always correct, eg for something at an https:// URL
     #       without the job_id in the path, we need to include the job_id in the path when copying to
     #       a laxy+sftp:// url.
-    file_path = str(Path(base_dir) / Path(url.path).relative_to('/'))
+    file_path = str(Path(base_dir) / Path(url.path).relative_to("/"))
     return file_path
 
 
-def get_checksum_and_size(filelike, hash_type='md5', blocksize=8192):
-    hashers = {'md5': hashlib.md5,
-               'sha512': hashlib.sha512,
-               'xx64': xxhash.xxh64}
+def get_checksum_and_size(filelike, hash_type="md5", blocksize=8192):
+    hashers = {"md5": hashlib.md5, "sha512": hashlib.sha512, "xx64": xxhash.xxh64}
 
     hasher = hashers.get(hash_type, None)
     if hasher is None:
@@ -303,15 +495,17 @@ def get_checksum_and_size(filelike, hash_type='md5', blocksize=8192):
     # We read buffer ahead - this seems to be more reliable for files over the network
     with BufferedReader(filelike, buffer_size=chunk_size * 128).raw as fh:
         byte_count = 0
-        for chunk in iter(lambda: fh.read(chunk_size), b''):
+        for chunk in iter(lambda: fh.read(chunk_size), b""):
             hasher.update(chunk)
             byte_count += len(chunk)
 
     checksum = hasher.hexdigest()
-    return f'{hash_type}:{checksum}', byte_count
+    return f"{hash_type}:{checksum}", byte_count
 
 
-def verify(file: File, location: Union[str, FileLocation, None] = None, set_size: bool = True) -> bool:
+def verify(
+    file: File, location: Union[str, FileLocation, None] = None, set_size: bool = True
+) -> bool:
     """
     Verifies the data at a particular FileLocation but comparing the checksum of the
     remote data to the File.checksum value.
@@ -335,12 +529,12 @@ def verify(file: File, location: Union[str, FileLocation, None] = None, set_size
         location = file.location
 
     if isinstance(location, FileLocation):
-        location = location.url
+        location = str(location)
     elif not file.locations.filter(url=location).exists():
         # logger.error(f"File {file.id} does not have location: {location}")
         raise ValueError(f"File {file.id} does not have location: {location}")
 
-    if urlparse(location).scheme != 'laxy+sftp':
+    if urlparse(location).scheme != "laxy+sftp":
         # Only verifying 'laxy+sftp' URLs at this stage.
         return True
 
@@ -353,7 +547,7 @@ def verify(file: File, location: Union[str, FileLocation, None] = None, set_size
     checksum_matches = checksum_at_location == file.checksum
 
     if set_size and checksum_matches and file.size is None:
-        file.metadata['size'] = size
+        file.metadata["size"] = size
         file.save()
 
     return checksum_matches
@@ -365,12 +559,14 @@ def verify_task(self, task_data=None, **kwargs):
         raise InvalidTaskError("task_data is None")
 
     try:
-        filelocation_id = task_data.get('filelocation_id', None)
-        file_id = task_data.get('file_id', None)
-        location = task_data.get('location', None)
+        filelocation_id = task_data.get("filelocation_id", None)
+        file_id = task_data.get("file_id", None)
+        location = task_data.get("location", None)
 
         if filelocation_id and location:
-            raise ValueError("Please provide only filelocation_id or location, not both.")
+            raise ValueError(
+                "Please provide only filelocation_id or location, not both."
+            )
 
         if filelocation_id:
             location = FileLocation.objects.get(id=filelocation_id)
@@ -381,18 +577,19 @@ def verify_task(self, task_data=None, **kwargs):
         finished_at = datetime.now()
         walltime = (finished_at - started_at).total_seconds()
         url = location
-        if isinstance(location, FileLocation):
-            url = location.url
+        url = str(location)
 
-        task_data['result'] = {'verified': verified,
-                               'operation': 'verify',
-                               'location': url,
-                               'started_time': started_at.isoformat(),
-                               'finished_time': finished_at.isoformat(),
-                               'walltime_seconds': walltime}
+        task_data["result"] = {
+            "verified": verified,
+            "operation": "verify",
+            "location": url,
+            "started_time": started_at.isoformat(),
+            "finished_time": finished_at.isoformat(),
+            "walltime_seconds": walltime,
+        }
         if file.size is not None:
             kbps = (file.size / 1000) / walltime
-            task_data['result']['rate_kbps'] = kbps
+            task_data["result"]["rate_kbps"] = kbps
 
         task_succeeded = True
 
@@ -408,21 +605,39 @@ def verify_task(self, task_data=None, **kwargs):
     return task_data
 
 
-def copy_file_to(file: File,
-                 to_location: str,
-                 make_default=False,
-                 verification_type='immediate',
-                 deleted_failed_destination_copy=True) -> File:
-    _verification_types = ['immediate', 'async', 'none']
+def copy_file_to(
+    file: File,
+    from_location: Union[None, str, FileLocation],
+    to_location: Union[str, FileLocation],
+    make_default=False,
+    clobber=False,
+    verification_type="immediate",
+    verify_on="checksum",
+    delete_failed_destination_copy=True,
+) -> File:
+
+    _verification_types = ["immediate", "async", "none"]
     if verification_type not in _verification_types:
-        raise ValueError(f'verification_type must be one of: {", ".join(_verification_types)}')
+        raise ValueError(
+            f'verification_type must be one of: {", ".join(_verification_types)}'
+        )
+
+    _verify_on_options = ["checksum", "size", "checksum_if_set"]
+    if verify_on not in _verify_on_options:
+        raise ValueError(f'verify_on must be one of: {", ".join(_verify_on_options)}')
 
     if file.deleted:
-        logger.warning(f"{file.id} is marked as deleted. Not attempting copy operation.")
+        logger.warning(
+            f"{file.id} is marked as deleted. Not attempting copy operation."
+        )
         return file
 
+    from_location = str(from_location)
+    to_location = str(to_location)
+
     with transaction.atomic():
-        from_location = file.location
+        if from_location is None:
+            from_location = file.location
 
         # TODO: Most of the code here assumes the laxy+sftp:// scheme
         #       Refactor parts onto the File or ComputeResource models and
@@ -444,26 +659,51 @@ def copy_file_to(file: File,
 
         try:
             new_path = location_path_on_compute(file.location, new_compute)
-            # full_path = file.full_path
-            # We need to check file existence, otherwise Django storages creates a new name rather than clobbering the
-            # existing file !
+            src_path = location_path_on_compute(from_location)
+
+            if not storage.exists(src_path):
+                logger.error(f"Cannot find file at: {from_location}")
+                raise IOError(f"Cannot find file: {from_location}")
+
+            # We need to check file existence, otherwise Django storages creates
+            # a new random suffixed name rather than clobbering the existing
+            # file !
+            if storage.exists(new_path):
+                if clobber:
+                    logger.info(f"Clobbering file at {to_location}")
+                    storage.delete(new_path)
+                else:
+                    logger.info(
+                        f"A file already exists at {to_location} and clobber=False, skipping copy: {new_path}"
+                    )
+
             if not storage.exists(new_path):
-                logger.info(f'Copying file to: {new_compute}:{new_path}')
-                storage.save(new_path, file.file)
+                logger.info(f"Copying file to: {new_compute}:{new_path}")
 
-                if verification_type == 'immediate':
-                    if not verify(file, to_location):
-                        message = (f"File verification failed after copy ({file.id}: "
-                                   f"{from_location} -> {to_location}). "
-                                   f"Checksum for {to_location} doesn't match expected checksum: {file.checksum}")
-                        if deleted_failed_destination_copy:
-                            storage.delete(new_path)
-                            logger.info(f"Deleted corrupted copy of {file.id} at {to_location}, "
-                                        f"copy failed verification.")
+                if from_location != to_location:
+                    storage.save(new_path, file._file(from_location))
 
-                        logger.error(message)
-                        raise Exception(message)
-                elif verification_type == 'async':
+                    # chmod the destination to be the same as the source
+                    src_storage: SFTPStorage = get_storage_class_for_location(
+                        from_location
+                    )
+                    src_mode: int = src_storage.sftp.stat(src_path).st_mode
+                    storage.sftp.chmod(new_path, src_mode)
+
+                verification_ok = False
+
+                if verification_type == "immediate":
+                    if verify_on == "checksum" or (
+                        verify_on == "checksum_if_set" and file.checksum
+                    ):
+                        verification_ok = verify(file, to_location)
+                    elif verify_on == "size":
+                        from_fh = file._file(from_location)
+                        to_fh = file._file(to_location)
+                        if hasattr(from_fh, "size") and hasattr(to_fh, "size"):
+                            verification_ok = int(from_fh.size) == int(to_fh.size)
+
+                elif verification_type == "async":
                     # TODO: Trigger an async verification task.
                     #       What do we do if the location doesn't verify ?
                     #       Extra 'verified' flag or DateTime on FileLocation ?
@@ -474,21 +714,35 @@ def copy_file_to(file: File,
                     # result = verify_task.apply_async(args=(_task_data,))
 
                     raise NotImplementedError()
-                elif verification_type == 'none':
-                    pass
+                elif verification_type == "none":
+                    verification_ok = True
 
-            else:
-                print(f'A file already exists at, skipping copy: {new_path}')
+                if not verification_ok:
+                    message = (
+                        f"File verification failed after copy ({file.id}: "
+                        f"{from_location} -> {to_location}). "
+                        f"Checksum for {to_location} doesn't match expected checksum: {file.checksum}"
+                    )
+                    if delete_failed_destination_copy:
+                        storage.delete(new_path)
+                        logger.info(
+                            f"Deleted corrupted copy of {file.id} at {to_location}, "
+                            f"copy failed verification."
+                        )
+
+                    logger.error(message)
+                    raise Exception(message)
+
+                if make_default:
+                    file.location = to_location
+
+                file.save()
 
         except BaseException as e:
-            logger.error(f'Failed to copy {file.id} from {from_location} to {to_location}')
+            logger.error(
+                f"Failed to copy {file.id} from {from_location} to {to_location}"
+            )
             raise e
-
-        file.location = to_location
-        if not make_default:
-            file.location = from_location
-
-        file.save()
 
     return file
 
@@ -500,39 +754,143 @@ def copy_file_task(self, task_data=None, **kwargs):
     if task_data is None:
         raise InvalidTaskError("task_data is None")
 
-    file_id = task_data.get('file_id')
-    to_location = task_data.get('to_location')
+    file_id = task_data.get("file_id")
+    from_location = task_data.get("from_location", None)
+    to_location = task_data.get("to_location")
     # verification_type = task_data.get('verification_type', 'immediate')
     make_default = False
-    verification_type = 'none'
-    deleted_failed = False
+    clobber = task_data.get("clobber", False)
+    verification_type = task_data.get("verification_type", "immediate")
+    verify_on = task_data.get("verify_on", "checksum_if_set")
+    deleted_failed = True
 
     start_time = None
     end_time = None
     try:
         file = File.objects.get(id=file_id)
-        from_location = file.location
+
+        if from_location is None:
+            from_location = file.location
+        elif not file.locations.filter(url=from_location).exists():
+            raise ValueError(f"File {file.id} does not have location: {from_location}")
+
         try:
             start_time = datetime.utcnow()
-            file = copy_file_to(file, to_location,
-                                verification_type=verification_type,
-                                deleted_failed_destination_copy=deleted_failed)
+            file = copy_file_to(
+                file,
+                from_location,
+                to_location,
+                make_default=make_default,
+                clobber=clobber,
+                verification_type=verification_type,
+                verify_on=verify_on,
+                delete_failed_destination_copy=deleted_failed,
+            )
             end_time = datetime.utcnow()
             wall_time = (end_time - start_time).total_seconds()
         except BaseException as e:
-            logger.error(f'Failed to copy {file_id} from {from_location} to {to_location}')
+            logger.error(
+                f"Failed to copy {file_id} from {from_location} to {to_location}"
+            )
             raise e
 
-        task_data.update(result={'file_id': file.id,
-                                 'operation': 'copy',
-                                 'to': to_location,
-                                 'from': from_location,
-                                 'start_time': start_time.isoformat(),
-                                 'end_time': end_time.isoformat(),
-                                 'walltime_seconds': wall_time})
+        task_data.update(
+            result={
+                "file_id": file.id,
+                "operation": "copy",
+                "to": to_location,
+                "from": from_location,
+                "start_time": start_time.isoformat(),
+                "end_time": end_time.isoformat(),
+                "walltime_seconds": wall_time,
+            }
+        )
     except BaseException as e:
         message = get_traceback_message(e)
         self.update_state(state=states.FAILURE, meta=message)
         raise Exception(message)
 
     return task_data
+
+
+def add_file_replica_records(
+    files: Iterable[File],
+    compute_resource: Union[str, ComputeResource],
+    set_as_default=False,
+) -> int:
+    """
+    Adds a new laxy+sftp:// file location to every files in a job, given
+    a ComputeResource. If set_as_default=True, the new replica location becomes the
+    default location.
+
+    NOTE: This task doesn't actually move any data - it's more intended for situations
+    where data has been moved out-of-band (eg, rsynced manually, not via an
+    internal Laxy task) but records in the database need to be updated.
+    """
+
+    if isinstance(compute_resource, str):
+        compute_resource = ComputeResource.objects.get(id=compute_resource)
+
+    # if isinstance(job, str):
+    #     job = Job.objects.get(id=job)
+    # files = job.get_files()
+
+    new_prefix = f"laxy+sftp://{compute_resource.id}"
+
+    n_added = 0
+    with transaction.atomic():
+        for f in files:
+            replica_url = f"{new_prefix}/{f.fileset.job.id}/{f.full_path}"
+            # try:
+            loc, created = FileLocation.objects.get_or_create(file=f, url=replica_url)
+            if set_as_default:
+                loc.set_as_default(save=True)
+            if created:
+                n_added += 1
+            #
+            # except IntegrityError as ex:
+            #     if 'unique constraint' in ex.message:
+            #         pass
+
+    return n_added
+
+
+def remove_file_replica_records(
+    files: QuerySet,
+    compute_resource: Union[str, ComputeResource],
+    allow_delete_default=False,
+) -> int:
+    """
+    Removes the laxy+sftp:// file location for the specified ComputeResource for every
+    file in a job, if there is an alternative location in existence.
+
+    This method will raise an exception if trying to delete a FileLocation
+    marked as the 'default', since this is something you probably don't want to do.
+    If really want to do that, set allow_delete_default = True.
+
+    NOTE: This task doesn't actually move any data - it's more intended for situations
+    where data has been moved out-of-band (eg, rsynced manually, not via an
+    internal Laxy task) but records in the database need to be updated.
+    """
+
+    if isinstance(compute_resource, str):
+        compute_resource = ComputeResource.objects.get(id=compute_resource)
+
+    n_deleted = 0
+    with transaction.atomic():
+        old_prefix = f"laxy+sftp://{compute_resource.id}/"
+        oldlocs = FileLocation.objects.filter(
+            file__in=files, url__startswith=old_prefix
+        )
+        # TODO: This safety check seems to be triggering when it shouldn't ??
+        # if not allow_delete_default and oldlocs.filter(default=True).exists():
+        #     raise ValueError(f"The provided ComputeResource ({compute_resource.id}) "
+        #                      f"is used as a default location for at least some of the files in the provided QuerySet. "
+        #                      f"Either set allow_delete_default = True, or ensure no files provided "
+        #                      f"use this ComputeResource in their default location.")
+
+        n_deleted = oldlocs.count()
+        # NOTE: Delete on a QuerySet DOES trigger post_delete signals (eg ensure_one_default_filelocation)
+        oldlocs.delete()
+
+    return n_deleted

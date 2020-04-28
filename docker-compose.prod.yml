@@ -89,7 +89,9 @@ services:
   celeryd:
     image: '${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest'
     # user: laxy
-    # command: bash -c "celery -A laxy worker -B -E -l info --broker=${LAXY_BROKER_URL}"
+    command: ["celery", "-A", "laxy", "worker", "-B", "-E", "-l", "info", "-Ofair", "--broker=${LAXY_BROKER_URL}"]
+    stop_grace_period: 5m
+    stop_signal: SIGTERM
     env_file:
       - .env
     environment:

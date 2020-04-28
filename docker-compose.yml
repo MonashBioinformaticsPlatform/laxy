@@ -56,7 +56,9 @@ services:
 #     - LAXY_BROKER_URL=redis://redis:6379/0
       - LAXY_WEB_SCRAPER_BACKEND=splash
       - LAXY_WEB_SCRAPER_SPLASH_HOST=http://splash:8050
-    command: bash -c "celery -A laxy worker -B -E -l info --broker=${LAXY_BROKER_URL}"
+    command: ["celery", "-A", "laxy", "worker", "-B", "-E", "-l", "info", "-Ofair", "--broker=${LAXY_BROKER_URL}"]
+    stop_grace_period: 5m
+    stop_signal: SIGTERM
     depends_on:
       - db
       - rabbitmq

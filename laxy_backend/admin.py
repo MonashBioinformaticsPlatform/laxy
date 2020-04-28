@@ -1,3 +1,5 @@
+from typing import Union, Sequence
+
 from datetime import datetime, timedelta
 
 from django.contrib import admin
@@ -15,29 +17,36 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from reversion.admin import VersionAdmin
 
-from django_object_actions import (DjangoObjectActions,
-                                   takes_instance_or_queryset)
+from django_object_actions import DjangoObjectActions, takes_instance_or_queryset
 
 from laxy_backend.tasks import job as job_tasks
 from laxy_backend.tasks import file as file_tasks
 
-from .models import (Job,
-                     ComputeResource,
-                     File,
-                     FileLocation,
-                     FileSet,
-                     SampleCart,
-                     PipelineRun,
-                     EventLog,
-                     UserProfile,
-                     AccessToken)
+from .models import (
+    Job,
+    ComputeResource,
+    File,
+    FileLocation,
+    FileSet,
+    SampleCart,
+    PipelineRun,
+    EventLog,
+    UserProfile,
+    AccessToken,
+    URIValidator,
+)
 
-from .models import URIValidator
+from laxy_backend.models import get_compute_resource_for_location
+from laxy_backend.util import split_laxy_sftp_url
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 User = get_user_model()
 
 
-def truncate_middle(text: str, middle='…', length=77, end=8) -> str:
+def truncate_middle(text: str, middle="…", length=77, end=8) -> str:
     """
     Truncates the 'middle' of a string, leaving `end` characters at the end intact,
     and replacing some characters in the middle with an ellipsis.
@@ -54,17 +63,24 @@ def truncate_middle(text: str, middle='…', length=77, end=8) -> str:
     :rtype:
     """
     if len(text) > length:
-        return text[:(length-8)] + middle + text[(-1*end):]
+        return text[: (length - 8)] + middle + text[(-1 * end) :]
     else:
         return text
 
 
 class Timestamped:
-    list_display = ('uuid', 'created', 'modified',)
-    ordering = ('-created_time', '-modified_time',)
+    list_display = (
+        "uuid",
+        "created",
+        "modified",
+    )
+    ordering = (
+        "-created_time",
+        "-modified_time",
+    )
 
     def uuid(self, obj):
-        return '%s' % obj.uuid()
+        return "%s" % obj.uuid()
 
     def created(self, obj):
         return humanize.naturaltime(obj.created_time)
@@ -74,22 +90,28 @@ class Timestamped:
 
 
 class MigrationAdmin(admin.ModelAdmin):
-    ordering = ('-applied',)
-    list_display = ('app', 'name', 'applied')
-    readonly_fields = ('app', 'name', 'applied')
+    ordering = ("-applied",)
+    list_display = ("app", "name", "applied")
+    readonly_fields = ("app", "name", "applied")
 
 
 class ProfileInline(admin.StackedInline):
     model = UserProfile
     can_delete = False
-    verbose_name_plural = 'Profile'
-    fk_name = 'user'
+    verbose_name_plural = "Profile"
+    fk_name = "user"
 
 
 class LaxyUserAdmin(UserAdmin):
     inlines = (ProfileInline,)
-    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff',)
-    list_select_related = ('profile',)
+    list_display = (
+        "username",
+        "email",
+        "first_name",
+        "last_name",
+        "is_staff",
+    )
+    list_select_related = ("profile",)
 
     def get_inline_instances(self, request, obj=None):
         if not obj:
@@ -102,22 +124,30 @@ class UserProfileAdmin(admin.ModelAdmin):
 
 
 class ComputeResourceAdmin(Timestamped, VersionAdmin):
-    list_display = ('uuid', 'name', 'address', 'priority', 'created', 'status_html')
-    search_fields = ('id', 'name', 'host', 'status',)
-    list_filter = ('status',)
-    ordering = ('-priority', '-created_time',)
+    list_display = ("uuid", "name", "address", "priority", "created", "status_html")
+    search_fields = (
+        "id",
+        "name",
+        "host",
+        "status",
+    )
+    list_filter = ("status",)
+    ordering = (
+        "-priority",
+        "-created_time",
+    )
 
     color_mappings = {
-        ComputeResource.STATUS_ONLINE: 'green',
-        ComputeResource.STATUS_ERROR: 'red',
-        ComputeResource.STATUS_STARTING: 'orange',
-        ComputeResource.STATUS_TERMINATING: 'orange',
+        ComputeResource.STATUS_ONLINE: "green",
+        ComputeResource.STATUS_ERROR: "red",
+        ComputeResource.STATUS_STARTING: "orange",
+        ComputeResource.STATUS_TERMINATING: "orange",
     }
 
     def status_html(self, obj):
         return format_html(
             '<span style="color: {};"><strong>{}</strong></span>',
-            self.color_mappings.get(obj.status, 'black'),
+            self.color_mappings.get(obj.status, "black"),
             obj.get_status_display(),
         )
 
@@ -125,33 +155,94 @@ class ComputeResourceAdmin(Timestamped, VersionAdmin):
         if obj.status == ComputeResource.STATUS_ONLINE:
             return obj.host
         else:
-            return ''
+            return ""
+
+
+def async_copy_files(files, dst_compute_id: Union[None, str] = None):
+    """
+    Starts async (celery) copy tasks for a set of files to a destination ComputeResource (by ID).
+
+    Returns a list of file IDs that failed immediately (some tasks may start but fail after some time, 
+    these won't be included in the failed list). 
+    """
+
+    failed = []
+    for file in files:
+        if file.location is None:
+            logger.error(
+                f"File {file.id} has no location. Skipping copy_to_archive for this file."
+            )
+            continue
+
+        src_compute, job, path, filename = split_laxy_sftp_url(
+            file.location, to_objects=True
+        )
+        src_prefix = f"laxy+sftp://{src_compute.id}/"
+
+        if dst_compute_id is None:
+            if job.compute_resource.archive_host:
+                dst_compute_id = job.compute_resource.archive_host.id
+            else:
+                failed.append(file.id)
+
+        dst_prefix = f"laxy+sftp://{dst_compute_id}/"
+        from_location = str(file.location)
+        to_location = str(file.location).replace(src_prefix, dst_prefix)
+
+        task_data = dict(
+            file_id=file.id,
+            from_location=from_location,
+            to_location=to_location,
+            clobber=True,
+        )
+
+        if from_location != to_location:
+            result = file_tasks.copy_file_task.apply_async(args=(task_data,))
+
+            if result.failed():
+                failed.append(file.id)
+
+    return failed
 
 
 class JobAdmin(Timestamped, VersionAdmin):
-    list_display = ('uuid',
-                    'created',
-                    'modified',
-                    'completed',
-                    'expires',
-                    '_compute_resource',
-                    '_owner_email',
-                    '_status',
-                    '_size')
-    ordering = ('-created_time', '-completed_time', '-modified_time', '-expiry_time')
-    search_fields = ('id', 'status', 'remote_id', 'owner_id__exact', 'owner__email__exact',)
-    list_filter = ('status', 'expired',)
-    actions = ('trigger_file_ingestion',
-               'expire_job',
-               'estimate_job_tarball_size',
-               'verify',
-               'copy_to_archive',
-               'bulk_move_to_archive')
+    list_display = (
+        "uuid",
+        "created",
+        "modified",
+        "completed",
+        "expires",
+        "_compute_resource",
+        "_owner_email",
+        "_status",
+        "_size",
+    )
+    ordering = ("-created_time", "-completed_time", "-modified_time", "-expiry_time")
+    search_fields = (
+        "id",
+        "status",
+        "remote_id",
+        "owner_id__exact",
+        "owner__email__exact",
+    )
+    list_filter = (
+        "status",
+        "expired",
+    )
+    actions = (
+        "trigger_file_ingestion",
+        "expire_job",
+        "estimate_job_tarball_size",
+        "verify",
+        "copy_to_archive",
+        "bulk_move_to_archive",
+        "move_job_files_to_archive",
+    )
 
     color_mappings = {
-        Job.STATUS_FAILED: 'red',
-        Job.STATUS_CANCELLED: 'red',
-        Job.STATUS_RUNNING: 'green',
+        Job.STATUS_FAILED: "red",
+        Job.STATUS_CANCELLED: "red",
+        Job.STATUS_RUNNING: "green",
     }
 
     def completed(self, obj: Job):
@@ -163,29 +254,33 @@ class JobAdmin(Timestamped, VersionAdmin):
     def _compute_resource(self, obj: Job):
         c = obj.compute_resource
         if c is not None:
-            return format_html('%s (%s)' % (c.name, c.id))
+            return format_html("%s (%s)" % (c.name, c.id))
         else:
-            return ''
+            return ""
 
     def _status(self, obj: Job):
         return format_html(
             '<span style="color: {};"><strong>{}</strong></span>',
-            self.color_mappings.get(obj.status, 'black'),
+            self.color_mappings.get(obj.status, "black"),
             obj.get_status_display(),
         )
 
     def _size(self, obj: Job):
-        size = obj.params.get('tarball_size', None)
+        size = obj.params.get("tarball_size", None)
         if size is not None:
             return format_html(naturalsize(size))
-        return format_html('<i>unknown</i>')
+        return format_html("<i>unknown</i>")
 
     def _owner_email(self, obj: Job):
         if obj.owner:
             ct = ContentType.objects.get_for_model(obj.owner)
-            user_url = reverse('admin:%s_%s_change' % (ct.app_label, ct.model), args=(obj.owner.id,))
-            return format_html('<a href="{}">{} ({})</a>', user_url, obj.owner.email, obj.owner.id)
-        return ''
+            user_url = reverse(
+                "admin:%s_%s_change" % (ct.app_label, ct.model), args=(obj.owner.id,)
+            )
+            return format_html(
+                '<a href="{}">{} ({})</a>', user_url, obj.owner.email, obj.owner.id
+            )
+        return ""
 
     @takes_instance_or_queryset
     def trigger_file_ingestion(self, request, queryset):
@@ -198,8 +293,7 @@ class JobAdmin(Timestamped, VersionAdmin):
         if not failed:
             self.message_user(request, "Ingesting !")
         else:
-            self.message_user(request, "Errors trying to ingest %s" %
-                              ','.join(failed))
+            self.message_user(request, "Errors trying to ingest %s" % ",".join(failed))
 
     trigger_file_ingestion.short_description = "Ingest files"
 
@@ -214,8 +308,10 @@ class JobAdmin(Timestamped, VersionAdmin):
         if not failed:
             self.message_user(request, "Starting estimate_job_tarball_size task(s) !")
         else:
-            self.message_user(request, "Errors trying to estimate tarball size for %s" %
-                              ','.join(failed))
+            self.message_user(
+                request,
+                "Errors trying to estimate tarball size for %s" % ",".join(failed),
+            )
 
     estimate_job_tarball_size.short_description = "Estimate tarball size (task)"
 
@@ -232,8 +328,7 @@ class JobAdmin(Timestamped, VersionAdmin):
         if not failed:
             self.message_user(request, f"Expiring job: {obj.id}")
         else:
-            self.message_user(request, "Errors trying to expire %s" %
-                              ','.join(failed))
+            self.message_user(request, "Errors trying to expire %s" % ",".join(failed))
 
     expire_job.short_description = "Expire job (delete large files)"
 
@@ -251,8 +346,11 @@ class JobAdmin(Timestamped, VersionAdmin):
         if not failed:
             self.message_user(request, "Verifying !")
         else:
-            self.message_user(request, "Errors trying to verify %d file locations (%s)" %
-                              (len(failed), ','.join(failed)))
+            self.message_user(
+                request,
+                "Errors trying to verify %d file locations (%s)"
+                % (len(failed), ",".join(failed)),
+            )
 
     verify.short_description = "Verify file checksums (all locations)"
 
@@ -260,29 +358,27 @@ class JobAdmin(Timestamped, VersionAdmin):
     def copy_to_archive(self, request, queryset):
         failed = []
         for job in queryset:
-            old_compute = job.compute_resource.id
-            if old_compute.archive_host is None:
-                self.message_user(request, f"Unable to copy job {job.id}, ComputeResource "
-                                           f"{old_compute.id} has no archive_host !")
+            archive_host = job.compute_resource.archive_host
+            if archive_host is None:
+                self.message_user(
+                    request,
+                    f"Unable to copy job {job.id}, ComputeResource "
+                    f"{job.compute_resource.id} has no archive_host !",
+                )
                 return
-            new_compute = old_compute.archive_host.id
-            old_prefix = f'laxy+sftp://{old_compute}/'
-            new_prefix = f'laxy+sftp://{new_compute}/'
 
-            for file in job.get_files():
-                task_data = dict(file_id=file.id,
-                                 to_location=file.location.replace(old_prefix, new_prefix))
-                result = file_tasks.copy_file_task.apply_async(args=(task_data,))
-                if result.failed():
-                    failed.append(file.id)
+            dst_compute = archive_host.id
+
+            failed = async_copy_files(job.get_files(), dst_compute)
 
             if not failed:
                 self.message_user(request, "Copying !")
             else:
-                self.message_user(request, "Errors trying to copy %s" %
-                                  ','.join(failed))
+                self.message_user(
+                    request, "Errors trying to copy %s" % ",".join(failed)
+                )
 
-    copy_to_archive.short_description = "Copy files to archive location."
+    copy_to_archive.short_description = "Copy files to archive location"
 
     @takes_instance_or_queryset
     def bulk_move_to_archive(self, request, queryset):
@@ -290,7 +386,7 @@ class JobAdmin(Timestamped, VersionAdmin):
         for job in queryset:
             task_data = dict(job_id=job.id)
             if job.compute_resource.archive_host is not None:
-                task_data['dst_compute_id'] = job.compute_resource.archive_host.id
+                task_data["dst_compute_id"] = job.compute_resource.archive_host.id
             result = file_tasks.bulk_move_job_task.apply_async(args=(task_data,))
             if result.failed():
                 failed.append(job.id)
@@ -298,10 +394,35 @@ class JobAdmin(Timestamped, VersionAdmin):
         if not failed:
             self.message_user(request, "Bulk moving now !")
         else:
-            self.message_user(request, "Errors trying to initiate transfer of %s" %
-                              ','.join(failed))
+            self.message_user(
+                request, "Errors trying to initiate transfer of %s" % ",".join(failed)
+            )
 
-    bulk_move_to_archive.short_description = "Bulk move job to archive host (via tar pipe), update default location."
+    bulk_move_to_archive.short_description = (
+        "Bulk move job to archive host (via tar pipe), update default location."
+    )
+
+    @takes_instance_or_queryset
+    def move_job_files_to_archive(self, request, queryset):
+        failed = []
+        for job in queryset:
+            task_data = dict(job_id=job.id)
+            result = job_tasks.move_job_files_to_archive_task.apply_async(
+                args=(task_data,)
+            )
+            if result.failed():
+                failed.append(job.id)
+
+        if not failed:
+            self.message_user(request, "Bulk moving now !")
+        else:
+            self.message_user(
+                request, "Errors trying to initiate transfer of %s" % ",".join(failed)
+            )
+
+    move_job_files_to_archive.short_description = (
+        "Move job to archive host (one task per file)"
+    )
 
 
 def do_nothing_validator(value):
@@ -309,20 +430,29 @@ def do_nothing_validator(value):
 
 
 class FileLocationAdmin(admin.ModelAdmin):
-    list_display = ('id',
-                    'file',
-                    'default',
-                    '_url',)
+    list_display = (
+        "id",
+        "file",
+        "default",
+        "_url",
+    )
     # raw_id_fields = ('file',)
-    readonly_fields = ('url', 'file',)
-    actions = ('verify',)
-    ordering = ('-default',)
-    search_fields = ('id', 'url', 'file__id',)
+    readonly_fields = (
+        "url",
+        "file",
+    )
+    actions = ("verify",)
+    ordering = ("-default",)
+    search_fields = (
+        "id",
+        "url",
+        "file__id",
+    )
 
     def _url(self, obj):
-        return format_html('<a href="{}">{}</a>',
-                           obj.url,
-                           truncate_middle(obj.url, end=32))
+        return format_html(
+            '<a href="{}">{}</a>', obj.url, truncate_middle(obj.url, end=32)
+        )
 
     @takes_instance_or_queryset
     def verify(self, request, queryset):
@@ -335,8 +465,11 @@ class FileLocationAdmin(admin.ModelAdmin):
         if not failed:
             self.message_user(request, "Verifying !")
         else:
-            self.message_user(request, "Errors trying to verify %d files (%s)" % 
-                (len(failed), ','.join(failed)))
+            self.message_user(
+                request,
+                "Errors trying to verify %d files (%s)"
+                % (len(failed), ",".join(failed)),
+            )
 
     verify.short_description = "Verify file checksum"
 
@@ -344,42 +477,56 @@ class FileLocationAdmin(admin.ModelAdmin):
 class FileLocationAdminForm(django.forms.ModelForm):
     class Meta:
         model = FileLocation
-        fields = '__all__'
+        fields = "__all__"
 
     url = django.forms.CharField(max_length=2048, validators=[URIValidator()])
 
 
 class FileLocationsInline(admin.TabularInline):
     model = FileLocation
-    readonly_fields = ('id', 'default', 'url',)
-    fields = ('id', 'default', 'url',)
-    ordering = ('-default',)
+    readonly_fields = (
+        "id",
+        "default",
+        "url",
+    )
+    fields = (
+        "id",
+        "default",
+        "url",
+    )
+    ordering = ("-default",)
     can_delete = False
-    verbose_name_plural = 'File Locations'
-    fk_name = 'file'
+    verbose_name_plural = "File Locations"
+    fk_name = "file"
     extra = 0
 
 
 class FileAdminForm(django.forms.ModelForm):
     class Meta:
         model = File
-        fields = '__all__'
+        fields = "__all__"
 
     location = django.forms.CharField(max_length=2048, validators=[URIValidator()])
 
 
 class FileAdmin(Timestamped, VersionAdmin):
-    list_display = ('uuid',
-                    '_path',
-                    '_name',
-                    'location',
-                    'created',
-                    'modified')
-    readonly_fields = ('location',)
-    ordering = ('-created_time', '-modified_time',)
-    search_fields = ('id', 'path', 'name',)
-    inlines = (FileLocationsInline, )
-    actions = ('fix_metadata', 'verify',)  # 'copy_to_archive_test',)
+    list_display = ("uuid", "_path", "_name", "location", "created", "modified")
+    readonly_fields = ("location",)
+    ordering = (
+        "-created_time",
+        "-modified_time",
+    )
+    search_fields = (
+        "id",
+        "path",
+        "name",
+    )
+    inlines = (FileLocationsInline,)
+    actions = (
+        "fix_metadata",
+        "verify",
+        "copy_to_archive",
+    )
     form = FileAdminForm
 
     truncate_to = 32
@@ -391,11 +538,13 @@ class FileAdmin(Timestamped, VersionAdmin):
         return truncatechars(obj.name, self.truncate_to)
 
     def location(self, obj):
-        url = reverse('laxy_backend:file_download',
-                      kwargs={'uuid': obj.uuid(), 'filename': obj.name})
-        return format_html('<a href="{}">{}</a>',
-                           url,
-                           truncatechars(obj.name, self.truncate_to))
+        url = reverse(
+            "laxy_backend:file_download",
+            kwargs={"uuid": obj.uuid(), "filename": obj.name},
+        )
+        return format_html(
+            '<a href="{}">{}</a>', url, truncatechars(obj.name, self.truncate_to)
+        )
 
     @takes_instance_or_queryset
     def fix_metadata(self, request, queryset):
@@ -408,7 +557,7 @@ class FileAdmin(Timestamped, VersionAdmin):
         File.metadata field JSON shape/schema changed.
         """
         count = 0
-        last_msg = ''
+        last_msg = ""
         for obj in queryset:
             if isinstance(obj.metadata, str):
                 obj.metadata = dict()
@@ -432,79 +581,107 @@ class FileAdmin(Timestamped, VersionAdmin):
         if not failed:
             self.message_user(request, "Verifying !")
         else:
-            self.message_user(request, "Errors trying to ingest %s" %
-                              ','.join(failed))
+            self.message_user(request, "Errors trying to ingest %s" % ",".join(failed))
 
     verify.short_description = "Verify file checksums (all locations)"
 
-    # @takes_instance_or_queryset
-    # def copy_to_archive_test(self, request, queryset):
-    #     failed = []
-    #     for file in queryset:
-    #         job = file.fileset.jobs()[0]
-    #         old_compute = job.compute_resource.id
-    #         new_compute = ComputeResource.objects.get(name='laxy-archive').id
-    #         old_prefix = f'laxy+sftp://{old_compute}/'
-    #         new_prefix = f'laxy+sftp://{new_compute}/'
-    #
-    #         task_data = dict(file_id=file.id,
-    #                          to_location=file.location.replace(old_prefix, new_prefix))
-    #         result = file_tasks.copy_file_task.apply_async(args=(task_data,))
-    #         if result.failed():
-    #             failed.append(file.id)
-    #
-    #     if not failed:
-    #         self.message_user(request, "Copying !")
-    #     else:
-    #         self.message_user(request, "Errors trying to ingest %s" %
-    #                           ','.join(failed))
-    #
-    # copy_to_archive_test.short_description = "TEST: Copy file to laxy-archive location."
+    # TODO: This should be refactored alongside the equivalent function on JobAdmin
+    #       to used common code
+    @takes_instance_or_queryset
+    def copy_to_archive(self, request, queryset):
+        failed = []
+        failed = async_copy_files(queryset)
+
+        if not failed:
+            self.message_user(request, "Copying !")
+        else:
+            self.message_user(request, "Errors trying to ingest %s" % ",".join(failed))
+
+    copy_to_archive.short_description = "Copy file to archive location"
 
 
 class JobInputFilesInline(admin.TabularInline):
     model = Job
-    readonly_fields = ('id', 'status', 'owner', 'completed_time',)
-    fields = ('id', 'status', 'owner', 'completed_time',)
+    readonly_fields = (
+        "id",
+        "status",
+        "owner",
+        "completed_time",
+    )
+    fields = (
+        "id",
+        "status",
+        "owner",
+        "completed_time",
+    )
     can_delete = False
-    verbose_name_plural = 'Associated Job (as input FileSet)'
-    fk_name = 'input_files'
+    verbose_name_plural = "Associated Job (as input FileSet)"
+    fk_name = "input_files"
     extra = 0
 
 
 class JobOutputFilesInline(admin.TabularInline):
     model = Job
-    readonly_fields = ('id', 'status', 'owner', 'completed_time',)
-    fields = ('id', 'status', 'owner', 'completed_time',)
+    readonly_fields = (
+        "id",
+        "status",
+        "owner",
+        "completed_time",
+    )
+    fields = (
+        "id",
+        "status",
+        "owner",
+        "completed_time",
+    )
     can_delete = False
-    verbose_name_plural = 'Associated Job (as output FileSet)'
-    fk_name = 'output_files'
+    verbose_name_plural = "Associated Job (as output FileSet)"
+    fk_name = "output_files"
     extra = 0
 
 
 class FilesInline(admin.TabularInline):
     model = File
-    readonly_fields = ('id', 'locations_list',)
-    fields = ('id', 'path', 'name', 'locations_list', 'type_tags',)
-    ordering = ('path', 'name',)
+    readonly_fields = (
+        "id",
+        "locations_list",
+    )
+    fields = (
+        "id",
+        "path",
+        "name",
+        "locations_list",
+        "type_tags",
+    )
+    ordering = (
+        "path",
+        "name",
+    )
     can_delete = False
-    verbose_name_plural = 'Files'
-    fk_name = 'fileset'
+    verbose_name_plural = "Files"
+    fk_name = "fileset"
     extra = 0
 
     def locations_list(self, file):
-        return format_html('<br>'.join([l.url for l in file.locations.all()]))
+        return format_html("<br>".join([l.url for l in file.locations.all()]))
 
 
 class FileSetAdmin(Timestamped, VersionAdmin):
-    list_display = ('uuid',
-                    'path',
-                    'name',
-                    'created',
-                    'modified')
-    ordering = ('-created_time', '-modified_time',)
-    search_fields = ('id', 'name', 'path',)
-    inlines = (JobInputFilesInline, JobOutputFilesInline, FilesInline,)
+    list_display = ("uuid", "path", "name", "created", "modified")
+    ordering = (
+        "-created_time",
+        "-modified_time",
+    )
+    search_fields = (
+        "id",
+        "name",
+        "path",
+    )
+    inlines = (
+        JobInputFilesInline,
+        JobOutputFilesInline,
+        FilesInline,
+    )
 
 
 class SampleCartAdmin(Timestamped, VersionAdmin):
@@ -516,31 +693,42 @@ class PipelineRunAdmin(Timestamped, VersionAdmin):
 
 
 class EventLogAdmin(admin.ModelAdmin):
-    ordering = ('-timestamp',)
-    raw_id_fields = ('user',)
-    list_filter = ('event',
-                   'timestamp',)
-    list_display = ('uuid',
-                    'timestamp',
-                    'user',
-                    'event',
-                    'obj',
-                    'extra',)
-    search_fields = ('id',
-                     'object_id',
-                     'user__username',
-                     'user__email',
-                     'extra',)
+    ordering = ("-timestamp",)
+    raw_id_fields = ("user",)
+    list_filter = (
+        "event",
+        "timestamp",
+    )
+    list_display = (
+        "uuid",
+        "timestamp",
+        "user",
+        "event",
+        "obj",
+        "extra",
+    )
+    search_fields = (
+        "id",
+        "object_id",
+        "user__username",
+        "user__email",
+        "extra",
+    )
 
 
 class AccessTokenAdmin(Timestamped, VersionAdmin):
-    list_display = ('uuid',
-                    'obj',
-                    'created_by',
-                    'expiry_time',
-                    'created')
-    ordering = ('-created_time', '-modified_time', '-expiry_time',)
-    search_fields = ('id', 'obj', 'created_by', 'expiry_time',)
+    list_display = ("uuid", "obj", "created_by", "expiry_time", "created")
+    ordering = (
+        "-created_time",
+        "-modified_time",
+        "-expiry_time",
+    )
+    search_fields = (
+        "id",
+        "obj",
+        "created_by",
+        "expiry_time",
+    )
 
 
 admin.site.register(MigrationRecorder.Migration, MigrationAdmin)

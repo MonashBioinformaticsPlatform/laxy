@@ -96,6 +96,7 @@ from .tasks.job import (
     set_job_status,
     kill_remote_job,
     estimate_job_tarball_size,
+    move_job_files_to_archive_task,
 )
 from .tasks.file import bulk_move_job_task
 
@@ -1670,7 +1671,8 @@ class JobView(JSONPatchMixin, JSONView):
                     result = celery.chain(
                         index_remote_files.s(task_data),
                         set_job_status.s(),
-                        bulk_move_job_task.s(),
+                        move_job_files_to_archive_task.s(),
+                        # bulk_move_job_task.s(),
                     ).apply_async(
                         link_error=_finalize_job_task_err_handler.s(job_id=job.id)
                     )
@@ -1763,7 +1765,7 @@ class JobCreate(JSONView):
     serializer_class = JobSerializerRequest
 
     @shared_task(bind=True)
-    def _task_err_handler(failed_task, cxt, ex, tb, job_id):
+    def _task_err_handler(self, cxt, ex, tb, job_id):
         # job_id = task_data.get('job_id', None)
         job = Job.objects.get(id=job_id)
         job.status = Job.STATUS_FAILED

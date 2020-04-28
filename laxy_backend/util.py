@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, Tuple
 import traceback
 import random
 import string
@@ -17,12 +17,14 @@ from typing import Mapping, Sequence
 from urllib.parse import urlparse
 from cache_memoize import cache_memoize
 
+import django
 from django.urls import reverse
 from django.utils.http import urlencode
 
 from rest_framework.request import Request
 
 from . import models
+from pathlib import Path
 
 
 def sh_bool(boolean):
@@ -34,14 +36,14 @@ def sh_bool(boolean):
     :rtype: str
     """
     if boolean:
-        return 'yes'
+        return "yes"
     else:
-        return 'no'
+        return "no"
 
 
 def url_safe_base64_uuid() -> str:
     padded_base64_uuid = base64.urlsafe_b64encode(uuid.uuid4().bytes)
-    return padded_base64_uuid.decode('ascii').replace('=', '')
+    return padded_base64_uuid.decode("ascii").replace("=", "")
 
 
 def url_safe_base62_uuid() -> str:
@@ -53,15 +55,14 @@ def generate_uuid() -> str:
 
 
 def generate_secret_key(length=255) -> str:
-    return ''.join(
-        [random.choice(string.ascii_letters + string.digits)
-         for _ in range(length)]
+    return "".join(
+        [random.choice(string.ascii_letters + string.digits) for _ in range(length)]
     )
 
 
 def b64uuid_to_uuid(b64uuid: str, regenerate_padding=True) -> uuid.UUID:
     if regenerate_padding:
-        pad_chars = (24 - len(b64uuid)) * '='
+        pad_chars = (24 - len(b64uuid)) * "="
         b64uuid += pad_chars
     as_str = str(b64uuid)
     as_bytes = base64.urlsafe_b64decode(as_str)
@@ -69,7 +70,7 @@ def b64uuid_to_uuid(b64uuid: str, regenerate_padding=True) -> uuid.UUID:
 
 
 def b62encode(text: str) -> str:
-    return base62().encode(int.from_bytes(text.encode(), byteorder='big'))
+    return base62().encode(int.from_bytes(text.encode(), byteorder="big"))
 
 
 def ordereddicts_to_dicts(d: OrderedDict) -> dict:
@@ -80,7 +81,7 @@ def ordereddicts_to_dicts(d: OrderedDict) -> dict:
     return json.loads(json.dumps(d))
 
 
-@cache_memoize(timeout=3*60*60, cache_alias='memoize')
+@cache_memoize(timeout=3 * 60 * 60, cache_alias="memoize")
 def find_filename_and_size_from_url(url, **kwargs):
     """
     Tries to determine the filename for a given download URL via the
@@ -101,35 +102,37 @@ def find_filename_and_size_from_url(url, **kwargs):
     scheme = urlparse(url).scheme.lower()
     file_size = None
     filename = None
-    if scheme in ['http', 'https']:
+    if scheme in ["http", "https"]:
         try:
             head = requests.head(url, **kwargs)
             filename_header = cgi.parse_header(
-                head.headers.get('Content-Disposition', ''))[-1]
-            file_size = head.headers.get('Content-Length', None)
+                head.headers.get("Content-Disposition", "")
+            )[-1]
+            file_size = head.headers.get("Content-Length", None)
             if file_size is not None:
                 file_size = int(file_size)
-            if 'filename' in filename_header:
-                filename = filename_header.get('filename')
+            if "filename" in filename_header:
+                filename = filename_header.get("filename")
         except:
             pass
 
-    if filename is None or (scheme == 'file' or scheme == 'ftp' or scheme == 'sftp'):
+    if filename is None or (scheme == "file" or scheme == "ftp" or scheme == "sftp"):
         filename = os.path.basename(urlparse(url).path)
 
     # TODO: Should we disallow this, given that it actually reads the local filesystem and may be
     #  unsafe or an information leak if used with arbitrary user supplied URLs ?
-    if scheme == 'file':
+    if scheme == "file":
         file_size = os.path.getsize(urlparse(url).path)
 
     if not filename:
-        raise ValueError('Could not find a filename for: %s' % url)
+        raise ValueError("Could not find a filename for: %s" % url)
 
     return filename.strip(), file_size
 
 
-def reverse_querystring(view, urlconf=None, args=None, kwargs=None,
-                        current_app=None, query_kwargs=None):
+def reverse_querystring(
+    view, urlconf=None, args=None, kwargs=None, current_app=None, query_kwargs=None
+):
     """
     Custom reverse to handle query strings.
 
@@ -138,9 +141,11 @@ def reverse_querystring(view, urlconf=None, args=None, kwargs=None,
 
     https://gist.github.com/benbacardi/227f924ec1d9bedd242b
     """
-    base_url = reverse(view, urlconf=urlconf, args=args, kwargs=kwargs, current_app=current_app)
+    base_url = reverse(
+        view, urlconf=urlconf, args=args, kwargs=kwargs, current_app=current_app
+    )
     if query_kwargs:
-        return '{}?{}'.format(base_url, urlencode(query_kwargs))
+        return "{}?{}".format(base_url, urlencode(query_kwargs))
     return base_url
 
 
@@ -148,7 +153,9 @@ def unique(l):
     return list(set(l))
 
 
-def multikeysort(items: Sequence[Mapping], columns: Sequence[str], reverse=False) -> Sequence[Mapping]:
+def multikeysort(
+    items: Sequence[Mapping], columns: Sequence[str], reverse=False
+) -> Sequence[Mapping]:
     """
     Takes a list of dictionaries and returns a list sorted by the value
     associated with keys specified in 'columns'.
@@ -167,7 +174,7 @@ def multikeysort(items: Sequence[Mapping], columns: Sequence[str], reverse=False
     """
     i = itemgetter
     comparers = [
-        ((i(col[1:].strip()), -1) if col.startswith('-') else (i(col.strip()), 1))
+        ((i(col[1:].strip()), -1) if col.startswith("-") else (i(col.strip()), 1))
         for col in columns
     ]
 
@@ -175,10 +182,7 @@ def multikeysort(items: Sequence[Mapping], columns: Sequence[str], reverse=False
         return (a > b) - (a < b)
 
     def comparer(left, right):
-        comparer_iter = (
-            cmp(fn(left), fn(right)) * mult
-            for fn, mult in comparers
-        )
+        comparer_iter = (cmp(fn(left), fn(right)) * mult for fn, mult in comparers)
         return next((result for result in comparer_iter if result), 0)
 
     return sorted(items, key=cmp_to_key(comparer), reverse=reverse)
@@ -196,13 +200,15 @@ def laxy_sftp_url(job, path: str = None) -> str:
     :rtype: str
     """
     if job.compute_resource is None:
-        raise ValueError("Job has no compute_resource defined. "
-                         "Cannot generate laxy+sftp:// URL since it requires a compute_resource ID.")
+        raise ValueError(
+            "Job has no compute_resource defined. "
+            "Cannot generate laxy+sftp:// URL since it requires a compute_resource ID."
+        )
 
-    url = f'laxy+sftp://{job.compute_resource.id}/{job.id}'
+    url = f"laxy+sftp://{job.compute_resource.id}/{job.id}"
 
     if path:
-        url = f'{url}/{path}'
+        url = f"{url}/{path}"
 
     return url
 
@@ -210,19 +216,71 @@ def laxy_sftp_url(job, path: str = None) -> str:
 def is_valid_laxy_sftp_url(url):
     try:
         scheme = urlparse(url).scheme.lower()
-        if scheme != 'laxy+sftp':
+        if scheme != "laxy+sftp":
             return False
         compute_resource_id = urlparse(url).netloc
         if compute_resource_id:
             compute = models.ComputeResource.objects.get(id=compute_resource_id)
             if not compute:
                 return False
-        if urlparse(url).path == '':
+        if urlparse(url).path == "":
             return False
     except:
         return False
 
     return True
+
+
+def split_laxy_sftp_url(
+    location, to_objects=False
+) -> Union[Tuple[str], Tuple[django.db.models.Model]]:
+    valid_scheme = "laxy+sftp"
+    location = str(location)
+
+    url = urlparse(location)
+    scheme = url.scheme
+    if scheme != valid_scheme:
+        raise ValueError(
+            f"{location} is not a valid {valid_scheme}:// URL. Wrong scheme."
+        )
+    if "." in url.netloc:
+        raise ValueError(
+            f"{location} is not a valid {valid_scheme}:// URL. "
+            "Invalid ComputeResource ID format."
+        )
+    # use netloc not hostname, since hostname forces lowercase
+    compute = url.netloc
+    _, job, path_file = url.path.split("/", 2)
+    path = Path(path_file).parent
+    filename = Path(path_file).name
+
+    if "." in compute:
+        raise ValueError(
+            f"{location} is not a valid {valid_scheme}:// URL. "
+            "Invalid ComputeResource ID format."
+        )
+
+    if "." in job:
+        raise ValueError(
+            f"{location} is not a valid {valid_scheme}:// URL. "
+            "Invalid Job ID format."
+        )
+
+    if to_objects:
+        try:
+            compute = models.ComputeResource.objects.get(id=compute)
+        except models.ComputeResource.DoesNotExist as e:
+            raise models.ComputeResource.DoesNotExist(
+                f"ComputeResource {compute} does not exist. (file.location={location})"
+            )
+        try:
+            job = models.Job.objects.get(id=job)
+        except models.Job.DoesNotExist as e:
+            raise models.Job.DoesNotExist(
+                f"Job {job} does not exist. (file.location={location})"
+            )
+
+    return compute, job, path, filename
 
 
 def get_content_type(request: Request) -> str:
@@ -235,18 +293,21 @@ def get_content_type(request: Request) -> str:
     :return: The content type, eg text/html or application/json
     :rtype: str
     """
-    return request.content_type.split(';')[0].strip()
+    return request.content_type.split(";")[0].strip()
 
 
 def get_traceback_message(ex: BaseException) -> Union[str]:
-    message = ''
-    if hasattr(ex, 'message') and ex.message:
+    message = ""
+    if hasattr(ex, "message") and ex.message:
         message = ex.message
     else:
         message = str(ex)
 
-    if hasattr(ex, '__traceback__'):
+    if hasattr(ex, "__traceback__"):
         tb = ex.__traceback__
-        message = '%s - Traceback: %s' % (message, ''.join(traceback.format_list(traceback.extract_tb(tb))))
+        message = "%s - Traceback: %s" % (
+            message,
+            "".join(traceback.format_list(traceback.extract_tb(tb))),
+        )
 
     return message

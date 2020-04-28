@@ -56,6 +56,8 @@ from ..models import (
 )
 from ..util import laxy_sftp_url, get_traceback_message
 
+from .file import move_file_task
+
 logger = get_task_logger(__name__)
 
 # For debugging - paramiko logs to seperate file
@@ -289,26 +291,6 @@ def start_job(self, task_data=None, **kwargs):
     return task_data
 
 
-def remote_list_files(path="."):
-    """
-    Recursively list files relative to the specified path.
-    Intended to be called within a Fabric context.
-
-    :param path: A path (absolute or relative to cwd)
-    :type path: str
-    :return: A list of relative paths.
-    :rtype: List[str]
-    """
-    # path = shlex.quote(path)
-    # -L ensures symlinks are followed and output as filenames too
-    lslines = run(f"find -L {path} -mindepth 1 -type f -printf '%P\n'")
-    if not lslines.succeeded:
-        raise Exception("Failed to list remote files: %s" % lslines)
-    filepaths = lslines.splitlines()
-    filepaths = [f for f in filepaths if f.strip()]
-    return filepaths
-
-
 @shared_task(bind=True, track_started=True)
 def set_job_status(self, task_data=None, **kwargs):
     from ..models import Job, File
@@ -336,6 +318,25 @@ def set_job_status(self, task_data=None, **kwargs):
 
 @shared_task(bind=True, track_started=True)
 def index_remote_files(self, task_data=None, **kwargs):
+    def _remote_list_files(path="."):
+        """
+        Recursively list files relative to the specified path.
+        Intended to be called within a Fabric context.
+
+        :param path: A path (absolute or relative to cwd)
+        :type path: str
+        :return: A list of relative paths.
+        :rtype: List[str]
+        """
+        # path = shlex.quote(path)
+        # -L ensures symlinks are followed and output as filenames too
+        lslines = run(f"find -L {path} -mindepth 1 -type f -printf '%P\n'")
+        if not lslines.succeeded:
+            raise Exception("Failed to list remote files: %s" % lslines)
+        filepaths = lslines.splitlines()
+        filepaths = [f for f in filepaths if f.strip()]
+        return filepaths
+
     if task_data is None:
         raise InvalidTaskError("task_data is None")
 
@@ -362,7 +363,7 @@ def index_remote_files(self, task_data=None, **kwargs):
     compute_id = job.compute_resource.id
     message = "No message."
 
-    def create_update_file_objects(
+    def _create_update_file_objects(
         remote_path, fileset=None, prefix_path="", location_base=""
     ):
         """
@@ -383,7 +384,7 @@ def index_remote_files(self, task_data=None, **kwargs):
         """
 
         with cd(remote_path):
-            filepaths = remote_list_files(".")
+            filepaths = _remote_list_files(".")
             urls = [(f"{location_base}/{fpath}", fpath) for fpath in filepaths]
 
             file_objs = []
@@ -419,7 +420,7 @@ def index_remote_files(self, task_data=None, **kwargs):
             input_dir = os.path.join(working_dir, "input")
             output_dir = os.path.join(working_dir, "output")
 
-            output_files = create_update_file_objects(
+            output_files = _create_update_file_objects(
                 output_dir,
                 fileset=job.output_files,
                 prefix_path="output",
@@ -436,7 +437,7 @@ def index_remote_files(self, task_data=None, **kwargs):
 
             # TODO: This should really be done at job start, or once input data
             #       has been staged on the compute node.
-            input_files = create_update_file_objects(
+            input_files = _create_update_file_objects(
                 input_dir,
                 fileset=job.input_files,
                 prefix_path="input",
@@ -475,7 +476,9 @@ def index_remote_files(self, task_data=None, **kwargs):
 
 @shared_task(bind=True)
 def _finalize_job_task_err_handler(self, uuid, job_id=None):
-    logger.info(f"_index_files_task_err_handler: failed task: {uuid}, job_id: {job_id}")
+    logger.info(
+        f"_finalize_job_task_err_handler: failed task: {uuid}, job_id: {job_id}"
+    )
     result = AsyncResult(uuid)
 
     job = Job.objects.get(id=job_id)
@@ -893,84 +896,132 @@ def expire_old_jobs(self, task_data=None, *kwargs):
         expire_old_job.s(task_data=dict(job_id=job.id)).apply_async()
 
 
-def add_file_replica_records(
-    files: Iterable[File],
-    compute_resource: Union[str, ComputeResource],
-    set_as_default=False,
-) -> int:
-    """
-    Adds a new laxy+sftp:// file location to every files in a job, given
-    a ComputeResource. If set_as_default=True, the new replica location becomes the
-    default location.
+@shared_task(bind=True, track_started=True)
+def move_job_files_to_archive_task(self, task_data=None, *kwargs):
+    from ..models import Job, File
+    from ..util import split_laxy_sftp_url
 
-    NOTE: This task doesn't actually move any data - it's more intended for situations
-    where data has been moved out-of-band (eg, rsynced manually, not via an
-    internal Laxy task) but records in the database need to be updated.
-    """
+    def _move_untracked_files(
+        job: Job, src_compute: ComputeResource, dst_compute: ComputeResource
+    ):
+        """
+        Temporary function that moves files not in input/ and output/ directories, that aren't
+        tracked by Laxy File objects in the database.
+        """
+        job_src_path = job_path_on_compute(job, src_compute)
+        _, fpaths = src_compute.sftp_storage.listdir(job_src_path)
+        fpaths = [str(Path(job_src_path, fn)) for fn in fpaths]
 
-    if isinstance(compute_resource, str):
-        compute_resource = ComputeResource.objects.get(id=compute_resource)
+        for src_fp in fpaths:
+            dst_path = job_path_on_compute(job, dst_compute)
+            dst_fp = str(Path(dst_path) / Path(src_fp).name)
+            dst_sftp = dst_compute.sftp_storage
+            src_sftp = src_compute.sftp_storage
+            with src_sftp.open(src_fp, "r") as fh:
+                if dst_sftp.exists(dst_fp):
+                    dst_sftp.delete(dst_path)
+                dst_sftp.save(dst_fp, fh)
+                # chmod to match dst with src
+                src_mode: int = src_sftp.sftp.stat(src_fp).st_mode
+                dst_sftp.sftp.chmod(dst_fp, src_mode)
 
-    # if isinstance(job, str):
-    #     job = Job.objects.get(id=job)
-    # files = job.get_files()
+            src_sftp.delete(src_fp)
 
-    new_prefix = f"laxy+sftp://{compute_resource.id}"
+        return fpaths
 
-    n_added = 0
-    with transaction.atomic():
-        for f in files:
-            replica_url = f"{new_prefix}/{f.fileset.job.id}/{f.full_path}"
-            # try:
-            loc, created = FileLocation.objects.get_or_create(file=f, url=replica_url)
-            if set_as_default:
-                loc.set_as_default(save=True)
-            if created:
-                n_added += 1
-            #
-            # except IntegrityError as ex:
-            #     if 'unique constraint' in ex.message:
-            #         pass
+    job_id = task_data.get("job_id")
+    job = Job.objects.get(id=job_id)
 
-    return n_added
+    results = {}
+    immediate_failed = []
+    skipped = []
+    n_started = 0
+    # task_list = []
 
+    for file in job.get_files():
+        try:
+            if file.location is None:
+                logger.error(
+                    f"File {file.id} has no location. Skipping copy_to_archive for this file."
+                )
+                skipped.append(file.id)
+                continue
 
-def remove_file_replica_records(
-    files: QuerySet,
-    compute_resource: Union[str, ComputeResource],
-    allow_delete_default=False,
-) -> int:
-    """
-    Removes the laxy+sftp:// file location for the specified ComputeResource for every
-    file in a job, if there is an alternative location in existence.
+            # Moving from default file location
+            # (not always the _original_ compute location, in the case where we've moved once already)
+            src_compute, _job, path, filename = split_laxy_sftp_url(
+                file.location, to_objects=True
+            )
 
-    This method will raise an exception if trying to delete a FileLocation
-    marked as the 'default', since this is something you probably don't want to do.
-    If really want to do that, set allow_delete_default = True.
+            src_prefix = f"laxy+sftp://{src_compute.id}/"
 
-    NOTE: This task doesn't actually move any data - it's more intended for situations
-    where data has been moved out-of-band (eg, rsynced manually, not via an
-    internal Laxy task) but records in the database need to be updated.
-    """
+            if job.compute_resource.archive_host:
+                dst_compute_id = job.compute_resource.archive_host.id
+            else:
+                immediate_failed.append(file.id)
+                logger.error(
+                    f"Job for file {file.id} has no archive_host set. Skipping copy_to_archive for this file."
+                )
+                continue
 
-    if isinstance(compute_resource, str):
-        compute_resource = ComputeResource.objects.get(id=compute_resource)
+            dst_prefix = f"laxy+sftp://{dst_compute_id}/"
+            from_location = str(file.location)
+            to_location = str(file.location).replace(src_prefix, dst_prefix)
 
-    n_deleted = 0
-    with transaction.atomic():
-        old_prefix = f"laxy+sftp://{compute_resource.id}/"
-        oldlocs = FileLocation.objects.filter(
-            file__in=files, url__startswith=old_prefix
+            # TODO: Consider using a Group call here (parallel) and return failed/succeeded
+            #       IDs from the GroupResult, polling on `while group_result.waiting():`
+            #       https://docs.celeryproject.org/en/stable/userguide/canvas.html#groups
+            #       The advantage is we can retry / reschedule if group_result.failed()
+            if from_location != to_location:
+                _t_data = dict(
+                    file_id=file.id,
+                    from_location=from_location,
+                    to_location=to_location,
+                    clobber=True,
+                    verification_type="immediate",
+                    verify_on="size",
+                )
+                celery_result = move_file_task.apply_async(args=(_t_data,))
+
+                # Example of how we might do this with a celery Group instead
+                # task_list.append(move_file_task.s(_t_data))
+
+                if celery_result.failed():
+                    immediate_failed.append(file.id)
+                else:
+                    n_started += 1
+            else:
+                skipped.append(file.id)
+
+        except BaseException as ex:
+            pass
+
+    #
+    # TODO: Remove this extra step once /manifest.csv etc are tracked as model.Files
+    #
+    # job.get_files() doesn't include files below input/ and output/ (they aren't tracked as models.Files).
+    # We need to either transfer these seperately (:/ yeck) or register them (which may require moving them to
+    # to input/ or output/ due to current inflexibility of Job filesets)
+    # Files are: job.pids, kill_job.sh, manifest.csv, slurm.jids
+    try:
+        fpaths = _move_untracked_files(
+            job, job.compute_resource, job.compute_resource.archive_host
         )
-        # TODO: This safety check seems to be triggering when it shouldn't ??
-        # if not allow_delete_default and oldlocs.filter(default=True).exists():
-        #     raise ValueError(f"The provided ComputeResource ({compute_resource.id}) "
-        #                      f"is used as a default location for at least some of the files in the provided QuerySet. "
-        #                      f"Either set allow_delete_default = True, or ensure no files provided "
-        #                      f"use this ComputeResource in their default location.")
+        results["_move_untracked_files"] = fpaths
+    except BaseException as ex:
+        results["_move_untracked_files"] = "failed"
+        raise ex
 
-        n_deleted = oldlocs.count()
-        # NOTE: Delete on a QuerySet DOES trigger post_delete signals (eg ensure_one_default_filelocation)
-        oldlocs.delete()
+    # Example of how we might do this with a celery Group instead
+    # task_group = group(task_list)
+    # group_result = task_group()
+    # while group_result.waiting():
+    #     time.sleep(30)
+    # successful_task_results = [r.result for r in group_result.join() if r.successful()]
+    # failed_task_exceptions = [r.result for r in group_result.join() if r.failed()]
 
-    return n_deleted
+    results["n_started"] = n_started
+    results["immediate_failed"] = immediate_failed
+    results["skipped"] = skipped
+    task_data["results"] = results
+    return task_data

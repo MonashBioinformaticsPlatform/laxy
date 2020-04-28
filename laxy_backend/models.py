@@ -16,10 +16,7 @@ from io import StringIO, BytesIO, BufferedRandom
 import backoff
 import rows
 import paramiko
-from paramiko import (SSHClient,
-                      ssh_exception,
-                      RSAKey,
-                      AutoAddPolicy)
+from paramiko import SSHClient, ssh_exception, RSAKey, AutoAddPolicy
 
 from django.conf import settings
 from django.db import models, transaction
@@ -30,9 +27,19 @@ from django.core.files.storage import get_storage_class, Storage
 from django.core.serializers import serialize
 from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError
-from django.db.models import Model, Manager, CharField, URLField, ForeignKey, BooleanField, IntegerField, DateTimeField, \
-    QuerySet
+from django.db.models import (
+    Model,
+    Manager,
+    CharField,
+    URLField,
+    ForeignKey,
+    BooleanField,
+    IntegerField,
+    DateTimeField,
+    QuerySet,
+)
 from django.contrib.postgres.fields import ArrayField
+
 # from django.contrib.auth.models import User
 from django.contrib.auth.models import AbstractUser
 from django.contrib.contenttypes.fields import GenericForeignKey
@@ -44,25 +51,27 @@ from storages.backends.sftpstorage import SFTPStorage
 
 from .tasks import orchestration
 from .cfncluster import generate_cluster_stack_name
-from .util import (unique,
-                   generate_uuid,
-                   generate_secret_key,
-                   find_filename_and_size_from_url,
-                   laxy_sftp_url)
+from .util import (
+    unique,
+    generate_uuid,
+    generate_secret_key,
+    find_filename_and_size_from_url,
+    laxy_sftp_url,
+)
 
 import logging
 
 logger = logging.getLogger(__name__)
 
-if 'postgres' not in settings.DATABASES['default']['ENGINE']:
+if "postgres" not in settings.DATABASES["default"]["ENGINE"]:
     from jsonfield import JSONField
 else:
     from django.contrib.postgres.fields import JSONField
 
 SCHEME_STORAGE_CLASS_MAPPING = {
-    'file': 'django.core.files.storage.FileSystemStorage',
-    'sftp': 'storages.backends.sftpstorage.SFTPStorage',
-    'laxy+sftp': 'storages.backends.sftpstorage.SFTPStorage',
+    "file": "django.core.files.storage.FileSystemStorage",
+    "sftp": "storages.backends.sftpstorage.SFTPStorage",
+    "laxy+sftp": "storages.backends.sftpstorage.SFTPStorage",
 }
 """
 Maps URL schemes to Django storage backends that can handle them.
@@ -101,15 +110,16 @@ class URIValidator(URLValidator):
     supported by the default Django URLValidator.
     """
 
-    schemes = ('http',
-               'https',
-               'ftp',
-               'sftp',
-               'laxy+sftp',
-               's3',
-               'magnet',
-               'file',
-               )
+    schemes = (
+        "http",
+        "https",
+        "ftp",
+        "sftp",
+        "laxy+sftp",
+        "s3",
+        "magnet",
+        "file",
+    )
 
     def __call__(self, value):
         try:
@@ -131,21 +141,21 @@ class ExtendedURIField(URLField):
 class Timestamped(Model):
     class Meta:
         abstract = True
-        get_latest_by = ['-modified_time']
+        get_latest_by = ["-modified_time"]
 
     created_time = DateTimeField(auto_now_add=True)
     modified_time = DateTimeField(auto_now=True)
 
 
 def _job_expiry_datetime():
-    job_ttl = getattr(settings, 'DEFAULT_JOB_EXPIRY', 30 * 24 * 60 * 60)
+    job_ttl = getattr(settings, "DEFAULT_JOB_EXPIRY", 30 * 24 * 60 * 60)
     return datetime.now() + timedelta(seconds=job_ttl)
 
 
 class Expires(Model):
     class Meta:
         abstract = True
-        get_latest_by = ['-expiry_time']
+        get_latest_by = ["-expiry_time"]
 
     expiry_time = DateTimeField(blank=True, null=True, default=_job_expiry_datetime)
     expired = BooleanField(default=False)
@@ -193,7 +203,7 @@ class ReadOnlyFlag(Model):
     def readonly(self, state):
         if state != self._readonly:
             self._readonly = state
-            super(ReadOnlyFlag, self).save(update_fields=['_readonly'])
+            super(ReadOnlyFlag, self).save(update_fields=["_readonly"])
 
     def save(self, *args, **kwargs):
         if self.readonly:
@@ -221,10 +231,9 @@ class UUIDModel(Model):
     class Meta:
         abstract = True
 
-    id = CharField(primary_key=True,
-                   editable=False,
-                   max_length=24,
-                   default=generate_uuid)
+    id = CharField(
+        primary_key=True, editable=False, max_length=24, default=generate_uuid
+    )
 
     def uuid(self):
         return self.id
@@ -238,11 +247,13 @@ class User(AbstractUser, UUIDModel):
 
 
 class UserProfile(models.Model):
-    user = models.OneToOneField(User,
-                                primary_key=True,
-                                on_delete=models.CASCADE,
-                                blank=False,
-                                related_name='profile')
+    user = models.OneToOneField(
+        User,
+        primary_key=True,
+        on_delete=models.CASCADE,
+        blank=False,
+        related_name="profile",
+    )
     image_url = models.URLField(max_length=2048, blank=True, null=True)
 
 
@@ -255,7 +266,7 @@ def create_or_update_user_profile(sender, instance, created, **kwargs):
 
 class JSONSerializable:
     def to_json(self):
-        return serialize('json', self)
+        return serialize("json", self)
 
 
 # class JobParams(JSONSerializable, UUIDModel):
@@ -281,27 +292,27 @@ class JSONSerializable:
 
 class EventLog(UUIDModel):
     class Meta:
-        ordering = ['-timestamp']
-        get_latest_by = ['timestamp']
+        ordering = ["-timestamp"]
+        get_latest_by = ["timestamp"]
 
-    user = ForeignKey(User,
-                      blank=True,
-                      null=True,
-                      on_delete=models.SET_NULL,
-                      related_name='event_logs')
+    user = ForeignKey(
+        User,
+        blank=True,
+        null=True,
+        on_delete=models.SET_NULL,
+        related_name="event_logs",
+    )
     timestamp = DateTimeField(default=timezone.now, db_index=True)
     event = CharField(max_length=64)
-    message = CharField(max_length=256,
-                        blank=True,
-                        null=True)
+    message = CharField(max_length=256, blank=True, null=True)
     extra = JSONField(default=OrderedDict)
 
     content_type = ForeignKey(ContentType, null=True, on_delete=models.SET_NULL)
     object_id = CharField(null=True, max_length=24, db_index=True)
-    obj = GenericForeignKey('content_type', 'object_id')
+    obj = GenericForeignKey("content_type", "object_id")
 
     @staticmethod
-    def log(event, message='', user=None, extra=None, obj=None, timestamp=None):
+    def log(event, message="", user=None, extra=None, obj=None, timestamp=None):
         if extra is None:
             extra = {}
         content_type = None
@@ -319,7 +330,7 @@ class EventLog(UUIDModel):
             extra=extra,
             content_type=content_type,
             object_id=object_id,
-            timestamp=timestamp
+            timestamp=timestamp,
         )
         return event
 
@@ -327,72 +338,77 @@ class EventLog(UUIDModel):
 @reversion.register()
 class ComputeResource(Timestamped, UUIDModel):
     # model created, no actual resource yet
-    STATUS_CREATED = 'created'
+    STATUS_CREATED = "created"
     # actual resource is being created
-    STATUS_STARTING = 'starting'
+    STATUS_STARTING = "starting"
     # resource is online and functioning as expected
-    STATUS_ONLINE = 'online'
+    STATUS_ONLINE = "online"
     # resource isn't functioning correctly. may be temporary.
-    STATUS_ERROR = 'error'
+    STATUS_ERROR = "error"
     # resource is intentionally offline and shouldn't be used. may be temporary.
-    STATUS_OFFLINE = 'offline'
+    STATUS_OFFLINE = "offline"
     # resource is being decommissioned and shouldn't be used. permanent.
-    STATUS_TERMINATING = 'terminating'
+    STATUS_TERMINATING = "terminating"
     # resource has been decommissioned and won't be available. permanent.
-    STATUS_DECOMMISSIONED = 'decommissioned'
+    STATUS_DECOMMISSIONED = "decommissioned"
 
-    COMPUTE_STATUS_CHOICES = ((STATUS_CREATED, 'object_created'),
-                              (STATUS_STARTING, 'starting'),
-                              (STATUS_ONLINE, 'online'),
-                              (STATUS_ERROR, 'error'),
-                              (STATUS_OFFLINE, 'offline'),
-                              (STATUS_TERMINATING, 'terminating'),
-                              (STATUS_DECOMMISSIONED, 'decommissioned'),
-                              )
+    COMPUTE_STATUS_CHOICES = (
+        (STATUS_CREATED, "object_created"),
+        (STATUS_STARTING, "starting"),
+        (STATUS_ONLINE, "online"),
+        (STATUS_ERROR, "error"),
+        (STATUS_OFFLINE, "offline"),
+        (STATUS_TERMINATING, "terminating"),
+        (STATUS_DECOMMISSIONED, "decommissioned"),
+    )
 
-    owner = ForeignKey(User,
-                       blank=True,
-                       null=True,
-                       on_delete=models.CASCADE,
-                       related_name='compute_resources')
-    status = CharField(max_length=64,
-                       choices=COMPUTE_STATUS_CHOICES,
-                       default=STATUS_CREATED)
+    owner = ForeignKey(
+        User,
+        blank=True,
+        null=True,
+        on_delete=models.CASCADE,
+        related_name="compute_resources",
+    )
+    status = CharField(
+        max_length=64, choices=COMPUTE_STATUS_CHOICES, default=STATUS_CREATED
+    )
 
     host = CharField(max_length=255, blank=True, null=True)
     gateway_server = CharField(max_length=255, blank=True, null=True)
     disposable = BooleanField(default=False)
     name = CharField(max_length=128, blank=True, null=True)
     priority = IntegerField(default=0)
-    archive_host = ForeignKey('self',
-                              blank=True,
-                              null=True,
-                              on_delete=models.SET_NULL,
-                              related_name='source_host')
+    archive_host = ForeignKey(
+        "self",
+        blank=True,
+        null=True,
+        on_delete=models.SET_NULL,
+        related_name="source_host",
+    )
 
     extra = JSONField(default=OrderedDict)
-    '''
+    """
     This contains resource type specific data. For a typical SSH-accessible 
     ComputeResource, it will contain a base_dir, username, private_key, queue_type 
     and possibly other configuration values.
     
     See views.ComputeResourceCreate.post docs for details.
-    '''
+    """
 
     def __str__(self):
-        return f'{self.name} ({self.id})'
+        return f"{self.name} ({self.id})"
 
     @classmethod
     def get_best_available(cls):
-        return cls.objects.filter(status=cls.STATUS_ONLINE).order_by('-priority').first()
+        return (
+            cls.objects.filter(status=cls.STATUS_ONLINE).order_by("-priority").first()
+        )
 
     @property
-    def sftp_storage(self) -> Union[Storage, None]:
-
-        @backoff.on_exception(backoff.expo,
-                              (socket.gaierror,),
-                              max_tries=3,
-                              jitter=backoff.full_jitter)
+    def sftp_storage(self) -> Union[SFTPStorage, None]:
+        @backoff.on_exception(
+            backoff.expo, (socket.gaierror,), max_tries=3, jitter=backoff.full_jitter
+        )
         def _connect(_storage_instance: SFTPStorage):
             """
             Attempt to connect to SFTP server, with retries.
@@ -401,11 +417,18 @@ class ComputeResource(Timestamped, UUIDModel):
             _ = _storage_instance.sftp
 
         if not self.available:
-            raise Exception(f"Cannot access storage for ComputeResource {self.id} - status='{self.status}'")
+            raise Exception(
+                f"Cannot access storage for ComputeResource {self.id} - status='{self.status}'"
+            )
 
         if CACHE_SFTP_CONNECTIONS:
-            _storage_instance: SFTPStorage = CACHED_SFTP_STORAGE_CLASS_INSTANCES.get(self.id, None)
-            if _storage_instance is not None and _storage_instance._ssh.get_transport() is not None:
+            _storage_instance: SFTPStorage = CACHED_SFTP_STORAGE_CLASS_INSTANCES.get(
+                self.id, None
+            )
+            if (
+                _storage_instance is not None
+                and _storage_instance._ssh.get_transport() is not None
+            ):
                 if _storage_instance._ssh.get_transport().is_active():
                     # This ensures connection is still open, reopens it if it's not
                     _connect(_storage_instance)
@@ -414,18 +437,23 @@ class ComputeResource(Timestamped, UUIDModel):
                     _storage_instance.sftp.close()
 
         storage_class = get_storage_class(
-            SCHEME_STORAGE_CLASS_MAPPING.get('laxy+sftp', None))
+            SCHEME_STORAGE_CLASS_MAPPING.get("laxy+sftp", None)
+        )
 
         host = self.hostname
         port = self.port
         private_key = self.private_key
-        username = self.extra.get('username')
-        params = dict(port=port,
-                      username=username,
-                      pkey=RSAKey.from_private_key(StringIO(private_key)))
+        username = self.extra.get("username")
+        params = dict(
+            port=port,
+            username=username,
+            pkey=RSAKey.from_private_key(StringIO(private_key)),
+        )
         # storage = SFTPStorage(host=host, params=params)
         storage: SFTPStorage = storage_class(host=host, params=params)
-        _connect(storage)  # Do this to ensure we can connect before caching the SFTPStorage class
+        _connect(
+            storage
+        )  # Do this to ensure we can connect before caching the SFTPStorage class
         CACHED_SFTP_STORAGE_CLASS_INSTANCES[self.id] = storage
 
         return storage
@@ -444,17 +472,19 @@ class ComputeResource(Timestamped, UUIDModel):
         :return: A paramiko SSHClient instance connected to the compute resource.
         :rtype: paramiko.SSHClient
         """
-        remote_username = self.extra.get('username', 'laxy')
+        remote_username = self.extra.get("username", "laxy")
 
         # TODO: Cache connections to the same ComputeResource
         client = SSHClient()
         client.set_missing_host_key_policy(AutoAddPolicy)
         # client.load_system_host_keys()
-        client.connect(self.hostname,
-                       port=self.port,
-                       username=remote_username,
-                       pkey=RSAKey.from_private_key(StringIO(self.private_key)),
-                       **kwargs)
+        client.connect(
+            self.hostname,
+            port=self.port,
+            username=remote_username,
+            pkey=RSAKey.from_private_key(StringIO(self.private_key)),
+            **kwargs,
+        )
 
         return client
 
@@ -466,8 +496,7 @@ class ComputeResource(Timestamped, UUIDModel):
         :return: The pending Jobs
         :rtype: django.db.models.query.QuerySet
         """
-        return Job.objects.filter(compute_resource=self,
-                                  status=Job.STATUS_RUNNING)
+        return Job.objects.filter(compute_resource=self, status=Job.STATUS_RUNNING)
 
     def pending_jobs(self):
         """
@@ -477,10 +506,10 @@ class ComputeResource(Timestamped, UUIDModel):
         :return: The pending Jobs
         :rtype: django.db.models.query.QuerySet
         """
-        return Job.objects.filter(compute_resource=self,
-                                  status__in=[Job.STATUS_CREATED,
-                                              Job.STATUS_RUNNING,
-                                              Job.STATUS_STARTING])
+        return Job.objects.filter(
+            compute_resource=self,
+            status__in=[Job.STATUS_CREATED, Job.STATUS_RUNNING, Job.STATUS_STARTING],
+        )
 
     def dispose(self):
         """
@@ -494,7 +523,8 @@ class ComputeResource(Timestamped, UUIDModel):
         """
         if self.disposable:
             orchestration.dispose_compute_resource.apply_async(
-                args=({'compute_resource_id': self.id},))
+                args=({"compute_resource_id": self.id},)
+            )
         else:
             return False
 
@@ -504,11 +534,11 @@ class ComputeResource(Timestamped, UUIDModel):
 
     @property
     def private_key(self):
-        return base64.b64decode(self.extra.get('private_key')).decode('ascii')
+        return base64.b64decode(self.extra.get("private_key")).decode("ascii")
 
     @property
     def hostname(self):
-        return self.host.split(':')[0]
+        return self.host.split(":")[0]
 
     @property
     def port(self) -> int:
@@ -518,10 +548,10 @@ class ComputeResource(Timestamped, UUIDModel):
         :return: The port (eg 22)
         :rtype: int
         """
-        if ':' in self.host:
-            return int(self.host.split(':').pop())
+        if ":" in self.host:
+            return int(self.host.split(":").pop())
         else:
-            return '22'
+            return "22"
 
     @property
     def jobs_dir(self) -> str:
@@ -531,54 +561,53 @@ class ComputeResource(Timestamped, UUIDModel):
         :return: The path where jobs are stored on the ComputeResource.
         :rtype: str
         """
-        fallback_base_dir = getattr(settings, 'DEFAULT_JOB_BASE_PATH', '/tmp')
-        return self.extra.get('base_dir', fallback_base_dir)
+        fallback_base_dir = getattr(settings, "DEFAULT_JOB_BASE_PATH", "/tmp")
+        return self.extra.get("base_dir", fallback_base_dir)
 
     @property
     def queue_type(self):
-        return self.extra.get('queue_type', None)
+        return self.extra.get("queue_type", None)
 
     @queue_type.setter
     def queue_type(self, queue_type: str):
-        self.extra['queue_type'] = queue_type
+        self.extra["queue_type"] = queue_type
         self.save()
 
 
 @reversion.register()
 class Job(Expires, Timestamped, UUIDModel):
     class ExtraMeta:
-        patchable_fields = ['params', 'metadata']
+        patchable_fields = ["params", "metadata"]
 
     """
     Represents a processing job (typically a long running remote job managed
     by a Celery task queue).
     """
-    STATUS_CREATED = 'created'
-    STATUS_HOLD = 'hold'
-    STATUS_STARTING = 'starting'
-    STATUS_RUNNING = 'running'
-    STATUS_FAILED = 'failed'
-    STATUS_CANCELLED = 'cancelled'
-    STATUS_COMPLETE = 'complete'
+    STATUS_CREATED = "created"
+    STATUS_HOLD = "hold"
+    STATUS_STARTING = "starting"
+    STATUS_RUNNING = "running"
+    STATUS_FAILED = "failed"
+    STATUS_CANCELLED = "cancelled"
+    STATUS_COMPLETE = "complete"
 
-    JOB_STATUS_CHOICES = ((STATUS_CREATED, 'object_created'),
-                          (STATUS_HOLD, 'hold'),
-                          (STATUS_STARTING, 'starting'),
-                          (STATUS_RUNNING, 'running'),
-                          (STATUS_FAILED, 'failed'),
-                          (STATUS_CANCELLED, 'cancelled'),
-                          (STATUS_COMPLETE, 'complete'),
-                          )
+    JOB_STATUS_CHOICES = (
+        (STATUS_CREATED, "object_created"),
+        (STATUS_HOLD, "hold"),
+        (STATUS_STARTING, "starting"),
+        (STATUS_RUNNING, "running"),
+        (STATUS_FAILED, "failed"),
+        (STATUS_CANCELLED, "cancelled"),
+        (STATUS_COMPLETE, "complete"),
+    )
 
-    owner = ForeignKey(User,
-                       on_delete=models.CASCADE,
-                       blank=True,
-                       null=True,
-                       related_name='jobs')
+    owner = ForeignKey(
+        User, on_delete=models.CASCADE, blank=True, null=True, related_name="jobs"
+    )
 
-    status = CharField(max_length=64,
-                       choices=JOB_STATUS_CHOICES,
-                       default=STATUS_CREATED)
+    status = CharField(
+        max_length=64, choices=JOB_STATUS_CHOICES, default=STATUS_CREATED
+    )
     exit_code = IntegerField(blank=True, null=True)
     remote_id = CharField(max_length=64, blank=True, null=True)
 
@@ -600,34 +629,44 @@ class Job(Expires, Timestamped, UUIDModel):
     #                     null=True,
     #                     on_delete=models.SET_NULL)
 
-    input_files = ForeignKey('FileSet', null=True, blank=True,
-                             related_name='jobs_as_input',
-                             on_delete=models.SET_NULL)
-    output_files = ForeignKey('FileSet', null=True, blank=True,
-                              related_name='jobs_as_output',
-                              on_delete=models.SET_NULL)
+    input_files = ForeignKey(
+        "FileSet",
+        null=True,
+        blank=True,
+        related_name="jobs_as_input",
+        on_delete=models.SET_NULL,
+    )
+    output_files = ForeignKey(
+        "FileSet",
+        null=True,
+        blank=True,
+        related_name="jobs_as_output",
+        on_delete=models.SET_NULL,
+    )
 
-    compute_resource = ForeignKey(ComputeResource,
-                                  blank=True,
-                                  null=True,
-                                  on_delete=models.SET_NULL,
-                                  related_name='jobs')
+    compute_resource = ForeignKey(
+        ComputeResource,
+        blank=True,
+        null=True,
+        on_delete=models.SET_NULL,
+        related_name="jobs",
+    )
 
     completed_time = DateTimeField(blank=True, null=True)
 
     @transaction.atomic()
     def _init_filesets(self, save=True):
         if not self.input_files:
-            self.input_files = FileSet(name=f'Input files for job: {self.id}',
-                                       path='input',
-                                       owner=self.owner)
+            self.input_files = FileSet(
+                name=f"Input files for job: {self.id}", path="input", owner=self.owner
+            )
             if save:
                 self.input_files.save()
 
         if not self.output_files:
-            self.output_files = FileSet(name=f'Output files for job: {self.id}',
-                                        path='output',
-                                        owner=self.owner)
+            self.output_files = FileSet(
+                name=f"Output files for job: {self.id}", path="output", owner=self.owner
+            )
             if save:
                 self.output_files.save()
 
@@ -649,20 +688,24 @@ class Job(Expires, Timestamped, UUIDModel):
         if extra is None:
             extra = {}
 
-        eventlog = EventLog(event=event_type,
-                            message=message,
-                            extra=extra,
-                            user=self.owner,
-                            object_id=self.id,
-                            content_type=ContentType.objects.get_for_model(self))
+        eventlog = EventLog(
+            event=event_type,
+            message=message,
+            extra=extra,
+            user=self.owner,
+            object_id=self.id,
+            content_type=ContentType.objects.get_for_model(self),
+        )
         eventlog.save()
         return eventlog
 
     def latest_event(self):
         try:
-            return EventLog.objects.filter(
-                object_id=self.id).exclude(
-                event__exact='JOB_STATUS_CHANGED').latest()
+            return (
+                EventLog.objects.filter(object_id=self.id)
+                .exclude(event__exact="JOB_STATUS_CHANGED")
+                .latest()
+            )
         except EventLog.DoesNotExist:
             return EventLog.objects.none()
 
@@ -694,14 +737,14 @@ class Job(Expires, Timestamped, UUIDModel):
         :return: True if job is no longer running.
         :rtype: bool
         """
-        return (self.status == Job.STATUS_COMPLETE or
-                self.status == Job.STATUS_CANCELLED or
-                self.status == Job.STATUS_FAILED)
+        return (
+            self.status == Job.STATUS_COMPLETE
+            or self.status == Job.STATUS_CANCELLED
+            or self.status == Job.STATUS_FAILED
+        )
 
     @transaction.atomic()
-    def add_files_from_tsv(self,
-                           tsv_table: Union[List[dict], str, bytes],
-                           save=True):
+    def add_files_from_tsv(self, tsv_table: Union[List[dict], str, bytes], save=True):
         """
 
         ```tsv
@@ -742,13 +785,14 @@ class Job(Expires, Timestamped, UUIDModel):
 
                 # Check if file exists by path in input/output filesets already,
                 # if so, update existing file
-                fullpath = Path(f.validated_data['path']) / Path(f.validated_data['name'])
+                fullpath = Path(f.validated_data["path"]) / Path(
+                    f.validated_data["name"]
+                )
                 existing_infile = self.input_files.get_files_by_path(fullpath).first()
                 existing_outfile = self.output_files.get_files_by_path(fullpath).first()
                 for existing in [existing_infile, existing_outfile]:
                     if existing:
-                        f = FileBulkRegisterSerializer(existing,
-                                                       data=row, partial=True)
+                        f = FileBulkRegisterSerializer(existing, data=row, partial=True)
                         f.is_valid(raise_exception=True)
                         f_obj = f.instance
 
@@ -758,22 +802,24 @@ class Job(Expires, Timestamped, UUIDModel):
                 f_obj.owner = self.owner
                 if not f_obj.location and self.compute_resource is not None:
                     location_base = laxy_sftp_url(self)
-                    f_obj.location = f'{location_base}/{f_obj.path}/{f_obj.name}'
+                    f_obj.location = f"{location_base}/{f_obj.path}/{f_obj.name}"
                 if save:
                     f_obj = f.save()
 
-            pathbits = Path(f.validated_data.get('path', '').strip('/')).parts
-            if pathbits and pathbits[0] == 'input':
+            pathbits = Path(f.validated_data.get("path", "").strip("/")).parts
+            if pathbits and pathbits[0] == "input":
                 self.input_files.add(f_obj)
                 in_files.append(f_obj)
 
-            elif pathbits and pathbits[0] == 'output':
+            elif pathbits and pathbits[0] == "output":
                 self.output_files.add(f_obj)
                 out_files.append(f_obj)
 
             else:
-                logger.debug(f"Not adding file {f_obj.full_path} ({f_obj.id}) "
-                             f"- File paths for a Job must begin with input/ or output/")
+                logger.debug(
+                    f"Not adding file {f_obj.full_path} ({f_obj.id}) "
+                    f"- File paths for a Job must begin with input/ or output/"
+                )
                 # raise ValueError("File paths for a Job must begin with input/ or output/")
 
         return in_files, out_files
@@ -785,8 +831,7 @@ class Job(Expires, Timestamped, UUIDModel):
 # or using properties on the model:
 # https://www.stavros.io/posts/how-replace-django-model-field-property/
 @receiver(pre_save, sender=Job)
-def update_job_completed_time(sender, instance,
-                              raw, using, update_fields, **kwargs):
+def update_job_completed_time(sender, instance, raw, using, update_fields, **kwargs):
     """
     Takes actions every time a Job is saved, so changes to certain fields
     can have side effects (eg automatically setting completion time).
@@ -801,8 +846,7 @@ def update_job_completed_time(sender, instance,
 
 
 @receiver(pre_save, sender=Job)
-def job_status_changed_event_log(sender, instance,
-                                 raw, using, update_fields, **kwargs):
+def job_status_changed_event_log(sender, instance, raw, using, update_fields, **kwargs):
     """
     Creates an event log entry every time a Job is saved with a changed status.
     """
@@ -813,45 +857,55 @@ def job_status_changed_event_log(sender, instance,
     else:
         if instance.status != obj.status:
             EventLog.log(
-                'JOB_STATUS_CHANGED',
+                "JOB_STATUS_CHANGED",
                 message=f"Job status changed: {obj.status} → {instance.status}",
                 user=instance.owner,
                 obj=obj,
-                extra=OrderedDict({'from': obj.status, 'to': instance.status}))
+                extra=OrderedDict({"from": obj.status, "to": instance.status}),
+            )
 
 
 @receiver(pre_save, sender=Job)
-def job_init_filesets(sender, instance: Job,
-                      raw, using, update_fields, **kwargs):
+def job_init_filesets(sender, instance: Job, raw, using, update_fields, **kwargs):
     instance._init_filesets()
 
 
 @receiver(post_save, sender=Job)
-def new_job_event_log(sender, instance, created,
-                      raw, using, update_fields, **kwargs):
+def new_job_event_log(sender, instance, created, raw, using, update_fields, **kwargs):
     """
     Creates an event log entry every time a Job is created.
     """
     if created:
         EventLog.log(
-            'JOB_STATUS_CHANGED',
+            "JOB_STATUS_CHANGED",
             message="Job created.",
             user=instance.owner,
             obj=instance,
-            extra={'from': None, 'to': instance.status})
+            extra={"from": None, "to": instance.status},
+        )
 
 
 @reversion.register()
 class FileLocation(UUIDModel):
     class Meta:
-        unique_together = ('url', 'file',)
+        unique_together = (
+            "url",
+            "file",
+        )
 
     # The URL to the file. Could be file://, https://, s3://, sftp://
     url = ExtendedURIField(max_length=2048, blank=False, null=False)
-    file = ForeignKey('File',
-                      related_name='locations', null=False, blank=False,
-                      on_delete=models.CASCADE)
+    file = ForeignKey(
+        "File",
+        related_name="locations",
+        null=False,
+        blank=False,
+        on_delete=models.CASCADE,
+    )
     default = BooleanField(blank=False, null=False, default=False)
+
+    def __str__(self):
+        return self.url
 
     # TODO: For URLs that require some kind of authentication, we could
     #       store eg, Authorization: header values here. Alternatively,
@@ -860,7 +914,7 @@ class FileLocation(UUIDModel):
     #       exactly the same authentication values)
     # authentication = JSONField(default=OrderedDict)
 
-    def set_as_default(self, save=True) -> 'QuerySet[FileLocation]':
+    def set_as_default(self, save=True) -> "QuerySet[FileLocation]":
         """
         Set this FileLocation record as the 'default', ensuring all others
         are set to default=False.
@@ -896,16 +950,17 @@ class FileLocation(UUIDModel):
             return None
 
         url = urlparse(self.url)
-        base_dir = compute.extra.get('base_dir', getattr(settings, 'DEFAULT_JOB_BASE_PATH'))
-        file_path = str(Path(base_dir) / Path(url.path).relative_to('/'))
+        base_dir = compute.extra.get(
+            "base_dir", getattr(settings, "DEFAULT_JOB_BASE_PATH")
+        )
+        file_path = str(Path(base_dir) / Path(url.path).relative_to("/"))
         return file_path
 
 
 @receiver(post_delete, sender=FileLocation)
-def ensure_one_default_filelocation(sender: typing.Type[FileLocation],
-                                    instance: FileLocation,
-                                    using,
-                                    **kwargs):
+def ensure_one_default_filelocation(
+    sender: typing.Type[FileLocation], instance: FileLocation, using, **kwargs
+):
     # Ensure that we always have a default FileLocation after deleting
     if not instance.file.locations.filter(default=True).exists():
         firstloc = instance.file.locations.first()
@@ -913,15 +968,17 @@ def ensure_one_default_filelocation(sender: typing.Type[FileLocation],
             firstloc.set_as_default()
 
 
-def get_compute_resource_for_location(location: Union[str, FileLocation]) -> Union[ComputeResource, None]:
-    if isinstance(location, FileLocation):
-        location = location.url
+def get_compute_resource_for_location(
+    location: Union[str, FileLocation]
+) -> Union[ComputeResource, None]:
+
+    location = str(location)
 
     url = urlparse(location)
     scheme = url.scheme
-    if scheme != 'laxy+sftp':
+    if scheme != "laxy+sftp":
         return None
-    if '.' in url.netloc:
+    if "." in url.netloc:
         return None
     # use netloc not hostname, since hostname forces lowercase
     compute_id = url.netloc
@@ -933,15 +990,15 @@ def get_compute_resource_for_location(location: Union[str, FileLocation]) -> Uni
     return compute
 
 
-def get_storage_class_for_location(location: Union[str, FileLocation]) -> Union[Storage, None]:
+def get_storage_class_for_location(
+    location: Union[str, FileLocation]
+) -> Union[Storage, None]:
     if isinstance(location, FileLocation):
         location = location.url
 
     url = urlparse(location)
     scheme = url.scheme
-    storage_class = get_storage_class(
-        SCHEME_STORAGE_CLASS_MAPPING.get(scheme, None))
-    if scheme == 'laxy+sftp':
+    if scheme == "laxy+sftp":
         compute = get_compute_resource_for_location(location)
         if compute is None:
             raise Exception(f"Cannot extract ComputeResource ID from: {location}")
@@ -951,16 +1008,21 @@ def get_storage_class_for_location(location: Union[str, FileLocation]) -> Union[
     # TODO: This needs to be carefully reworked or removed. The intention would be to refer to a mountpoint
     #       relative to the Laxy backend server filesystem (eg an NFS mount), however there is scope for
     #       reading arbitrary files on the server if implemented incorrectly.
-    elif scheme == 'file':
+    elif scheme == "file":
         # raise NotImplementedError('file:// URLs are currently not supported')
         # TODO: location defaults to Djangos MEDIA_ROOT setting. If we were to use mount points local to the
         # backend filesystem, we need a mechanism to set this location (eg to something equivalent to
         # `base_dir` in the ComputeResource extra params. Setting location to something like
         # `/scratch/jobs/{job_id}/` per-job should mitigate some of the risk here (assuming Django's
         # FileSystemStorage doesn't allow relative/paths/like/../../../this/ outside the base location.
-        return storage_class(location='/')
+        storage_class = get_storage_class(
+            SCHEME_STORAGE_CLASS_MAPPING.get(scheme, None)
+        )
+        return storage_class(location="/")
     else:
-        raise NotImplementedError(f'Unsupported scheme or storage backend for file location: {location}')
+        raise NotImplementedError(
+            f"Unsupported scheme or storage backend for file location: {location}"
+        )
         # return None
 
 
@@ -986,15 +1048,15 @@ def job_path_on_compute(job: Union[str, Job], compute: ComputeResource) -> str:
 class File(Timestamped, UUIDModel):
     class Meta:
         indexes = [
-            models.Index(fields=['path', 'name']),
-            models.Index(fields=['fileset', 'path', 'name']),
+            models.Index(fields=["path", "name"]),
+            models.Index(fields=["fileset", "path", "name"]),
         ]
 
         # TODO: Enforce unique path/name within a FileSet ?
         # unique_together = ('fileset', 'path', 'name')
 
     class ExtraMeta:
-        patchable_fields = ['metadata']
+        patchable_fields = ["metadata"]
 
     """
     File model.
@@ -1016,18 +1078,17 @@ class File(Timestamped, UUIDModel):
     # owner and fileset use on_delete=models.SET_NULL rather than CASCADE,
     # since we don't want to lose reference to files-on-disk, which will
     # need to be deleted/moved by an async (eg celery) deletion task.
-    owner = ForeignKey(User, on_delete=models.SET_NULL,
-                       blank=True,
-                       null=True,
-                       related_name='files')
+    owner = ForeignKey(
+        User, on_delete=models.SET_NULL, blank=True, null=True, related_name="files"
+    )
 
-    fileset = ForeignKey('FileSet', related_name='files', null=True,
-                         on_delete=models.SET_NULL)
+    fileset = ForeignKey(
+        "FileSet", related_name="files", null=True, on_delete=models.SET_NULL
+    )
 
-    type_tags = ArrayField(models.CharField(max_length=255),
-                           default=list,
-                           null=True,
-                           blank=True)
+    type_tags = ArrayField(
+        models.CharField(max_length=255), default=list, null=True, blank=True
+    )
 
     deleted_time = DateTimeField(blank=True, null=True)
 
@@ -1077,16 +1138,16 @@ class File(Timestamped, UUIDModel):
     def location(self, url):
         self._dirty_location = url
 
-        # If the instance isn't yet
+        # If the instance is being created
         if self._state.adding:
             if not self.name:
                 self.name = str(Path(urlparse(url).path).name)
             if not self.path:
                 self.path = str(Path(urlparse(url).path).parent)
 
-    def delete_at_location(self,
-                           location: Union[str, FileLocation],
-                           allow_delete_default=False):
+    def delete_at_location(
+        self, location: Union[str, FileLocation], allow_delete_default=False
+    ):
         """
         Delete file content at a particular remote location.
         Takes a URL string or FileLocation object.
@@ -1107,12 +1168,14 @@ class File(Timestamped, UUIDModel):
         elif isinstance(location, FileLocation):
             fileloc = location
         else:
-            raise TypeError(f'location must be a string or FileLocation, not a {type(location)}.')
+            raise TypeError(
+                f"location must be a string or FileLocation, not a {type(location)}."
+            )
 
         if fileloc is None:
             raise FileLocation.DoesNotExist()
         if fileloc.default and not allow_delete_default:
-            raise ValueError('Cannot remove default FileLocation for this File')
+            raise ValueError("Cannot remove default FileLocation for this File")
 
         def _do_logical_delete():
             """
@@ -1123,16 +1186,14 @@ class File(Timestamped, UUIDModel):
             if self.locations.count() == 0:
                 self.deleted_time = datetime.now()
                 self.save()
-            # TODO: Should we do this to ensure there is always a default ?
-            #       Should this be in a post_delete signal ?
-            # else:
-            #     if self.locations.filter(default=True).count() == 0:
-            #         self.locations.first().set_as_default()
+            # Ensure there is always a default.
+            else:
+                if self.locations.filter(default=True).count() == 0:
+                    self.locations.first().set_as_default()
 
-        @backoff.on_exception(backoff.expo,
-                              (socket.gaierror,),
-                              max_tries=3,
-                              jitter=backoff.full_jitter)
+        @backoff.on_exception(
+            backoff.expo, (socket.gaierror,), max_tries=3, jitter=backoff.full_jitter
+        )
         def _delete_with_retries(_storage, _path: str):
             """Delete with retries upon network connection errors"""
             _storage.delete(_path)
@@ -1140,23 +1201,32 @@ class File(Timestamped, UUIDModel):
         url = urlparse(fileloc.url)
         scheme = url.scheme
 
-        if scheme == 'laxy+sftp':
+        if scheme == "laxy+sftp":
             compute = get_compute_resource_for_location(location)
             if compute.status == ComputeResource.STATUS_DECOMMISSIONED:
                 _do_logical_delete()
                 return
             if not compute.available:
-                raise Exception(f"Unable to delete file {self.id} at {url} (FileLocation {location.id}) "
-                                f" - ComputeResource {compute.id} is {compute.status}.")
+                raise Exception(
+                    f"Unable to delete file {self.id} at {url} (FileLocation {location.id}) "
+                    f" - ComputeResource {compute.id} is {compute.status}."
+                )
+
             try:
-                _delete_with_retries(compute.sftp_storage, self._abs_path_on_compute())
+                _delete_with_retries(
+                    compute.sftp_storage, self._abs_path_on_compute(location=location)
+                )
 
             except BaseException as ex:
-                from .util import get_traceback_message
-                raise Exception(f'Storage backend issue - failed to delete file: '
-                                f'{self.id} at {fileloc.url} (FileLocation {fileloc.id}) :: {ex}')
+
+                raise Exception(
+                    f"Storage backend issue - failed to delete file: "
+                    f"{self.id} at {fileloc.url} (FileLocation {fileloc.id}) :: {ex}"
+                )
         else:
-            raise NotImplementedError("Only laxy+sftp:// internal URLs can be deleted at this time.")
+            raise NotImplementedError(
+                "Only laxy+sftp:// internal URLs can be deleted at this time."
+            )
 
         _do_logical_delete()
 
@@ -1187,7 +1257,7 @@ class File(Timestamped, UUIDModel):
         filename, size = find_filename_and_size_from_url(self.location)
         self.name = filename
         if size is not None:
-            self.metadata['size'] = size
+            self.metadata["size"] = size
         if save:
             self.save()
 
@@ -1255,8 +1325,8 @@ class File(Timestamped, UUIDModel):
         :return: The checksum type (algorithm), eg md5.
         :rtype: str
         """
-        if ':' in self.checksum:
-            return self.checksum.split(':', 1)[0]
+        if ":" in self.checksum:
+            return self.checksum.split(":", 1)[0]
 
     @property
     def checksum_hash(self) -> str:
@@ -1266,8 +1336,8 @@ class File(Timestamped, UUIDModel):
         :return: The hash value, eg f3c90181aae57b887a38c4e5fe73db0c.
         :rtype: str
         """
-        if ':' in self.checksum:
-            return self.checksum.split(':', 1).pop()
+        if ":" in self.checksum:
+            return self.checksum.split(":", 1).pop()
 
     @property
     def checksum_hash_base64(self) -> str:
@@ -1282,27 +1352,38 @@ class File(Timestamped, UUIDModel):
         if c:
             int_hash = int(c, 16)
             return base64.b64encode(
-                int_hash.to_bytes(
-                    int(math.ceil(int_hash.bit_length() / 8)), 'big')
-            ).decode('ascii')
+                int_hash.to_bytes(int(math.ceil(int_hash.bit_length() / 8)), "big")
+            ).decode("ascii")
 
     @property
     def full_path(self):
         return str(Path(self.path) / Path(self.name))
 
-    def _abs_path_on_compute(self):
-        url = urlparse(self.location)
-        compute = get_compute_resource_for_location(self.location)
-        if compute is None:
-            raise Exception(f"Cannot extract ComputeResource ID from: {self.location}")
+    def _abs_path_on_compute(
+        self, location: Union[str, FileLocation, None] = None
+    ) -> str:
 
-        base_dir = compute.extra.get('base_dir', getattr(settings, 'DEFAULT_JOB_BASE_PATH'))
-        file_path = str(Path(base_dir) / Path(url.path).relative_to('/'))
+        if location is None:
+            location = self.location
+
+        location = str(location)
+
+        url = urlparse(location)
+        compute = get_compute_resource_for_location(location)
+        if compute is None:
+            raise Exception(f"Cannot extract ComputeResource ID from: {location}")
+
+        base_dir = compute.extra.get(
+            "base_dir", getattr(settings, "DEFAULT_JOB_BASE_PATH")
+        )
+        file_path = str(Path(base_dir) / Path(url.path).relative_to("/"))
 
         return file_path
 
-    def _get_storage_class(self) -> Union[Storage, None]:
-        return get_storage_class_for_location(self.location)
+    def _get_storage_class(self, location=None) -> Union[Storage, None]:
+        if location is None:
+            location = self.location
+        return get_storage_class_for_location(location)
 
     # def file_at_location(self, location: Union[str, FileLocation]) -> Union[BufferedRandom, None]:
     #     from laxy_backend.tasks.download import request_with_retries
@@ -1347,25 +1428,26 @@ class File(Timestamped, UUIDModel):
     #     else:
     #         raise NotImplementedError(f'Cannot provide file-like object for scheme: {scheme}')
 
-    @property
-    def file(self) -> Union[None, typing.IO[AnyStr]]:
+    def _file(
+        self, location: Union[str, FileLocation]
+    ) -> Union[None, typing.IO[AnyStr]]:
+        """
+        Return a file-like object for the given location.
+        
+        (django.core.files.storage.File interface)
+        """
         # return self.file_at_location(self.location)
         from laxy_backend.tasks.download import request_with_retries
 
-        # assert self.location is not None and str(self.location).strip() != '', \
-        #     f"File {self.id} location is empty. This isn't allowed and shouldn't ever happen."
-        if ((self.location is None or str(self.location).strip() == '')
-                and not self._state.adding):
-            logger.warning(f"File {self.id} location is empty. "
-                           f"This isn't allowed and shouldn't ever happen.")
-            return None
+        if isinstance(location, FileLocation):
+            location = location.url
 
-        url = urlparse(self.location)
+        url = urlparse(location)
         scheme = url.scheme
-        if scheme == 'laxy+sftp':
+        if scheme == "laxy+sftp":
             buffer_size = 8192
-            storage = self._get_storage_class()
-            file_path = self._abs_path_on_compute()
+            storage = self._get_storage_class(location=location)
+            file_path = self._abs_path_on_compute(location=location)
             filelike = storage.open(file_path)
             # setattr(filelike, 'name', self.name)
             return filelike
@@ -1373,23 +1455,43 @@ class File(Timestamped, UUIDModel):
         # TODO: This needs to be carefully reworked or removed. The intention would be to refer to a mountpoint
         #       relative to the Laxy backend server filesystem (eg an NFS mount), however there is scope for
         #       reading arbitrary files on the server if implemented incorrectly.
-        elif scheme == 'file':
+        elif scheme == "file":
             # raise NotImplementedError('file:// URLs are currently not supported')
             storage = self._get_storage_class()
             return storage.open(self.full_path)
 
-        elif scheme in ['http', 'https', 'ftp', 'ftps', 'data']:
+        elif scheme in ["http", "https", "ftp", "ftps", "data"]:
             response = request_with_retries(
-                'GET', self.location,
-                stream=True,
-                headers={},
-                auth=None)
+                "GET", self.location, stream=True, headers={}, auth=None
+            )
             filelike = response.raw
             filelike.decode_content = True
             return filelike
 
         else:
-            raise NotImplementedError(f'Cannot provide file-like object for scheme: {scheme}')
+            raise NotImplementedError(
+                f"Cannot provide file-like object for scheme: {scheme}"
+            )
+
+    @property
+    def file(self) -> Union[None, typing.IO[AnyStr]]:
+        """
+        Return a file-like object for the default location.
+
+        (django.core.files.storage.File interface)
+        """
+        if (
+            self.location is None
+            or str(self.location).strip() == ""
+            and not self._state.adding
+        ):
+            logger.warning(
+                f"File {self.id} location is empty. "
+                f"This isn't allowed and shouldn't ever happen."
+            )
+            return None
+
+        return self._file(self.location)
 
     @property
     def size(self) -> Union[int, None]:
@@ -1403,15 +1505,13 @@ class File(Timestamped, UUIDModel):
         :rtype:
         """
         size = None
-        if hasattr(self.metadata, 'get'):
-            size = self.metadata.get('size', None)
-        if (size is None and
-                self.file is not None and
-                hasattr(self.file, 'size')):
+        if hasattr(self.metadata, "get"):
+            size = self.metadata.get("size", None)
+        if size is None and self.file is not None and hasattr(self.file, "size"):
             try:
                 size = int(self.file.size)
-                # cache on demand
-                self.metadata['size'] = size
+                # set on demand
+                self.metadata["size"] = size
                 self.save(update_fields=["metadata"])
             except NotImplementedError as ex:
                 pass
@@ -1423,7 +1523,7 @@ class File(Timestamped, UUIDModel):
 
     @size.setter
     def size(self, value: int):
-        self.metadata['size'] = int(value)
+        self.metadata["size"] = int(value)
 
     @property
     def deleted(self):
@@ -1435,8 +1535,11 @@ class File(Timestamped, UUIDModel):
 
     def get_absolute_url(self):
         from django.urls import reverse
-        url = reverse('laxy_backend:file_download',
-                      kwargs={'uuid': self.uuid(), 'filename': self.name})
+
+        url = reverse(
+            "laxy_backend:file_download",
+            kwargs={"uuid": self.uuid(), "filename": self.name},
+        )
         return url
 
 
@@ -1453,7 +1556,9 @@ def auto_file_fields(sender, instance, raw, using, update_fields, **kwargs):
             instance.path = instance.path_from_location()
 
 
-def get_compute_resources_for_files(files: Union[Sequence, QuerySet]) -> typing.Set[Union[ComputeResource, None]]:
+def get_compute_resources_for_files(
+    files: Union[Sequence, QuerySet]
+) -> typing.Set[Union[ComputeResource, None]]:
     """
     Return the set of ComputeResources associated with the primary location of
     a set of Files. If some files have no primary location, None will be included.
@@ -1471,7 +1576,9 @@ def get_compute_resources_for_files(files: Union[Sequence, QuerySet]) -> typing.
     return set([get_compute_resource_for_location(f.location) for f in files])
 
 
-def get_primary_compute_location_for_files(files: Union[Sequence, QuerySet]) -> Union[ComputeResource, None]:
+def get_primary_compute_location_for_files(
+    files: Union[Sequence, QuerySet]
+) -> Union[ComputeResource, None]:
     """
     Given some Files, return the single primary ComputeResource where they are stored, if there is one.
     If the files are spread across multiple ComputeResource locations (or some are missing locations),
@@ -1501,11 +1608,9 @@ class FileSet(Timestamped, UUIDModel):
     name = CharField(max_length=2048)
     path = CharField(max_length=4096, blank=True, null=True)
 
-    owner = ForeignKey(User,
-                       on_delete=models.CASCADE,
-                       blank=True,
-                       null=True,
-                       related_name='filesets')
+    owner = ForeignKey(
+        User, on_delete=models.CASCADE, blank=True, null=True, related_name="filesets"
+    )
 
     # a list of File ids eg ['2VSd4mZvmYX0OXw07dGfnV', '3XSd4mZvmYX0OXw07dGfmZ']
     # old_file_list = ArrayField(CharField(max_length=22), blank=True, default=list)
@@ -1597,7 +1702,7 @@ class FileSet(Timestamped, UUIDModel):
         :return: The File object in this FileSet (as a Django QuerySet).
         :rtype: django.models.query.QuerySet(File)
         """
-        return self.files.order_by('path', 'name')
+        return self.files.order_by("path", "name")
 
     def get_files_by_path(self, file_path: Union[str, Path]) -> QuerySet:
         fname = Path(file_path).name
@@ -1633,7 +1738,7 @@ class FileSet(Timestamped, UUIDModel):
         j = self.jobs()
         if j is not None:
             # Oldest Job first
-            return j.order_by('created_time').first()
+            return j.order_by("created_time").first()
 
 
 @reversion.register()
@@ -1648,11 +1753,13 @@ class SampleCart(Timestamped, UUIDModel):
     """
 
     name = CharField(max_length=2048, blank=True, null=True)
-    owner = ForeignKey(User,
-                       blank=True,
-                       null=True,
-                       on_delete=models.CASCADE,
-                       related_name='samplecarts')
+    owner = ForeignKey(
+        User,
+        blank=True,
+        null=True,
+        on_delete=models.CASCADE,
+        related_name="samplecarts",
+    )
 
     # TODO: Should we put a validator on here to ensure the
     # basic object shape and required fields are present ?
@@ -1663,11 +1770,9 @@ class SampleCart(Timestamped, UUIDModel):
     # It might make more sense to create a DRF Serializer and use that as a validator.
     samples = JSONField(default=list)
 
-    job = ForeignKey(Job,
-                     blank=True,
-                     null=True,
-                     on_delete=models.CASCADE,
-                     related_name='samplecarts')
+    job = ForeignKey(
+        Job, blank=True, null=True, on_delete=models.CASCADE, related_name="samplecarts"
+    )
 
     # 'samples' is a dictionary keyed by sample name, with a list of files grouped by
     # merge_group and pair (a merge_group could be a set of equivalent lanes the sample
@@ -1721,8 +1826,9 @@ class SampleCart(Timestamped, UUIDModel):
     #     and   "3XSd4mZvmYX0OXw07dGfmZ" with "Einanoohiew9ungoh3yiev"
     # ..etc.. as technical replicates
 
-    def from_csv(self, csv_string, header=False, dialect='excel',
-                 comment_char='#', save=True):
+    def from_csv(
+        self, csv_string, header=False, dialect="excel", comment_char="#", save=True
+    ):
         """
         Accepts a raw string, or a pre-parsed list-of-lists (eg from Python's csv.reader)
 
@@ -1763,11 +1869,11 @@ class SampleCart(Timestamped, UUIDModel):
                 continue
             sample_name = fields[0].strip()
 
-            if sample_name == '':
+            if sample_name == "":
                 if prev_sample_name:
                     sample_name = prev_sample_name
                 else:
-                    raise ValueError('First row sample name cannot be blank')
+                    raise ValueError("First row sample name cannot be blank")
 
             if sample_name not in samples:
                 samples[sample_name] = []
@@ -1778,9 +1884,14 @@ class SampleCart(Timestamped, UUIDModel):
             #       for that user
 
             pair = OrderedDict(
-                {f'R{n + 1}': {'location': file.strip(),
-                               'name': find_filename_and_size_from_url(file.strip())[0]}
-                 for n, file in enumerate(fields[1:])})
+                {
+                    f"R{n + 1}": {
+                        "location": file.strip(),
+                        "name": find_filename_and_size_from_url(file.strip())[0],
+                    }
+                    for n, file in enumerate(fields[1:])
+                }
+            )
             samples[sample_name].append(pair)
             prev_sample_name = sample_name
 
@@ -1790,27 +1901,27 @@ class SampleCart(Timestamped, UUIDModel):
         # Then convert to [{name: sampleName, files: [ ... ]},]
         sample_list = []
         for sample_name, files in samples.items():
-            sample_list.append({'name': sample_name, 'files': files})
+            sample_list.append({"name": sample_name, "files": files})
 
         self.samples = sample_list
         if save:
             self.save()
 
-    def to_csv(self, newline='\r\n'):
+    def to_csv(self, newline="\r\n"):
         lines = []
         for sample in self.samples:
-            sample_name = sample.get('name')
-            for pair in sample.get('files', {}):
-                r1 = pair.get('R1', '')
-                r2 = pair.get('R2', '')
+            sample_name = sample.get("name")
+            for pair in sample.get("files", {}):
+                r1 = pair.get("R1", "")
+                r2 = pair.get("R2", "")
                 # Deal with {R1: str} or {R1: {location: str, name: str}} shapes in database
                 locations = []
                 for p in [r1, r2]:
                     if isinstance(p, str):
                         locations.append(p)
                     if isinstance(p, dict):
-                        locations.append(p.get('location', ''))
-                lines.append(','.join([sample_name] + locations))
+                        locations.append(p.get("location", ""))
+                lines.append(",".join([sample_name] + locations))
 
         # TODO: Optionally convert File UUIDs into URLs
 
@@ -1820,26 +1931,31 @@ class SampleCart(Timestamped, UUIDModel):
 # NOTE: We could bypass this signal in special cases using:
 #       https://github.com/RobertKolner/django-signal-disabler
 @receiver(pre_save, sender=SampleCart)
-def prevent_samplecart_update_after_job_assigned(sender, instance: SampleCart,
-                                                 raw, using, update_fields, **kwargs):
+def prevent_samplecart_update_after_job_assigned(
+    sender, instance: SampleCart, raw, using, update_fields, **kwargs
+):
     """
     Prevents a SampleCart being updated once it has been attached to a Job.
     """
     try:
         obj: SampleCart = sender.objects.get(pk=instance.pk)
         if obj.job:
-            raise RuntimeError("Updating a SampleCart once the job field is set is not allowed.")
+            raise RuntimeError(
+                "Updating a SampleCart once the job field is set is not allowed."
+            )
     except sender.DoesNotExist:
         pass
 
 
 @reversion.register()
 class PipelineRun(Timestamped, UUIDModel):
-    owner = ForeignKey(User,
-                       blank=True,
-                       null=True,
-                       on_delete=models.CASCADE,
-                       related_name='pipeline_runs')
+    owner = ForeignKey(
+        User,
+        blank=True,
+        null=True,
+        on_delete=models.CASCADE,
+        related_name="pipeline_runs",
+    )
 
     # NOTE: This may become a ForeignKey pointing to a Pipeline definition
     #       Currently it's intended to be a pipeline name used as an identifier
@@ -1847,11 +1963,13 @@ class PipelineRun(Timestamped, UUIDModel):
     #        ComputeResource)
     pipeline = CharField(max_length=256, blank=True, null=True)
 
-    sample_cart = ForeignKey(SampleCart,
-                             blank=True,
-                             null=True,
-                             on_delete=models.SET_NULL,
-                             related_name='pipeline_runs')
+    sample_cart = ForeignKey(
+        SampleCart,
+        blank=True,
+        null=True,
+        on_delete=models.SET_NULL,
+        related_name="pipeline_runs",
+    )
 
     # input_fileset = ForeignKey(FileSet,
     #                            blank=True,
@@ -1892,20 +2010,28 @@ class AccessToken(Timestamped, UUIDModel):
     Intended to allow read-only access to the target object (obj / object_id) to
     the bearer. Optional expiry time, if set.
     """
-    owner_field_name = 'created_by'
 
-    token = CharField(db_index=True, max_length=64, blank=False, null=False,
-                      default=_generate_access_token_string)
+    owner_field_name = "created_by"
+
+    token = CharField(
+        db_index=True,
+        max_length=64,
+        blank=False,
+        null=False,
+        default=_generate_access_token_string,
+    )
     expiry_time = DateTimeField(blank=True, null=True)
-    created_by = ForeignKey(User,
-                            blank=True,
-                            null=True,
-                            on_delete=models.CASCADE,
-                            related_name='access_tokens')
+    created_by = ForeignKey(
+        User,
+        blank=True,
+        null=True,
+        on_delete=models.CASCADE,
+        related_name="access_tokens",
+    )
 
     content_type = ForeignKey(ContentType, null=True, on_delete=models.SET_NULL)
     object_id = CharField(db_index=True, null=True, max_length=24)
-    obj = GenericForeignKey('content_type', 'object_id')
+    obj = GenericForeignKey("content_type", "object_id")
 
     def is_valid(self, target_obj: Union[UUIDModel, str] = None):
         if self.expiry_time is not None and (datetime.now() < self.expiry_time):

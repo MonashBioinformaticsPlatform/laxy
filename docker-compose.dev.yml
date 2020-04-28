@@ -104,7 +104,9 @@ services:
     build:
       context: .
       dockerfile: ./docker/laxy/Dockerfile
-    command: bash -c "celery -A laxy worker -B -E -l info --broker=${LAXY_BROKER_URL}"
+    command: ["celery", "-A", "laxy", "worker", "-B", "-E", "-l", "info", "-Ofair", "--broker=${LAXY_BROKER_URL}"]
+    stop_grace_period: 30s
+    stop_signal: SIGTERM
     volumes:
       - .:/app
     logging:

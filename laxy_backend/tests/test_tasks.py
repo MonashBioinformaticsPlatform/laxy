@@ -20,6 +20,9 @@ from ..tasks.job import (
     _finalize_job_task_err_handler,
     set_job_status,
     file_should_be_deleted,
+)
+
+from ..tasks.file import (
     add_file_replica_records,
     remove_file_replica_records,
 )
