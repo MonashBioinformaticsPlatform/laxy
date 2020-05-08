@@ -235,7 +235,6 @@ class JobAdmin(Timestamped, VersionAdmin):
         "estimate_job_tarball_size",
         "verify",
         "copy_to_archive",
-        "bulk_move_to_archive",
         "move_job_files_to_archive",
     )
 
@@ -379,28 +378,6 @@ class JobAdmin(Timestamped, VersionAdmin):
                 )
 
     copy_to_archive.short_description = "Copy files to archive location"
-
-    @takes_instance_or_queryset
-    def bulk_move_to_archive(self, request, queryset):
-        failed = []
-        for job in queryset:
-            task_data = dict(job_id=job.id)
-            if job.compute_resource.archive_host is not None:
-                task_data["dst_compute_id"] = job.compute_resource.archive_host.id
-            result = file_tasks.bulk_move_job_task.apply_async(args=(task_data,))
-            if result.failed():
-                failed.append(job.id)
-
-        if not failed:
-            self.message_user(request, "Bulk moving now !")
-        else:
-            self.message_user(
-                request, "Errors trying to initiate transfer of %s" % ",".join(failed)
-            )
-
-    bulk_move_to_archive.short_description = (
-        "Bulk move job to archive host (via tar pipe), update default location."
-    )
 
     @takes_instance_or_queryset
     def move_job_files_to_archive(self, request, queryset):

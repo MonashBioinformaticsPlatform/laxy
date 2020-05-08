@@ -98,7 +98,6 @@ from .tasks.job import (
     estimate_job_tarball_size,
     move_job_files_to_archive_task,
 )
-from .tasks.file import bulk_move_job_task
 
 from .jwt_helpers import get_jwt_user_header_dict, get_jwt_user_header_str
 from .models import (
@@ -1672,7 +1671,6 @@ class JobView(JSONPatchMixin, JSONView):
                         index_remote_files.s(task_data),
                         set_job_status.s(),
                         move_job_files_to_archive_task.s(),
-                        # bulk_move_job_task.s(),
                     ).apply_async(
                         link_error=_finalize_job_task_err_handler.s(job_id=job.id)
                     )
@@ -1685,8 +1683,6 @@ class JobView(JSONPatchMixin, JSONView):
 
                     # We aren't too concerned if estimate_job_tarball_size fails here,
                     # It's considered nice but not critical
-                    # (bulk_move_job_task also finds the tarball size, so this is only
-                    #  required when we aren't running that)
                     estimate_job_tarball_size.s(task_data).apply_async()
 
             else:
