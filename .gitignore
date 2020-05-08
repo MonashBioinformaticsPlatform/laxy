@@ -75,8 +75,9 @@ ENV/
 # test databases
 *.sqlite3
 
-# PyCharm
+# PyCharm & Visual Studio Code
 .idea
+.vscode
 
 # Any locally generated secret key file
 .secret_key
