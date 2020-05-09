@@ -125,7 +125,7 @@ DEBUG=yes python3.6 manage.py runserver 0.0.0.0:8000
 #### Run Celery
 
 ```bash
-celery -A laxy worker -B -E -Ofair -l info \
+celery -A laxy worker -B -E -Ofair -l info -Q celery,low-priority \
        --statedb=laxy_celery_worker.state
 ```
 

@@ -605,7 +605,9 @@ def kill_remote_job(self, task_data=None, **kwargs):
     return task_data
 
 
-@shared_task(bind=True, track_started=True)
+@shared_task(
+    queue="low-priority", bind=True, track_started=True,
+)
 def estimate_job_tarball_size(self, task_data=None, **kwargs):
     if task_data is None:
         raise InvalidTaskError("task_data is None")
@@ -770,7 +772,7 @@ def file_should_be_deleted(ff: File, max_size=200):
     )
 
 
-@shared_task(bind=True, track_started=True)
+@shared_task(queue="low-priority", bind=True, track_started=True)
 def expire_old_job(self, task_data=None, **kwargs):
     from ..models import Job, File
 

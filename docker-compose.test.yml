@@ -39,7 +39,21 @@ services:
 
   # For simple local development, we run in Django debug mode (LAXY_DEBUG=yes) with CELERY_ALWAYS_EAGER=True
   # so that celery tasks run non-async in the Django process. We don't need the celery daemon in this case.
-  celeryd:
+  queue-high:
+    image: alpine
+    entrypoint:
+      - /bin/echo
+    command: "Service disabled"
+    restart: "no"
+
+  queue-low:
+    image: alpine
+    entrypoint:
+      - /bin/echo
+    command: "Service disabled"
+    restart: "no"
+
+  celery-beat:
     image: alpine
     entrypoint:
       - /bin/echo

@@ -8,6 +8,7 @@ volumes:
   certs:
   dbdata:
   ssl-acme-challenge:
+  celerybeat-schedule:
 
 services:
   django:
@@ -86,10 +87,10 @@ services:
     networks:
       - private
 
-  celeryd:
+  queue-high:
     image: '${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest'
     # user: laxy
-    command: ["celery", "-A", "laxy", "worker", "-B", "-E", "-l", "info", "-Ofair", "--broker=${LAXY_BROKER_URL}"]
+    # command: ["celery", "-A", "laxy", "worker", "-B", "-E", "-l", "info", "-Ofair", "--broker=${LAXY_BROKER_URL}"]
     stop_grace_period: 5m
     stop_signal: SIGTERM
     env_file:
@@ -101,6 +102,36 @@ services:
       replicas: 3
       restart_policy:
         condition: any
+    networks:
+      - private
+
+  queue-low:
+    image: '${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest'
+    # user: laxy
+    # command: ["celery", "-A", "laxy", "worker", "-B", "-E", "-l", "info", "-Ofair", 
+    #           "--broker=${LAXY_BROKER_URL}", 
+    #           "-Q", "low-priority"]
+    stop_grace_period: 5m
+    stop_signal: SIGTERM
+    env_file:
+      - .env
+    environment:
+      - LAXY_DEBUG=no
+    deploy:
+      mode: replicated
+      replicas: 5
+      restart_policy:
+        condition: any
+    networks:
+      - private
+
+  celery-beat:
+    image: '${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest'
+    # user: laxy
+    env_file:
+      - .env
+    environment:
+      - LAXY_DEBUG=no
     networks:
       - private
 

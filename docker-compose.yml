@@ -14,7 +14,8 @@ services:
       - "8001"
     depends_on:
       - db
-      - celeryd
+      - queue-high
+      - queue-low
 
   dev-frontend-server:
     image: laxy:latest
@@ -47,21 +48,58 @@ services:
 #     - "5672"
 #     - "15672"
 
-  celeryd:
+  queue-high:
     image: laxy:latest
     working_dir: /app
     environment:
       - LAXY_DATABASE_URL=postgres://postgres:postgres@db:5432/postgres
       - LAXY_BROKER_URL=amqp://guest@rabbitmq
-#     - LAXY_BROKER_URL=redis://redis:6379/0
+      # - LAXY_BROKER_URL=redis://redis:6379/0
       - LAXY_WEB_SCRAPER_BACKEND=splash
       - LAXY_WEB_SCRAPER_SPLASH_HOST=http://splash:8050
-    command: ["celery", "-A", "laxy", "worker", "-B", "-E", "-l", "info", "-Ofair", "--broker=${LAXY_BROKER_URL}"]
+    command: ["celery", "-A", "laxy", "worker", "-E", "-l", "info", "-Ofair", 
+              "--broker=${LAXY_BROKER_URL}"]
     stop_grace_period: 5m
     stop_signal: SIGTERM
     depends_on:
       - db
       - rabbitmq
+
+  queue-low:
+    image: laxy:latest
+    working_dir: /app
+    environment:
+      - LAXY_DATABASE_URL=postgres://postgres:postgres@db:5432/postgres
+      - LAXY_BROKER_URL=amqp://guest@rabbitmq
+      # - LAXY_BROKER_URL=redis://redis:6379/0
+      - LAXY_WEB_SCRAPER_BACKEND=splash
+      - LAXY_WEB_SCRAPER_SPLASH_HOST=http://splash:8050
+    command: ["celery", "-A", "laxy", "worker", "-E", "-l", "info", "-Ofair", 
+              "--broker=${LAXY_BROKER_URL}", 
+              "-Q", "low-priority"]
+    stop_grace_period: 5m
+    stop_signal: SIGTERM
+    depends_on:
+      - db
+      - rabbitmq
+
+  celery-beat:
+    image: laxy:latest
+    working_dir: /app
+    environment:
+      - LAXY_DATABASE_URL=postgres://postgres:postgres@db:5432/postgres
+      - LAXY_BROKER_URL=amqp://guest@rabbitmq
+      # - LAXY_BROKER_URL=redis://redis:6379/0
+      - LAXY_WEB_SCRAPER_BACKEND=splash
+      - LAXY_WEB_SCRAPER_SPLASH_HOST=http://splash:8050
+    command: ["celery", "-A", "laxy", "--broker=${LAXY_BROKER_URL}", 
+              "-s", "/app/celerybeat-schedule", 
+              "beat"]
+    depends_on:
+      - db
+      - rabbitmq
+    volumes:
+      - celerybeat-schedule:/var/run/celerybeat-schedule
 
   flower:
     # Alternative using public flower image
@@ -86,7 +124,8 @@ services:
     depends_on:
       - db
       - rabbitmq
-      - celeryd
+      - queue-high
+      - queue-low
 
   nginx:
     image: laxy-static-nginx:latest
@@ -103,7 +142,8 @@ services:
       - "8050"
     depends_on:
       - django
-      - celeryd
+      - queue-high
+      - queue-low
 
   portainer:
     image: portainer/portainer:latest
@@ -123,4 +163,5 @@ services:
 volumes:
   dbdata:
   rabbitmq_data:
+  celerybeat-schedule:
   portainer_data:
