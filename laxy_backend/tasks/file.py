@@ -56,6 +56,7 @@ def _conservative_exp_backoff(n_retries):
 
 
 @shared_task(
+    queue="low-priority",
     bind=True,
     track_started=True,
     default_retry_delay=60 * 60,
@@ -285,7 +286,7 @@ def verify(
     return checksum_matches
 
 
-@shared_task(bind=True, track_started=True)
+@shared_task(queue="low-priority", bind=True, track_started=True)
 def verify_task(self, task_data=None, **kwargs):
     if task_data is None:
         raise InvalidTaskError("task_data is None")
@@ -479,7 +480,7 @@ def copy_file_to(
     return file
 
 
-@shared_task(bind=True, track_started=True)
+@shared_task(queue="low-priority", bind=True, track_started=True)
 def copy_file_task(self, task_data=None, **kwargs):
     from ..models import File
 
