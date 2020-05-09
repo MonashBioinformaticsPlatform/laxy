@@ -90,10 +90,11 @@ services:
   queue-high:
     image: '${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest'
     # user: laxy
-    # command: ["celery", "-A", "laxy", "worker", "-E", "-l", "info", "-Ofair", 
-    #           "--broker=${LAXY_BROKER_URL}", 
-    #           "--pool=solo",  # for use when remote debugging
-    # ]
+    command: ["celery", "-A", "laxy", "worker", "-E", "-l", "info", "-Ofair", 
+              "--broker=${LAXY_BROKER_URL}", 
+              "--concurrency=2",
+              # "--pool=solo",  # for use when remote debugging
+    ]
     stop_grace_period: 5m
     stop_signal: SIGTERM
     env_file:
@@ -115,11 +116,12 @@ services:
   queue-low:
     image: '${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest'
     # user: laxy
-    # command: ["celery", "-A", "laxy", "worker", "-E", "-l", "info", "-Ofair", 
-    #           "--broker=${LAXY_BROKER_URL}", 
-    #           "-Q", "low-priority",
-    #           "--pool=solo",  # for use when remote debugging
-    # ]
+    command: ["celery", "-A", "laxy", "worker", "-E", "-l", "info", "-Ofair", 
+              "--broker=${LAXY_BROKER_URL}", 
+              "-Q", "low-priority",
+              "--concurrency=4",
+              # "--pool=solo",  # for use when remote debugging
+    ]
     stop_grace_period: 5m
     stop_signal: SIGTERM
     env_file:
