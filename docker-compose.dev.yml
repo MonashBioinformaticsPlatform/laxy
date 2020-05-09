@@ -188,6 +188,35 @@ services:
         max-size: "100k"
         max-file: "1"
 
+  queue-low:
+    build:
+      context: .
+      dockerfile: ./docker/laxy/Dockerfile
+    command: ["celery", "-A", "laxy", "worker", "-B", "-E", "-l", "info", "-Ofair", 
+              "--broker=${LAXY_BROKER_URL}", 
+              "-Q", "low-priority"]
+    stop_grace_period: 30s
+    stop_signal: SIGTERM
+    volumes:
+      - .:/app
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100k"
+        max-file: "1"
+
+  celery-beat:
+    build:
+      context: .
+      dockerfile: ./docker/laxy/Dockerfile
+    volumes:
+      - .:/app
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100k"
+        max-file: "1"
+
   flower:
     environment:
       - FLOWER_BASIC_AUTH=user:pass
