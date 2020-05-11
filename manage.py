@@ -10,32 +10,31 @@ if __name__ == "__main__":
         from django.conf import settings
 
         # Start the remote debugger for VSCode/PyCharm if in debug mode
-        if settings.DEBUG and sys.argv[1] == 'runserver':
+        if settings.DEBUG and sys.argv[1] == "runserver":
             import traceback
 
             try:
-                if os.environ.get('RUN_MAIN') or os.environ.get('WERKZEUG_RUN_MAIN'):  # prevent reattach on hot reload
-                    debugger_port = 21001
+                if os.environ.get("RUN_MAIN") or os.environ.get(
+                    "WERKZEUG_RUN_MAIN"
+                ):  # prevent reattach on hot reload
+                    debugger_port = os.environ.get("DEBUGGER_PORT", 21001)
 
                     # Visual Studio Code debugging
                     import json
                     import ptvsd
 
-                    ptvsd.enable_attach(address=('0.0.0.0', debugger_port))
+                    ptvsd.enable_attach(address=("0.0.0.0", debugger_port))
                     # ptvsd.enable_attach(settings.SECRET_KEY, address=('0.0.0.0', 21001))
                     # ptvsd.wait_for_attach()
                     _vscode_launch_json = {
-                          "name": "Remote Django App (Laxy)",
-                          "type": "python",
-                          "request": "attach",
-                          "pathMappings": [
-                              {
-                                  "localRoot": "${workspaceFolder}",
-                                  "remoteRoot": "/app"
-                              }
-                          ],
-                          "port": debugger_port,
-                          "host": "localhost"
+                        "name": "Remote Django App (Laxy)",
+                        "type": "python",
+                        "request": "attach",
+                        "pathMappings": [
+                            {"localRoot": "${workspaceFolder}", "remoteRoot": "/app"}
+                        ],
+                        "port": debugger_port,
+                        "host": "localhost",
                     }
                     print("Visual Studio Code debugger launch.json snippet to add:")
                     print(json.dumps(_vscode_launch_json, indent=4))
@@ -71,6 +70,3 @@ if __name__ == "__main__":
         raise
 
     execute_from_command_line(sys.argv)
-
-
-
