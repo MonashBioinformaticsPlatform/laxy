@@ -387,41 +387,40 @@ def copy_file_to(
         #       filesystem:
         #       https://unix.stackexchange.com/questions/44249/how-to-check-if-two-directories-or-files-belong-to-same-filesystem
 
-        storage = get_storage_class_for_location(to_location)
-        new_compute = get_compute_resource_for_location(to_location)
+        src_storage: SFTPStorage = get_storage_class_for_location(from_location)
+        dst_storage: SFTPStorage = get_storage_class_for_location(to_location)
+        dst_compute: ComputeResource = get_compute_resource_for_location(to_location)
 
         try:
-            new_path = location_path_on_compute(file.location, new_compute)
+            dst_path = location_path_on_compute(file.location, dst_compute)
             src_path = location_path_on_compute(from_location)
 
-            if not storage.exists(src_path):
+            if not src_storage.exists(src_path):
                 logger.error(f"Cannot find file at: {from_location}")
                 raise IOError(f"Cannot find file: {from_location}")
 
             # We need to check file existence, otherwise Django storages creates
             # a new random suffixed name rather than clobbering the existing
             # file !
-            if storage.exists(new_path):
+            if dst_storage.exists(dst_path):
                 if clobber:
                     logger.info(f"Clobbering file at {to_location}")
-                    storage.delete(new_path)
+                    dst_storage.delete(dst_path)
                 else:
                     logger.info(
-                        f"A file already exists at {to_location} and clobber=False, skipping copy: {new_path}"
+                        f"A file already exists at {to_location} and clobber=False, skipping copy: {dst_path}"
                     )
 
-            if not storage.exists(new_path):
-                logger.info(f"Copying file to: {new_compute}:{new_path}")
+            if not dst_storage.exists(dst_path):
+                logger.info(f"Copying file to: {dst_compute}:{dst_path}")
 
                 if from_location != to_location:
-                    storage.save(new_path, file._file(from_location))
+                    dst_storage.save(dst_path, file._file(from_location))
 
                     # chmod the destination to be the same as the source
-                    src_storage: SFTPStorage = get_storage_class_for_location(
-                        from_location
-                    )
+
                     src_mode: int = src_storage.sftp.stat(src_path).st_mode
-                    storage.sftp.chmod(new_path, src_mode)
+                    dst_storage.sftp.chmod(dst_path, src_mode)
 
                 verification_ok = False
 
@@ -457,7 +456,7 @@ def copy_file_to(
                         f"Checksum for {to_location} doesn't match expected checksum: {file.checksum}"
                     )
                     if delete_failed_destination_copy:
-                        storage.delete(new_path)
+                        dst_storage.delete(dst_path)
                         logger.info(
                             f"Deleted corrupted copy of {file.id} at {to_location}, "
                             f"copy failed verification."

@@ -136,7 +136,7 @@ services:
       - django
 
   splash:
-    image: scrapinghub/splash:latest
+    image: scrapinghub/splash:3.4.1
     command: --disable-ui --disable-lua --disable-browser-caches --max-timeout 300
     expose:
       - "8050"
