@@ -90,13 +90,20 @@ services:
   queue-high:
     image: '${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest'
     # user: laxy
-    # command: ["celery", "-A", "laxy", "worker", "-B", "-E", "-l", "info", "-Ofair", "--broker=${LAXY_BROKER_URL}"]
+    # command: ["celery", "-A", "laxy", "worker", "-E", "-l", "info", "-Ofair", 
+    #           "--broker=${LAXY_BROKER_URL}", 
+    #           "--pool=solo",  # for use when remote debugging
+    # ]
     stop_grace_period: 5m
     stop_signal: SIGTERM
     env_file:
       - .env
     environment:
       - LAXY_DEBUG=no
+    # - DEBUGGER_PORT=21002
+    # ports:
+    #   # for use when remote debugging
+    #     - "21002:21002"
     deploy:
       mode: replicated
       replicas: 3
@@ -108,15 +115,21 @@ services:
   queue-low:
     image: '${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest'
     # user: laxy
-    # command: ["celery", "-A", "laxy", "worker", "-B", "-E", "-l", "info", "-Ofair", 
+    # command: ["celery", "-A", "laxy", "worker", "-E", "-l", "info", "-Ofair", 
     #           "--broker=${LAXY_BROKER_URL}", 
-    #           "-Q", "low-priority"]
+    #           "-Q", "low-priority",
+    #           "--pool=solo",  # for use when remote debugging
+    # ]
     stop_grace_period: 5m
     stop_signal: SIGTERM
     env_file:
       - .env
     environment:
       - LAXY_DEBUG=no
+    # - DEBUGGER_PORT=21002
+    # ports:
+    #   # for use when remote debugging
+    #     - "21002:21002"
     deploy:
       mode: replicated
       replicas: 5

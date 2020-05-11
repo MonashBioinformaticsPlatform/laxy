@@ -104,10 +104,17 @@ services:
     build:
       context: .
       dockerfile: ./docker/laxy/Dockerfile
-    command: ["celery", "-A", "laxy", "worker", "-B", "-E", "-l", "info", "-Ofair", 
-              "--broker=${LAXY_BROKER_URL}"]
+    command: ["celery", "-A", "laxy", "worker", "-E", "-l", "info", "-Ofair", 
+              "--broker=${LAXY_BROKER_URL}",
+              # "--pool=solo",  # for use when remote debugging
+              ]
+    # environment:
+    #   - DEBUGGER_PORT=21002
     stop_grace_period: 30s
     stop_signal: SIGTERM
+    # ports:
+    # for use when remote debugging
+    #   - "21002:21001"
     volumes:
       - .:/app
     logging:
@@ -120,11 +127,18 @@ services:
     build:
       context: .
       dockerfile: ./docker/laxy/Dockerfile
-    command: ["celery", "-A", "laxy", "worker", "-B", "-E", "-l", "info", "-Ofair", 
+    command: ["celery", "-A", "laxy", "worker", "-E", "-l", "info", "-Ofair", 
               "--broker=${LAXY_BROKER_URL}", 
-              "-Q", "low-priority"]
+              "-Q", "low-priority",
+              # "--pool=solo",  # for use when remote debugging
+              ]
+    # environment:
+    #   - DEBUGGER_PORT=21002
     stop_grace_period: 30s
     stop_signal: SIGTERM
+    # ports:
+    # # for use when remote debugging
+    #   - "21002:21002"
     volumes:
       - .:/app
     logging:
