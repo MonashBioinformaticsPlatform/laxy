@@ -291,6 +291,19 @@ def start_job(self, task_data=None, **kwargs):
     return task_data
 
 
+def get_job_expiry_for_status(status: str) -> datetime:
+    _hours = 60 * 60
+    if status == Job.STATUS_CANCELLED:
+        ttl = getattr(settings, "JOB_EXPIRY_TTL_CANCELLED", 1 * _hours)
+    elif status == Job.STATUS_FAILED:
+        ttl = getattr(settings, "JOB_EXPIRY_TTL_FAILED", 72 * _hours)
+    else:
+        ttl = getattr(settings, "JOB_EXPIRY_TTL_DEFAULT", 30 * 24 * _hours)
+
+    expiry_time = datetime.now() + timedelta(seconds=ttl)
+    return expiry_time
+
+
 @shared_task(bind=True, track_started=True)
 def set_job_status(self, task_data=None, **kwargs):
     from ..models import Job, File
@@ -303,6 +316,7 @@ def set_job_status(self, task_data=None, **kwargs):
     with transaction.atomic():
         job = Job.objects.get(id=job_id)
         job.status = status
+        job.expiry_time = get_job_expiry_for_status(job.status)
         job.save()
 
     if (
@@ -316,7 +330,9 @@ def set_job_status(self, task_data=None, **kwargs):
     return task_data
 
 
-@shared_task(bind=True, track_started=True)
+@shared_task(
+    bind=True, track_started=True, default_retry_delay=60, max_retries=3,
+)
 def index_remote_files(self, task_data=None, **kwargs):
     def _remote_list_files(path="."):
         """
@@ -453,13 +469,14 @@ def index_remote_files(self, task_data=None, **kwargs):
             task_data["results"]["input_files_indexed"] = len(input_files)
 
         succeeded = True
-    except BaseException as e:
+    except BaseException as ex:
         succeeded = False
-        if hasattr(e, "message"):
-            message = e.message
+        if hasattr(ex, "message"):
+            message = expanduser.message
 
-        self.update_state(state=states.FAILURE, meta=message)
-        raise e
+        self.retry(exc=ex, countdown=60)
+        # self.update_state(state=states.FAILURE, meta=message)
+        # raise e
 
     # job_status = Job.STATUS_RUNNING if succeeded else Job.STATUS_FAILED
     # job = Job.objects.get(id=job_id)
@@ -495,7 +512,9 @@ def _finalize_job_task_err_handler(self, uuid, job_id=None):
                 "traceback": result.traceback,
             },
         )
-        message = f"Failed to index files, finalize job status or bulk transfer to archive (EventLog ID: {eventlog.id})"
+        message = (
+            f"Failed to index files or finalize job status (EventLog ID: {eventlog.id})"
+        )
         eventlog.message = message
         eventlog.save()
 
@@ -608,54 +627,54 @@ def kill_remote_job(self, task_data=None, **kwargs):
 @shared_task(
     queue="low-priority", bind=True, track_started=True,
 )
-def estimate_job_tarball_size(self, task_data=None, **kwargs):
-    if task_data is None:
-        raise InvalidTaskError("task_data is None")
-
-    from ..models import Job
-
-    _init_fabric_env()
-
-    environment = task_data.get("environment", {})
-    job_id = task_data.get("job_id")
-    job = Job.objects.get(id=job_id)
-    # stored_at = get_primary_compute_location_for_files(job.get_files())
-    compute_locs = [
-        c for c in get_compute_resources_for_files(job.get_files()) if c is not None
-    ]
-    stored_at = compute_locs.pop()
-    host = stored_at.host
-    gateway = stored_at.gateway_server
-    queue_type = stored_at.queue_type
-    private_key = stored_at.private_key
-    remote_username = stored_at.extra.get("username", None)
-
-    job_path = job_path_on_compute(job, stored_at)
-    # job_path = job.abs_path_on_compute
-
-    message = "No message."
+def estimate_job_tarball_size(self, task_data=None, optional=False, **kwargs):
     task_result = dict()
     try:
+        if task_data is None:
+            raise InvalidTaskError("task_data is None")
+
+        from ..models import Job
+
+        _init_fabric_env()
+
+        environment = task_data.get("environment", {})
+
+        job_id = task_data.get("job_id")
+        job = Job.objects.get(id=job_id)
+        # stored_at = get_primary_compute_location_for_files(job.get_files())
+        compute_locs = [
+            c for c in get_compute_resources_for_files(job.get_files()) if c is not None
+        ]
+        if not compute_locs:
+            raise Exception('Job files have no ComputeResource location(s) ?')
+        stored_at = compute_locs.pop()
+        host = stored_at.host
+        gateway = stored_at.gateway_server
+        queue_type = stored_at.queue_type
+        private_key = stored_at.private_key
+        remote_username = stored_at.extra.get("username", None)
+
+        job_path = job_path_on_compute(job, stored_at)
+
+        # If running tar -chzf is too slow / too much extra I/O load,
+        # we can get a rough idea using du instead and a scaling factor
+        # to account for compression.
+        # We run as 'nice' since this is considered low priority.
+        quick_mode = task_data.get("tarball_size_use_heuristic")
+        compression_scaling = 1
+        cmd = f'nice tar -chzf - --directory "{job_path}" . | nice wc --bytes'
+        if quick_mode:
+            # This compression ratio seems reasonable for RNAsik runs. Will likely be different
+            # for different data types.
+            compression_scaling = 0.66
+            cmd = f'nice du -bc --max-depth=0 "{job_path}" | tail -n 1 | cut -f 1'
+
         with fabsettings(
             gateway=gateway, host_string=host, user=remote_username, key=private_key
         ):
             with cd(job_path):
                 with shell_env(**environment):
-                    # if queue_type == 'slurm':
-                    #     result = run(f"scancel {job.remote_id}")
-                    # else:
-                    #     result = run(f"kill {job.remote_id}")
-
-                    # NOTE: If running tar -chzf is too slow / too much extra I/O load,
-                    #       we could use the placeholder heuristic of
-                    #       f`du -bc --max-depth=0 "{job_path}"` * 0.66 for RNAsik runs,
-                    #       stored in job metadata. Or add proper sizes to every File.metdata
-                    #       and derive it from a query.
-                    # We run as 'nice' since this is considered low priority
-
-                    result = run(
-                        f'nice tar -chzf - --directory "{job_path}" . | nice wc --bytes'
-                    )
+                    result = run(cmd)
                     tries = 0
                     while (
                         result.succeeded
@@ -663,9 +682,7 @@ def estimate_job_tarball_size(self, task_data=None, **kwargs):
                         in result.stdout.strip().lower()
                         and tries <= 3
                     ):
-                        result = run(
-                            f'nice tar -chzf - --directory "{job_path}" . | nice wc --bytes'
-                        )
+                        result = run(cmd)
                         tries += 1
 
                     if result.succeeded:
@@ -678,7 +695,7 @@ def estimate_job_tarball_size(self, task_data=None, **kwargs):
                                 f"Job: {job.id}"
                             )
 
-                        tarball_size = int(result.stdout.strip())
+                        tarball_size = int(result.stdout.strip()) * compression_scaling
                         with transaction.atomic():
                             job = Job.objects.get(id=job_id)
                             job.params["tarball_size"] = tarball_size
@@ -689,11 +706,11 @@ def estimate_job_tarball_size(self, task_data=None, **kwargs):
                         task_result["stdout"] = result.stdout.strip()
                         task_result["stderr"] = result.stderr.strip()
 
-    except BaseException as e:
-        message = get_traceback_message(e)
-
+    except BaseException as ex:
+        message = get_traceback_message(ex)
         self.update_state(state=states.FAILURE, meta=message)
-        raise e
+        if not optional:
+            raise ex
 
     task_data.update(result=task_result)
 

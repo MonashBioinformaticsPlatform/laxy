@@ -148,7 +148,7 @@ class Timestamped(Model):
 
 
 def _job_expiry_datetime():
-    job_ttl = getattr(settings, "DEFAULT_JOB_EXPIRY", 30 * 24 * 60 * 60)
+    job_ttl = getattr(settings, "JOB_EXPIRY_TTL_DEFAULT", 30 * 24 * 60 * 60)
     return datetime.now() + timedelta(seconds=job_ttl)
 
 
