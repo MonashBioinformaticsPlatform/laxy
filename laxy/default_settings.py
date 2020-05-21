@@ -96,8 +96,8 @@ default_env = PrefixedEnv(
     USE_SSL=(bool, False),
     SENTRY_DSN=(str, ""),
     JOB_EXPIRY_TTL_DEFAULT=(int, 30 * 24 * 60 * 60),  # 30 days
-    JOB_EXPIRY_TTL_CANCELLED=(int, 1 * 60 * 60),      # 1 hour
-    JOB_EXPIRY_TTL_FAILED=(int, 3 * 24 * 60 * 60),    # 3 days
+    JOB_EXPIRY_TTL_CANCELLED=(int, 1 * 60 * 60),  # 1 hour
+    JOB_EXPIRY_TTL_FAILED=(int, 3 * 24 * 60 * 60),  # 3 days
     WEB_SCRAPER_BACKEND=(str, "simple"),
     WEB_SCRAPER_SPLASH_HOST=(str, "http://localhost:8050"),
     DEGUST_URL=(str, "http://degust.erc.monash.edu"),
@@ -153,7 +153,7 @@ def get_git_commit():
     git_commit = None
     try:
         git_commit = (
-            subprocess.check_output(["git", "log", "-1", "--format=%h"])
+            subprocess.check_output(["git", "log", "-1", "--format=%h 2>/dev/null"])
             .strip()
             .decode("utf-8")
         )
