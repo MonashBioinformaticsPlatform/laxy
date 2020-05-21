@@ -97,6 +97,7 @@ from .tasks.job import (
     kill_remote_job,
     estimate_job_tarball_size,
     move_job_files_to_archive_task,
+    get_job_expiry_for_status,
 )
 
 from .jwt_helpers import get_jwt_user_header_dict, get_jwt_user_header_str
@@ -1643,51 +1644,60 @@ class JobView(JSONPatchMixin, JSONView):
         if serializer.is_valid():
 
             # Providing only an exit_code sets job status
-            job_status = serializer.validated_data.get("status", None)
+            new_status = serializer.validated_data.get("status", None)
             exit_code = serializer.validated_data.get("exit_code", None)
-            if job_status is None and exit_code is not None:
+            if new_status is None and exit_code is not None:
                 if exit_code == 0:
                     serializer.validated_data.update(status=Job.STATUS_COMPLETE)
                 else:
                     serializer.validated_data.update(status=Job.STATUS_FAILED)
 
-            if job_status == Job.STATUS_CANCELLED:
-                kill_remote_job.apply_async(args=(dict(job_id=uuid),))
+            new_status = serializer.validated_data.get("status", None)
+            expiry = get_job_expiry_for_status(new_status)
 
-            new_status = serializer.validated_data.get("status")
+            task_data = dict(
+                job_id=uuid, status=new_status, tarball_size_use_heuristic=True
+            )
 
-            if new_status != original_status and (
-                new_status == Job.STATUS_COMPLETE or new_status == Job.STATUS_FAILED
+            status_changed_to = None
+            if new_status is not None and new_status != original_status:
+                status_changed_to = new_status
+
+            if status_changed_to == Job.STATUS_CANCELLED:
+                serializer.save(expiry_time=expiry)
+                celery.chain(
+                    kill_remote_job.s(task_data), index_remote_files.s()
+                ).apply_async()
+
+            if (
+                status_changed_to == Job.STATUS_COMPLETE
+                or status_changed_to == Job.STATUS_FAILED
             ):
-
                 # We don't update the status yet - an async task will do this after file indexing is complete
-                serializer.save(status=original_status)
-
-                task_data = dict(job_id=uuid, status=new_status)
+                serializer.save(status=original_status, expiry_time=expiry)
 
                 if job.compute_resource and job.compute_resource.archive_host:
-                    task_data["dst_compute_id"] = job.compute_resource.archive_host.id
+                    task_data["dst_compute_id"] = job.compute_resource.archive_host_id
                     result = celery.chain(
-                        index_remote_files.s(task_data),
+                        index_remote_files.s(task_data=task_data),
                         set_job_status.s(),
+                        # move_job_files_to_archive_task will run even
+                        # if estimate_job_tarball_size fails (since optional=True)
+                        estimate_job_tarball_size.s(optional=True),
                         move_job_files_to_archive_task.s(),
                     ).apply_async(
                         link_error=_finalize_job_task_err_handler.s(job_id=job.id)
                     )
                 else:
                     result = celery.chain(
-                        index_remote_files.s(task_data), set_job_status.s()
+                        index_remote_files.s(task_data=task_data),
+                        set_job_status.s(),
+                        estimate_job_tarball_size.s(optional=True),
                     ).apply_async(
                         link_error=_finalize_job_task_err_handler.s(job_id=job.id)
                     )
-
-                    # We aren't too concerned if estimate_job_tarball_size fails here,
-                    # It's considered nice but not critical
-                    estimate_job_tarball_size.s(task_data).apply_async()
-
             else:
-                serializer.save()
-                # job = Job.objects.get(id=uuid)
+                serializer.save(expiry_time=expiry)
 
             return Response(status=status.HTTP_204_NO_CONTENT)
 

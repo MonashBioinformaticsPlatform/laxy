@@ -95,7 +95,9 @@ default_env = PrefixedEnv(
     CSRF_TRUSTED_ORIGINS=(list, []),
     USE_SSL=(bool, False),
     SENTRY_DSN=(str, ""),
-    DEFAULT_JOB_EXPIRY=(int, 30 * 24 * 60 * 60),
+    JOB_EXPIRY_TTL_DEFAULT=(int, 30 * 24 * 60 * 60),  # 30 days
+    JOB_EXPIRY_TTL_CANCELLED=(int, 1 * 60 * 60),      # 1 hour
+    JOB_EXPIRY_TTL_FAILED=(int, 3 * 24 * 60 * 60),    # 3 days
     WEB_SCRAPER_BACKEND=(str, "simple"),
     WEB_SCRAPER_SPLASH_HOST=(str, "http://localhost:8050"),
     DEGUST_URL=(str, "http://degust.erc.monash.edu"),
@@ -199,7 +201,9 @@ if SENTRY_DSN:
         integrations=[DjangoIntegration()],
     )
 
-DEFAULT_JOB_EXPIRY = env("DEFAULT_JOB_EXPIRY")
+JOB_EXPIRY_TTL_DEFAULT = env("JOB_EXPIRY_TTL_DEFAULT")
+JOB_EXPIRY_TTL_CANCELLED = env("JOB_EXPIRY_TTL_CANCELLED")
+JOB_EXPIRY_TTL_FAILED = env("JOB_EXPIRY_TTL_FAILED")
 
 SFTP_STORAGE_PIPELINED = True
 
@@ -302,6 +306,24 @@ if DEBUG:
 # to save clogging up the queue with things that will probably never finish
 _days = 60 * 60 * 24
 CELERY_TASK_SOFT_TIME_LIMIT = 7 * _days
+
+# Don't prefetch tasks, work on one at a time, only acknowledge task is done when it finishes
+# (successfully or with exception). Tasks must be idempotent in this mode, since if a worker
+# dies ungracefully without the task finishing, that task will be requeued later. This mode
+# as lower throughput for many small short tasks, but make it less likely tasks will be lost
+# and forgotten upon worker kill/restart.
+# https://docs.celeryproject.org/en/latest/userguide/configuration.html#worker-prefetch-multiplier
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_TASK_ACKS_LATE = True  # no prefetching at all ! tasks must be idempotent
+
+_prefetch_one = False
+if _prefetch_one:
+    # In this mode, only reserve one 'unacknowledged' task for every cpu/thread on the worker
+    # ... so for every one executing, one 'unacknowledged' task will prefetched from RabbitMQ
+    # and waiting on the worker.
+    CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+    CELERY_TASK_ACKS_LATE = False  # default
+
 
 # CELERY_TASK_DEFAULT_QUEUE = 'celery'
 # CELERY_TASK_CREATE_MISSING_QUEUES = True
