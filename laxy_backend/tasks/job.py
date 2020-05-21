@@ -588,6 +588,12 @@ def kill_remote_job(self, task_data=None, **kwargs):
     environment = task_data.get("environment", {})
     job_id = task_data.get("job_id")
     job = Job.objects.get(id=job_id)
+    if not job.compute_resource:
+        logger.warning(
+            f"Attempting to kill job without a ComputeResource ({job_id}) - ignoring"
+        )
+        return task_data
+
     host = job.compute_resource.host
     gateway = job.compute_resource.gateway_server
     queue_type = job.compute_resource.queue_type
@@ -646,7 +652,7 @@ def estimate_job_tarball_size(self, task_data=None, optional=False, **kwargs):
             c for c in get_compute_resources_for_files(job.get_files()) if c is not None
         ]
         if not compute_locs:
-            raise Exception('Job files have no ComputeResource location(s) ?')
+            raise Exception("Job files have no ComputeResource location(s) ?")
         stored_at = compute_locs.pop()
         host = stored_at.host
         gateway = stored_at.gateway_server
