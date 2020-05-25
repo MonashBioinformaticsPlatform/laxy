@@ -10,6 +10,10 @@
       type="error"
       :show-close-button="false"
     >Please add some samples before submitting your job.</banner-notice>
+    <banner-notice v-if="!isValid_duplicate_samples" type="error" :show-close-button="false">
+      Input sample files contain duplicates (based on URL/location).
+      <br />Please remove duplicates before continuing.
+    </banner-notice>
     <banner-notice
       v-if="!isValid_mixed_single_paired_check"
       type="error"
@@ -324,6 +328,23 @@ export default class PipelineParams extends Vue {
     return this.$store.getters.sample_cart_count > 0;
   }
 
+  get isValid_duplicate_samples() {
+    const samples = this.$store.state.samples;
+    const seen: string[] = [];
+    for (let i of samples.items) {
+      for (let f of i.files) {
+        for (let pair of ['R1', 'R2']) {
+          if (f[pair] == null) continue;
+          if (f[pair].location == null) continue;
+          if (seen.includes(f[pair].location)) return false;
+          seen.push(f[pair].location);
+        }
+      }
+    }
+
+    return true;
+  }
+
   get isValid_mixed_single_paired_check() {
     function isPairedEnd(f: PairedEndFiles) {
       return (f.R1 != null && f.R2 != null);
@@ -344,6 +365,7 @@ export default class PipelineParams extends Vue {
     let is_valid = false;
     if (this.isValid_reference_genome &&
       this.isValid_samples_added &&
+      this.isValid_duplicate_samples &&
       this.isValid_mixed_single_paired_check) {
       is_valid = true;
     }
