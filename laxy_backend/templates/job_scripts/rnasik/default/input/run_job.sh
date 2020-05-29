@@ -61,7 +61,7 @@ fi
 
 RESOURCE_PROFILE="default"
 [[ "${REFERENCE_GENOME}" == *"Saccharomyces_cerevisiae"* ]] && RESOURCE_PROFILE="low"
-[[ "${REFERENCE_GENOME}" == *"Acinetobacter"* ]] && RESOURCE_PROFILE="low"
+# [[ "${REFERENCE_GENOME}" == *"Acinetobacter"* ]] && RESOURCE_PROFILE="low"
 [[ "${REFERENCE_GENOME}" == *"Escherichia"* ]] && RESOURCE_PROFILE="low"
 
 if [[ ${QUEUE_TYPE} == "local" ]]; then
@@ -516,6 +516,12 @@ function add_to_manifest() {
     python3 ${JOB_PATH}/input/add_to_manifest.py ${manifest_path} "$1" "$2" "${3:-}"
 }
 
+function cleanup_tmp_files() {
+    # Failed RNAsik runs can leave some temporary files around which we rarely want to keep
+    find "${JOB_PATH}/output/sikRun/countFiles/" -type f -name "temp-core-*.tmp" -delete
+    find "${JOB_PATH}/output/tmp/" -type f -delete
+}
+
 function get_strandedness_metadata() {
     local prediction="unknown"
     local bias="null"
@@ -693,15 +699,14 @@ function run_mash_screen() {
         curl -L -o "${mash_reference_sketches}" -C - "https://gembox.cbcb.umd.edu/mash/refseq.genomes.k21s1000.msh" || true
     fi
 
-    local mash_reads=$(find "${JOB_PATH}/input" -name "*.fast[q,a].gz" | xargs)
-    local cmd="mash screen -w -p 8 ${mash_reference_sketches} ${mash_reads}"
+    local mash_reads=$(find "${JOB_PATH}/input" -name "*.f*[q,a].gz" | xargs)
+    local cmd="mash screen -w -p 8 ${mash_reference_sketches}"
     # TODO: Try subsamping (1000?) via process substitution - should make mash screen closer to constant time
     #       A few quick tests suggest it's no faster subsampled in this way (I/O limited ?)
     # local cmd="mash screen -w -p 8 ${mash_reference_sketches} <(seqtk sample -s 42 ${mash_reads} 1000)"
-    local mash_outfile="${JOB_PATH}/output/mash_screen.tab"
-
-    if [[ "${QUEUE_TYPE}" == "slurm" ]]; then
-        cat >"${JOB_PATH}/input/run_mash.sh" <<EOM
+    local mash_outdir="${JOB_PATH}/output/mash/"
+    mkdir -p "${mash_outdir}"
+    cat >"${JOB_PATH}/input/run_mash.sh" <<EOM
 #!/bin/bash
 #SBATCH --mem 16G
 #SBATCH --cpus-per-task=8
@@ -714,16 +719,33 @@ function run_mash_screen() {
 #SBATCH --account={{ SLURM_ACCOUNT }}
 {% endif %}
 # #SBATCH --qos=shortq
+# #SBATCH --partition=short,comp
 
-${cmd} | sort -gr >${mash_outfile} && \
-grep '_ViralProj\|_ViralMultiSegProj' ${mash_outfile} >${JOB_PATH}/output/mash_screen_virus.tab && \
-grep -v '_ViralProj\|_ViralMultiSegProj' ${mash_outfile} >${JOB_PATH}/output/mash_screen_nonvirus.tab
+fqfile="\${1}"
+sample_base="\$(basename \${fqfile%%.*})"
+
+mash_outfile="${mash_outdir}/\${sample_base}_mash_screen.tab"
+
+mkdir -p "${mash_outdir}"
+
+${cmd} "\${fqfile}" | sort -gr >"\${mash_outfile}" && \
+grep '_ViralProj\|_ViralMultiSegProj' "\${mash_outfile}" >"${mash_outdir}/\${sample_base}_mash_screen_virus.tab" && \
+grep -v '_ViralProj\|_ViralMultiSegProj' "\${mash_outfile}" >"${mash_outdir}/\${sample_base}_mash_screen_nonvirus.tab"
 EOM
-        sbatch --parsable "${JOB_PATH}/input/run_mash.sh" >>"${JOB_PATH}/slurm.jids"
+
+    if [[ "${QUEUE_TYPE}" == "slurm" ]]; then
+        for f in $mash_reads; do
+            sbatch --parsable "${JOB_PATH}/input/run_mash.sh" "${f}" >>"${JOB_PATH}/slurm.jids"
+        done
     else
-        eval ${cmd} | sort -gr >"${mash_outfile}" && \
-        grep _ViralProj "${mash_outfile}" >"${JOB_PATH}/output/mash_screen_virus.tab" && \
-        grep -v _ViralProj "${mash_outfile}" >"${JOB_PATH}/output/mash_screen_nonvirus.tab"
+        for f in $mash_reads; do
+            bash "${JOB_PATH}/input/run_mash.sh" "${f}" >>"${JOB_PATH}/job.pids"
+            # local sample_base="${mash_outdir}/${f%%.*}"
+            # local mash_outfile="${sample_base}_mash_screen.tab"
+            # eval ${cmd} "${f}" | sort -gr >"${mash_outfile}" && \
+            # grep '_ViralProj\|_ViralMultiSegProj' "${mash_outfile}" >"${sample_base}_mash_screen_virus.tab" && \
+            # grep -v '_ViralProj\|_ViralMultiSegProj' "${mash_outfile}" >"${sample_base}_mash_screen_nonvirus.tab"
+        done
     fi
 }
 
@@ -908,6 +930,8 @@ else
 fi
 
 send_job_metadata $(get_strandedness_metadata) || true
+
+cleanup_tmp_files || true
 
 update_permissions || true
 
