@@ -1216,6 +1216,8 @@ class File(Timestamped, UUIDModel):
                 _delete_with_retries(
                     compute.sftp_storage, self._abs_path_on_compute(location=location)
                 )
+            except FileNotFoundError as ex:
+                logger.info(f"File is missing at {fileloc.url} - marking as deleted.")
 
             except BaseException as ex:
 
@@ -1507,17 +1509,17 @@ class File(Timestamped, UUIDModel):
         size = None
         if hasattr(self.metadata, "get"):
             size = self.metadata.get("size", None)
-        if size is None and self.file is not None and hasattr(self.file, "size"):
-            try:
+        try:
+            if size is None and self.file is not None and hasattr(self.file, "size"):
                 size = int(self.file.size)
                 # set on demand
                 self.metadata["size"] = size
                 self.save(update_fields=["metadata"])
-            except NotImplementedError as ex:
-                pass
-            except FileNotFoundError:
-                # Can occur when SFTP backend server is inaccessible
-                pass
+        except NotImplementedError as ex:
+            pass
+        except FileNotFoundError:
+            # Can occur when SFTP backend server is inaccessible
+            pass
 
         return size
 
@@ -1530,8 +1532,28 @@ class File(Timestamped, UUIDModel):
         return bool(self.deleted_time)
 
     def delete_file(self):
+        excn = None
         for location in self.locations.all():
-            self.delete_at_location(location, allow_delete_default=True)
+            # Attempt delete on all even if one raises exception.
+            # Defers the first exception thrown to be raised later
+            try:
+                self.delete_at_location(location, allow_delete_default=True)
+            except BaseException as _ex:
+                if excn is None:
+                    excn = _ex
+
+        if excn is not None:
+            raise excn
+
+    def exists(self, loc=None):
+        if loc is None:
+            loc = self.locations.filter(default=True).first()
+        loc = str(loc)
+        try:
+            f = self._file(loc)
+            return f.exists()
+        except FileNotFoundError:
+            return False
 
     def get_absolute_url(self):
         from django.urls import reverse

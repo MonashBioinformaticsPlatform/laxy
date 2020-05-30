@@ -353,6 +353,12 @@ def index_remote_files(self, task_data=None, **kwargs):
         filepaths = [f for f in filepaths if f.strip()]
         return filepaths
 
+    def _stat_filesize(filepath):
+        s = run(f"stat -L -c %B {filepath}")
+        if s.succeeded:
+            return int(s.splitlines()[0])
+        return None
+
     if task_data is None:
         raise InvalidTaskError("task_data is None")
 
@@ -416,6 +422,11 @@ def index_remote_files(self, task_data=None, **kwargs):
                 elif not f.location:
                     f.location = location
                     f.owner = job.owner
+
+                try:
+                    f.size = _stat_filesize(filepath)
+                except BaseException:
+                    pass
 
                 file_objs.append(f)
 
@@ -840,13 +851,14 @@ def expire_old_job(self, task_data=None, **kwargs):
     message = "No message."
     try:
         count = 0
+        deferred_exception = None
         for f in old_files:
             try:
                 if file_should_be_deleted(f):
+                    _size_str = ""
                     if f.size is not None:
-                        logger.info(
-                            f"Deleting {job.id} {f.full_path} ({f.size / MB:.1f}MB)"
-                        )
+                        _size_str = f"({f.size / MB:.1f}MB)"
+                    logger.info(f"Deleting {job.id} {f.full_path} {_size_str}")
                     try:
                         # NOTE: There are temporary states where a file will fail to delete (network outage),
                         #       and permanent states where deletion will fail (ComputeResource no longer exists).
@@ -860,12 +872,19 @@ def expire_old_job(self, task_data=None, **kwargs):
                             f"Unable to delete {job.id} {f.full_path} "
                             f"(NotImplementedError for this file location)"
                         )
-                    except FileNotFoundError as ex:
-                        logger.info(
-                            f"File is missing on backend storage: {job.id} {f.full_path} - marking as expired"
-                        )
-                        f.deleted_time = datetime.now()
-                        f.save()
+            except FileNotFoundError as ex:
+                if f.locations.count() == 0:
+                    logger.info(
+                        f"File {f.id} doesn't exist on backend storage and no locations remain - marking as expired"
+                    )
+                    f.deleted_time = datetime.now()
+                    f.save()
+                else:
+                    logger.info(
+                        f"File {f.id} is missing at one location, but still exists a some locations. Not marking as expired."
+                    )
+                    if deferred_exception is None:
+                        deferred_exception = ex
 
             except BaseException as ex:
                 # If any file can't be deleted for unknown reasons, ensure we don't mark the job as expired by
@@ -874,7 +893,11 @@ def expire_old_job(self, task_data=None, **kwargs):
                     f"Unable to delete File {f.id} in Job {job.id}:",
                     get_traceback_message(ex),
                 )
-                raise ex
+                if deferred_exception is None:
+                    deferred_exception = ex
+
+        if deferred_exception is not None:
+            raise deferred_exception
 
         job.expired = True
         job.save()
@@ -921,7 +944,15 @@ def expire_old_jobs(self, task_data=None, *kwargs):
         expire_old_job.s(task_data=dict(job_id=job.id)).apply_async()
 
 
-@shared_task(bind=True, track_started=True)
+@shared_task(
+    bind=True,
+    track_started=True,
+    default_retry_delay=60 * 60,
+    max_retries=5,
+    # autoretry_for=(IOError, OSError,),
+    retry_backoff=600,  # 10 min, doubling each retry
+    retry_backoff_max=60 * 60 * 48,  # 48 hours
+)
 def move_job_files_to_archive_task(self, task_data=None, *kwargs):
     from ..models import Job, File
     from ..util import split_laxy_sftp_url
