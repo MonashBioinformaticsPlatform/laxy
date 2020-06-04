@@ -335,6 +335,10 @@ class EventLog(UUIDModel):
         return event
 
 
+class ComputeResourceDecommissioned(Exception):
+    pass
+
+
 @reversion.register()
 class ComputeResource(Timestamped, UUIDModel):
     # model created, no actual resource yet
@@ -417,9 +421,10 @@ class ComputeResource(Timestamped, UUIDModel):
             _ = _storage_instance.sftp
 
         if not self.available:
-            raise Exception(
-                f"Cannot access storage for ComputeResource {self.id} - status='{self.status}'"
-            )
+            msg = f"Cannot access storage for ComputeResource {self.id} - status='{self.status}'"
+            if self.status == ComputeResource.STATUS_DECOMMISSIONED:
+                raise ComputeResourceDecommissioned(msg)
+            raise Exception(msg)
 
         if CACHE_SFTP_CONNECTIONS:
             _storage_instance: SFTPStorage = CACHED_SFTP_STORAGE_CLASS_INSTANCES.get(
