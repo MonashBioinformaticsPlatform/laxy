@@ -18,6 +18,8 @@ from io import BytesIO, StringIO, BufferedRandom, BufferedReader
 from copy import copy
 from contextlib import closing
 
+import numpy as np
+
 from django.db import transaction
 from django.conf import settings
 from django.db.models import QuerySet
@@ -50,9 +52,13 @@ from ..util import get_traceback_message
 logger = get_task_logger(__name__)
 
 
-def _conservative_exp_backoff(n_retries):
-    # From ~16 min to 70 hours, exponential backoff
-    return round(random.uniform(10, 12) ** (n_retries + 2))
+def _conservative_exp_backoff(n_retries, a=6, b=6.1, max_time=5 * 24 * 60 * 60):
+    # From ~3 min (retry 1) to 3 days (retry 5) for a=6, b=6.1
+    # max_time ensures we never exceed 5 days by default
+    jittered_max = max_time + random.uniform(0, 60)
+    jittered_delay = random.uniform(a, b) ** (n_retries + 2)
+    # clamp between 1 and jittered_max
+    return round(np.clip(jittered_delay, 1, jittered_max))
 
 
 @shared_task(
