@@ -81,6 +81,12 @@ services:
       - private
 
   rabbitmq:
+    environment:
+      - RABBITMQ_DEFAULT_USER=user
+      - RABBITMQ_DEFAULT_PASS=pass
+    ports:
+      # rabbitmq management port accessible on host for monitoring, debugging
+      - "15672:15672"
     deploy:
       restart_policy:
         condition: any

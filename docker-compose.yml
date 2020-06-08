@@ -40,7 +40,7 @@ services:
 #      - "5432"
 
   rabbitmq:
-    image: rabbitmq:3-alpine
+    image: rabbitmq:3-management-alpine
     hostname: "rabbitmq"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
