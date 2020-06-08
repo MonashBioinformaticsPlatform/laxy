@@ -636,6 +636,10 @@ function detect_pairs() {
     if stat -t "${JOB_PATH}"/input/*.fq.gz >/dev/null 2>&1; then
       EXTN=".fq.gz"
     fi
+    # .. and IonTorrent tarballs contain uncompressed fastqs
+    if stat -t "${JOB_PATH}"/input/*.fastq >/dev/null 2>&1; then
+      EXTN=".fastq"
+    fi
 
     if stat -t "${JOB_PATH}"/input/*_R2_001${EXTN} >/dev/null 2>&1; then
       PAIRIDS="_R1_001,_R2_001"
