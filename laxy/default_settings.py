@@ -316,7 +316,7 @@ CELERY_TASK_SOFT_TIME_LIMIT = 7 * _days
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 CELERY_TASK_ACKS_LATE = True  # no prefetching at all ! tasks must be idempotent
 
-_prefetch_one = False
+_prefetch_one = True
 if _prefetch_one:
     # In this mode, only reserve one 'unacknowledged' task for every cpu/thread on the worker
     # ... so for every one executing, one 'unacknowledged' task will prefetched from RabbitMQ
