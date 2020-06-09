@@ -23,7 +23,7 @@ if __name__ == "__main__":
                     import json
                     import ptvsd
 
-                    ptvsd.enable_attach(address=("0.0.0.0", debugger_port))
+                    ptvsd.enable_attach(address=("0.0.0.0", debugger_port), log_dir=".")
                     # ptvsd.enable_attach(settings.SECRET_KEY, address=('0.0.0.0', 21001))
                     # ptvsd.wait_for_attach()
                     _vscode_launch_json = {

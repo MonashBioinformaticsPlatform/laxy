@@ -29,7 +29,10 @@ app.config_from_object("django.conf:settings")
 app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
 
 
-if settings.DEBUG:
+# We don't start the debugger when CELERY_ALWAYS_EAGER is True to avoid attempting to
+# open the debugger port twice (With CELERY_ALWAYS_EAGER celery jobs run as blocking
+# function calls on the Django app rather than a seperate worker process)
+if settings.DEBUG and not settings.CELERY_ALWAYS_EAGER:
     import traceback
 
     try:

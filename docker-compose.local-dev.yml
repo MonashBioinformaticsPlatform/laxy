@@ -1,11 +1,10 @@
-version: '3.7'
+version: "3.7"
 
 volumes:
   fake-cluster-scratch:
   fake-archive-storage:
 
 services:
-
   db:
     ports:
       # postgres accessible on the host at 5433 for debugging
@@ -25,13 +24,14 @@ services:
       - LAXY_ADMIN_USERNAME=admin
       - LAXY_ADMIN_PASSWORD=adminpass
       - LAXY_SECRET_KEY=_do_please_change_this_in_production_
+      - DEBUGGER_PORT=21004
     volumes:
       - .:/app
     # Django app is publicly accessible without reverse proxy
     ports:
       - "8001:8001"
       # Debugger port
-      - "21001:21001"
+      - "21004:21004"
     logging:
       driver: "json-file"
       options:
@@ -40,14 +40,14 @@ services:
     depends_on:
       - db
     command: bash -c "sleep 10 &&
-                      pip3 install -U ptvsd &&
-                      python3 manage.py migrate --no-input --run-syncdb &&
-                      python3 manage.py migrate --no-input &&
-                      python3 manage.py makemigrations --no-input &&
-                      python3 manage.py migrate --no-input &&
-                      python3 manage.py shell -c \"from os import environ as env; from django.contrib.auth import get_user_model; username = env.get('LAXY_ADMIN_USERNAME', 'admin'); User = get_user_model(); User.objects.filter(username=username).count() or User.objects.create_superuser(username, env.get('LAXY_ADMIN_EMAIL', None), env.get('LAXY_ADMIN_PASSWORD', None));\" &&
-                      python3 manage.py loaddata --app laxy_backend /app/docker/fake-cluster/fixtures.json &&
-                      LAXY_FRONTEND_API_URL=http://`hostname`:8001 python3 manage.py runserver 0.0.0.0:8001"
+      pip3 install -U ptvsd &&
+      python3 manage.py migrate --no-input --run-syncdb &&
+      python3 manage.py migrate --no-input &&
+      python3 manage.py makemigrations --no-input &&
+      python3 manage.py migrate --no-input &&
+      python3 manage.py shell -c \"from os import environ as env; from django.contrib.auth import get_user_model; username = env.get('LAXY_ADMIN_USERNAME', 'admin'); User = get_user_model(); User.objects.filter(username=username).count() or User.objects.create_superuser(username, env.get('LAXY_ADMIN_EMAIL', None), env.get('LAXY_ADMIN_PASSWORD', None));\" &&
+      python3 manage.py loaddata --app laxy_backend /app/docker/fake-cluster/fixtures.json &&
+      LAXY_FRONTEND_API_URL=http://`hostname`:8001 python3 manage.py runserver 0.0.0.0:8001"
   # Examine the logs to find the token to login to the Jupyter notebook
   # (eg docker-compose logs -f docker-compose.yml -f docker-compose.dev.yml shell-notebook )
   shell-notebook:
@@ -77,14 +77,14 @@ services:
     depends_on:
       - db
     command: bash -c "sleep 10 &&
-                      pip3 install jupyter ipython ipykernel django-extensions &&
-                      python3 manage.py shell_plus --notebook"
+      pip3 install jupyter ipython ipykernel django-extensions &&
+      python3 manage.py shell_plus --notebook"
 
- # This is npm + webpack, automatically rebuilding upon changes and serving on port 8002.
- # The source code directory on your host is mounted inside the container, so changes
- # you make will trigger automatic rebuilds (via webpack --watch).
- # If you prefer to run npm yourself outside a container, comment this out and run
- # "npm install && npm run server" manually.
+  # This is npm + webpack, automatically rebuilding upon changes and serving on port 8002.
+  # The source code directory on your host is mounted inside the container, so changes
+  # you make will trigger automatic rebuilds (via webpack --watch).
+  # If you prefer to run npm yourself outside a container, comment this out and run
+  # "npm install && npm run server" manually.
   dev-frontend-server:
     image: node:10-buster
     working_dir: /app
@@ -103,8 +103,8 @@ services:
         max-file: "1"
     restart: "unless-stopped"
     command: bash -c "cd /app/laxy_frontend &&
-                      npm install &&
-                      npm run server"
+      npm install &&
+      npm run server"
     depends_on:
       - django
 
