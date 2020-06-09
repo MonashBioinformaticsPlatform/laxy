@@ -94,6 +94,11 @@ http {
 
     upstream api_servers {
         server django:8001 fail_timeout=0 max_fails=0 weight=10;
+        # Experimental hack: 
+        # List the reverse proxy target multiple times to act as a retry 
+        # upon 503 gateway error from API backend
+        server django:8001 fail_timeout=0 max_fails=0 weight=9;
+        server django:8001 fail_timeout=0 max_fails=0 weight=8;
 
         # zone upstream_api_servers 1M;
         # resolve keyword not available until nginx v1.15.12
