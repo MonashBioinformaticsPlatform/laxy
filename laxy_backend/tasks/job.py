@@ -354,7 +354,7 @@ def index_remote_files(self, task_data=None, **kwargs):
         return filepaths
 
     def _stat_filesize(filepath):
-        s = run(f"stat -L -c %B {filepath}")
+        s = run(f"stat -L -c %s {filepath}")
         if s.succeeded:
             return int(s.splitlines()[0])
         return None
