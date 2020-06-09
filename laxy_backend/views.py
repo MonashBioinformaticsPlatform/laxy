@@ -579,7 +579,10 @@ class StreamFileMixin(JSONView):
             del response["Content-Type"]
 
         size = obj.metadata.get("size", None)
-        if size is not None:
+        if obj.file is not None and hasattr(obj.file, "size"):
+            if obj.file.size is not None:
+                response["Content-Length"] = int(obj.file.size)
+        elif size is not None:
             response["Content-Length"] = int(size)
 
         self._add_metalink_headers(obj, response)
