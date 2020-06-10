@@ -235,16 +235,59 @@ function send_job_metadata() {
          "${JOB_COMPLETE_CALLBACK_URL}"
 }
 
+function download_somehow() {
+    # A very determined download function
+    # Finds something, _ANYTHING_ that might help us download a file over HTTPS
+    # This is primarily used to bootstrap a conda installation - after
+    # that we can use the curl installed by conda.
+    #
+    # (We don't include the most bare-bones solution that only uses 
+    #  /dev/tcp/$host/$port since we need HTTPS, not just HTTP)
+
+    local url=$1
+    local filename=$2
+    if which wget; then
+        wget --directory-prefix "${TMP}" -c "${url}"
+    elif which curl; then
+        curl "${url}" >"${TMP}/${filename}"
+    elif which python && [[ "$(python --version | cut -d '.' -f 1)" == "Python 3" ]]; then
+        python3 -c "from urllib.request import urlretrieve; urlretrieve('${url}', '${filename}')"
+    elif which python && [[ "$(python --version | cut -d '.' -f 1)" == "Python 2" ]]; then
+        python -c "from urllib import urlretrieve; urlretrieve('${url}', '${filename}')"
+    elif which GET; then
+        GET "${url}" >"${filename}"
+    elif perl -MLWP::Simple=getstore -e"exit 0;"; then
+        perl -MLWP::Simple=getstore -e"getstore('${url}', '${filename}');" 
+    elif which openssl; then
+        read proto server path <<<$(echo ${url//// })
+        local scheme=${proto//:*}
+        local url_path=/${path// //}
+        local host=${server//:*}
+        local port=${server//*:}
+        if [[ "${host}" == "${port}" ]]; then
+            [[ "${scheme}" == 'http' ]] && port=80;
+            [[ "${scheme}" == 'https' ]] && port=443;
+        fi
+
+        echo -e"GET ${url_path} HTTP/1.0\nHost: ${host}\n\n" | openssl s_client -quiet -connect "${host}:${port}" >"${filename}"
+    else
+        return 1
+    fi
+}
+
 function install_miniconda() {
     send_event "JOB_INFO" "Installing/detecting local conda installation."
 
     if [[ ! -d "${CONDA_BASE}" ]]; then
-         # TODO: On some older systems (eg Centos 7.7, gcc 8.1.0) the latest Miniconda installer seems to segfault
-         #       Miniconda3-4.4.10-Linux-x86_64.sh appears to work, but still segfaults when attempting
-         #       conda update. Maybe a running inside a pre-baked Singularity image is the solution here ?
-         wget --directory-prefix "${TMP}" -c "https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh"
-         chmod +x "${TMP}"/Miniconda3-latest-Linux-x86_64.sh
-         "${TMP}"/Miniconda3-latest-Linux-x86_64.sh -b -p "${CONDA_BASE}"
+        # TODO: On some older systems (eg Centos 7.7, gcc 8.1.0) the latest Miniconda installer seems to segfault
+        #       Miniconda3-4.4.10-Linux-x86_64.sh appears to work, but still segfaults when attempting
+        #       conda update. Maybe a running inside a pre-baked Singularity image is the solution here ?
+        local url="https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh"
+        local filename="Miniconda3-latest-Linux-x86_64.sh"
+        download_somehow "${url}" "${TMP}/${filename}" || return 1
+
+        chmod +x "${TMP}/${filename}"
+        "${TMP}/${filename}" -b -p "${CONDA_BASE}"
     fi
 }
 
