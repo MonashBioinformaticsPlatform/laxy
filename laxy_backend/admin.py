@@ -312,7 +312,7 @@ class JobAdmin(Timestamped, VersionAdmin):
                 "Errors trying to estimate tarball size for %s" % ",".join(failed),
             )
 
-    estimate_job_tarball_size.short_description = "Estimate tarball size (task)"
+    estimate_job_tarball_size.short_description = "Estimate tarball size"
 
     @takes_instance_or_queryset
     def expire_job(self, request, queryset):
@@ -347,11 +347,11 @@ class JobAdmin(Timestamped, VersionAdmin):
         else:
             self.message_user(
                 request,
-                "Errors trying to verify %d file locations (%s)"
+                "Errors trying to launch verify tasks for %d file locations (%s)"
                 % (len(failed), ",".join(failed)),
             )
 
-    verify.short_description = "Verify file checksums (all locations)"
+    verify.short_description = "Verify job files (all locations)"
 
     @takes_instance_or_queryset
     def copy_to_archive(self, request, queryset):
@@ -397,9 +397,7 @@ class JobAdmin(Timestamped, VersionAdmin):
                 request, "Errors trying to initiate transfer of %s" % ",".join(failed)
             )
 
-    move_job_files_to_archive.short_description = (
-        "Move job to archive host (one task per file)"
-    )
+    move_job_files_to_archive.short_description = "Move job files to archive host"
 
 
 def do_nothing_validator(value):
@@ -558,9 +556,11 @@ class FileAdmin(Timestamped, VersionAdmin):
         if not failed:
             self.message_user(request, "Verifying !")
         else:
-            self.message_user(request, "Errors trying to ingest %s" % ",".join(failed))
+            self.message_user(
+                request, "Errors trying to run verify task for %s" % ",".join(failed)
+            )
 
-    verify.short_description = "Verify file checksums (all locations)"
+    verify.short_description = "Verify file (all locations)"
 
     # TODO: This should be refactored alongside the equivalent function on JobAdmin
     #       to used common code

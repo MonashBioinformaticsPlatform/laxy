@@ -57,6 +57,7 @@ from ..models import (
 from ..util import laxy_sftp_url, get_traceback_message
 
 from .file import move_file_task
+from .verify import verify, verify_task, VerifMode
 
 logger = get_task_logger(__name__)
 
@@ -1034,8 +1035,8 @@ def move_job_files_to_archive_task(self, task_data=None, *kwargs):
                     from_location=from_location,
                     to_location=to_location,
                     clobber=True,
-                    verification_type="immediate",
-                    verify_on="size",
+                    # verify_on=VerifMode.CHECKSUM_ELSE_SIZE,
+                    verify_on=VerifMode.SIZE,
                 )
                 celery_result = move_file_task.apply_async(args=(_t_data,))
 

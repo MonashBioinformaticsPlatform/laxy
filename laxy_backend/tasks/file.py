@@ -17,6 +17,7 @@ import base64
 from io import BytesIO, StringIO, BufferedRandom, BufferedReader
 from copy import copy
 from contextlib import closing
+from collections import namedtuple
 
 import numpy as np
 
@@ -47,6 +48,8 @@ from ..models import (
     get_primary_compute_location_for_files,
     job_path_on_compute,
 )
+
+from .verify import verify, verify_task, VerifMode
 from ..util import get_traceback_message
 
 logger = get_task_logger(__name__)
@@ -62,6 +65,7 @@ def _conservative_exp_backoff(n_retries, a=6, b=6.1, max_time=5 * 24 * 60 * 60):
 
 
 @shared_task(
+    name="move_file_task",
     queue="low-priority",
     bind=True,
     track_started=True,
@@ -96,8 +100,7 @@ def move_file_task(self, task_data=None, **kwargs):
     to_location = task_data.get("to_location")
     make_default = True
     clobber = task_data.get("clobber", False)
-    verification_type = task_data.get("verification_type", "immediate")
-    verify_on = task_data.get("verify_on", "checksum_if_set")
+    verify_on = task_data.get("verify_on", VerifMode.CHECKSUM_ELSE_SIZE)
     deleted_failed = True
 
     start_time = None
@@ -110,11 +113,20 @@ def move_file_task(self, task_data=None, **kwargs):
         file = File.objects.get(id=file_id)
 
         if not file.locations.filter(url=from_location).exists():
-            retry = False
-            raise ValueError(f"File {file.id} does not have location: {from_location}")
+            # TODO:
+            # if verify(to_location, verify_on=verify_on):
+            #     task_data["result"] = {"no_move_required": True,
+            #                             "message": f"Skipping move of {file.id} - does not have requested source location {from_location} and already exists (verified) at destination {to_location}"}
+            #     return task_data
+
+            message = f"File {file.id} does not have location: {from_location} (task_id: {self.request.id})"
+            raise ValueError(
+                f"File {file.id} does not have location: {from_location} (task_id: {self.request.id})"
+            )
 
         try:
-            self.update_state(state="PROGRESS", meta={"running": "copy_and_verify"})
+            # self.update_state(state="PROGRESS", meta={"running": "copy_and_verify"})
+            self.send_event("progress", step="copy_and_verify")
             if from_location != to_location:
                 start_time = datetime.utcnow()
                 # TODO: Upon task retries, this will clobber and retransfer even if the copy on
@@ -127,7 +139,6 @@ def move_file_task(self, task_data=None, **kwargs):
                     to_location,
                     make_default=make_default,
                     clobber=clobber,
-                    verification_type=verification_type,
                     verify_on=verify_on,
                     delete_failed_destination_copy=deleted_failed,
                 )
@@ -159,7 +170,8 @@ def move_file_task(self, task_data=None, **kwargs):
             raise ex
 
         try:
-            self.update_state(state="PROGRESS", meta={"running": "delete_old_copy"})
+            # self.update_state(state="PROGRESS", meta={"running": "delete_old_copy"})
+            self.send_event("progress", step="delete_old_copy")
             # TODO: Empty directories don't get removed when the last file is gone (do we care ?)
             file.delete_at_location(from_location, allow_delete_default=make_default)
             result["deleted_old_copy"] = True
@@ -177,15 +189,15 @@ def move_file_task(self, task_data=None, **kwargs):
         task_data["result"] = result
 
     except BaseException as ex:
-        if retry:
-            self.retry(
-                exc=ex, countdown=_conservative_exp_backoff(self.request.retries)
-            )
         task_succeeded = False
         exc_type = type(ex).__name__
         if message is None:
             message = get_traceback_message(ex)
         print(message)
+        if retry:
+            raise self.retry(
+                exc=ex, countdown=_conservative_exp_backoff(self.request.retries)
+            )
 
     if not task_succeeded:
         raise Exception("\n".join([message, str(result)]))
@@ -219,151 +231,18 @@ def location_path_on_compute(
     return file_path
 
 
-def get_checksum_and_size(filelike, hash_type="md5", blocksize=8192):
-    hashers = {"md5": hashlib.md5, "sha512": hashlib.sha512, "xx64": xxhash.xxh64}
-
-    hasher = hashers.get(hash_type, None)
-    if hasher is None:
-        raise ValueError(f"Unsupported hash_type: {hash_type}")
-    else:
-        hasher = hasher()
-
-    # Make the chunk_size an integral of the preferred block_size for the hash algorithm
-    chunk_size = max(blocksize // hasher.block_size, 1) * hasher.block_size
-
-    # We read buffer ahead - this seems to be more reliable for files over the network
-    with BufferedReader(filelike, buffer_size=chunk_size * 128).raw as fh:
-        byte_count = 0
-        for chunk in iter(lambda: fh.read(chunk_size), b""):
-            hasher.update(chunk)
-            byte_count += len(chunk)
-
-    checksum = hasher.hexdigest()
-    return f"{hash_type}:{checksum}", byte_count
-
-
-def verify(
-    file: File, location: Union[str, FileLocation, None] = None, set_size: bool = True
-) -> bool:
-    """
-    Verifies the data at a particular FileLocation but comparing the checksum of the
-    remote data to the File.checksum value.
-
-    Optionally can set the file size metadata if verification is successful and the
-    size hasn't been recorded.
-
-    :param file: The File model object.
-    :type file: laxy_backend.models.File
-    :param location: The file location to verify, as a string or FileLocation object
-    :type location:  Union[str, laxy_backend.models.FileLocation, None]
-    :param set_size: Add the size metadata if verification is successful and size metadata is absent.
-    :type set_size: bool
-    :return: True if checksum of remote file matches the recorded checksum
-    :rtype: bool
-    """
-    if not file.checksum:
-        return None
-
-    if location is None:
-        location = file.location
-
-    if isinstance(location, FileLocation):
-        location = str(location)
-    elif not file.locations.filter(url=location).exists():
-        # logger.error(f"File {file.id} does not have location: {location}")
-        raise ValueError(f"File {file.id} does not have location: {location}")
-
-    if urlparse(location).scheme != "laxy+sftp":
-        # Only verifying 'laxy+sftp' URLs at this stage.
-        return True
-
-    storage = get_storage_class_for_location(location)
-    compute_for_loc = get_compute_resource_for_location(location)
-    path_on_storage = location_path_on_compute(location, compute_for_loc)
-    with storage.open(path_on_storage) as filelike:
-        checksum_at_location, size = get_checksum_and_size(filelike)
-
-    checksum_matches = checksum_at_location == file.checksum
-
-    if set_size and checksum_matches and file.size is None:
-        file.metadata["size"] = size
-        file.save()
-
-    return checksum_matches
-
-
-@shared_task(queue="low-priority", bind=True, track_started=True)
-def verify_task(self, task_data=None, **kwargs):
-    if task_data is None:
-        raise InvalidTaskError("task_data is None")
-
-    try:
-        filelocation_id = task_data.get("filelocation_id", None)
-        file_id = task_data.get("file_id", None)
-        location = task_data.get("location", None)
-
-        if filelocation_id and location:
-            raise ValueError(
-                "Please provide only filelocation_id or location, not both."
-            )
-
-        if filelocation_id:
-            location = FileLocation.objects.get(id=filelocation_id)
-
-        file = File.objects.get(id=file_id)
-        started_at = datetime.now()
-        verified = verify(file, location)
-        finished_at = datetime.now()
-        walltime = (finished_at - started_at).total_seconds()
-        url = location
-        url = str(location)
-
-        task_data["result"] = {
-            "verified": verified,
-            "operation": "verify",
-            "location": url,
-            "started_time": started_at.isoformat(),
-            "finished_time": finished_at.isoformat(),
-            "walltime_seconds": walltime,
-        }
-        if file.size is not None:
-            kbps = (file.size / 1000) / walltime
-            task_data["result"]["rate_kbps"] = kbps
-
-        task_succeeded = True
-
-    except BaseException as e:
-        task_succeeded = False
-        message = get_traceback_message(e)
-
-    if not task_succeeded:
-        self.update_state(state=states.FAILURE, meta=message)
-        raise Exception(message)
-        # raise Ignore()
-
-    return task_data
-
-
 def copy_file_to(
     file: File,
     from_location: Union[None, str, FileLocation],
     to_location: Union[str, FileLocation],
     make_default=False,
     clobber=False,
-    verification_type="immediate",
-    verify_on="checksum",
+    verify_on=VerifMode.CHECKSUM,
     delete_failed_destination_copy=True,
 ) -> File:
 
-    _verification_types = ["immediate", "async", "none"]
-    if verification_type not in _verification_types:
-        raise ValueError(
-            f'verification_type must be one of: {", ".join(_verification_types)}'
-        )
-
-    _verify_on_options = ["checksum", "size", "checksum_if_set"]
-    if verify_on not in _verify_on_options:
-        raise ValueError(f'verify_on must be one of: {", ".join(_verify_on_options)}')
+    if verify_on not in list(VerifMode):
+        raise ValueError(f'verify_on must be one of: {", ".join(list(VerifMode))}')
 
     if file.deleted:
         logger.warning(
@@ -428,32 +307,7 @@ def copy_file_to(
                     src_mode: int = src_storage.sftp.stat(src_path).st_mode
                     dst_storage.sftp.chmod(dst_path, src_mode)
 
-                verification_ok = False
-
-                if verification_type == "immediate":
-                    if verify_on == "checksum" or (
-                        verify_on == "checksum_if_set" and file.checksum
-                    ):
-                        verification_ok = verify(file, to_location)
-                    elif verify_on == "size":
-                        from_fh = file._file(from_location)
-                        to_fh = file._file(to_location)
-                        if hasattr(from_fh, "size") and hasattr(to_fh, "size"):
-                            verification_ok = int(from_fh.size) == int(to_fh.size)
-
-                elif verification_type == "async":
-                    # TODO: Trigger an async verification task.
-                    #       What do we do if the location doesn't verify ?
-                    #       Extra 'verified' flag or DateTime on FileLocation ?
-                    #       Delete the new copy that failed verification, as long as original exists ?
-                    #       Attempt copy again ?
-
-                    # _task_data = dict(file_id=file.id, location=to_location)
-                    # result = verify_task.apply_async(args=(_task_data,))
-
-                    raise NotImplementedError()
-                elif verification_type == "none":
-                    verification_ok = True
+                verification_ok = verify(file, to_location, verify_on=verify_on)
 
                 if not verification_ok:
                     message = (
@@ -495,11 +349,9 @@ def copy_file_task(self, task_data=None, **kwargs):
     file_id = task_data.get("file_id")
     from_location = task_data.get("from_location", None)
     to_location = task_data.get("to_location")
-    # verification_type = task_data.get('verification_type', 'immediate')
     make_default = False
     clobber = task_data.get("clobber", False)
-    verification_type = task_data.get("verification_type", "immediate")
-    verify_on = task_data.get("verify_on", "checksum_if_set")
+    verify_on = task_data.get("verify_on", VerifMode.CHECKSUM_IF_SET)
     deleted_failed = True
 
     start_time = None
@@ -520,7 +372,6 @@ def copy_file_task(self, task_data=None, **kwargs):
                 to_location,
                 make_default=make_default,
                 clobber=clobber,
-                verification_type=verification_type,
                 verify_on=verify_on,
                 delete_failed_destination_copy=deleted_failed,
             )
