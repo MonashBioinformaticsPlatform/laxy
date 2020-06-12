@@ -782,7 +782,11 @@ EOM
 
     if [[ "${QUEUE_TYPE}" == "slurm" ]]; then
         for f in $mash_reads; do
-            sbatch --parsable "${JOB_PATH}/input/run_mash.sh" "${f}" >>"${JOB_PATH}/slurm.jids"
+            sbatch --output="${mash_outdir}/slurm.out" \
+                   --error="${mash_outdir}/slurm.err" \
+                   --open-mode=append \
+                   --parsable \
+                   "${JOB_PATH}/input/run_mash.sh" "${f}" >>"${JOB_PATH}/slurm.jids"
         done
     else
         for f in $mash_reads; do
