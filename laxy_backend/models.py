@@ -1151,7 +1151,10 @@ class File(Timestamped, UUIDModel):
                 self.path = str(Path(urlparse(url).path).parent)
 
     def delete_at_location(
-        self, location: Union[str, FileLocation], allow_delete_default=False
+        self,
+        location: Union[str, FileLocation],
+        allow_delete_default=False,
+        delete_empty_directory=True,
     ):
         """
         Delete file content at a particular remote location.
@@ -1160,10 +1163,18 @@ class File(Timestamped, UUIDModel):
         - this ensures we don't accidentally delete the primary location unless
         we are explicit about it.
 
+        By default, if the containing directory is empty after file deletion, 
+        it will also be removed (disable this behaviour using 
+        `delete_empty_directory=False`).
+
         :param location: The URL location or FileLocation to delete.
         :type location: Union[str, FileLocation]
-        :param allow_delete_default:
+        :param allow_delete_default: Allow deletion of the data at the default 
+                                     FileLocation.
         :type allow_delete_default: bool
+        :param delete_empty_directory: Also removes the containing directory of 
+                                       the file if it's empty after deleting the file.
+        :type delete_empty_directory: bool
         :return:
         :rtype:
         """
@@ -1218,9 +1229,20 @@ class File(Timestamped, UUIDModel):
                 )
 
             try:
-                _delete_with_retries(
-                    compute.sftp_storage, self._abs_path_on_compute(location=location)
-                )
+                path_on_compute = self._abs_path_on_compute(location=location)
+                _delete_with_retries(compute.sftp_storage, path_on_compute)
+
+                if delete_empty_directory:
+                    containing_dir = os.path.normpath(str(Path(path_on_compute).parent))
+                    _dirs, _files = compute.sftp_storage.listdir(containing_dir)
+                    if (
+                        len(_files) == 0
+                        and len(_dirs) == 0
+                        and containing_dir
+                        != os.path.normpath(compute.jobs_dir)  # just in case
+                    ):
+                        _delete_with_retries(compute.sftp_storage, containing_dir)
+
             except FileNotFoundError as ex:
                 logger.info(f"File is missing at {fileloc.url} - marking as deleted.")
 
@@ -1230,6 +1252,7 @@ class File(Timestamped, UUIDModel):
                     f"Storage backend issue - failed to delete file: "
                     f"{self.id} at {fileloc.url} (FileLocation {fileloc.id}) :: {ex}"
                 )
+
         else:
             raise NotImplementedError(
                 "Only laxy+sftp:// internal URLs can be deleted at this time."
