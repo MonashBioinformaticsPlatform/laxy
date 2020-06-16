@@ -193,12 +193,27 @@ if SENTRY_DSN:
     import sentry_sdk
     from sentry_sdk.integrations.django import DjangoIntegration
 
+    def _sentry_before_send(event, hint):
+        import socket
+
+        ignored_exceptions = (
+            socket.error,
+            socket.timeout,
+        )
+
+        if "exc_info" in hint:
+            exc_type, exc_value, tb = hint["exc_info"]
+            if isinstance(exc_value, ignored_exceptions):
+                return None
+        return event
+
     SENTRY_RELEASE = f"{VERSION}"
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         release=SENTRY_RELEASE,
         environment=ENV,
         integrations=[DjangoIntegration()],
+        before_send=_sentry_before_send,
     )
 
 JOB_EXPIRY_TTL_DEFAULT = env("JOB_EXPIRY_TTL_DEFAULT")
