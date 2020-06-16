@@ -495,9 +495,11 @@ class FileAdmin(Timestamped, VersionAdmin):
         "id",
         "path",
         "name",
+        "locations__url__contains",
     )
     inlines = (FileLocationsInline,)
     actions = (
+        "delete_real_file",
         "fix_metadata",
         "verify",
         "copy_to_archive",
@@ -575,6 +577,22 @@ class FileAdmin(Timestamped, VersionAdmin):
             self.message_user(request, "Errors trying to ingest %s" % ",".join(failed))
 
     copy_to_archive.short_description = "Copy file to archive location"
+
+    def delete_real_file(self, request, queryset):
+        failed = []
+
+        for f in queryset:
+            try:
+                f.delete_file()
+            except BaseException as ex:
+                failed.append(f.id)
+
+        if not failed:
+            self.message_user(request, "Deleting !")
+        else:
+            self.message_user(request, "Errors trying to delete %s" % ",".join(failed))
+
+    delete_real_file.short_description = "Delete real file at all locations"
 
 
 class JobInputFilesInline(admin.TabularInline):
