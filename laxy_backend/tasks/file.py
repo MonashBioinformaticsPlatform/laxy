@@ -113,11 +113,14 @@ def move_file_task(self, task_data=None, **kwargs):
         file = File.objects.get(id=file_id)
 
         if not file.locations.filter(url=from_location).exists():
-            # TODO:
-            # if verify(to_location, verify_on=verify_on):
-            #     task_data["result"] = {"no_move_required": True,
-            #                             "message": f"Skipping move of {file.id} - does not have requested source location {from_location} and already exists (verified) at destination {to_location}"}
-            #     return task_data
+            if verify(to_location, verify_on=VerifMode.SIZE):
+                task_data["result"] = {
+                    "no_copy_required": True,
+                    "message": f"Skipping move of {file.id} - does not have requested "
+                    f"source location {from_location} and already exists (size verified) at "
+                    f"destination {to_location}.",
+                }
+                return task_data
 
             message = f"File {file.id} does not have location: {from_location} (task_id: {self.request.id})"
             raise ValueError(
@@ -129,10 +132,6 @@ def move_file_task(self, task_data=None, **kwargs):
             self.send_event("progress", step="copy_and_verify")
             if from_location != to_location:
                 start_time = datetime.utcnow()
-                # TODO: Upon task retries, this will clobber and retransfer even if the copy on
-                #       earlier tries was successful (but a later step failed).
-                #       Add a clobber='always' and clobber='size' option, that will do a file size
-                #       check and only clobber if the sizes don't match.
                 file = copy_file_to(
                     file,
                     from_location,
