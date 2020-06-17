@@ -1545,7 +1545,7 @@ class File(Timestamped, UUIDModel):
                 self.save(update_fields=["metadata"])
         except NotImplementedError as ex:
             pass
-        except FileNotFoundError:
+        except (FileNotFoundError, ssh_exception.SSHException):
             # Can occur when SFTP backend server is inaccessible
             pass
 
