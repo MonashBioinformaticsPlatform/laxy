@@ -363,11 +363,9 @@ def clean_cache(cache_path, cache_age: int = 30):
     cmd = [
         "find",
         cache_path,
-        "-depth",
+        "-not",  # this part ignores .hidden files and dirs
         "-name",
         '".*"',
-        "-prune",
-        "-o",  # this part ignores .hidden files and dirs
         "-type",
         "f",
         "-mtime",
