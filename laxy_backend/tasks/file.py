@@ -236,7 +236,7 @@ def copy_file_to(
     to_location: Union[str, FileLocation],
     make_default=False,
     clobber=False,
-    verify_on=VerifMode.CHECKSUM,
+    verify_on=VerifMode.CHECKSUM_ELSE_SIZE,
     delete_failed_destination_copy=True,
 ) -> File:
 
@@ -350,7 +350,7 @@ def copy_file_task(self, task_data=None, **kwargs):
     to_location = task_data.get("to_location")
     make_default = False
     clobber = task_data.get("clobber", False)
-    verify_on = task_data.get("verify_on", VerifMode.CHECKSUM_IF_SET)
+    verify_on = task_data.get("verify_on", VerifMode.CHECKSUM_ELSE_SIZE)
     deleted_failed = True
 
     start_time = None

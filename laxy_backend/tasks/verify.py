@@ -180,19 +180,19 @@ def verify(
     if verify_on == VerifMode.NONE:
         return True
 
-    if verify_on == VerifMode.SIZE:
+    elif verify_on == VerifMode.SIZE:
         verified = verify_size(file, location)
 
-    if verify_on == VerifMode.CHECKSUM:
+    elif verify_on == VerifMode.CHECKSUM:
         verified = verify_checksum(file, location)
 
-    if verify_on == VerifMode.CHECKSUM_ELSE_SIZE:
+    elif verify_on == VerifMode.CHECKSUM_ELSE_SIZE:
         if file.checksum:
             verified = verify_checksum(file, location)
         else:
             verified = verify_size(file, location)
 
-    if verify_on == VerifMode.CHECKSUM_IF_SET:
+    elif verify_on == VerifMode.CHECKSUM_IF_SET:
         if file.checksum:
             verified = verify_checksum(file, location)
         else:
