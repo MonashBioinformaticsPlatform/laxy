@@ -2,9 +2,10 @@ import fnmatch
 import shlex
 import traceback
 from django.db import transaction
-from typing import Sequence, Union, Iterable
+from typing import Sequence, Union, Iterable, List, Tuple
 from datetime import datetime, timedelta
 from pathlib import Path
+from urllib.parse import urlparse
 import logging
 import os
 from os.path import join, expanduser
@@ -332,63 +333,51 @@ def set_job_status(self, task_data=None, **kwargs):
 
 
 @shared_task(
-    bind=True, track_started=True, default_retry_delay=60, max_retries=3,
+    name="index_remote_files",
+    bind=True,
+    track_started=True,
+    default_retry_delay=60,
+    max_retries=3,
 )
-def index_remote_files(self, task_data=None, **kwargs):
+def index_remote_files(self, task_data=None, **kwargs) -> Sequence[Tuple[str, int]]:
     def _remote_list_files(path="."):
         """
-        Recursively list files relative to the specified path.
+        Recursively list files relative to the specified path,
+        returning a list of tuples [(relpath, size)].
+
         Intended to be called within a Fabric context.
 
         :param path: A path (absolute or relative to cwd)
         :type path: str
-        :return: A list of relative paths.
-        :rtype: List[str]
+        :return: A list of tuples, (relative file path, byte size).
+        :rtype: Sequence[Tuple[str, int]]
         """
         # path = shlex.quote(path)
+        # lslines = run(f"find -L '{path}' -mindepth 1 -type f -printf '%P\n'")
+        # Get the relative file path and the size
         # -L ensures symlinks are followed and output as filenames too
-        lslines = run(f"find -L {path} -mindepth 1 -type f -printf '%P\n'")
+        # try:
+        cmd = f"find -L '{path}'" + " -mindepth 1 -type f -printf '%P\t%s\n'"
+        with fabsettings(warn_only=True):
+            lslines = run(cmd)
+
         if not lslines.succeeded:
-            raise Exception("Failed to list remote files: %s" % lslines)
-        filepaths = lslines.splitlines()
-        filepaths = [f for f in filepaths if f.strip()]
-        return filepaths
+            logger.error(lslines.stderr)
+            raise SystemExit(f"Command {cmd} -- failed to list remote files: {lslines}")
 
-    def _stat_filesize(filepath):
-        s = run(f"stat -L -c %s {filepath}")
-        if s.succeeded:
-            return int(s.splitlines()[0])
-        return None
+        filepath_size = [l.split("\t") for l in lslines.splitlines() if l.strip()]
+        filepath_size = [(pair[0], int(pair[1])) for pair in filepath_size]
+        return filepath_size
 
-    if task_data is None:
-        raise InvalidTaskError("task_data is None")
-
-    job_id = task_data.get("job_id")
-    job = Job.objects.get(id=job_id)
-    clobber = task_data.get("clobber", False)
-
-    compute_resource = job.compute_resource
-    if compute_resource is not None:
-        host = compute_resource.host
-        gateway = compute_resource.gateway_server
-    else:
-        logger.info(f"Not indexing files for {job_id}, no compute_resource.")
-        return task_data
-
-    job.log_event("JOB_INFO", "Indexing all files (backend task)")
-
-    environment = task_data.get("environment", {})
-    # environment.update(JOB_ID=job_id)
-    _init_fabric_env()
-    private_key = job.compute_resource.private_key
-    remote_username = job.compute_resource.extra.get("username", None)
-
-    compute_id = job.compute_resource.id
-    message = "No message."
+    # def _stat_filesize(filepath):
+    #     s = run(f"stat -L -c %s '{filepath}'")
+    #     if s.succeeded:
+    #         return int(s.splitlines()[0])
+    #     return None
 
     def _create_update_file_objects(
         remote_path, fileset=None, prefix_path="", location_base=""
-    ):
+    ) -> Sequence[File]:
         """
         Returns a list of (unsaved) File objects from a recursive 'find'
         of a remote directory. If a file of the same path exists in the FileSet,
@@ -403,20 +392,20 @@ def index_remote_files(self, task_data=None, **kwargs):
         :param location_base: Prefix of location URL (eg sftp://127.0.0.1/XxX/)
         :type location_base: str
         :return: A list of File objects
-        :rtype: List[File]
+        :rtype: Sequence[File]
         """
 
         with cd(remote_path):
-            filepaths = _remote_list_files(".")
-            urls = [(f"{location_base}/{fpath}", fpath) for fpath in filepaths]
+            filelisting = _remote_list_files(".")
 
             file_objs = []
-            for location, filepath in urls:
+            for filepath, filesize in filelisting:
+                location = f"{location_base}/{filepath}"
                 fname = Path(filepath).name
-                fpath = Path(prefix_path) / Path(filepath).parent
+                fpath = Path(prefix_path, filepath).parent
 
                 if fileset:
-                    f = fileset.get_file_by_path(Path(fpath) / Path(fname))
+                    f = fileset.get_file_by_path(Path(fpath, fname))
 
                 if not f:
                     f = File(location=location, owner=job.owner, name=fname, path=fpath)
@@ -424,81 +413,109 @@ def index_remote_files(self, task_data=None, **kwargs):
                     f.location = location
                     f.owner = job.owner
 
-                try:
-                    f.size = _stat_filesize(filepath)
-                except BaseException:
-                    pass
+                f.size = filesize
 
                 file_objs.append(f)
 
         return file_objs
 
+    if task_data is None:
+        raise InvalidTaskError("task_data is None")
+
+    job_id = task_data.get("job_id")
+    job = Job.objects.get(id=job_id)
+    clobber = task_data.get("clobber", False)
+    remove_missing = task_data.get("remove_missing", True)
+    environment = task_data.get("environment", {})
+
+    # TODO: We could in fact loop over all compute resources where files are
+    #       and ingest from each of them (adding duplicates as extra FileLocations)
+    #       This would mean jobs split over two hosts (eg due to a failed
+    #       move_job_files_task) would still index correctly.
+    #
+    # stored_at = get_compute_resources_for_files(job.get_files())
+
+    compute_resource = get_primary_compute_location_for_files(job.get_files())
+    if compute_resource is None:
+        compute_resource = job.compute_resource
+
+    if compute_resource is not None:
+        host = compute_resource.host
+        gateway = compute_resource.gateway_server
+    else:
+        logger.info(f"Not indexing files for {job_id}, no compute_resource.")
+        return task_data
+
+    job.log_event("JOB_INFO", "Indexing all files (backend task)")
+
+    _init_fabric_env()
+    private_key = compute_resource.private_key
+    remote_username = compute_resource.extra.get("username", None)
+
+    compute_id = compute_resource.id
+    message = "No message."
+
     try:
-        if "results" not in task_data:
-            task_data["results"] = {}
+        task_data["result"] = task_data.get("result", {})
 
         with fabsettings(
-            gateway=gateway,
-            host_string=host,
-            user=remote_username,
-            key=private_key,
-            # key_filename=expanduser("~/.ssh/id_rsa"),
+            gateway=gateway, host_string=host, user=remote_username, key=private_key,
         ):
-            working_dir = job.abs_path_on_compute
-            input_dir = os.path.join(working_dir, "input")
-            output_dir = os.path.join(working_dir, "output")
 
-            output_files = _create_update_file_objects(
-                output_dir,
-                fileset=job.output_files,
-                prefix_path="output",
-                location_base=laxy_sftp_url(job, "output"),
-            )
-            job.output_files.path = "output"
-            job.output_files.owner = job.owner
+            task_data["result"]["n_files_indexed"] = 0
 
-            if clobber:
-                job.output_files.remove(job.output_files, delete=True)
+            for fileset_relpath, fileset in [
+                ("input", job.input_files),
+                ("output", job.output_files),
+            ]:
 
-            job.output_files.add(output_files)
-            task_data["results"]["output_files_indexed"] = len(output_files)
+                job_abs_path = job_path_on_compute(job, compute_resource)
+                fileset_abspath = str(Path(job_abs_path, fileset_relpath))
 
-            # TODO: This should really be done at job start, or once input data
-            #       has been staged on the compute node.
-            input_files = _create_update_file_objects(
-                input_dir,
-                fileset=job.input_files,
-                prefix_path="input",
-                location_base=laxy_sftp_url(job, "input"),
-            )
-            job.input_files.path = "input"
-            job.input_files.owner = job.owner
+                file_objs = _create_update_file_objects(
+                    fileset_abspath,
+                    fileset=fileset,
+                    prefix_path=fileset_relpath,
+                    location_base=f"laxy+sftp://{compute_resource.id}/{job.id}/{fileset_relpath}",
+                )
 
-            if clobber:
-                job.input_files.remove(job.input_files, delete=True)
+                with transaction.atomic():
+                    fileset.path = fileset_relpath
+                    fileset.owner = job.owner
 
-            job.input_files.add(input_files)
-            task_data["results"]["input_files_indexed"] = len(input_files)
+                    if clobber:
+                        fileset.remove(list(fileset.get_files()), delete=True)
+
+                    if remove_missing:
+                        new_file_pathlist = set([f.full_path for f in file_objs])
+                        for old_fobj in fileset.get_files():
+                            # We ignore non-laxy+sftp files so we don't unintentionlly
+                            # remove files that reside in non-SFTP storage backends, eg
+                            # object store etc
+                            # (eg, a pipeline might stream files directly from object store,
+                            #  or registers output files output into object store)
+                            if (
+                                old_fobj.location
+                                and urlparse(old_fobj.location).scheme.lower()
+                                != "laxy+sftp"
+                            ):
+                                continue
+                            if old_fobj.full_path not in new_file_pathlist:
+                                fileset.remove(old_fobj, delete=True)
+
+                    fileset.add(file_objs)
+
+                    fileset.save()
+
+                task_data["result"]["n_files_indexed"] += len(file_objs)
 
         succeeded = True
     except BaseException as ex:
         succeeded = False
         if hasattr(ex, "message"):
-            message = expanduser.message
+            message = ex.message
 
         self.retry(exc=ex, countdown=60)
-        # self.update_state(state=states.FAILURE, meta=message)
-        # raise e
-
-    # job_status = Job.STATUS_RUNNING if succeeded else Job.STATUS_FAILED
-    # job = Job.objects.get(id=job_id)
-    # job.status = job_status
-    # job.save()
-
-    # if not succeeded:
-    #     self.update_state(state=states.FAILURE, meta=message)
-    #     raise Exception(message)
-    #     # raise Ignore()
 
     return task_data
 
@@ -1080,5 +1097,5 @@ def move_job_files_to_archive_task(self, task_data=None, *kwargs):
     results["n_started"] = n_started
     results["immediate_failed"] = immediate_failed
     results["skipped"] = skipped
-    task_data["results"] = results
+    task_data["result"] = results
     return task_data

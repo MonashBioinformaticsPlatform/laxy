@@ -230,7 +230,7 @@ class JobAdmin(Timestamped, VersionAdmin):
         "expired",
     )
     actions = (
-        "trigger_file_ingestion",
+        "index_remote_files",
         "expire_job",
         "estimate_job_tarball_size",
         "verify",
@@ -282,7 +282,7 @@ class JobAdmin(Timestamped, VersionAdmin):
         return ""
 
     @takes_instance_or_queryset
-    def trigger_file_ingestion(self, request, queryset):
+    def index_remote_files(self, request, queryset):
         failed = []
         for obj in queryset:
             task_data = dict(job_id=obj.id)
@@ -290,11 +290,11 @@ class JobAdmin(Timestamped, VersionAdmin):
             if result.failed():
                 failed.append(obj.id)
         if not failed:
-            self.message_user(request, "Ingesting !")
+            self.message_user(request, "Indexing !")
         else:
-            self.message_user(request, "Errors trying to ingest %s" % ",".join(failed))
+            self.message_user(request, "Errors trying to index %s" % ",".join(failed))
 
-    trigger_file_ingestion.short_description = "Ingest files"
+    index_remote_files.short_description = "Index job files"
 
     @takes_instance_or_queryset
     def estimate_job_tarball_size(self, request, queryset):
