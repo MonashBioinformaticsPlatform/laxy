@@ -552,7 +552,15 @@ class StreamFileMixin(JSONView):
         obj = self._as_file_obj(obj_ref)
 
         if obj is None:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+            return HttpResponse(
+                status=status.HTTP_404_NOT_FOUND,
+                reason=f"File object does not exist ({obj_ref})",
+            )
+        if obj.file is None:
+            return HttpResponse(
+                status=status.HTTP_404_NOT_FOUND,
+                reason=f"File data is unavailable (missing location) ({obj_ref})",
+            )
 
         renderer = StreamingFileDownloadRenderer()
         # TODO: For local file:// URLs, django.http.response.FileResponse will probably preform better
