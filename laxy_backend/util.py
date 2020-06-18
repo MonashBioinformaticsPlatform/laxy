@@ -2,6 +2,7 @@ from typing import Union, Tuple
 import traceback
 import random
 import string
+import shlex
 import uuid
 import base64
 from collections import OrderedDict
@@ -13,6 +14,8 @@ import os
 from operator import itemgetter
 from functools import cmp_to_key
 from typing import Mapping, Sequence
+import unicodedata
+from text_unidecode import unidecode
 
 from urllib.parse import urlparse
 from cache_memoize import cache_memoize
@@ -311,3 +314,42 @@ def get_traceback_message(ex: BaseException) -> Union[str]:
         )
 
     return message
+
+
+def sanitize_filename(
+    filename: str,
+    valid_filename_chars: str = None,
+    replace: dict = None,
+    max_length: int = 255,
+) -> str:
+    """
+    Adapted from: https://gist.github.com/wassname/1393c4a57cfcbf03641dbc31886123b8
+
+    Replaces or removes characters that aren't filename safe on most platforms (or often
+    cause issues in shell commmands when left unescaped), spaces to underscores, 
+    truncates the filename length and replaces a subset of Unicode characters with 
+    US-ASCII transliterations (eg à -> a, 蛇 -> She).
+    """
+    if valid_filename_chars is None:
+        # valid_filename_chars = "-_.() %s%s" % (string.ascii_letters, string.digits)
+        # Brackets often cause issue with improperly escaped shell commands, so we disallow those too ..
+        valid_filename_chars = "-_. %s%s" % (string.ascii_letters, string.digits)
+
+    if replace is None:
+        replace = {" ": "_"}
+
+    filename = unidecode(filename)
+
+    # replace spaces or other characters in the replacement dict
+    for old, new in replace.items():
+        filename = filename.replace(old, new)
+
+    # keep only valid ascii chars
+    cleaned_filename = (
+        unicodedata.normalize("NFKD", filename).encode("ASCII", "ignore").decode()
+    )
+
+    # keep only valid chars
+    cleaned_filename = "".join(c for c in cleaned_filename if c in valid_filename_chars)
+
+    return cleaned_filename[:max_length]

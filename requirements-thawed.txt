@@ -27,6 +27,7 @@ Jinja2>=2.10.1
 fs  # PyFilesystem
 sentry-sdk==0.14.4
 humanize
+text-unidecode
 git+https://github.com/pansapiens/webdav-client-python.git@master#egg=webdavclient
 ptvsd
 

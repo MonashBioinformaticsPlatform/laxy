@@ -123,6 +123,7 @@ soupsieve==1.7.1
 Sphinx==1.6.6
 sphinx-rtd-theme==0.2.4
 sphinxcontrib-websupport==1.0.1
+text-unidecode==1.3
 toolz==0.9.0
 tornado==4.5.3
 typing==3.6.6
