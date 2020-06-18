@@ -291,7 +291,7 @@ export default class ENAFileSelect extends Vue {
       }
 
       cart_samples.push({
-        name: ena.sample_accession,
+        name: ena.run_accession,
         files: files,
         metadata: { condition: "", ena: ena },
       } as Sample);
