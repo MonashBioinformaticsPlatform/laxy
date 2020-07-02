@@ -6,10 +6,10 @@ import forEach from 'lodash-es/forEach';
 import find from 'lodash-es/find';
 import flatten from 'lodash-es/flatten';
 
-import {Store as store} from './store';
+import { Store as store } from './store';
 
-import {WebAPI} from './web-api';
-import {LaxyFile} from './model';
+import { WebAPI } from './web-api';
+import { LaxyFile } from './model';
 
 export interface TreeNode<T> {
     id: string;
@@ -88,8 +88,8 @@ export function filterByRegex(files: LaxyFile[], patterns: RegExp[] | null): Lax
 }
 
 export function filterBy(files: LaxyFile[],
-                         query: string | null,
-                         map_fn: Function): LaxyFile[] {
+    query: string | null,
+    map_fn: Function): LaxyFile[] {
     if (query == null || query.length === 0 || files == null) {
         return files;
     }
@@ -127,8 +127,8 @@ export function filterByFilename(files: LaxyFile[], query: string | null, caseSe
 }
 
 export function viewFile(file_id: string | LaxyFile,
-                         fileset: LaxyFileSet | null,
-                         job_id: string | null) {
+    fileset: LaxyFileSet | null,
+    job_id: string | null) {
     let file: LaxyFile | undefined;
     if (file_id instanceof String) {
         file = store.getters.fileById(file_id, fileset);
@@ -150,8 +150,8 @@ export function viewFile(file_id: string | LaxyFile,
 }
 
 export function downloadFile(file_id: string | LaxyFile,
-                             fileset: LaxyFileSet | null,
-                             job_id: string | null) {
+    fileset: LaxyFileSet | null,
+    job_id: string | null) {
     let file: LaxyFile | undefined;
     if (file_id instanceof String) {
         file = store.getters.fileById(file_id, fileset);
@@ -177,6 +177,7 @@ export function truncateFastqFilename(filename: string): string {
     fn = fn.replace('.fastq.gz', '');  // ENA/SRA
     fn = fn.replace('.fasta.gz', '');  // occasionally we get FASTA format reads
     fn = fn.replace('.fq.gz', '');  // BGI does this, it seems
+    fn = fn.replace('.fastq', '');  // Occasionally we need to take uncompressed fastqs
     return fn;
 }
 
@@ -225,8 +226,8 @@ export function fileListToTree(files: LaxyFile[]): TreeNode<LaxyFile> {
 }
 
 export function objListToTree<T>(objs: T[],
-                                 getPathParts: Function,
-                                 getId: Function): TreeNode<T> {
+    getPathParts: Function,
+    getId: Function): TreeNode<T> {
     const tree: TreeNode<T> = {
         id: '__root__',
         name: '/',
@@ -270,7 +271,7 @@ export function objListToTree<T>(objs: T[],
         // walk up the path. for each subdirectory, determine if it is already
         // represented as a node in the tree else add it
         forEach(pathParts, (part => {
-            const existingPath: TreeNode<T> = find(currentLevel.children, {name: part.name}) as any;
+            const existingPath: TreeNode<T> = find(currentLevel.children, { name: part.name }) as any;
 
             if (existingPath) {
                 // The path to this item was already in the tree, so don't add it again.
