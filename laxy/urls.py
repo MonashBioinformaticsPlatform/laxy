@@ -14,6 +14,12 @@ from rest_framework.documentation import include_docs_urls
 
 from .openapi import LaxyOpenAPISchemaView
 
+admin.site.site_header = 'Laxy admin'
+admin.site.site_title = 'Laxy admin'
+admin.site.site_url = settings.FRONTEND_API_URL
+admin.site.index_title = 'Laxy backend administration'
+# admin.empty_value_display = '**no value**'
+
 urlpatterns = [
     re_path(r'^admin/', admin.site.urls),
 
