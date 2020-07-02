@@ -321,6 +321,7 @@ def sanitize_filename(
     valid_filename_chars: str = None,
     replace: dict = None,
     max_length: int = 255,
+    unicode_to_ascii=False,
 ) -> str:
     """
     Adapted from: https://gist.github.com/wassname/1393c4a57cfcbf03641dbc31886123b8
@@ -338,7 +339,8 @@ def sanitize_filename(
     if replace is None:
         replace = {" ": "_"}
 
-    filename = unidecode(filename)
+    if unicode_to_ascii:
+        filename = unidecode(filename)
 
     # replace spaces or other characters in the replacement dict
     for old, new in replace.items():
