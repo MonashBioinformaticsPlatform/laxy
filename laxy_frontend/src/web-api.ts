@@ -167,10 +167,10 @@ export class WebAPI {
         return await this.fetcher.get(url);
     }
 
-    public static async remoteFilesList(url: string): Promise<AxiosResponse> {
+    public static async remoteFilesList(url: string, fileglob: string = "*"): Promise<AxiosResponse> {
         try {
-            const api_url = `/api/v1/remote-browse/?url=${url}`;
-            return await this.fetcher.get(api_url);
+            const api_url = `/api/v1/remote-browse/`;
+            return await this.fetcher.post(api_url, {url: url, fileglob: fileglob});
         } catch (error) {
             throw error;
         }

@@ -4,7 +4,7 @@ import re
 from fnmatch import fnmatch
 from typing import List, Union, Pattern
 from contextlib import closing
-from urllib.parse import urljoin, urlparse, parse_qs
+from urllib.parse import urljoin, urlparse, parse_qs, unquote, quote, quote_plus
 from pathlib import Path
 import asyncio
 import concurrent.futures
@@ -21,17 +21,17 @@ logger = logging.getLogger(__name__)
 # BACKEND = 'splash'
 # BACKEND = 'simple'
 # BACKEND = 'pyppeteer'
-BACKEND = getattr(settings, 'WEB_SCRAPER_BACKEND', 'simple')
-SPLASH_HOST = getattr(settings, 'WEB_SCRAPER_SPLASH_HOST', 'http://localhost:8050')
+BACKEND = getattr(settings, "WEB_SCRAPER_BACKEND", "simple")
+SPLASH_HOST = getattr(settings, "WEB_SCRAPER_SPLASH_HOST", "http://localhost:8050")
 
 
 def render_page(url: str, backend=None) -> str:
     if backend is None:
         backend = BACKEND
 
-    if backend == 'simple':
+    if backend == "simple":
         return render_simple(url)
-    elif backend == 'splash':
+    elif backend == "splash":
         return render_with_splash(url)
     # elif backend == 'pyppeteer':
     #     return render_with_pyppeteer(url)
@@ -43,7 +43,7 @@ def render_simple(url: str, max_size: int = 10 * 1024 * 1024):
     from .tasks.download import request_with_retries
 
     try:
-        with closing(request_with_retries('GET', url, allow_redirects=True)) as resp:
+        with closing(request_with_retries("GET", url, allow_redirects=True)) as resp:
             resp.raise_for_status()
 
             text = []
@@ -56,7 +56,7 @@ def render_simple(url: str, max_size: int = 10 * 1024 * 1024):
                     raise MemoryError(f"File is too large (> {max_size} bytes)")
 
             try:
-                text = ''.join(text)
+                text = "".join(text)
                 return text
             except TypeError as ex:
                 raise ValueError(f"File doesn't look like sane HTML")
@@ -65,18 +65,22 @@ def render_simple(url: str, max_size: int = 10 * 1024 * 1024):
         raise e
 
 
-def render_with_splash(url: str,
-                       fallback_backend = None,
-                       timeout: float = 10,
-                       wait: float = 0.5,
-                       fetch_images: bool = False) -> str:
-    fetch_images = {True: '1', False: '0'}[fetch_images]
+def render_with_splash(
+    url: str,
+    fallback_backend=None,
+    timeout: float = 10,
+    wait: float = 0.5,
+    fetch_images: bool = False,
+) -> str:
+    fetch_images = {True: "1", False: "0"}[fetch_images]
     try:
-        text = requests.get(f"{SPLASH_HOST}/render.html?"
-                            f"url={url}&"
-                            f"timeout={timeout}&"
-                            f"wait={wait}&"
-                            f"images={fetch_images}").text
+        text = requests.get(
+            f"{SPLASH_HOST}/render.html?"
+            f"url={quote(url)}&"
+            f"timeout={timeout}&"
+            f"wait={wait}&"
+            f"images={fetch_images}"
+        ).text
     except requests.exceptions.ConnectionError as ex:
         if fallback_backend is not None:
             text = render_page(url, backend=fallback_backend)
@@ -152,16 +156,16 @@ def parse_links(text: str, url=None) -> List[str]:
     :return:
     :rtype:
     """
-    soup = BeautifulSoup(text, 'html.parser')
+    soup = BeautifulSoup(text, "html.parser")
 
     links = []
-    for a in soup.find_all('a'):
-        href = a.get('href')
+    for a in soup.find_all("a"):
+        href = a.get("href")
         if href is None:
             continue
 
         u = str(href)
-        if u.strip() == '' or u.startswith('#'):
+        if u.strip() == "" or u.startswith("#"):
             continue
 
         # convert to full URL, not just path
@@ -171,24 +175,30 @@ def parse_links(text: str, url=None) -> List[str]:
 
 
 def is_apache_index_page(url, text):
-    soup = BeautifulSoup(text, 'html.parser')
-    title = soup.select('title')
-    footer = soup.select('address')
+    soup = BeautifulSoup(text, "html.parser")
+    title = soup.select("title")
+    footer = soup.select("address")
     logger.info(f"{title}, {footer}")
-    if (title and footer and
-            len(title) and len(footer) and
-            title[0].text.startswith('Index of') and
-            footer[0].text.startswith('Apache/')):
+    if (
+        title
+        and footer
+        and len(title)
+        and len(footer)
+        and title[0].text.startswith("Index of")
+        and footer[0].text.startswith("Apache/")
+    ):
         return True
 
     return False
 
 
-def parse_simple_index_links(text: str,
-                             url=None,
-                             url_regex: Union[str, Pattern] = '^https?://|^ftp://',
-                             ignore_regex: Union[str, Pattern] = '\/\?C=.;O=.',
-                             fileglob: str = '*') -> List[dict]:
+def parse_simple_index_links(
+    text: str,
+    url=None,
+    url_regex: Union[str, Pattern] = "^https?://|^ftp://",
+    ignore_regex: Union[str, Pattern] = "\/\?C=.;O=.",
+    fileglob: str = "*",
+) -> List[dict]:
     """
     Parse the text of a simple HTML index page (eg Apache) for links.
     """
@@ -206,7 +216,7 @@ def parse_simple_index_links(text: str,
     links = parse_links(text, url)
     for link in links:
         if url_regex.search(link) and not ignore_regex.search(link):
-            if urlparse(link).path.endswith('/'):
+            if urlparse(link).path.endswith("/"):
                 dir_urls.append(link)
             else:
                 file_urls.append(link)
@@ -216,16 +226,24 @@ def parse_simple_index_links(text: str,
         name = Path(urlparse(i).path).name
         if not fnmatch(name, fileglob):
             continue
-        listing.append(dict(type='file',
-                            name=name,
-                            location=i,
-                            tags=['archive'] if is_archive_link(name) else []))
+        listing.append(
+            dict(
+                type="file",
+                name=unquote(name),
+                location=i,
+                tags=["archive"] if is_archive_link(name) else [],
+            )
+        )
     for i in dir_urls:
         name = Path(urlparse(i).path).name
-        listing.append(dict(type='directory',
-                            name=name,
-                            location=f'{i.rstrip("/")}/',
-                            tags=[]))
+        listing.append(
+            dict(
+                type="directory",
+                name=unquote(name),
+                location=f'{i.rstrip("/")}/',
+                tags=[],
+            )
+        )
     return listing
 
 
@@ -240,36 +258,37 @@ def parse_cloudstor_links(text: str, url=None) -> List[dict]:
     :return: A list of dicts describing the files and directories
     :rtype: List[dict]
     """
-    soup = BeautifulSoup(text, 'html.parser')
+    soup = BeautifulSoup(text, "html.parser")
 
     links = []
     for d in soup.select('tr[data-type="dir"]'):
-        name = d.get('data-file')
+        name = d.get("data-file")
         first_link = d.select("a[href]")[0]
-        u = _make_url_absolute(first_link.get('href'), url)
+        u = _make_url_absolute(first_link.get("href"), url)
         u = f"{u}?path=/{name}"
-        links.append(dict(type='directory',
-                          name=name,
-                          location=u,
-                          tags=[]))
+        links.append(dict(type="directory", name=unquote(name), location=u, tags=[]))
 
     for f in soup.select('tr[data-type="file"]'):
-        name = f.get('data-file')
+        name = f.get("data-file")
         first_link = f.select("a[href]")[0]
-        href = first_link.get('href')
+        href = first_link.get("href")
         if href is None:
             continue
 
         u = str(href)
-        if u.strip() == '' or u.startswith('#'):
+        if u.strip() == "" or u.startswith("#"):
             continue
 
         # convert to full URL, not just path
         u = _make_url_absolute(u, url)
-        links.append(dict(type='file',
-                          name=name,
-                          location=u,
-                          tags=['archive'] if is_archive_link(name) else []))
+        links.append(
+            dict(
+                type="file",
+                name=unquote(name),
+                location=u,
+                tags=["archive"] if is_archive_link(name) else [],
+            )
+        )
 
     return links
 
@@ -296,30 +315,34 @@ def parse_cloudstor_webdav(text: Union[str, None] = None, url=None) -> List[dict
     webdav_server = f"{base_url}/public.php/webdav/"
     # eg, for the URL "https://cloudstor.aarnet.edu.au/plus/s/lnSmyyug1fexY8l", share_id = 'lnSmyyug1fexY8l'
     share_id = list(os.path.split(urlparse(url).path)).pop()
-    path = parse_qs(urlparse(url).query).get('path', ['/'])[0].strip('/')
+    path = parse_qs(urlparse(url).query).get("path", ["/"])[0].strip("/")
     _pathparts = list(os.path.split(path))
-    last_dir_in_path = '%s/' % _pathparts[-1:][0].strip('/')
-    up_dir = '/'.join(_pathparts[:-1])
+    last_dir_in_path = "%s/" % _pathparts[-1:][0].strip("/")
+    up_dir = "/".join(_pathparts[:-1])
 
     options = {
-        'webdav_hostname': webdav_server,
-        'webdav_login': share_id,
-        'webdav_password': "null"
+        "webdav_hostname": webdav_server,
+        "webdav_login": share_id,
+        "webdav_password": "null",
     }
     client = webdav.client.Client(options)
     ls = client.list(remote_path=path)
-    is_top_level = path in ['/', ''] and 'webdav/' in ls
+    is_top_level = path in ["/", ""] and "webdav/" in ls
 
     links = []
 
     # Add a '..' if we aren't in the top-level directory
     if not is_top_level:
-        links.append(dict(type='directory',
-                          name='..',
-                          location=f"{base_url}/s/{share_id}?path=/{up_dir}",
-                          tags=[]))
+        links.append(
+            dict(
+                type="directory",
+                name="..",
+                location=f"{base_url}/s/{share_id}?path=/{quote(up_dir)}",
+                tags=[],
+            )
+        )
     for name in ls:
-        if is_top_level and name == 'webdav/':
+        if is_top_level and name == "webdav/":
             # Don't add the root 'webdav/' directory
             continue
 
@@ -328,23 +351,31 @@ def parse_cloudstor_webdav(text: Union[str, None] = None, url=None) -> List[dict
             # be we don't want to see it
             continue
 
-        if name.endswith('/'):
-            name = name.rstrip('/')
+        if name.endswith("/"):
+            name = name.rstrip("/")
             full_path = os.path.join(path, name)
-            links.append(dict(type='directory',
-                              name=name,
-                              location=f"{base_url}/s/{share_id}?path=/{full_path}",
-                              tags=[]))
+            links.append(
+                dict(
+                    type="directory",
+                    name=name,
+                    location=f"{base_url}/s/{share_id}?path=/{quote(full_path)}",
+                    tags=[],
+                )
+            )
         else:
-            links.append(dict(type='file',
-                              name=name,
-                              location=f"{base_url}/s/{share_id}/download?path=/{path}&files={name}",
-                              tags=['archive'] if is_archive_link(name) else []))
+            links.append(
+                dict(
+                    type="file",
+                    name=name,
+                    location=f"{base_url}/s/{share_id}/download?path=/{quote(path)}&files={quote(name)}",
+                    tags=["archive"] if is_archive_link(name) else [],
+                )
+            )
 
     return links
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # eg:
     # python -m laxy_backend.scraping "https://cloudstor.aarnet.edu.au/plus/s/lnSmyyug1fexY8l" pyppeteer
 

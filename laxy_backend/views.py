@@ -68,7 +68,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from typing import Dict, List, Union
 import urllib
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, unquote
 from wsgiref.util import FileWrapper
 
 from drf_openapi.utils import view_config
@@ -2641,7 +2641,7 @@ class RemoteBrowseView(JSONView):
 
     # @method_decorator(cache_page(10 * 60))
     @view_config(response_serializer=FileListing)
-    def get(self, request, version=None):
+    def post(self, request, version=None):
         """
         Returns a single level of a file/directory tree.
         Takes query parameters:
@@ -2688,8 +2688,8 @@ class RemoteBrowseView(JSONView):
         :rtype:
         -->
         """
-        url = request.query_params.get("url", "").strip()
-        fileglob = request.query_params.get("fileglob", "*")
+        url = request.data.get("url", "")
+        fileglob = request.data.get("fileglob", "*")
 
         if url == "":
             return HttpResponse(
