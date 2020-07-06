@@ -6,7 +6,7 @@ https://github.com/MonashBioinformaticsPlatform/laxy/laxy_downloader
 from setuptools import setup, find_packages
 from codecs import open
 from os import path
-import downloader
+import laxy_downloader
 
 here = path.abspath(path.dirname(__file__))
 
@@ -15,7 +15,7 @@ with open(path.join(here, "README.md"), encoding="utf-8") as f:
 
 setup(
     name="laxy_downloader",
-    version=downloader.__version__,
+    version=laxy_downloader.__version__,
     description="Laxy clientside downloader",
     long_description=long_description,
     url="https://github.com/MonashBioinformaticsPlatform/laxy",
@@ -57,6 +57,7 @@ setup(
         "trio==0.8.0",
         "psutil==5.7.0",
         "python-magic==0.4.15",
+        "text-unidecode==1.3",
         "pyaria2 @ git+https://github.com/pansapiens/pyaria2.git#egg=pyaria2-0.2.1.2",
     ],
     # pip deprecated dependency_links :/
@@ -90,6 +91,6 @@ setup(
     # To provide executable scripts, use entry points in preference to the
     # "scripts" keyword. Entry points provide cross-platform support and allow
     # pip to create the appropriate form of executable for the target platform.
-    entry_points={"console_scripts": ["laxydl=downloader.cli:main",],},
+    entry_points={"console_scripts": ["laxydl=laxy_downloader.cli:main",],},
     test_suite="tests",
 )

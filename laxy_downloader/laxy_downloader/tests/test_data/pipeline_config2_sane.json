@@ -1,0 +1,64 @@
+{
+  "owner": "3n0KJX6w5XBqIlbmgJeAKK",
+  "params": {
+    "genome": "Saccharomyces_cerevisiae/Ensembl/R64-1-1",
+    "description": "cloudstor webdav test",
+    "pipeline_version": "1.5.3"
+  },
+  "pipeline": "rnasik",
+  "sample_cart": {
+    "id": "1i97hkRn2RXSriboCDjOOF",
+    "name": "Sample set created on 2019-05-02T05:10:27.971994",
+    "owner": "3n0KJX6w5XBqIlbmgJeAKK",
+    "samples": [
+      {
+        "name": "sample #1",
+        "files": [
+          {
+            "R1": {
+              "name": "SRR5963435_ss_1.fastq.gz",
+              "tags": [],
+              "location": "https://cloudstor.aarnet.edu.au/plus/s/lnSmyyug1fexY8l/download?path=/&files=SRR5963435_ss_1.fastq.gz",
+              "sanitized_filename": "sample1_1.fastq.gz"
+            },
+            "R2": {
+              "name": "SRR5963435_ss_2.fastq.gz",
+              "tags": [],
+              "location": "https://cloudstor.aarnet.edu.au/plus/s/lnSmyyug1fexY8l/download?path=/&files=SRR5963435_ss_2.fastq.gz",
+              "sanitized_filename": "sample1_2.fastq.gz"
+            }
+          }
+        ],
+        "metadata": {
+          "condition": ""
+        }
+      },
+      {
+        "name": "sample #2",
+        "files": [
+          {
+            "R1": {
+              "name": "SRR5963441_ss_1.fastq.gz",
+              "tags": [],
+              "location": "https://cloudstor.aarnet.edu.au/plus/s/lnSmyyug1fexY8l/download?path=/&files=SRR5963441_ss_1.fastq.gz",
+              "sanitized_filename": "sample2_1.fastq.gz"
+            },
+            "R2": {
+              "name": "SRR5963441_ss_2.fastq.gz",
+              "tags": [],
+              "location": "https://cloudstor.aarnet.edu.au/plus/s/lnSmyyug1fexY8l/download?path=/&files=SRR5963441_ss_2.fastq.gz",
+              "sanitized_filename": "sample2_2.fastq.gz"
+            }
+          }
+        ],
+        "metadata": {
+          "condition": ""
+        }
+      }
+    ]
+  },
+  "description": "cloudstor webdav test",
+  "created_time": "2019-05-02T05:10:58.991733Z",
+  "modified_time": "2019-05-02T05:10:59.015981Z",
+  "pipelinerun_id": "4oX5YPTSYpSYQn1sMhO9f8"
+}

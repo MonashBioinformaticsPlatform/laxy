@@ -4,10 +4,10 @@ import json
 import ssl
 import urllib
 from contextlib import closing
-from urllib.parse import urlparse, urlsplit, urlunsplit
+from urllib.parse import urlparse, urlsplit, urlunsplit, unquote
 from pathlib import Path
 import shutil
-from typing import List, Union, Mapping
+from typing import Dict, List, Sequence, Union, Mapping, Union, Set
 import logging
 import sys
 import os
@@ -24,6 +24,10 @@ import concurrent.futures
 from http.client import responses as response_codes
 from base64 import urlsafe_b64encode
 import functools
+from collections import OrderedDict
+
+import unicodedata
+from text_unidecode import unidecode
 
 import requests
 import backoff
@@ -299,7 +303,7 @@ def _simple_grab_url(url: str, output_path: str):
 
 
 def download_concurrent(
-    urls: List[str], cache_path, proxy=None, concurrent_downloads=8
+    urls: Union[Sequence[str], Set[str]], cache_path, proxy=None, concurrent_downloads=8
 ):
     # executor = concurrent.futures.ProcessPoolExecutor
     executor = concurrent.futures.ThreadPoolExecutor
@@ -394,8 +398,8 @@ def parse_pipeline_config(config_fh):
     return config
 
 
-def get_urls_from_pipeline_config(config):
-    urls = set()
+def get_urls_from_pipeline_config(config: Union[dict, OrderedDict]) -> Dict[str, str]:
+    url_filename_mapping = dict()
     samples = config.get("sample_cart", {}).get("samples", [])
     # TODO: Remove the sample_set alternative in the future
     # Deprecated: old sample cart name
@@ -405,17 +409,74 @@ def get_urls_from_pipeline_config(config):
         for f in sample["files"]:
             for read_number, url_descriptor in f.items():
                 if isinstance(url_descriptor, str):
-                    urls.add(url_descriptor)
+                    url = url_descriptor
+                    sanitized_filename = None
                 elif isinstance(url_descriptor, dict) and url_descriptor.get(
                     "location", False
                 ):
-                    urls.add(url_descriptor["location"])
+                    url = url_descriptor["location"]
+                    sanitized_filename = url_descriptor.get("sanitized_filename", None)
+                else:
+                    continue
 
-    return urls
+                url_filename_mapping[url] = sanitized_filename
+
+    return url_filename_mapping
 
 
+#
+# TODO: Duplicated code with laxy_backend.util - merge into single shared library
+#
+def sanitize_filename(
+    filename: str,
+    valid_filename_chars: str = None,
+    replace: dict = None,
+    max_length: int = 255,
+    unicode_to_ascii=False,
+    unquote_urlencoding=True,
+) -> str:
+    """
+    Adapted from: https://gist.github.com/wassname/1393c4a57cfcbf03641dbc31886123b8
+
+    Replaces or removes characters that aren't filename safe on most platforms (or often
+    cause issues in shell commmands when left unescaped), spaces to underscores, 
+    truncates the filename length and replaces a subset of Unicode characters with 
+    US-ASCII transliterations (eg à -> a, 蛇 -> She).
+    """
+    if valid_filename_chars is None:
+        # valid_filename_chars = "-_.() %s%s" % (string.ascii_letters, string.digits)
+        # Brackets often cause issue with improperly escaped shell commands, so we disallow those too ..
+        valid_filename_chars = "-_. %s%s" % (string.ascii_letters, string.digits)
+
+    if replace is None:
+        replace = {" ": "_"}
+
+    if unquote_urlencoding:
+        filename = unquote(filename)
+
+    if unicode_to_ascii:
+        filename = unidecode(filename)
+
+    # replace spaces or other characters in the replacement dict
+    for old, new in replace.items():
+        filename = filename.replace(old, new)
+
+    # keep only valid ascii chars
+    cleaned_filename = (
+        unicodedata.normalize("NFKD", filename).encode("ASCII", "ignore").decode()
+    )
+
+    # keep only valid chars
+    cleaned_filename = "".join(c for c in cleaned_filename if c in valid_filename_chars)
+
+    return cleaned_filename[:max_length]
+
+
+#
+# TODO: Duplicated code with laxy_backend.util - merge into single shared library
+#
 @functools.lru_cache(maxsize=1024)
-def find_filename_and_size_from_url(url, **kwargs):
+def find_filename_and_size_from_url(url, sanitize_name=True, **kwargs):
     """
     Tries to determine the filename for a given download URL via the
     Content-Disposition header - falls back to path splitting if that header
@@ -456,25 +517,52 @@ def find_filename_and_size_from_url(url, **kwargs):
     if not filename:
         raise ValueError("Could not find a filename for: %s" % url)
 
+    filename = filename.strip()
+
+    if sanitize_name:
+        filename = sanitize_filename(filename)
+
     return filename, file_size
 
 
-def create_symlink_to_cache(url: str, target_dir, cache_path, filename=None):
+def _random_chars(n: int) -> str:
+    return "".join([random.choice(string.ascii_letters) for i in range(n)])
+
+
+def random_prefix_filename_if_exists(filepath: Union[str, Path]) -> str:
+    tries = 0
+    while tries < 5 and os.path.exists(filepath):
+        filename = Path(filepath).name
+        prefixed_filename = f"{_random_chars(4)}_{filename}"
+        filepath = Path(Path(filepath).parent, prefixed_filename)
+        tries += 1
+    return str(filepath)
+
+
+def create_symlink_to_cache(
+    url: str, target_dir, cache_path, filename=None, sanitize_name=True,
+):
     # Attempt to determine the filename based on the URL
     if filename is None:
-        filename, _ = find_filename_and_size_from_url(url)
+        filename, _ = find_filename_and_size_from_url(url, sanitize_name=sanitize_name)
 
     cached = get_url_cached_path(url, cache_path)
-    os.symlink(cached, os.path.join(target_dir, filename))
+    filepath = os.path.join(target_dir, filename)
+
+    os.symlink(cached, filepath)
 
 
-def create_copy_from_cache(url: str, target_dir, cache_path, filename=None):
+def create_copy_from_cache(
+    url: str, target_dir, cache_path, filename=None, sanitize_name=True,
+):
     # Attempt to determine the filename based on the URL
     if filename is None:
-        filename, _ = find_filename_and_size_from_url(url)
+        filename, _ = find_filename_and_size_from_url(url, sanitize_name=sanitize_name)
 
     cached = get_url_cached_path(url, cache_path=cache_path)
-    shutil.copyfile(cached, os.path.join(target_dir, filename))
+    filepath = os.path.join(target_dir, filename)
+
+    shutil.copyfile(cached, filepath)
 
 
 def is_zipfile(fpath: str) -> bool:
