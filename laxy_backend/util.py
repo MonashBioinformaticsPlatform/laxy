@@ -17,31 +17,33 @@ from typing import Mapping, Sequence
 import unicodedata
 from text_unidecode import unidecode
 
-from urllib.parse import urlparse
+from urllib.parse import urlparse, unquote
 from cache_memoize import cache_memoize
 
 import django
 from django.urls import reverse
 from django.utils.http import urlencode
 
+from typing_extensions import Literal
 from rest_framework.request import Request
 
 from . import models
 from pathlib import Path
 
 
-def sh_bool(boolean):
+def sh_bool(boolean: bool) -> Literal["yes", "no"]:
     """
     Formats a boolean to be passed to a bash script environment (eg run_job.sh)
-    :param boolean:
-    :type boolean:
+
+    :param boolean: A boolean flag (True or False)
+    :type boolean: bool
     :return: 'yes' or 'no'
     :rtype: str
     """
     if boolean:
         return "yes"
-    else:
-        return "no"
+
+    return "no"
 
 
 def url_safe_base64_uuid() -> str:
@@ -85,7 +87,7 @@ def ordereddicts_to_dicts(d: OrderedDict) -> dict:
 
 
 @cache_memoize(timeout=3 * 60 * 60, cache_alias="memoize")
-def find_filename_and_size_from_url(url, **kwargs):
+def find_filename_and_size_from_url(url, sanitize_name=True, **kwargs):
     """
     Tries to determine the filename for a given download URL via the
     Content-Disposition header - falls back to path splitting if that header
@@ -130,14 +132,20 @@ def find_filename_and_size_from_url(url, **kwargs):
     if not filename:
         raise ValueError("Could not find a filename for: %s" % url)
 
-    return filename.strip(), file_size
+    filename = filename.strip()
+
+    if sanitize_name:
+        filename = sanitize_filename(filename)
+
+    return filename, file_size
 
 
 def reverse_querystring(
     view, urlconf=None, args=None, kwargs=None, current_app=None, query_kwargs=None
 ):
     """
-    Custom reverse to handle query strings.
+    Custom Django `reverse` to handle query strings. Turns a view function into a URL,
+    with a properly encoded query string generated from the query_kwargs dict.
 
     Usage:
         reverse('app.views.my_view', kwargs={'pk': 123}, query_kwargs={'search', 'Bob'})
@@ -322,6 +330,7 @@ def sanitize_filename(
     replace: dict = None,
     max_length: int = 255,
     unicode_to_ascii=False,
+    unquote_urlencoding=True,
 ) -> str:
     """
     Adapted from: https://gist.github.com/wassname/1393c4a57cfcbf03641dbc31886123b8
@@ -338,6 +347,9 @@ def sanitize_filename(
 
     if replace is None:
         replace = {" ": "_"}
+
+    if unquote_urlencoding:
+        filename = unquote(filename)
 
     if unicode_to_ascii:
         filename = unidecode(filename)

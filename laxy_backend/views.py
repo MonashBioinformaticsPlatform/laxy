@@ -139,7 +139,14 @@ from .serializers import (
     JobAccessTokenResponseSerializer,
     PingResponseSerializer,
 )
-from .util import sh_bool, laxy_sftp_url, generate_uuid, multikeysort, get_content_type
+from .util import (
+    sh_bool,
+    laxy_sftp_url,
+    generate_uuid,
+    multikeysort,
+    get_content_type,
+    find_filename_and_size_from_url,
+)
 from .storage import http_remote
 from .view_mixins import (
     JSONView,
@@ -1777,6 +1784,19 @@ def get_abs_backend_url(
     return url.geturl()
 
 
+def add_sanitized_filenames_to_samplecart_json(cart_json):
+    updated_json = dict(cart_json)
+    samples = updated_json.get("samples", [])
+    for s in samples:
+        for f in s.get("files", []):
+            for paircode in f.keys():
+                url = f[paircode]["location"]
+                fn, _ = find_filename_and_size_from_url(url, sanitize_name=True)
+                f[paircode]["sanitized_filename"] = fn
+
+    return updated_json
+
+
 class JobCreate(JSONView):
     queryset = Job.objects.all()
     serializer_class = JobSerializerRequest
@@ -1829,6 +1849,14 @@ class JobCreate(JSONView):
                     reason="pipeline_run %s does not exist" % pipeline_run_id,
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+
+        if request.data.get("params"):
+            _params = json.loads(request.data["params"])
+            if _params.get("sample_cart", None) is not None:
+                _params["sample_cart"] = add_sanitized_filenames_to_samplecart_json(
+                    _params["sample_cart"]
+                )
+                request.data["params"] = json.dumps(_params)
 
         serializer = self.request_serializer(
             data=request.data, context={"request": request}

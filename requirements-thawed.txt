@@ -27,6 +27,7 @@ Jinja2>=2.10.1
 fs  # PyFilesystem
 sentry-sdk==0.14.4
 humanize
+typing-extensions  # backport, not required after Python 3.8
 text-unidecode
 git+https://github.com/pansapiens/webdav-client-python.git@master#egg=webdavclient
 ptvsd
