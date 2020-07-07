@@ -113,7 +113,7 @@ def move_file_task(self, task_data=None, **kwargs):
         file = File.objects.get(id=file_id)
 
         if not file.locations.filter(url=from_location).exists():
-            if verify(to_location, verify_on=VerifMode.SIZE):
+            if verify(file, to_location, verify_on=VerifMode.SIZE):
                 task_data["result"] = {
                     "no_copy_required": True,
                     "message": f"Skipping move of {file.id} - does not have requested "
