@@ -680,7 +680,7 @@ class JobViewTest(TestCase):
         )
 
         self.assertEqual(
-            with_sane_names["samples"][0]["name"],
+            with_sane_names["samples"][0]["sanitized_name"],
             "Im_an_ugly_2_L002_1_sample-NAME__r1_",
         )
 
