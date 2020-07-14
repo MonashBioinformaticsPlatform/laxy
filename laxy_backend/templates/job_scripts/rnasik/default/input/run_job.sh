@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
+
+# shellcheck disable=SC1054,SC1083
 {% if SLURM_ACCOUNT %}
 #SBATCH --account={{ SLURM_ACCOUNT }}
+# shellcheck disable=SC1054,SC1083
 {% endif %}
 set -o nounset
 set -o pipefail
@@ -38,8 +41,10 @@ readonly LAXYDL_USE_ARIA2C=yes
 readonly JOB_FILE_PERMS='ug+rw-s,o='
 readonly JOB_DIR_PERMS='ug+rwx-s,o='
 
+# shellcheck disable=SC1054,SC1083,SC1009
 {% if SLURM_ACCOUNT %}
 export SLURM_ACCOUNT="{{ SLURM_ACCOUNT }}"
+# shellcheck disable=SC1073
 {% endif %}
 readonly QUEUE_TYPE="{{ QUEUE_TYPE }}"
 # readonly QUEUE_TYPE="local"
@@ -90,7 +95,7 @@ fi
 readonly SLURM_OPTIONS="--parsable \
                         --cpus-per-task=${CPUS} \
                         --mem=${MEM} \
-                        -t 1-0:00 \
+                        -t 3-0:00 \
                         --ntasks-per-node=1 \
                         --ntasks=1 \
                         {% if SLURM_ACCOUNT %}
@@ -370,11 +375,10 @@ function get_reference_data_aws() {
     #       not the whole lot. Assume reference is present if appropriate
     #       directory is there
     if [[ ! -d "${REFERENCE_BASE}" ]]; then
-        prev="${PWD}"
         mkdir -p "${REFERENCE_BASE}"
-        cd "${REFERENCE_BASE}"
+        pushd "${REFERENCE_BASE}"
         aws s3 sync s3://bioinformatics-au/iGenomes .
-        cd "${prev}"
+        popd
     fi
 }
 
@@ -668,35 +672,21 @@ function get_input_data_urls() {
 }
 
 function detect_pairs() {
-    PAIRIDS=""
-    EXTN=".fastq.gz"
+    RNASIK_PAIR_EXTN_ARGS=$(${JOB_PATH}/input/helper.py pairids ${JOB_PATH}/input) || fail_job 'detect_pairs' '' $?
 
-    # Very occasionally, we get FASTA format reads
-    if stat -t "${JOB_PATH}"/input/*.fasta.gz >/dev/null 2>&1; then
-      EXTN=".fasta.gz"
-    fi
-    # BGI currently uses .fq.gz ?!? This is why we can't have nice things.
-    if stat -t "${JOB_PATH}"/input/*.fq.gz >/dev/null 2>&1; then
-      EXTN=".fq.gz"
-    fi
-    # .. and IonTorrent tarballs contain uncompressed fastqs
-    if stat -t "${JOB_PATH}"/input/*.fastq >/dev/null 2>&1; then
-      EXTN=".fastq"
-    fi
-
-    if stat -t "${JOB_PATH}"/input/*_R2_001${EXTN} >/dev/null 2>&1; then
-      PAIRIDS="_R1_001,_R2_001"
-    elif stat -t "${JOB_PATH}"/input/*_R2${EXTN} >/dev/null 2>&1; then
-      PAIRIDS="_R1,_R2"
-    elif stat -t "${JOB_PATH}"/input/*_2${EXTN} >/dev/null 2>&1; then
-      PAIRIDS="_1,_2"
-    fi
-
-    if [[ -z "${PAIRIDS}" ]]; then
+    if [[ "${RNASIK_PAIR_EXTN_ARGS}" = *" -paired "* ]]; then
         send_event "JOB_INFO" "(Looks like unpaired reads)"
     else
-        send_event "JOB_INFO" "(Looks like paired end data [${PAIRIDS}]) 👍"
+        send_event "JOB_INFO" "(Looks like paired end data) 👍"
     fi
+}
+
+function generate_samplesheet() {
+    pushd ${JOB_PATH}
+    input/helper.py samplesheet input/pipeline_config.json >input/samplesSheet.txt
+    popd
+
+    send_event "JOB_INFO" "Generated an RNAsik samplesSheet.txt 🧪"
 }
 
 function set_genome_index_arg() {
@@ -906,6 +896,10 @@ download_input_data || fail_job 'download_input_data' '' $?
 
 capture_environment_variables || true
 
+detect_pairs
+
+generate_samplesheet || fail_job 'generate_samplesheet' '' $?
+
 cd "${JOB_PATH}/output"
 
 ####
@@ -921,9 +915,9 @@ run_mash_screen || true
 set +o errexit
 
 # quick and dirty detection of paired-end or not
-PAIRIDS=""
-EXTN=".fastq.gz"
-detect_pairs || fail_job 'detect_pairs' '' $?
+# PAIRIDS=""
+# EXTN=".fastq.gz"
+# detect_pairs || fail_job 'detect_pairs' '' $?
 
 set_genome_index_arg
 
@@ -943,10 +937,10 @@ while [[ "${EXIT_CODE}" -ne 0 ]] && [[ ${RETRY_COUNT} -le ${MAX_RETRIES} ]]; do
         sleep ${RETRY_DELAY}
     fi
 
-    _PAIR_ARGS=''
-    if [[ ! -z "${PAIRIDS}" ]]; then
-      _PAIR_ARGS=" -paired -pairIds ${PAIRIDS} "
-    fi
+    # _PAIR_ARGS=''
+    # if [[ ! -z "${PAIRIDS}" ]]; then
+    #   _PAIR_ARGS=" -paired -pairIds ${PAIRIDS} "
+    # fi
 
     ${PREFIX_JOB_CMD} \
        "RNAsik \
@@ -958,8 +952,8 @@ while [[ "${EXIT_CODE}" -ne 0 ]] && [[ ${RETRY_COUNT} -le ${MAX_RETRIES} ]]; do
            -counts \
            -gtfFile ${ANNOTATION_FILE} \
            -all \
-           -extn ${EXTN} \
-           ${_PAIR_ARGS} \
+           ${RNASIK_PAIR_EXTN_ARGS} \
+           -samplesSheet ${JOB_PATH}/input/samplesSheet.txt \
            >>rnasik.out 2>>rnasik.err" \
     >>"${JOB_PATH}/slurm.jids"
 

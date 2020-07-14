@@ -189,19 +189,16 @@ def start_job(self, task_data=None, **kwargs):
     #       Possibly using the get_template_files() function. But things might be easier at this point if
     #       we just ignored the Django template system and just worked with os.walk and the laxy_backend/templates path.
 
-    job_script = template_filelike(find_job_file("input/run_job.sh"))
-    add_to_manifest_script = template_filelike(
-        find_job_file("input/add_to_manifest.py")
-    )
-    kill_script = template_filelike(find_job_file("kill_job.sh"))
-
-    # From: conda list --explicit >conda_environment_explicit.txt
-    conda_env_template = find_job_file("input/conda_environment_explicit.txt")
-    if not conda_env_template:
-        # From: conda env export >../conda_environment.yml
-        find_job_file("input/conda_environment.yml")
-
-    conda_env = template_filelike(find_job_file("input/conda_environment.yml"))
+    job_template_files = [
+        ("input/run_job.sh", 0o700),
+        ("kill_job.sh", 0o700),
+        ("input/add_to_manifest.py", 0o700),
+        ("input/helper.py", 0o700),
+        # From: conda env export >conda_environment.yml
+        ("input/conda_environment.yml", 0o600),
+        # From: conda list --explicit >conda_environment_explicit.txt
+        ("input/conda_environment_explicit.txt", 0o600),
+    ]
 
     remote_id = None
     message = "Failure, without exception."
@@ -217,18 +214,16 @@ def start_job(self, task_data=None, **kwargs):
             input_dir = join(working_dir, "input")
             output_dir = join(working_dir, "output")
             job_script_path = join(input_dir, "run_job.sh")
-            kill_script_path = join(working_dir, "kill_job.sh")
-            conda_env_path = join(input_dir, "conda_environment.yml")
+
             for d in [working_dir, input_dir, output_dir]:
                 result = run(f"mkdir -p {d} && chmod 700 {d}")
-            result = put(job_script, job_script_path, mode=0o700)
-            result = put(
-                add_to_manifest_script,
-                join(input_dir, "add_to_manifest.py"),
-                mode=0o700,
-            )
-            result = put(kill_script, kill_script_path, mode=0o700)
-            result = put(conda_env, conda_env_path, mode=0o600)
+
+            for fpath, fmode in job_template_files:
+                template_fn = find_job_file(fpath)
+                if template_fn:
+                    flike = template_filelike(template_fn)
+                    put(flike, join(working_dir, fpath), mode=fmode)
+
             result = put(
                 curl_headers, join(working_dir, ".private_request_headers"), mode=0o600
             )
