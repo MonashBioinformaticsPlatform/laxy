@@ -28,7 +28,7 @@ from ..jwt_helpers import (
 
 # from ..models import User
 from django.contrib.auth import get_user_model
-from laxy_backend.views import add_sanitized_filenames_to_samplecart_json
+from laxy_backend.views import add_sanitized_names_to_samplecart_json
 
 User = get_user_model()
 
@@ -668,7 +668,7 @@ class JobViewTest(TestCase):
         }
         """
         orig_params = json.loads(jsonstr)
-        with_sane_names = add_sanitized_filenames_to_samplecart_json(orig_params)
+        with_sane_names = add_sanitized_names_to_samplecart_json(orig_params)
 
         self.assertEqual(
             with_sane_names["samples"][0]["files"][0]["R1"]["sanitized_filename"],
@@ -677,5 +677,10 @@ class JobViewTest(TestCase):
         self.assertEqual(
             with_sane_names["samples"][0]["files"][0]["R2"]["sanitized_filename"],
             "Im_an_ugly_2_L002_1_sample-NAME__r1_R2.fastq.gz",
+        )
+
+        self.assertEqual(
+            with_sane_names["samples"][0]["name"],
+            "Im_an_ugly_2_L002_1_sample-NAME__r1_",
         )
 

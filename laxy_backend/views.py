@@ -140,12 +140,15 @@ from .serializers import (
     PingResponseSerializer,
 )
 from .util import (
+    sanitize_filename,
     sh_bool,
     laxy_sftp_url,
     generate_uuid,
     multikeysort,
     get_content_type,
     find_filename_and_size_from_url,
+    simplify_fastq_name,
+    longest_common_prefix,
 )
 from .storage import http_remote
 from .view_mixins import (
@@ -1784,15 +1787,24 @@ def get_abs_backend_url(
     return url.geturl()
 
 
-def add_sanitized_filenames_to_samplecart_json(cart_json):
+def add_sanitized_names_to_samplecart_json(cart_json):
     updated_json = dict(cart_json)
     samples = updated_json.get("samples", [])
     for s in samples:
+        sane_prefixes = []
         for f in s.get("files", []):
             for paircode in f.keys():
                 url = f[paircode]["location"]
                 fn, _ = find_filename_and_size_from_url(url, sanitize_name=True)
                 f[paircode]["sanitized_filename"] = fn
+                sane_prefixes.append(simplify_fastq_name(fn))
+
+        # If the sample has a name set add a sanitized version
+        if s["name"] is not None and s["name"].strip():
+            s["sanitized_name"] = sanitize_filename(s["name"])
+        else:
+            # when no sample name is set, derive a sanitized one from the associated filenames
+            s["sanitized_name"] = longest_common_prefix(sane_prefixes)
 
     return updated_json
 
@@ -1853,7 +1865,7 @@ class JobCreate(JSONView):
         if request.data.get("params"):
             _params = json.loads(request.data["params"])
             if _params.get("sample_cart", None) is not None:
-                _params["sample_cart"] = add_sanitized_filenames_to_samplecart_json(
+                _params["sample_cart"] = add_sanitized_names_to_samplecart_json(
                     _params["sample_cart"]
                 )
                 request.data["params"] = json.dumps(_params)
@@ -2536,7 +2548,26 @@ class SendFileToDegust(JSONView):
         degust_conditions = OrderedDict([(condition, []) for condition in conditions])
 
         for sample in samples:
-            name = sample["name"]
+            # this is the unsanitized user supplied sample name
+            # (associated with both R1 and R2, maybe file that represent technical replicates)
+            # name = sample["name"]
+
+            name = sample.get("sanitized_name", None)
+            if name is None:
+                # We get all the sanitized_filenames for the sample, then
+                # find the longest common prefix. This essentially mimicks what
+                # RNAsik does when it automatically generates a samplesheet
+                sample_files = pydash.flatten(
+                    [list(f.values()) for f in sample["files"]]
+                )
+                names = [
+                    simplify_fastq_name(f["sanitized_filename"])
+                    for f in sample_files
+                    if "sanitized_filename" in f
+                ]
+
+                name = longest_common_prefix(names)
+
             condition = sample["metadata"].get("condition")
             degust_conditions[condition].append(name)
 

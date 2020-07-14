@@ -1,7 +1,8 @@
-from typing import Union, Tuple
+from typing import Union, Tuple, Sequence
 import traceback
 import random
 import string
+import re
 import shlex
 import uuid
 import base64
@@ -367,3 +368,39 @@ def sanitize_filename(
     cleaned_filename = "".join(c for c in cleaned_filename if c in valid_filename_chars)
 
     return cleaned_filename[:max_length]
+
+
+def truncate_fastq_to_pair_suffix(fn: str) -> str:
+    """
+    Turn a XXXBLAFOO_R1.fastq.gz filename into XXXBLAFOO_R1.
+    """
+    extensions = [
+        r"_001\.fastq\.gz$",  # Default Illumina
+        r"\.fastq\.gz$",  # ENA/SRA
+        r"\.fasta\.gz$",  # occasionally we get FASTA format reads
+        r"\.fq\.gz$",  # BGI does this, it seems
+        r"\.fastq$",  # Occasionally we need to take uncompressed fastqs
+        r"\.fasta$",  # why not
+    ]
+
+    # Try removing all of these extensions
+    for ext in extensions:
+        fn = re.sub(ext, "", fn, 1)
+
+    return fn
+
+
+def simplify_fastq_name(filename: str) -> str:
+    """
+    Given a FASTQ filename XXXBLAFOO_R1.fastq.gz, return something like
+    the 'sample name' XXXBLAFOO. Should work with typical naming used by 
+    Illumina instrument and SRA/ENA FASTQ files.
+    """
+    fn = truncate_fastq_to_pair_suffix(filename)
+    # eg remove suffix _L002_R1 or L003_2 or _2, or just _R2
+    fn = re.sub(r"_(R)?[1-2]$|_L[0-9][0-9][0-9]_(R)?[1-2]$", "", fn, 1)
+    return fn
+
+
+def longest_common_prefix(string_list: Sequence[Sequence]):
+    return os.path.commonprefix(string_list)
