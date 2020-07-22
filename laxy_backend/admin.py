@@ -285,7 +285,7 @@ class JobAdmin(Timestamped, VersionAdmin):
     def index_remote_files(self, request, queryset):
         failed = []
         for obj in queryset:
-            task_data = dict(job_id=obj.id)
+            task_data = dict(job_id=obj.id, clobber=True)
             result = job_tasks.index_remote_files.apply_async(args=(task_data,))
             if result.failed():
                 failed.append(obj.id)
