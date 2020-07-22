@@ -1,8 +1,8 @@
 import os
 import socket
 import typing
-from typing import List, Union, AnyStr
-from collections import OrderedDict, Sequence
+from typing import List, Union, AnyStr, Iterable
+from collections import OrderedDict
 from datetime import datetime, timedelta
 import math
 import json
@@ -1607,7 +1607,7 @@ def auto_file_fields(sender, instance, raw, using, update_fields, **kwargs):
 
 
 def get_compute_resources_for_files(
-    files: Union[Sequence, QuerySet]
+    files: Union[Iterable, QuerySet]
 ) -> typing.Set[Union[ComputeResource, None]]:
     """
     Return the set of ComputeResources associated with the primary location of
@@ -1618,8 +1618,8 @@ def get_compute_resources_for_files(
     >>> get_compute_resources_for_files(job.get_files())
     {<ComputeResource: ComputeResource object (Zk4BZgcDDfRZGfXYismNBC)>}
 
-    :param files: A list, sequence or QuerySet of Files.
-    :type files: Union[Sequence, QuerySet]
+    :param files: A list, iterable or QuerySet of Files.
+    :type files: Union[Iterable, QuerySet]
     :return: A set of ComputeResource instances, including None.
     :rtype: Set[Union[ComputeResource, None]]
     """
@@ -1627,15 +1627,15 @@ def get_compute_resources_for_files(
 
 
 def get_primary_compute_location_for_files(
-    files: Union[Sequence, QuerySet]
+    files: Union[Iterable, QuerySet]
 ) -> Union[ComputeResource, None]:
     """
     Given some Files, return the single primary ComputeResource where they are stored, if there is one.
     If the files are spread across multiple ComputeResource locations (or some are missing locations),
     returns None.
 
-    :param files: A list, sequence or QuerySet of Files.
-    :type files: Union[Sequence, QuerySet]
+    :param files: A list, iterable or QuerySet of Files.
+    :type files: Union[Iterable, QuerySet]
     :return: The ComputeResource where the files reside, or None.
     :rtype: Union[ComputeResource, None]
     """
@@ -1669,20 +1669,20 @@ class FileSet(Timestamped, UUIDModel):
     # filesets = ArrayField(CharField(max_length=22), blank=True, default=list)
 
     @transaction.atomic
-    def add(self, files: Union[File, List[File]], save=True):
+    def add(self, files: Union[File, Iterable[File]], save=True):
         """
         Add a File or Files to the FileSet. Takes a single File object,
         or a list of Files. Files passed to the method are always saved
         (via File.save()).
 
         :param files: A single File object or a list of File objects.
-        :type files: File | Sequence
+        :type files: File | Iterable
         :param save: If True, save this FileSet after adding files.
         :type save: bool
         :return: None
         :rtype: NoneType
         """
-        if not isinstance(files, Sequence):
+        if not isinstance(files, Iterable):
             files = [files]
 
         # we ensure all Files in the list are unique
@@ -1706,13 +1706,13 @@ class FileSet(Timestamped, UUIDModel):
                 self.save()
 
     @transaction.atomic
-    def remove(self, files: Union[File, List[File]], save=True, delete=False):
+    def remove(self, files: Union[File, Iterable[File]], save=True, delete=False):
         """
         Remove a File or Files to the FileSet. Takes a File object or a list
         of Files.
 
         :param files: A single File object or a list of File objects.
-        :type files: File | Sequence
+        :type files: File | Iterable
         :param save: If True, save this FileSet after removing files.
         :type save: bool
         :param delete: Delete the Files after removing them from this FileSet
@@ -1723,7 +1723,7 @@ class FileSet(Timestamped, UUIDModel):
         :return: None
         :rtype: NoneType
         """
-        if not isinstance(files, Sequence):
+        if not isinstance(files, Iterable):
             files = [files]
 
         files = unique(files)

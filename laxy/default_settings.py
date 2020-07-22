@@ -325,7 +325,7 @@ CELERY_TASK_SOFT_TIME_LIMIT = 7 * _days
 # Don't prefetch tasks, work on one at a time, only acknowledge task is done when it finishes
 # (successfully or with exception). Tasks must be idempotent in this mode, since if a worker
 # dies ungracefully without the task finishing, that task will be requeued later. This mode
-# as lower throughput for many small short tasks, but make it less likely tasks will be lost
+# has lower throughput for many small short tasks, but makes it less likely tasks will be lost
 # and forgotten upon worker kill/restart.
 # https://docs.celeryproject.org/en/latest/userguide/configuration.html#worker-prefetch-multiplier
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
