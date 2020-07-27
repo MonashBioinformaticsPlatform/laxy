@@ -1814,7 +1814,7 @@ class JobCreate(JSONView):
     serializer_class = JobSerializerRequest
 
     @shared_task(bind=True)
-    def _task_err_handler(self, cxt, ex, tb, job_id):
+    def _task_err_handler(self, cxt, ex, job_id):
         # job_id = task_data.get('job_id', None)
         job = Job.objects.get(id=job_id)
         job.status = Job.STATUS_FAILED

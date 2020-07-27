@@ -219,7 +219,7 @@ class TasksTest(TestCase):
         job.save()
 
         in_file = File(
-            name="pipeline_config.json", path="input", metadata={"size": 512}
+            name="pipeline_config.json", path="input/config", metadata={"size": 512}
         )
         in_file.location = laxy_sftp_url(job, in_file.full_path)
         out_file = File(

@@ -15,10 +15,8 @@ set -o xtrace
 
 # These variables are overridden by environment vars if present
 export DEBUG="${DEBUG:-{{ DEBUG }}}"
-# export JOB_ID="${JOB_ID:-}"
-# export JOB_COMPLETE_CALLBACK_URL="${JOB_COMPLETE_CALLBACK_URL:-}"
 
-readonly TMP="${PWD}/../tmp"
+# These variables are set via templating when the script file is created
 readonly JOB_ID="{{ JOB_ID }}"
 readonly JOB_COMPLETE_CALLBACK_URL="{{ JOB_COMPLETE_CALLBACK_URL }}"
 readonly JOB_EVENT_URL="{{ JOB_EVENT_URL }}"
@@ -27,15 +25,22 @@ readonly JOB_INPUT_STAGED="{{ JOB_INPUT_STAGED }}"
 readonly REFERENCE_GENOME="{{ REFERENCE_GENOME }}"
 readonly PIPELINE_VERSION="{{ PIPELINE_VERSION }}"
 readonly PIPELINE_ALIGNER="{{ PIPELINE_ALIGNER }}"
+
+# Global variables used throughout the script
+readonly TMP="${PWD}/../tmp"
 readonly JOB_PATH=${PWD}
-readonly PIPELINE_CONFIG="${JOB_PATH}/input/pipeline_config.json"
+readonly INPUT_READS_PATH="${JOB_PATH}/input/reads"
+readonly INPUT_SCRIPTS_PATH="${JOB_PATH}/input/scripts"
+readonly INPUT_CONFIG_PATH="${JOB_PATH}/input/config"
+readonly PIPELINE_CONFIG="${INPUT_CONFIG_PATH}/pipeline_config.json"
 readonly CONDA_BASE="${JOB_PATH}/../miniconda3"
-readonly REFERENCE_BASE="${PWD}/../references/iGenomes"
-readonly DOWNLOAD_CACHE_PATH="${PWD}/../cache"
+readonly REFERENCE_BASE="${JOB_PATH}/../references/iGenomes"
+readonly DOWNLOAD_CACHE_PATH="${JOB_PATH}/../cache"
 readonly AUTH_HEADER_FILE="${JOB_PATH}/.private_request_headers"
 readonly IGNORE_SELF_SIGNED_CERTIFICATE="{{ IGNORE_SELF_SIGNED_CERTIFICATE }}"
 readonly LAXYDL_BRANCH=master
 readonly LAXYDL_USE_ARIA2C=yes
+readonly LAXYDL_PARALLEL_DOWNLOADS=8
 
 # These are applied via chmod to all files and directories in the run, upon completion
 readonly JOB_FILE_PERMS='ug+rw-s,o='
@@ -48,6 +53,11 @@ export SLURM_ACCOUNT="{{ SLURM_ACCOUNT }}"
 {% endif %}
 readonly QUEUE_TYPE="{{ QUEUE_TYPE }}"
 # readonly QUEUE_TYPE="local"
+
+if [[ ! -f "${AUTH_HEADER_FILE}" ]]; then
+    echo "No auth token file (${AUTH_HEADER_FILE}) - exiting."
+    exit 1
+fi
 
 if [[ ${IGNORE_SELF_SIGNED_CERTIFICATE} == "yes" ]]; then
     readonly CURL_INSECURE="--insecure"
@@ -139,7 +149,7 @@ function add_sik_config() {
    # Always copy it to the job input directory to preserve it.
     local SIK_CONFIG
 
-    SIK_CONFIG="${JOB_PATH}/../sik.config"
+    SIK_CONFIG="${INPUT_CONFIG_PATH}/sik.config"
     if [[ ! -f "${SIK_CONFIG}" ]]; then
         SIK_CONFIG="$(dirname $(which RNAsik))/../opt/rnasik-${PIPELINE_VERSION}/configs/sik.config"
     fi
@@ -150,7 +160,7 @@ function add_sik_config() {
         SIK_CONFIG="${JOB_PATH}/../sik.yeast.config"
     fi
 
-    cp -n "${SIK_CONFIG}" "${JOB_PATH}/input/sik.config" || true
+    cp -n "${SIK_CONFIG}" "${INPUT_CONFIG_PATH}/sik.config" || true
 }
 
 function send_event() {
@@ -330,12 +340,12 @@ function init_conda_env() {
 #          conda-unpack || return 1
 #        fi
 
-        if [[ -f "${JOB_PATH}/input/conda_environment_explicit.txt" ]]; then
+        if [[ -f "${INPUT_CONFIG_PATH}/conda_environment_explicit.txt" ]]; then
             # Create environment with explicit dependencies
-            conda create --name "${env_name}" --file "${JOB_PATH}/input/conda_environment_explicit.txt" || return 1
+            conda create --name "${env_name}" --file "${INPUT_CONFIG_PATH}/conda_environment_explicit.txt" || return 1
         else
             # Create from an environment (yml) file
-            conda env create --name "${env_name}" --file "${JOB_PATH}/input/conda_environment.yml" || return 1
+            conda env create --name "${env_name}" --file "${INPUT_CONFIG_PATH}/conda_environment.yml" || return 1
         fi
     fi
 
@@ -347,10 +357,10 @@ function init_conda_env() {
     conda activate "${CONDA_BASE}/envs/${env_name}" || return 1
 
     # Capture environment files if they weren't provided
-    [[ ! -f "${JOB_PATH}/input/conda_environment.yml" ]] || \
-      conda env export >"${JOB_PATH}/input/conda_environment.yml" || return 1
-    [[ ! -f "${JOB_PATH}/input/conda_environment_explicit.txt" ]] || \
-      conda list --explicit >"${JOB_PATH}/input/conda_environment_explicit.txt" || return 1
+    [[ ! -f "${INPUT_CONFIG_PATH}/conda_environment.yml" ]] || \
+      conda env export >"${INPUT_CONFIG_PATH}/conda_environment.yml" || return 1
+    [[ ! -f "${INPUT_CONFIG_PATH}/conda_environment_explicit.txt" ]] || \
+      conda list --explicit >"${INPUT_CONFIG_PATH}/conda_environment_explicit.txt" || return 1
 
     # We can't use send_event BEFORE the env is activated since we rely on a recent
     # version of curl (>7.55)
@@ -560,7 +570,7 @@ function add_to_manifest() {
     #" md5:eb8c7a1382f1ef0cf984749a42e136bc","output/sikRun/bamFiles/SRR5963441_ss_sorted_mdups.bam","bam,alignment",{"metadata":"datadata"}
 
     local manifest_path=${JOB_PATH}/manifest.csv
-    python3 ${JOB_PATH}/input/add_to_manifest.py ${manifest_path} "$1" "$2" "${3:-}"
+    python3 ${INPUT_SCRIPTS_PATH}/add_to_manifest.py ${manifest_path} "$1" "$2" "${3:-}"
 }
 
 function cleanup_tmp_files() {
@@ -634,7 +644,7 @@ function setup_bds_config() {
     local job_bds_config
 
     default_bds_config="$(which bds).config"
-    job_bds_config="${JOB_PATH}/input/bds.config"
+    job_bds_config="${INPUT_CONFIG_PATH}/bds.config"
 
     # Check for custom bds.config
     if [[ -f "${JOB_PATH}/../bds.config" ]]; then
@@ -667,12 +677,12 @@ function setup_bds_config() {
 function get_input_data_urls() {
     # Output is one URL one per line
     local urls
-    urls=$(jq '.sample_cart.samples[].files[][]' <${PIPELINE_CONFIG} | sed s'/"//g')
+    urls=$(jq '.sample_cart.samples[].files[][]' <"${PIPELINE_CONFIG}" | sed s'/"//g')
     echo "${urls}"
 }
 
 function detect_pairs() {
-    RNASIK_PAIR_EXTN_ARGS=$(${JOB_PATH}/input/helper.py pairids ${JOB_PATH}/input) || fail_job 'detect_pairs' '' $?
+    RNASIK_PAIR_EXTN_ARGS=$(${INPUT_SCRIPTS_PATH}/helper.py pairids "${INPUT_READS_PATH}") || fail_job 'detect_pairs' '' $?
 
     if [[ "${RNASIK_PAIR_EXTN_ARGS}" = *" -paired "* ]]; then
         send_event "JOB_INFO" "(Looks like unpaired reads)"
@@ -683,7 +693,7 @@ function detect_pairs() {
 
 function generate_samplesheet() {
     pushd ${JOB_PATH}
-    input/helper.py samplesheet input/pipeline_config.json >input/samplesSheet.txt
+    ${INPUT_SCRIPTS_PATH}/helper.py samplesheet "${PIPELINE_CONFIG}" >"${INPUT_CONFIG_PATH}/samplesSheet.txt"
     popd
 
     send_event "JOB_INFO" "Generated an RNAsik samplesSheet.txt 🧪"
@@ -736,14 +746,14 @@ function run_mash_screen() {
         curl -L -o "${mash_reference_sketches}" -C - "https://gembox.cbcb.umd.edu/mash/refseq.genomes.k21s1000.msh" || true
     fi
 
-    local mash_reads=$(find "${JOB_PATH}/input" -name "*.f*[q,a].gz" | xargs)
+    local mash_reads=$(find "${INPUT_READS_PATH}" -name "*.f*[q,a].gz" | xargs)
     local cmd="mash screen -w -p 8 ${mash_reference_sketches}"
     # TODO: Try subsamping (1000?) via process substitution - should make mash screen closer to constant time
     #       A few quick tests suggest it's no faster subsampled in this way (I/O limited ?)
     # local cmd="mash screen -w -p 8 ${mash_reference_sketches} <(seqtk sample -s 42 ${mash_reads} 1000)"
     local mash_outdir="${JOB_PATH}/output/mash/"
     mkdir -p "${mash_outdir}"
-    cat >"${JOB_PATH}/input/run_mash.sh" <<EOM
+    cat >"${INPUT_SCRIPTS_PATH}/run_mash.sh" <<EOM
 #!/bin/bash
 #SBATCH --mem 16G
 #SBATCH --cpus-per-task=8
@@ -776,11 +786,11 @@ EOM
                    --error="${mash_outdir}/slurm.err" \
                    --open-mode=append \
                    --parsable \
-                   "${JOB_PATH}/input/run_mash.sh" "${f}" >>"${JOB_PATH}/slurm.jids"
+                   "${INPUT_SCRIPTS_PATH}/run_mash.sh" "${f}" >>"${JOB_PATH}/slurm.jids"
         done
     else
         for f in $mash_reads; do
-            bash "${JOB_PATH}/input/run_mash.sh" "${f}" >>"${JOB_PATH}/job.pids"
+            bash "${INPUT_SCRIPTS_PATH}/run_mash.sh" "${f}" >>"${JOB_PATH}/job.pids"
             # local sample_base="${mash_outdir}/${f%%.*}"
             # local mash_outfile="${sample_base}_mash_screen.tab"
             # eval ${cmd} "${f}" | sort -gr >"${mash_outfile}" && \
@@ -795,11 +805,10 @@ function download_input_data() {
 
         # send_event "INPUT_DATA_DOWNLOAD_STARTED" "Input data download started."
 
-        readonly PARALLEL_DOWNLOADS=8
         # one URL per line
         readonly urls=$(get_input_data_urls)
 
-        mkdir -p "${JOB_PATH}/../cache"
+        mkdir -p "${DOWNLOAD_CACHE_PATH}"
         if [[ "${LAXYDL_USE_ARIA2C}" == "yes" ]]; then
             laxydl download \
                ${LAXYDL_INSECURE} \
@@ -807,13 +816,13 @@ function download_input_data() {
                --cache-path "${DOWNLOAD_CACHE_PATH}" \
                --no-progress \
                --unpack \
-               --parallel-downloads "${PARALLEL_DOWNLOADS}" \
+               --parallel-downloads "${LAXYDL_PARALLEL_DOWNLOADS}" \
                --event-notification-url "${JOB_EVENT_URL}" \
                --event-notification-auth-file "${AUTH_HEADER_FILE}" \
-               --pipeline-config "${JOB_PATH}/input/pipeline_config.json" \
+               --pipeline-config "${PIPELINE_CONFIG}" \
                --create-missing-directories \
                --skip-existing \
-               --destination-path "${JOB_PATH}/input"
+               --destination-path "${INPUT_READS_PATH}"
         else
              laxydl download \
                ${LAXYDL_INSECURE} \
@@ -822,13 +831,13 @@ function download_input_data() {
                --cache-path "${DOWNLOAD_CACHE_PATH}" \
                --no-progress \
                --unpack \
-               --parallel-downloads "${PARALLEL_DOWNLOADS}" \
+               --parallel-downloads "${LAXYDL_PARALLEL_DOWNLOADS}" \
                --event-notification-url "${JOB_EVENT_URL}" \
                --event-notification-auth-file "${AUTH_HEADER_FILE}" \
-               --pipeline-config "${JOB_PATH}/input/pipeline_config.json" \
+               --pipeline-config "${PIPELINE_CONFIG}" \
                --create-missing-directories \
                --skip-existing \
-               --destination-path "${JOB_PATH}/input"
+               --destination-path "${INPUT_READS_PATH}"
         fi
 
         DL_EXIT_CODE=$?
@@ -863,6 +872,8 @@ mkdir -p "${TMP}"
 mkdir -p input
 mkdir -p output
 
+mkdir -p ${INPUT_CONFIG_PATH} ${INPUT_SCRIPTS_PATH} ${INPUT_READS_PATH}
+
 GENOME_FASTA="${REFERENCE_BASE}/${REFERENCE_GENOME}/Sequence/WholeGenomeFasta/genome.fa"
 
 ####
@@ -885,7 +896,7 @@ set_annotation_file
 # Make a copy of the bds.config in the $JOB_PATH, possibly modified for SLURM
 setup_bds_config || send_error 'setup_bds_config' '' $?
 
-# Make a copy of the sik.config into $JOB_PATH/input/sik.config
+# Make a copy of the sik.config into $INPUT_CONFIG_PATH/sik.config
 add_sik_config || send_error 'add_sik_config' '' $?
 
 ####
@@ -944,16 +955,16 @@ while [[ "${EXIT_CODE}" -ne 0 ]] && [[ ${RETRY_COUNT} -le ${MAX_RETRIES} ]]; do
 
     ${PREFIX_JOB_CMD} \
        "RNAsik \
-           -configFile ${JOB_PATH}/input/sik.config \
+           -configFile ${INPUT_CONFIG_PATH}/sik.config \
            -align ${PIPELINE_ALIGNER} \
            -fastaRef ${GENOME_FASTA} \
            ${GENOME_INDEX_ARG} \
-           -fqDir ../input \
+           -fqDir "${INPUT_READS_PATH}" \
            -counts \
            -gtfFile ${ANNOTATION_FILE} \
            -all \
            ${RNASIK_PAIR_EXTN_ARGS} \
-           -samplesSheet ${JOB_PATH}/input/samplesSheet.txt \
+           -samplesSheet ${INPUT_CONFIG_PATH}/samplesSheet.txt \
            >>rnasik.out 2>>rnasik.err" \
     >>"${JOB_PATH}/slurm.jids"
 

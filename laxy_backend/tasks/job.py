@@ -189,15 +189,17 @@ def start_job(self, task_data=None, **kwargs):
     #       Possibly using the get_template_files() function. But things might be easier at this point if
     #       we just ignored the Django template system and just worked with os.walk and the laxy_backend/templates path.
 
+    job_script_path = "input/scripts/run_job.sh"
+
     job_template_files = [
-        ("input/run_job.sh", 0o700),
+        (job_script_path, 0o700),
         ("kill_job.sh", 0o700),
-        ("input/add_to_manifest.py", 0o700),
-        ("input/helper.py", 0o700),
+        ("input/scripts/add_to_manifest.py", 0o700),
+        ("input/scripts/helper.py", 0o700),
         # From: conda env export >conda_environment.yml
-        ("input/conda_environment.yml", 0o600),
+        ("input/config/conda_environment.yml", 0o600),
         # From: conda list --explicit >conda_environment_explicit.txt
-        ("input/conda_environment_explicit.txt", 0o600),
+        ("input/config/conda_environment_explicit.txt", 0o600),
     ]
 
     remote_id = None
@@ -211,11 +213,12 @@ def start_job(self, task_data=None, **kwargs):
             # key_filename=expanduser("~/.ssh/id_rsa"),
         ):
             working_dir = job.abs_path_on_compute
-            input_dir = join(working_dir, "input")
-            output_dir = join(working_dir, "output")
-            job_script_path = join(input_dir, "run_job.sh")
+            subdirs = [
+                join(working_dir, d)
+                for d in ("output", "input/scripts", "input/config",)
+            ]
 
-            for d in [working_dir, input_dir, output_dir]:
+            for d in subdirs:
                 result = run(f"mkdir -p {d} && chmod 700 {d}")
 
             for fpath, fmode in job_template_files:
@@ -228,7 +231,9 @@ def start_job(self, task_data=None, **kwargs):
                 curl_headers, join(working_dir, ".private_request_headers"), mode=0o600
             )
             result = put(
-                config_json, join(input_dir, "pipeline_config.json"), mode=0o600
+                config_json,
+                join(working_dir, "input/config/pipeline_config.json"),
+                mode=0o600,
             )
             with cd(working_dir):
                 with shell_env(**environment):
