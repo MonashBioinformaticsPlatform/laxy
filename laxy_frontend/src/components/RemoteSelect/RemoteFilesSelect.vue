@@ -84,7 +84,6 @@
 
 
 <script lang="ts">
-
 import map from "lodash-es/map";
 import filter from "lodash-es/filter";
 
@@ -100,10 +99,10 @@ import {
   Model,
   Prop,
   Provide,
-  Watch
+  Watch,
 } from "vue-property-decorator";
 
-import VueMarkdown from 'vue-markdown';
+import VueMarkdown from "vue-markdown";
 
 import RemoteFileSelectAboutBox from "./RemoteFileSelectAboutBox";
 import FileList from "../FileList";
@@ -114,16 +113,19 @@ import { WebAPI } from "../../web-api";
 
 import { ENADummySampleList as _dummysampleList } from "../../test-data";
 import {
-  EMPTY_TREE_ROOT, FileListItem,
+  EMPTY_TREE_ROOT,
+  FileListItem,
   fileListToTree,
   findPair,
-  flattenTree, is_archive_url, objListToTree,
+  flattenTree,
+  is_archive_url,
+  objListToTree,
   simplifyFastqName,
-  TreeNode
+  TreeNode,
 } from "../../file-tree-util";
 import { Snackbar } from "../../snackbar";
 
-import { longestCommonPrefix } from "../../prefix";
+import { longestCommonPrefix, longestCommonSuffix } from "../../prefix";
 import { escapeRegExp, reverseString } from "../../util";
 
 interface DbAccession {
@@ -135,13 +137,16 @@ interface DbAccession {
     RemoteFileSelectAboutBox,
     VueMarkdown,
     FileList,
-    NestedFileList
+    NestedFileList,
   },
   props: {},
-  filters: {}
+  filters: {},
 })
 export default class RemoteFileSelect extends Vue {
-  @Prop({ default: "https://example.com/my-files/page-of-links/", type: String })
+  @Prop({
+    default: "https://example.com/my-files/page-of-links/",
+    type: String,
+  })
   public placeholder: string;
 
   @Prop({ default: true, type: Boolean })
@@ -151,7 +156,7 @@ export default class RemoteFileSelect extends Vue {
   public showAboutBox: boolean;
 
   public url: string = "";
-  public initialUrl: string = "";  // the URL initially submitted to the form, for tracking navigation state
+  public initialUrl: string = ""; // the URL initially submitted to the form, for tracking navigation state
   public navigatedUrl: string = "";
   public previousUrl: string = "";
   public listing: Array<any> = [];
@@ -164,9 +169,7 @@ export default class RemoteFileSelect extends Vue {
   public submitting: boolean = false;
   public error_alert_message: string = "Everything is fine.";
 
-  created() {
-
-  }
+  created() {}
 
   get fileTree(): TreeNode<FileListItem> {
     // This file tree isn't actually a tree, but a single (non-nested) list of children on the root node.
@@ -182,14 +185,18 @@ export default class RemoteFileSelect extends Vue {
         },
         (i: FileListItem) => {
           return i.name;
-        });
+        }
+      );
       // const tree = fileListToTree<FileListItem>(this.listing);
       for (let node of tree.children) {
         const item = node.obj as FileListItem;
         node.meta.type = item.type;
         node.meta.tags = item.tags;
         // add onclick callbacks to directory and archive nodes
-        if (item && (item.type === 'directory' || item.tags.includes('archive'))) {
+        if (
+          item &&
+          (item.type === "directory" || item.tags.includes("archive"))
+        ) {
           node.meta.onclick = () => this.listLinks(item.location);
         }
       }
@@ -213,7 +220,7 @@ export default class RemoteFileSelect extends Vue {
     // if (fileList) {
     //     this.selectedFiles = fileList.selectedFiles;
     // }
-    this.selectedFiles = filter(rows, { type: 'file' }) as FileListItem[];
+    this.selectedFiles = filter(rows, { type: "file" }) as FileListItem[];
   }
 
   remove(rows: LaxyFile[]) {
@@ -229,28 +236,21 @@ export default class RemoteFileSelect extends Vue {
     const added_files: FileListItem[] = [];
 
     const names: string[] = map(this.selectedFiles, (i) => {
-      return reverseString(simplifyFastqName(i.name));
+      return simplifyFastqName(i.name);
     });
-    // console.dir(names);
-    // actually longest common SUFFIX of (simplified) file names, since we reversed names above
-    const lcp = longestCommonPrefix(names);
-    // console.dir(lcp);
-    const commonSuffix = lcp.length > 0 ? reverseString(lcp) : '';
-    // console.dir(commonSuffix);
+    const commonSuffix = longestCommonSuffix(names);
 
     for (let f of this.selectedFiles) {
-      if (f.name === '..') {
+      if (f.name === "..") {
         continue;
       }
       if (added_files.includes(f)) continue;
       const pair = findPair(f, this.selectedFiles);
 
       let sname = f.name;
-      if (pair != null) {
-        sname = simplifyFastqName(f.name);
-      }
-      sname = sname.replace(commonSuffix, '');
-      if (sname === '') sname = commonSuffix;
+      sname = simplifyFastqName(f.name);
+      sname = sname.replace(commonSuffix, "");
+      if (sname === "") sname = commonSuffix;
 
       // copy and drop 'type' prop (ILaxyFile doesn't want 'type')
       const _f = Object.assign({}, f) as FileListItem;
@@ -272,7 +272,9 @@ export default class RemoteFileSelect extends Vue {
     }
     this.$store.commit(ADD_SAMPLES, cart_samples);
     let count = this.selectedFiles.length;
-    Snackbar.flashMessage(`Added ${count} ${pluralize("file", count)} to cart.`);
+    Snackbar.flashMessage(
+      `Added ${count} ${pluralize("file", count)} to cart.`
+    );
 
     //this.remove(this.selectedFiles);
     //this.selectedFiles = [];
@@ -312,19 +314,18 @@ export default class RemoteFileSelect extends Vue {
     this.listing = [];
     if (is_archive_url(this.navigatedUrl)) {
       // add a '..' entry to navigate out of TAR archive
-      const parts = this.navigatedUrl.split('/');
+      const parts = this.navigatedUrl.split("/");
       const archive_name = parts.pop();
-      const parentDir = parts.join('/');
+      const parentDir = parts.join("/");
       this.listing.push({
         location: parentDir,
-        name: '..',
-        type: 'directory',
+        name: "..",
+        type: "directory",
         tags: [],
-      } as FileListItem)
+      } as FileListItem);
     }
-    for (let f of data['listing']) {
-      if (f.type === 'directory') {
-
+    for (let f of data["listing"]) {
+      if (f.type === "directory") {
         // don't allow navigation down the tree below the initially submitted URL
         if (this.urlIsParentPath(this.initialUrl, f.location)) {
           continue;
@@ -332,13 +333,13 @@ export default class RemoteFileSelect extends Vue {
 
         // rename URLs that lead down toward the base of the tree
         if (this.urlIsParentPath(this.navigatedUrl, f.location)) {
-          f.name = '..';
+          f.name = "..";
           // or skip them ?
           // continue;
         }
 
         if (f.meta === undefined) f.meta = {};
-        f.meta.onclick = () => this.listLinks(f['location']);
+        f.meta.onclick = () => this.listLinks(f["location"]);
       }
       this.listing.push(f);
     }
@@ -353,8 +354,7 @@ export default class RemoteFileSelect extends Vue {
   openDialog(ref: string) {
     (this.$refs[ref] as MdDialog).open();
   }
-};
-
+}
 </script>
 
 <style lang="css" scoped>

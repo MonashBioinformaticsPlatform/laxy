@@ -72,7 +72,12 @@ const until = (p: any, f: any, x: any) => {
 };
 
 // lcp :: (Eq a) => [[a]] -> [a]
-export function longestCommonPrefix(xxx: any) {
+/**
+ * Given a list of strings, return the longest common prefix.
+ * eg ['ABCD', 'ABCFF', 'ABCDX'] => 'ABC'
+ * @param strList A list of strings
+ */
+export function longestCommonPrefix(strList: any): string | never[] {
     const go = (xs: any): any => {
         return xs.some(isNull) ? (
             []
@@ -85,9 +90,32 @@ export function longestCommonPrefix(xxx: any) {
         head,
         takeWhile(
             allSame,
-            go(map(chars, xxx))
+            go(map(chars, strList))
         )
     ));
+}
+
+/**
+ * Given a list of strings, return the longest common suffix.
+ * eg ['ABCXX', 'ABDXX', 'YYXXX'] => 'XX'
+ * @param strList A list of strings
+ */
+export function longestCommonSuffix(strList: string[]): string {
+
+    const reverse = (s: any) => s.split('').reverse().join('');
+
+    const reversedTxt: string[] = map(
+        (ss: string) => {
+            return reverse(ss);
+        },
+        strList
+    );
+    // console.dir(reversedNames);
+    // actually longest common SUFFIX of (simplified) file names, since we reversed names above
+    const lcp = longestCommonPrefix(reversedTxt);
+    // console.dir(lcp);
+    const commonSuffix = lcp.length > 0 ? reverse(lcp) : '';
+    return commonSuffix;
 }
 
 // TEST ---------------------------------------------
@@ -100,14 +128,14 @@ const showPrefix = (xs: any) =>
 const main = () => {
     const strResults = unlines(map(
         showPrefix, [
-            ['interspecies', 'interstellar', 'interstate'],
-            ['throne', 'throne'],
-            ['throne', 'dungeon'],
-            ['cheese'],
-            [''],
-            ['prefix', 'suffix'],
-            ['foo', 'foobar']
-        ]
+        ['interspecies', 'interstellar', 'interstate'],
+        ['throne', 'throne'],
+        ['throne', 'dungeon'],
+        ['cheese'],
+        [''],
+        ['prefix', 'suffix'],
+        ['foo', 'foobar']
+    ]
     ));
     return (
         // console.log(strResults),

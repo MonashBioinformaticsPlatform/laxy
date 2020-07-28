@@ -181,8 +181,11 @@ export function truncateFastqFilename(filename: string): string {
     return fn;
 }
 
-/* Given a FASTQ filename XXXBLAFOO_R1.fastq.gz, return something like
-   the 'sample name' XXXBLAFOO. Should work with typical naming used by Illumina instrument and SRA/ENA FASTQ files.
+/**
+ * Given a FASTQ filename XXXBLAFOO_L004_R1.fastq.gz, return something like the 
+ *'sample name' XXXBLAFOO. Should work with typical naming used by Illumina 
+ * instruments and SRA/ENA FASTQ files.
+ * @param filename The filename
  */
 export function simplifyFastqName(filename: string): string {
     let fn = truncateFastqFilename(filename);
@@ -191,8 +194,13 @@ export function simplifyFastqName(filename: string): string {
     return fn;
 }
 
-/*
- Given a file and a list of
+/**
+ * Given a file object (eg _R1 or _R2) and a list of file objects (potential pair), 
+ * return the corresponding R1 or R2 pair.
+ * @param file A file with a ILaxyFile-like interface.
+ * @param files A list of files with a ILaxyFile-like interface.
+ * @param getName A function that returns the filenname from the file object 
+ *                - defaults to grabbing the 'name' attribute.
  */
 export function findPair(file: any, files: any[], getName: Function | null = null): any | null {
     const lastChar = (s: string) => s.slice(-1);
