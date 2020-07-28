@@ -51,10 +51,10 @@
 </template>
 
 <script lang="ts">
-import '../../assets/outline-directions_run-24px.svg';
-import '../../assets/outline-check_circle_outline-24px.svg';
-import '../../assets/outline-cancel_presentation-24px.svg';
-import '../../assets/outline-error_outline-24px.svg';
+import "../../assets/outline-directions_run-24px.svg";
+import "../../assets/outline-check_circle_outline-24px.svg";
+import "../../assets/outline-cancel_presentation-24px.svg";
+import "../../assets/outline-error_outline-24px.svg";
 
 import Component from "vue-class-component";
 import { getThemedStatusColor, cssStripe } from "../palette";
@@ -71,8 +71,7 @@ export default class JobStatusPip extends JobStatusCard {
   cssStripe = cssStripe;
 
   askCancelJob(job_id: string) {
-    this.$emit('cancel', job_id);
+    this.$emit("cancel", job_id);
   }
 }
-
 </script>

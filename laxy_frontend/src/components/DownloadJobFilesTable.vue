@@ -40,10 +40,10 @@ import {
   Model,
   Prop,
   Provide,
-  Watch
+  Watch,
 } from "vue-property-decorator";
 
-const Clipboard = require('clipboard');
+const Clipboard = require("clipboard");
 
 @Component({
   filters: {},
@@ -53,26 +53,26 @@ export default class DownloadJobFilesTable extends Vue {
   public url: string;
 
   filename(url: string): string | undefined {
-    return new URL(url).pathname.split('/').pop();
+    return new URL(url).pathname.split("/").pop();
   }
 
   async setClipboard(text: string) {
     return new Promise(function (resolve, reject) {
-      const tmp_button = document.createElement('button');
+      const tmp_button = document.createElement("button");
       const clipboard = new Clipboard(tmp_button, {
         text: function () {
-          return text
+          return text;
         },
         action: function () {
-          return 'copy'
+          return "copy";
         },
-        container: document.body
+        container: document.body,
       });
-      clipboard.on('success', function (e: Promise<string>) {
+      clipboard.on("success", function (e: Promise<string>) {
         clipboard.destroy();
         resolve(e);
       });
-      clipboard.on('error', function (e: Promise<string>) {
+      clipboard.on("error", function (e: Promise<string>) {
         clipboard.destroy();
         reject(e);
       });
@@ -80,16 +80,22 @@ export default class DownloadJobFilesTable extends Vue {
     });
   }
 
-  async setClipboardFlash(text: string, message: string, failMessage: string = "Failed to copy to clipboard :/") {
+  async setClipboardFlash(
+    text: string,
+    message: string,
+    failMessage: string = "Failed to copy to clipboard :/"
+  ) {
     try {
-      const displayTime = (message.length * 20) + 500;
+      const displayTime = message.length * 20 + 500;
       await this.setClipboard(text);
-      this.$emit('flash-message', { message: message, duration: displayTime });
+      this.$emit("flash-message", { message: message, duration: displayTime });
     } catch (error) {
-      const displayTime = (failMessage.length * 20) + 1000;
-      this.$emit('flash-message', { message: failMessage, duration: displayTime });
+      const displayTime = failMessage.length * 20 + 1000;
+      this.$emit("flash-message", {
+        message: failMessage,
+        duration: displayTime,
+      });
     }
   }
 }
-
 </script>

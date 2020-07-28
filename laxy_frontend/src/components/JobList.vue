@@ -127,19 +127,18 @@ import {
   Model,
   Prop,
   Provide,
-  Watch
+  Watch,
 } from "vue-property-decorator";
 
-import {
-  State,
-  Getter,
-  Action,
-  Mutation,
-  namespace
-} from "vuex-class";
+import { State, Getter, Action, Mutation, namespace } from "vuex-class";
 
 import { ComputeJob, SampleCartItems } from "../model";
-import { FETCH_JOBS, SET_PIPELINE_DESCRIPTION, SET_PIPELINE_PARAMS, SET_SAMPLES } from "../store";
+import {
+  FETCH_JOBS,
+  SET_PIPELINE_DESCRIPTION,
+  SET_PIPELINE_PARAMS,
+  SET_SAMPLES,
+} from "../store";
 import { WebAPI } from "../web-api";
 
 //import {AuthMixin} from "../index";
@@ -149,12 +148,17 @@ import { Snackbar } from "../snackbar";
 import PipelineParams from "./PipelineParams.vue";
 
 @Component({})
-export default class JobList extends Vue {// Mixins<AuthMixin>(AuthMixin) {
+export default class JobList extends Vue {
+  // Mixins<AuthMixin>(AuthMixin) {
   _DEBUG: boolean = false;
 
   // public jobs: any[] = [];
   public jobToCancel: string = "";
-  public pagination: { [k: string]: number } = { page_size: 10, page: 1, count: 0 };
+  public pagination: { [k: string]: number } = {
+    page_size: 10,
+    page: 1,
+    count: 0,
+  };
 
   private _refreshPollerId: number | null = null;
 
@@ -183,7 +187,7 @@ export default class JobList extends Vue {// Mixins<AuthMixin>(AuthMixin) {
   mounted() {
     this._refreshPollerId = setInterval(() => {
       this.refresh(null);
-    }, 10000);  // ms
+    }, 10000); // ms
   }
 
   beforeDestroy() {
@@ -284,16 +288,19 @@ export default class JobList extends Vue {// Mixins<AuthMixin>(AuthMixin) {
 
       for (let ss of samplecart.samples) {
         for (let ff of ss.files) {
-          for (let field of ['R1', 'R2']) {
+          for (let field of ["R1", "R2"]) {
             const url = ff[field];
             // Replace and simple URL strings in the R1/R2 field with an ILaxyFile shaped object
-            if (url != undefined &&
-              typeof url === 'string' &&
-              url.includes('://')) {
+            if (
+              url != undefined &&
+              typeof url === "string" &&
+              url.includes("://")
+            ) {
               ff[field] = {
                 location: url,
                 name: url,
-                type: 'file'              } as ILaxyFile;
+                type: "file",
+              } as ILaxyFile;
             }
           }
         }
@@ -306,10 +313,9 @@ export default class JobList extends Vue {// Mixins<AuthMixin>(AuthMixin) {
       this.$store.commit(SET_PIPELINE_DESCRIPTION, pipelinerun.description);
 
       // TODO: make a prop on RNASeqSetup to allow a jump to second or last step immediately
-      this.$router.push({ name: 'rnaseq', params: { allowSkipping: 'true' } });
-
+      this.$router.push({ name: "rnaseq", params: { allowSkipping: "true" } });
     } catch (error) {
-      console.log(error)
+      console.log(error);
     }
   }
 
@@ -320,8 +326,7 @@ export default class JobList extends Vue {// Mixins<AuthMixin>(AuthMixin) {
   closeDialog(ref: string) {
     (this.$refs[ref] as MdDialog).close();
   }
-};
-
+}
 </script>
 
 <style scoped>

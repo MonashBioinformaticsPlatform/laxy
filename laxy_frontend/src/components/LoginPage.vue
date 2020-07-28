@@ -80,32 +80,32 @@
 </template>
 
 <script lang="ts">
-import '../../assets/favicon-grey-24.png';
-import '../../assets/btn_google_signin_dark_normal_web.png';
+import "../../assets/favicon-grey-24.png";
+import "../../assets/btn_google_signin_dark_normal_web.png";
 
-import get from 'lodash-es/get';
+import get from "lodash-es/get";
 
-import Vue from 'vue';
+import Vue from "vue";
 import Component from "vue-class-component";
 
-import {
-  Prop,
-} from "vue-property-decorator";
+import { Prop } from "vue-property-decorator";
 
-import { AUTHENTICATE_USER, SET_GLOBAL_SNACKBAR, SET_USER_PROFILE } from "../store";
+import {
+  AUTHENTICATE_USER,
+  SET_GLOBAL_SNACKBAR,
+  SET_USER_PROFILE,
+} from "../store";
 import { WebAPI } from "../web-api";
 
 import { Snackbar } from "../snackbar";
 
-
 @Component({})
 export default class LoginPage extends Vue {
-
-  @Prop({ default: '/', type: String })
+  @Prop({ default: "/", type: String })
   public redirectPath: string;
 
-  public login_form_username: string = '';
-  public login_form_password: string = '';
+  public login_form_username: string = "";
+  public login_form_password: string = "";
 
   public showExternalButtons: boolean = true;
 
@@ -114,23 +114,21 @@ export default class LoginPage extends Vue {
   }
 
   public get full_name(): string {
-    return get(this.$store.state.user_profile, 'full_name', 'Anonymous')
+    return get(this.$store.state.user_profile, "full_name", "Anonymous");
   }
 
   public get username(): string {
-    return get(this.$store.state.user_profile, 'username', 'anonymous')
+    return get(this.$store.state.user_profile, "username", "anonymous");
   }
 
-  public async created() {
-
-  }
+  public async created() {}
 
   public async login(provider: string) {
     let providerData = { provider: provider };
-    if (provider === 'laxy') {
+    if (provider === "laxy") {
       providerData = Object.assign(providerData, {
         username: this.login_form_username,
-        password: this.login_form_password
+        password: this.login_form_password,
       });
     }
     try {
@@ -138,8 +136,8 @@ export default class LoginPage extends Vue {
       this.clearLoginForm();
       this.$router.push({ path: this.redirectPath });
     } catch (error) {
-      if (error.message === 'Auth popup window closed') {
-        Snackbar.flashMessage('Authentication cancelled');
+      if (error.message === "Auth popup window closed") {
+        Snackbar.flashMessage("Authentication cancelled");
       } else {
         throw error;
       }
@@ -149,12 +147,12 @@ export default class LoginPage extends Vue {
   public async logout(event: Event) {
     await WebAPI.logout();
     this.$store.commit(SET_USER_PROFILE, null);
-    this.$router.push({ name: 'home' });
+    this.$router.push({ name: "home" });
   }
 
   public clearLoginForm() {
-    this.login_form_username = '';
-    this.login_form_password = '';
+    this.login_form_username = "";
+    this.login_form_password = "";
   }
 }
 </script>

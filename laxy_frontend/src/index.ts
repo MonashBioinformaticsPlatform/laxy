@@ -13,9 +13,9 @@ import 'vue-material/dist/vue-material.css';
 import 'es6-promise';
 
 const numeral = require('numeral');
-import axios, {AxiosResponse, AxiosRequestConfig} from 'axios';
+import axios, { AxiosResponse, AxiosRequestConfig } from 'axios';
 
-import Vue, {ComponentOptions} from 'vue';
+import Vue, { ComponentOptions } from 'vue';
 import Vue2Filters from 'vue2-filters';  // https://github.com/freearhey/vue2-filters
 
 const LAXY_ENV = process.env.LAXY_ENV === 'dev';
@@ -28,7 +28,7 @@ import Vuex from 'vuex';
 
 Vue.use(Vuex);
 
-import VueRouter, {RouterOptions} from 'vue-router';
+import VueRouter, { RouterOptions } from 'vue-router';
 
 Vue.use(VueRouter);
 
@@ -49,15 +49,15 @@ Vue.use(VueMaterial);
 
 Vue.use(Vue2Filters);
 
-import {browserLocale} from './util';
+import { browserLocale } from './util';
 import * as moment from 'moment';
 
 moment.locale(browserLocale());
 const VueMoment = require('vue-moment');  // for date formatting
 Vue.use(VueMoment);
 
-import {WebAPI} from './web-api';
-import {router} from './routes';
+import { WebAPI } from './web-api';
+import { router } from './routes';
 
 // Import per component, not globally
 // import VueMarkdown from 'vue-markdown';
@@ -71,7 +71,7 @@ import {
     SET_USER_PROFILE,
     Store as store
 } from './store';
-import {truncateString, widthAwareStringTruncate} from './util';
+import { truncateString, widthAwareStringTruncate } from './util';
 
 import InputDataForm from './components/InputFilesForm.vue';
 import SampleCart from './components/SampleCart.vue';
@@ -92,20 +92,20 @@ Vue.component('job-page', JobPage);
 Vue.component('job-status-card', JobStatusCard);
 
 import SpinnerCubeGrid from './components/spinners/SpinnerCubeGrid.vue';
-import {Snackbar} from "./snackbar";
+import { Snackbar } from "./snackbar";
 
 Vue.component('spinner-cube-grid', SpinnerCubeGrid);
 
 // import SpinnerEq from './components/spinners/SpinnerEq.vue';
 // Vue.component('spinner-eq', SpinnerEq);
 
-Vue.filter('numeral_format', function(value: number | string, format: string = '0 a') {
+Vue.filter('numeral_format', function (value: number | string, format: string = '0 a') {
     if (!value) return '';
     return numeral(value).format(format);
 });
 
 // Based on: https://stackoverflow.com/a/14919494
-Vue.filter('humanize_bytes',  function humanFileSize(bytes: number, si: boolean = true) {
+Vue.filter('humanize_bytes', function humanFileSize(bytes: number, si: boolean = true) {
     const thresh = si ? 1000 : 1024;
     if (Math.abs(bytes) < thresh) {
         return bytes + ' B';
@@ -122,7 +122,7 @@ Vue.filter('humanize_bytes',  function humanFileSize(bytes: number, si: boolean 
     return `${bytes.toFixed(1)} ${units[u]}`;
 });
 
-Vue.filter('deunderscore', function(value: string) {
+Vue.filter('deunderscore', function (value: string) {
     if (!value) return '';
     value = value.replace('_', ' ');
     // capitalize first letter
@@ -164,13 +164,13 @@ const App = new Vue({
         const snackbar = (this.$refs.global_snackbar as any);
         Snackbar.component = snackbar;
         snackbar.$on('close', () => {
-            this.$store.commit(SET_GLOBAL_SNACKBAR, {message: '', duration: 2000});
+            this.$store.commit(SET_GLOBAL_SNACKBAR, { message: '', duration: 2000 });
         });
 
         this.$store.dispatch(PING_BACKEND);
         this.pingPollerId = setInterval(() => {
-                this.$store.dispatch(PING_BACKEND);
-                }, 30000);  // ms
+            this.$store.dispatch(PING_BACKEND);
+        }, 30000);  // ms
     },
     beforeDestroy() {
         if (this.pingPollerId !== -1) clearInterval(this.pingPollerId);
@@ -187,7 +187,7 @@ const App = new Vue({
             this.closeLoginDropdown();
         },
         routeTo(name: string, params: any = {}) {
-            this.$router.push({name: name, params: params});
+            this.$router.push({ name: name, params: params });
         },
         toggleSidenav(refName: string) {
             ((this.$refs as any)[refName] as any).toggle();

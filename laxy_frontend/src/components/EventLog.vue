@@ -46,16 +46,10 @@ import {
   Model,
   Prop,
   Provide,
-  Watch
+  Watch,
 } from "vue-property-decorator";
 
-import {
-  State,
-  Getter,
-  Action,
-  Mutation,
-  namespace
-} from "vuex-class";
+import { State, Getter, Action, Mutation, namespace } from "vuex-class";
 
 import { WebAPI } from "../web-api";
 
@@ -66,7 +60,6 @@ import { WebAPI } from "../web-api";
   filters: {},
 })
 export default class EventLog extends Vue {
-
   public events: any[] = [];
   public jobId: string;
 
@@ -94,8 +87,7 @@ export default class EventLog extends Vue {
       throw error;
     }
   }
-};
-
+}
 </script>
 
 <style scoped>

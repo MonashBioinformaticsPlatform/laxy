@@ -202,16 +202,10 @@ import {
   Model,
   Prop,
   Provide,
-  Watch
+  Watch,
 } from "vue-property-decorator";
 
-import {
-  State,
-  Getter,
-  Action,
-  Mutation,
-  namespace
-} from "vuex-class";
+import { State, Getter, Action, Mutation, namespace } from "vuex-class";
 
 import { ComputeJob, LaxyFile } from "../model";
 import { WebAPI } from "../web-api";
@@ -250,20 +244,22 @@ export default class NestedFileList extends Vue {
   public title: string;
 
   @Prop({
-    type: Array, default: () => {
+    type: Array,
+    default: () => {
       return [];
-    }
+    },
   })
   public regexFilters: string[];
 
   @Prop({
-    type: Array, default: () => {
+    type: Array,
+    default: () => {
       return [];
-    }
+    },
   })
   public tagFilters: string[];
 
-  @Prop({ default: () => ['file'], type: Array })
+  @Prop({ default: () => ["file"], type: Array })
   public selectableTypes: string[];
 
   @Prop({ default: true })
@@ -284,7 +280,7 @@ export default class NestedFileList extends Vue {
   @Prop(String)
   public jobId: string | null;
 
-  @Prop({ default: 'Search', type: String })
+  @Prop({ default: "Search", type: String })
   public searchBoxPlaceholder: string;
 
   public searchQuery: string = "";
@@ -314,10 +310,13 @@ export default class NestedFileList extends Vue {
     if (!this.searchQuery || this.searchQuery.trim().length === 0) return nodes;
     const query = this.searchQuery.trim().toLowerCase();
 
-    const hits: Array<TreeNode<LaxyFile>> = filter(nodes,
+    const hits: Array<TreeNode<LaxyFile>> = filter(
+      nodes,
       (node: TreeNode<LaxyFile>) => {
         if (node.obj) {
-          return `${node.obj.name}/${node.obj.name}`.toLowerCase().includes(query);
+          return `${node.obj.name}/${node.obj.name}`
+            .toLowerCase()
+            .includes(query);
           // TODO: Make globbing work, or look at vuex-search
           // return minimatch(`${node.obj.name}/${node.obj.name}`, query);
         } else {
@@ -325,7 +324,8 @@ export default class NestedFileList extends Vue {
           // TODO: Make globbing work, or look at vuex-search
           // return minimatch(node.name, query);
         }
-      });
+      }
+    );
     this.searching = false;
     return hits;
   }
@@ -337,12 +337,11 @@ export default class NestedFileList extends Vue {
       if (query.length >= this.minQueryLength) {
         nodes = this.searchFilteredNodes;
       }
-      return sortBy(nodes,
-        [
-          (n: TreeNode<LaxyFile>) => n.obj != null,
-          "meta.type",
-          "name"
-        ]);
+      return sortBy(nodes, [
+        (n: TreeNode<LaxyFile>) => n.obj != null,
+        "meta.type",
+        "name",
+      ]);
     }
     return [];
   }
@@ -373,8 +372,10 @@ export default class NestedFileList extends Vue {
 
   get currentLevelFiles(): (LaxyFile | null)[] {
     if (this.currentLevel) {
-      return map(sortBy(this.currentLevel.children, ["name"]),
-        (node) => node.obj);
+      return map(
+        sortBy(this.currentLevel.children, ["name"]),
+        (node) => node.obj
+      );
     }
     return [];
   }
@@ -453,7 +454,7 @@ export default class NestedFileList extends Vue {
       tags: [],
       method: (file: LaxyFile) => {
         viewFile(file, null, this.jobId);
-      }
+      },
     },
     {
       text: "Download file",
@@ -461,7 +462,7 @@ export default class NestedFileList extends Vue {
       tags: [],
       method: (file: LaxyFile) => {
         downloadFile(file, null, this.jobId);
-      }
+      },
     },
     {
       text: "View report",
@@ -469,15 +470,18 @@ export default class NestedFileList extends Vue {
       tags: ["html", "report"],
       method: (file: LaxyFile) => {
         viewFile(file, null, this.jobId);
-      }
+      },
     },
     {
       text: "Open in Degust",
       icon: "dashboard",
       tags: ["counts", "degust"],
       method: async (file: LaxyFile) => {
-        window.open(WebAPI.getExternalAppRedirectUrl('degust', file.id), '_blank');
-      }
+        window.open(
+          WebAPI.getExternalAppRedirectUrl("degust", file.id),
+          "_blank"
+        );
+      },
     },
   ];
 
@@ -493,18 +497,18 @@ export default class NestedFileList extends Vue {
   // we need this wrapped in a method otherwise the viewMethod.method
   // doesn't have the correct 'this' context to $emit events.
   emitActionError(msg: string) {
-    this.$emit('action-error', msg);
+    this.$emit("action-error", msg);
   }
 
   getViewMethodsForTags(tags: string[]) {
-    return filter(this.viewMethods,
-      vm => hasSharedTagOrEmpty(vm.tags, tags));
+    return filter(this.viewMethods, (vm) => hasSharedTagOrEmpty(vm.tags, tags));
   }
 
   @Memoize((file: LaxyFile) => file.id)
   getDefaultViewMethod(file: LaxyFile) {
-    return head(filter(this.viewMethods,
-      vm => hasIntersection(vm.tags, file.type_tags)));
+    return head(
+      filter(this.viewMethods, (vm) => hasIntersection(vm.tags, file.type_tags))
+    );
   }
 
   get files(): LaxyFile[] {
@@ -518,8 +522,7 @@ export default class NestedFileList extends Vue {
   get titleText(): string {
     return this.title;
   }
-};
-
+}
 </script>
 
 <style scoped>

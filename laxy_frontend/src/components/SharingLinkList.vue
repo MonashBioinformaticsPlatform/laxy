@@ -80,14 +80,14 @@ import {
   Model,
   Prop,
   Provide,
-  Watch
+  Watch,
 } from "vue-property-decorator";
 
 import { Memoize } from "lodash-decorators";
 
-const Clipboard = require('clipboard');
+const Clipboard = require("clipboard");
 
-import * as moment from 'moment';
+import * as moment from "moment";
 
 import { WebAPI } from "../web-api";
 
@@ -107,13 +107,14 @@ export default class SharingLinkList extends Vue {
   @Prop({ type: Boolean, default: true })
   public allowExpiryEdit: boolean;
 
-  private _days = 24 * 60 * 60;  // seconds in a day
+  private _days = 24 * 60 * 60; // seconds in a day
   public access_token_lifetime_options: any[] = [
     1 * this._days,
     2 * this._days,
     7 * this._days,
     30 * this._days,
-    'Never (∞)']
+    "Never (∞)",
+  ];
 
   formatSharingLink(link: any) {
     const rel = `#/job/${link.object_id}/?access_token=${link.token}`;
@@ -121,7 +122,7 @@ export default class SharingLinkList extends Vue {
   }
 
   relToFullLink(rel_link: string) {
-    const tmp_a = document.createElement('a') as HTMLAnchorElement;
+    const tmp_a = document.createElement("a") as HTMLAnchorElement;
     tmp_a.href = rel_link;
     const abs_link = tmp_a.href;
     return abs_link;
@@ -135,17 +136,19 @@ export default class SharingLinkList extends Vue {
   formatExpiryString(expiry_time: Date | null, add_sentence_words?: boolean) {
     if (expiry_time == null) {
       if (add_sentence_words) {
-        return ', never expires'
+        return ", never expires";
       } else {
-        return 'Never';
+        return "Never";
       }
     }
     const m = moment(expiry_time);
-    let suffix = 'from now';
+    let suffix = "from now";
     if (m.isBefore(Date.now())) {
-      suffix = 'ago';
+      suffix = "ago";
     }
-    let formatted = `${m.fromNow(true)} ${suffix} on ${m.format("DD-MMM-YYYY (HH:mm UTCZ)")}`;
+    let formatted = `${m.fromNow(true)} ${suffix} on ${m.format(
+      "DD-MMM-YYYY (HH:mm UTCZ)"
+    )}`;
     if (add_sentence_words) {
       formatted = ` until ${formatted}`;
     }
@@ -154,21 +157,21 @@ export default class SharingLinkList extends Vue {
 
   async setClipboard(text: string) {
     return new Promise(function (resolve, reject) {
-      const tmp_button = document.createElement('button');
+      const tmp_button = document.createElement("button");
       const clipboard = new Clipboard(tmp_button, {
         text: function () {
-          return text
+          return text;
         },
         action: function () {
-          return 'copy'
+          return "copy";
         },
-        container: document.body
+        container: document.body,
       });
-      clipboard.on('success', function (e: Promise<string>) {
+      clipboard.on("success", function (e: Promise<string>) {
         clipboard.destroy();
         resolve(e);
       });
-      clipboard.on('error', function (e: Promise<string>) {
+      clipboard.on("error", function (e: Promise<string>) {
         clipboard.destroy();
         reject(e);
       });
@@ -177,23 +180,29 @@ export default class SharingLinkList extends Vue {
   }
 
   async updateSharingLink(job_id: string, expires_in: number | string) {
-    this.$emit('change-link', { job_id: job_id, expires_in: expires_in });
+    this.$emit("change-link", { job_id: job_id, expires_in: expires_in });
   }
 
   async deleteSharingLink(link_id: string) {
-    this.$emit('delete-link', link_id);
+    this.$emit("delete-link", link_id);
   }
 
-  async setClipboardFlash(text: string, message: string, failMessage: string = "Failed to copy to clipboard :/") {
+  async setClipboardFlash(
+    text: string,
+    message: string,
+    failMessage: string = "Failed to copy to clipboard :/"
+  ) {
     try {
-      const displayTime = (message.length * 20) + 500;
+      const displayTime = message.length * 20 + 500;
       await this.setClipboard(text);
-      this.$emit('flash-message', { message: message, duration: displayTime });
+      this.$emit("flash-message", { message: message, duration: displayTime });
     } catch (error) {
-      const displayTime = (failMessage.length * 20) + 1000;
-      this.$emit('flash-message', { message: failMessage, duration: displayTime });
+      const displayTime = failMessage.length * 20 + 1000;
+      this.$emit("flash-message", {
+        message: failMessage,
+        duration: displayTime,
+      });
     }
   }
 }
-
 </script>

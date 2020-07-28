@@ -43,7 +43,7 @@ import {
   Model,
   Prop,
   Provide,
-  Watch
+  Watch,
 } from "vue-property-decorator";
 import { cssStripe, getThemeColor } from "../palette";
 
@@ -51,20 +51,20 @@ import { cssStripe, getThemeColor } from "../palette";
   filters: {},
 })
 export default class GenericPip extends Vue {
-  @Prop({ type: String, default: 'info' })
+  @Prop({ type: String, default: "info" })
   public icon: string | null;
 
   @Prop({ type: String, default: null })
   public buttonIcon: string | null;
 
-  @Prop({ type: String, default: '' })
+  @Prop({ type: String, default: "" })
   public buttonText: string;
 
-  @Prop({ type: String, default: 'primary' })
-  public stripeColor: '' | 'primary' | 'accent' | 'warn' | 'transparent';
+  @Prop({ type: String, default: "primary" })
+  public stripeColor: "" | "primary" | "accent" | "warn" | "transparent";
 
-  @Prop({ type: String, default: '' })
-  public cardClass: '' | 'primary' | 'accent' | 'warn';
+  @Prop({ type: String, default: "" })
+  public cardClass: "" | "primary" | "accent" | "warn";
 
   @Prop({ type: Boolean, default: true })
   public hover: boolean;
@@ -73,7 +73,7 @@ export default class GenericPip extends Vue {
   getThemeColor = getThemeColor;
 
   onClicked(event: any) {
-    this.$emit('click')
+    this.$emit("click");
   }
 }
 </script>

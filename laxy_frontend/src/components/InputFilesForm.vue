@@ -168,14 +168,21 @@
 </template>
 
 <script lang="ts">
-import * as _ from 'lodash';
-import 'es6-promise';
+import * as _ from "lodash";
+import "es6-promise";
 
-import axios, { AxiosResponse } from 'axios';
-import Vue, { ComponentOptions } from 'vue';
-import Component from 'vue-class-component';
-import { Emit, Inject, Model, Prop, Provide, Watch } from 'vue-property-decorator'
-import VueMarkdown from 'vue-markdown';
+import axios, { AxiosResponse } from "axios";
+import Vue, { ComponentOptions } from "vue";
+import Component from "vue-class-component";
+import {
+  Emit,
+  Inject,
+  Model,
+  Prop,
+  Provide,
+  Watch,
+} from "vue-property-decorator";
+import VueMarkdown from "vue-markdown";
 
 import ENAFileSelect from "./ENA/ENAFileSelect";
 import ENASearchAboutBox from "./ENA/ENASearchAboutBox";
@@ -190,31 +197,32 @@ interface DbAccession {
 
 @Component({
   components: {
-    'vue-markdown': VueMarkdown,
-    ENASearchAboutBox, 'ena-file-select': ENAFileSelect,
-    RemoteFilesSelect, RemoteFileSelectAboutBox,
+    "vue-markdown": VueMarkdown,
+    ENASearchAboutBox,
+    "ena-file-select": ENAFileSelect,
+    RemoteFilesSelect,
+    RemoteFileSelectAboutBox,
     CSVSampleListUpload,
     CSVAboutBox,
   },
-  props: {}
+  props: {},
 })
 export default class InputFilesForm extends Vue {
-
   sources: object = [
-    { type: 'ENA', text: 'Public data from ENA or SRA' },
-    { type: 'URL', text: 'Files on a web or FTP server (URL)' },
-    { type: 'CLOUDSTOR_PUBLIC', text: 'Public CloudStor Share' },
-    { type: 'CSV', text: 'Sample list from CSV / Excel' },
+    { type: "ENA", text: "Public data from ENA or SRA" },
+    { type: "URL", text: "Files on a web or FTP server (URL)" },
+    { type: "CLOUDSTOR_PUBLIC", text: "Public CloudStor Share" },
+    { type: "CSV", text: "Sample list from CSV / Excel" },
     // {type: 'SFTP_UPLOAD', text: 'SFTP upload'},
   ];
-  selected_source: string = 'ENA';
-  url_input: string = '';
-  cloudstor_link_password: string = '';
-  user_email: string = 'my.username@example.com';
-  sftp_upload_host: string = 'laxy.erc.monash.edu';
-  sftp_upload_path: string = '';
-  sftp_upload_credentials: string = '';
-  dataset_name: string = '';
+  selected_source: string = "ENA";
+  url_input: string = "";
+  cloudstor_link_password: string = "";
+  user_email: string = "my.username@example.com";
+  sftp_upload_host: string = "laxy.erc.monash.edu";
+  sftp_upload_path: string = "";
+  sftp_upload_credentials: string = "";
+  dataset_name: string = "";
   password_valid_days: number = 2;
   password_expiry: Date = this.daysInFuture(2);
   dataset_name_invalid: boolean = false;
@@ -225,11 +233,11 @@ export default class InputFilesForm extends Vue {
   }
 
   email_username() {
-    return this.user_email.split('@')[0];
+    return this.user_email.split("@")[0];
   }
 
   email_domain() {
-    return this.user_email.split('@')[1];
+    return this.user_email.split("@")[1];
   }
 
   sftp_otp() {
@@ -246,7 +254,7 @@ export default class InputFilesForm extends Vue {
       this.sftp_upload_path = `${this.dataset_name}`;
       this.sftp_upload_credentials = `${username}_${domain}:${otp}@${this.sftp_upload_host}/${this.sftp_upload_path}/`;
 
-      this.$emit('stepDone');
+      this.$emit("stepDone");
     }
   }
 
@@ -258,23 +266,25 @@ export default class InputFilesForm extends Vue {
 
   // TODO: We might want to use: https://validatejs.org/#validators-url instead
   isValidURL(url: string): boolean {
-    const valid_protocols = ['http:', 'https:', 'ftp:'];
-    const a = document.createElement('a');
+    const valid_protocols = ["http:", "https:", "ftp:"];
+    const a = document.createElement("a");
     a.href = url;
-    return (a.host != null &&
+    return (
+      a.host != null &&
       a.host != window.location.host &&
       _.includes(valid_protocols, a.protocol)
     );
   }
 
   isCloudStorURL(url: string): boolean {
-    const valid_protocols = ['https:'];
-    const a = document.createElement('a');
+    const valid_protocols = ["https:"];
+    const a = document.createElement("a");
     a.href = url;
-    return (a.host != null &&
+    return (
+      a.host != null &&
       a.host != window.location.host &&
       _.includes(valid_protocols, a.protocol) &&
-      a.host == 'cloudstor.aarnet.edu.au'
+      a.host == "cloudstor.aarnet.edu.au"
     );
   }
 
@@ -288,25 +298,25 @@ export default class InputFilesForm extends Vue {
     ((this.$refs as any)[refName] as any).close();
   }
 
-  @Watch('selected_source')
+  @Watch("selected_source")
   onDataSourceChanged(newVal: string, oldVal: string) {
-    this.$emit('dataSourceChanged');
+    this.$emit("dataSourceChanged");
   }
 
-  @Watch('url_input', { immediate: true })
+  @Watch("url_input", { immediate: true })
   onURLInputChanged(newVal: string, oldVal: string) {
-    if (this.selected_source == 'URL' &&
-      this.isValidURL(newVal)) {
-      this.$emit('stepDone');
-    } else if (this.selected_source == 'CLOUDSTOR' &&
-      this.isCloudStorURL(newVal)) {
-      this.$emit('stepDone');
+    if (this.selected_source == "URL" && this.isValidURL(newVal)) {
+      this.$emit("stepDone");
+    } else if (
+      this.selected_source == "CLOUDSTOR" &&
+      this.isCloudStorURL(newVal)
+    ) {
+      this.$emit("stepDone");
     } else {
-      this.$emit('invalidData');
+      this.$emit("invalidData");
     }
   }
-};
-
+}
 </script>
 
 <style>

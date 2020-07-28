@@ -27,14 +27,14 @@ import {
   Model,
   Prop,
   Provide,
-  Watch
+  Watch,
 } from "vue-property-decorator";
 import { ComputeJob } from "../../model";
 // import VueMarkdown from 'vue-markdown';
 
 @Component({
   // components: {'vue-markdown': VueMarkdown},
-  filters: {}
+  filters: {},
 })
 export default class ExpiryDialog extends Vue {
   @Prop({ type: Object })
@@ -48,12 +48,12 @@ export default class ExpiryDialog extends Vue {
 
   open() {
     // console.log('Opened: ' + refName);
-    ((this.$refs as any)['thisDialog'] as any).open();
+    ((this.$refs as any)["thisDialog"] as any).open();
   }
 
   close() {
     // console.log('Closed: ' + refName);
-    ((this.$refs as any)['thisDialog'] as any).close();
+    ((this.$refs as any)["thisDialog"] as any).close();
   }
 }
 </script>

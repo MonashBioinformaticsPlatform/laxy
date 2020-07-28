@@ -23,7 +23,7 @@ import {
   Model,
   Prop,
   Provide,
-  Watch
+  Watch,
 } from "vue-property-decorator";
 import { ComputeJob } from "../../model";
 import { basename } from "../../util";
@@ -31,7 +31,7 @@ import { basename } from "../../util";
 
 @Component({
   // components: {'vue-markdown': VueMarkdown},
-  filters: {}
+  filters: {},
 })
 export default class DownloadHelpDialog extends Vue {
   @Prop({ type: String })
@@ -44,17 +44,17 @@ export default class DownloadHelpDialog extends Vue {
   closeTo: string | null;
 
   get filename() {
-    return basename((new URL(this.tarballUrl)).pathname);
+    return basename(new URL(this.tarballUrl).pathname);
   }
 
   open() {
     // console.log('Opened: ' + refName);
-    ((this.$refs as any)['thisDialog'] as any).open();
+    ((this.$refs as any)["thisDialog"] as any).open();
   }
 
   close() {
     // console.log('Closed: ' + refName);
-    ((this.$refs as any)['thisDialog'] as any).close();
+    ((this.$refs as any)["thisDialog"] as any).close();
   }
 }
 </script>

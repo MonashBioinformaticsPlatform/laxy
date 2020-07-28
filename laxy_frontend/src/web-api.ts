@@ -1,10 +1,10 @@
 import 'es6-promise';
-import axios, {AxiosResponse, AxiosRequestConfig} from 'axios';
+import axios, { AxiosResponse, AxiosRequestConfig } from 'axios';
 
 import * as Cookies from 'js-cookie';
-import {getDomain} from 'tldjs';
+import { getDomain } from 'tldjs';
 
-import {browserLocale} from './util';
+import { browserLocale } from './util';
 import * as moment from 'moment';
 
 moment.locale(browserLocale());
@@ -28,7 +28,7 @@ export class WebAPI {
         withCredentials: true,
         xsrfHeaderName: 'X-CSRFToken',
         xsrfCookieName: 'csrftoken',
-        headers: {'Content-Type': 'application/json'},
+        headers: { 'Content-Type': 'application/json' },
         data: {},
         params: {},
     };
@@ -124,7 +124,7 @@ export class WebAPI {
     public static async login(user: string, pass: string): Promise<AxiosResponse> {
         try {
             return await this.fetcher.post(`/api/v1/auth/login/`,
-                {username: user, password: pass}) as AxiosResponse;
+                { username: user, password: pass }) as AxiosResponse;
         } catch (error) {
             throw error;
         }
@@ -170,7 +170,7 @@ export class WebAPI {
     public static async remoteFilesList(url: string, fileglob: string = "*"): Promise<AxiosResponse> {
         try {
             const api_url = `/api/v1/remote-browse/`;
-            return await this.fetcher.post(api_url, {url: url, fileglob: fileglob});
+            return await this.fetcher.post(api_url, { url: url, fileglob: fileglob });
         } catch (error) {
             throw error;
         }
@@ -202,7 +202,7 @@ export class WebAPI {
         try {
             return await this.fetcher.patch(
                 `/api/v1/job/${id}/`,
-                {status: 'cancelled'}) as AxiosResponse;
+                { status: 'cancelled' }) as AxiosResponse;
         } catch (error) {
             throw error;
         }
@@ -246,8 +246,8 @@ export class WebAPI {
     }
 
     public static viewFileByIdUrl(file_id: string,
-                                  filename: string | null = null,
-                                  access_token?: string): string {
+        filename: string | null = null,
+        access_token?: string): string {
 
         let url = `${this.baseUrl}/api/v1/file/${file_id}/`;
 
@@ -261,8 +261,8 @@ export class WebAPI {
     }
 
     public static downloadFileByIdUrl(file_id: string,
-                                      filename: string | null = null,
-                                      access_token?: string): string {
+        filename: string | null = null,
+        access_token?: string): string {
         if (access_token) {
             WebAPI.setQueryParamAccessToken(access_token);
         }
@@ -273,8 +273,8 @@ export class WebAPI {
     }
 
     public static viewJobFileByPathUrl(job_id: string,
-                                       filepath: string,
-                                       access_token?: string): string {
+        filepath: string,
+        access_token?: string): string {
         let url = `${this.baseUrl}/api/v1/job/${job_id}/files/${filepath}`;
         if (access_token) {
             url += `?access_token=${access_token}`;
@@ -283,8 +283,8 @@ export class WebAPI {
     }
 
     public static downloadJobFileByPathUrl(job_id: string,
-                                           filepath: string,
-                                           access_token?: string): string {
+        filepath: string,
+        access_token?: string): string {
         if (access_token) {
             WebAPI.setQueryParamAccessToken(access_token);
         }
@@ -292,7 +292,7 @@ export class WebAPI {
     }
 
     public static downloadJobTarballUrl(job_id: string,
-                                        access_token?: string) {
+        access_token?: string) {
         let url = `${this.baseUrl}/api/v1/job/${job_id}.tar.gz`;
         if (access_token) {
             url = `${url}?access_token=${access_token}`;
@@ -427,7 +427,7 @@ export class WebAPI {
         }
     }
 
-    public static async sendToDegust(file_id: string, access_token?: string ): Promise<AxiosResponse> {
+    public static async sendToDegust(file_id: string, access_token?: string): Promise<AxiosResponse> {
         try {
             let url = `/api/v1/action/send-to/degust/${file_id}/`;
             if (access_token) {

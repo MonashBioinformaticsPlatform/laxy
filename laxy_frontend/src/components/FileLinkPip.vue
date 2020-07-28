@@ -37,7 +37,7 @@ import {
   Model,
   Prop,
   Provide,
-  Watch
+  Watch,
 } from "vue-property-decorator";
 import { getThemeColor, cssStripe } from "../palette";
 
@@ -48,7 +48,7 @@ export default class FileLinkPip extends Vue {
   @Prop({ type: String })
   public url: string;
 
-  @Prop({ type: String, default: 'view_list' })
+  @Prop({ type: String, default: "view_list" })
   public icon: string;
 
   getThemeColor = getThemeColor;

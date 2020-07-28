@@ -42,7 +42,7 @@ import {
   Model,
   Prop,
   Provide,
-  Watch
+  Watch,
 } from "vue-property-decorator";
 
 import { Sample, SampleCartItems } from "../../model";
@@ -72,7 +72,7 @@ export default class CSVSampleListUpload extends Vue {
   async submitCSV(filelist: FileList) {
     console.log(filelist);
     const file: File = filelist[0];
-    const formData = new FormData() as IFormData;  // automatically uses 'content-type': 'multipart/form-data' in axios ?
+    const formData = new FormData() as IFormData; // automatically uses 'content-type': 'multipart/form-data' in axios ?
     formData.append("name", file.name);
     formData.append("file", file, file.name);
     for (const k of formData.entries()) {
@@ -81,7 +81,9 @@ export default class CSVSampleListUpload extends Vue {
     //const headers = {headers: {'content-type': 'multipart/form-data'}};
     try {
       this.submitting = true;
-      const response = await WebAPI.createSampleCart(formData) as AxiosResponse;
+      const response = (await WebAPI.createSampleCart(
+        formData
+      )) as AxiosResponse;
       // TODO: CSV upload doesn't append/merge, it aways creates a new SampleCart.
       //       Implement backend PATCH method so we can append/merge an uploaded CSV
       //       (or parse and merge CSV clientside - probably a bad idea since we really
@@ -97,7 +99,7 @@ export default class CSVSampleListUpload extends Vue {
       Snackbar.flashMessage("Saved !");
       // coerce JSON into a list of proper Sample objects, ensuring all properties are present
       const _samples: Sample[] = map(response.data.samples, (s) => {
-        return new Sample(s)
+        return new Sample(s);
       });
       this.$store.commit(ADD_SAMPLES, _samples);
     } catch (error) {
@@ -116,6 +118,5 @@ export default class CSVSampleListUpload extends Vue {
   closeDialog(ref: string) {
     (this.$refs[ref] as MdDialog).close();
   }
-
 }
 </script>

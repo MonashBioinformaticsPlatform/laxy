@@ -1,9 +1,9 @@
 import trim from 'lodash-es/trim';
 
 // const VueAuthenticate = require('vue-authenticate');  // without TypeScript types
-import {VueAuthenticate, AuthenticateOptions, ProviderOptions} from 'vue-authenticate';
+import { VueAuthenticate, AuthenticateOptions, ProviderOptions } from 'vue-authenticate';
 
-import {WebAPI} from './web-api';
+import { WebAPI } from './web-api';
 
 export const AuthOptions: AuthenticateOptions = {
     // we MUST include withCredentials: true, otherwise the cookies returned by the VueAuthenticate.authenticateSession

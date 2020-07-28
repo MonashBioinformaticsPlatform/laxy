@@ -97,16 +97,10 @@ import {
   Model,
   Prop,
   Provide,
-  Watch
+  Watch,
 } from "vue-property-decorator";
 
-import {
-  State,
-  Getter,
-  Action,
-  Mutation,
-  namespace
-} from "vuex-class";
+import { State, Getter, Action, Mutation, namespace } from "vuex-class";
 
 import { ComputeJob, LaxyFile } from "../model";
 import { WebAPI } from "../web-api";
@@ -139,16 +133,18 @@ export default class FileList extends Vue {
   public title: string;
 
   @Prop({
-    type: Array, default: () => {
+    type: Array,
+    default: () => {
       return [];
-    }
+    },
   })
   public regexFilters: string[];
 
   @Prop({
-    type: Array, default: () => {
+    type: Array,
+    default: () => {
       return [];
-    }
+    },
   })
   public tagFilters: string[];
 
@@ -164,7 +160,7 @@ export default class FileList extends Vue {
   @Prop({ type: Boolean, default: true })
   public refreshOnLoad: boolean;
 
-  public searchQuery: string = '';
+  public searchQuery: string = "";
   public searching: boolean = false;
 
   public actionRunning: any = {};
@@ -181,7 +177,7 @@ export default class FileList extends Vue {
       tags: [],
       method: (file_id: string) => {
         viewFile(file_id, this.fileset, this.jobId);
-      }
+      },
     },
     {
       text: "Download file",
@@ -189,7 +185,7 @@ export default class FileList extends Vue {
       tags: [],
       method: (file_id: string) => {
         downloadFile(file_id, this.fileset, this.jobId);
-      }
+      },
     },
     {
       text: "View report",
@@ -197,15 +193,18 @@ export default class FileList extends Vue {
       tags: ["html", "report"],
       method: (file_id: string) => {
         viewFile(file_id, this.fileset, this.jobId);
-      }
+      },
     },
     {
       text: "Open in Degust",
       icon: "dashboard",
       tags: ["degust"],
       method: async (file: LaxyFile) => {
-        window.open(WebAPI.getExternalAppRedirectUrl('degust', file.id), '_blank');
-      }
+        window.open(
+          WebAPI.getExternalAppRedirectUrl("degust", file.id),
+          "_blank"
+        );
+      },
     },
   ];
 
@@ -220,26 +219,28 @@ export default class FileList extends Vue {
   // we need this wrapped in a method otherwise the viewMethod.method
   // doesn't have the correct 'this' context to $emit events.
   emitActionError(msg: string) {
-    this.$emit('action-error', msg);
+    this.$emit("action-error", msg);
   }
 
   getViewMethodsForTags(tags: string[]) {
-    return filter(this.viewMethods,
-      vm => hasSharedTagOrEmpty(vm.tags, tags));
+    return filter(this.viewMethods, (vm) => hasSharedTagOrEmpty(vm.tags, tags));
   }
 
   @Memoize((file: LaxyFile) => file.id)
   getDefaultViewMethod(file: LaxyFile) {
-    return head(filter(this.viewMethods,
-      vm => hasIntersection(vm.tags, file.type_tags)));
+    return head(
+      filter(this.viewMethods, (vm) => hasIntersection(vm.tags, file.type_tags))
+    );
   }
 
   @Debounce(600)
   get files(): LaxyFile[] {
     const fileset = this.fileset;
-    if (fileset == null ||
+    if (
+      fileset == null ||
       fileset.files == null ||
-      fileset.files.length === 0) {
+      fileset.files.length === 0
+    ) {
       return [];
     }
 
@@ -253,7 +254,7 @@ export default class FileList extends Vue {
     // const filtered = filter(this.fileset.files, (f) => {
     //     some(strToRegex(this.regexFilters), (p) => {f.name.matches(p)});
     // });
-    filtered = sortBy(filtered, ['path', 'name']);
+    filtered = sortBy(filtered, ["path", "name"]);
     return filtered;
   }
 
@@ -276,12 +277,14 @@ export default class FileList extends Vue {
     } catch (error) {
       console.log(error);
       this.refreshing = false;
-      this.$emit("refresh-error", error.toString() + ` (filesetId: ${this.filesetId})`);
+      this.$emit(
+        "refresh-error",
+        error.toString() + ` (filesetId: ${this.filesetId})`
+      );
       throw error;
     }
   }
-};
-
+}
 </script>
 
 <style scoped>

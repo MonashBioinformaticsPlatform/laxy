@@ -210,15 +210,14 @@ import "es6-promise";
 
 import axios, { AxiosResponse } from "axios";
 import Vue, { ComponentOptions } from "vue";
-import CalloutBox from './CalloutBox';
+import CalloutBox from "./CalloutBox";
 
-interface FrontPage extends Vue {
-}
+interface FrontPage extends Vue {}
 
 export default Vue.extend({
   components: {
     // 'input-files-form': InputFilesForm
-    'callout-box': CalloutBox,
+    "callout-box": CalloutBox,
   },
   props: {},
   data() {
@@ -227,6 +226,5 @@ export default Vue.extend({
   methods: {},
   computed: {},
   watch: {},
-});  // as ComponentOptions<RNASeqSetup>;
-
+}); // as ComponentOptions<RNASeqSetup>;
 </script>

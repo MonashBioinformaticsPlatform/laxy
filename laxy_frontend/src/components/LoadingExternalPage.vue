@@ -14,23 +14,20 @@
 </template>
 
 <script lang="ts">
-import { AxiosResponse } from 'axios';
+import { AxiosResponse } from "axios";
 
-import Vue from 'vue';
+import Vue from "vue";
 import Component from "vue-class-component";
 
-import {
-  Prop,
-} from "vue-property-decorator";
+import { Prop } from "vue-property-decorator";
 
 import { WebAPI } from "../web-api";
 import { Snackbar } from "../snackbar";
 
 @Component({
-  components: {}
+  components: {},
 })
 export default class LoadingExternalPage extends Vue {
-
   @Prop({ type: String })
   public appName: string;
 
@@ -40,9 +37,9 @@ export default class LoadingExternalPage extends Vue {
   public invalidAppName = false;
 
   public appMethods: any = {
-    'degust': {
-      displayName: 'Degust',
-      method: this.redirectToDegust
+    degust: {
+      displayName: "Degust",
+      method: this.redirectToDegust,
     },
   };
 
@@ -63,9 +60,7 @@ export default class LoadingExternalPage extends Vue {
     }
   }
 
-  public async mounted() {
-
-  }
+  public async mounted() {}
 
   public async redirectToDegust(fileId: string) {
     const response = await WebAPI.sendToDegust(fileId, this.access_token);

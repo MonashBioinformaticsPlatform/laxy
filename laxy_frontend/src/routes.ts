@@ -1,7 +1,7 @@
-import VueRouter, {RouterOptions} from 'vue-router';
+import VueRouter, { RouterOptions } from 'vue-router';
 // const multiguard = require('vue-router-multiguard');
 
-import {FETCH_USER_PROFILE, Store} from './store';
+import { FETCH_USER_PROFILE, Store } from './store';
 
 import FrontPage from './components/FrontPage.vue';
 import LoginPage from './components/LoginPage.vue';
@@ -100,7 +100,7 @@ export const router = new VueRouter({
             path: '/remoteselect',
             name: 'remoteselect',
             component: RemoteFilesSelect,
-            props: {showButtons: true},
+            props: { showButtons: true },
             beforeEnter: requireAuth,
         },
         {
@@ -147,7 +147,7 @@ export const router = new VueRouter({
         // The "behaviour: 'smooth'" option is a draft spec and might be
         // unsupported in some old/crappy browsers.
         // https://developer.mozilla.org/en-US/docs/Web/API/Window/scrollTo
-        const topOfPage = {x: 0, y: 0};
+        const topOfPage = { x: 0, y: 0 };
         const duration = 300; // ms
         return new Promise((resolve, reject) => {
             window.scrollTo({

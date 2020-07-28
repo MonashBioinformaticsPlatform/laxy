@@ -21,12 +21,11 @@
 <script lang="ts">
 import Vue from "vue";
 import Component from "vue-class-component";
-import VueMarkdown from 'vue-markdown';
+import VueMarkdown from "vue-markdown";
 
 @Component({
-  components: { 'vue-markdown': VueMarkdown },
-  filters: {}
+  components: { "vue-markdown": VueMarkdown },
+  filters: {},
 })
-export default class CSVSampleListUploadAboutBox extends Vue {
-}
+export default class CSVSampleListUploadAboutBox extends Vue {}
 </script>

@@ -65,12 +65,12 @@ export class Comp extends Vue {
 ```
 */
 
-import {createDecorator} from 'vue-class-component';
+import { createDecorator } from 'vue-class-component';
 
 function getDeepValue(st: string, obj: any) {
     return st.replace(/\[([^\]]+)]/g, '.$1')
         .split('.')
-        .reduce(function(o, p) {
+        .reduce(function (o, p) {
             return o[p];
         }, obj);
 }

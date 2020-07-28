@@ -70,8 +70,8 @@ export function cssGradient(color: string, angle: number = 90) {
 }
 
 export function cssStripe(color: string,
-                          side: 'left' | 'right' | 'top' | 'bottom' = 'left',
-                          width: number = 8) {
+    side: 'left' | 'right' | 'top' | 'bottom' = 'left',
+    width: number = 8) {
     let angle = 90;
     switch (side) {
         case 'left':

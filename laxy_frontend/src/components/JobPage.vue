@@ -416,7 +416,6 @@
 </template>
 
 <script lang="ts">
-
 import "es6-promise";
 
 import filter from "lodash-es/filter";
@@ -424,9 +423,9 @@ import find from "lodash-es/find";
 import get from "lodash-es/get";
 import { Memoize } from "lodash-decorators";
 
-const Clipboard = require('clipboard');
+const Clipboard = require("clipboard");
 
-import * as moment from 'moment';
+import * as moment from "moment";
 
 import axios, { AxiosResponse } from "axios";
 import Vue, { ComponentOptions } from "vue";
@@ -438,18 +437,12 @@ import {
   Model,
   Prop,
   Provide,
-  Watch
+  Watch,
 } from "vue-property-decorator";
 
-import {
-  State,
-  Getter,
-  Action,
-  Mutation,
-  namespace
-} from "vuex-class";
+import { State, Getter, Action, Mutation, namespace } from "vuex-class";
 // import { State2Way } from 'vuex-class-state2way'
-import { State2Way } from '../vuex/state2way';
+import { State2Way } from "../vuex/state2way";
 
 import { NotImplementedError } from "../exceptions";
 import { ComputeJob, LaxyFile, SampleCartItems } from "../model";
@@ -460,7 +453,7 @@ import {
   themeColors,
   getThemeColor,
   getThemedStatusColor,
-  cssColorVars
+  cssColorVars,
 } from "../palette";
 
 import {
@@ -504,11 +497,11 @@ import BannerNotice from "./BannerNotice.vue";
     JobStatusPip,
     NestedFileList,
     ExpiryDialog,
-    DownloadJobFilesTable
+    DownloadJobFilesTable,
   },
   props: {
     jobId: { type: String, default: "" },
-    showTab: { type: String, default: "summary" }
+    showTab: { type: String, default: "summary" },
   },
   filters: {},
 })
@@ -532,27 +525,56 @@ export default class JobPage extends Vue {
 
   public showTab: "summary" | "input" | "output" | "eventlog" | "sharing";
   public tabs: any = [
-    { name: 'summary', path: '', text: 'Summary', icon: 'dashboard', exact: true, showWithoutAuth: true },
-    { name: 'input', path: '/input', text: 'Input', icon: 'folder_open', exact: false, showWithoutAuth: true },
-    { name: 'output', path: '/output', text: 'Output', icon: 'folder_open', exact: false, showWithoutAuth: true },
     {
-      name: 'eventlog',
-      path: '/eventlog',
-      text: 'Event Log',
-      icon: 'view_list',
-      exact: false,
-      showWithoutAuth: true
+      name: "summary",
+      path: "",
+      text: "Summary",
+      icon: "dashboard",
+      exact: true,
+      showWithoutAuth: true,
     },
-    { name: 'sharing', path: '/sharing', text: 'Sharing', icon: 'share', exact: false, showWithoutAuth: false },
+    {
+      name: "input",
+      path: "/input",
+      text: "Input",
+      icon: "folder_open",
+      exact: false,
+      showWithoutAuth: true,
+    },
+    {
+      name: "output",
+      path: "/output",
+      text: "Output",
+      icon: "folder_open",
+      exact: false,
+      showWithoutAuth: true,
+    },
+    {
+      name: "eventlog",
+      path: "/eventlog",
+      text: "Event Log",
+      icon: "view_list",
+      exact: false,
+      showWithoutAuth: true,
+    },
+    {
+      name: "sharing",
+      path: "/sharing",
+      text: "Sharing",
+      icon: "share",
+      exact: false,
+      showWithoutAuth: false,
+    },
   ];
 
-  private _days = 24 * 60 * 60;  // seconds in a day
+  private _days = 24 * 60 * 60; // seconds in a day
   public access_token_lifetime_options: any[] = [
     1 * this._days,
     2 * this._days,
     7 * this._days,
     30 * this._days,
-    'Never (∞)'];
+    "Never (∞)",
+  ];
   public sharing: any = { lifetime: this.access_token_lifetime_options[3] };
 
   public sharingLinks: LaxySharingLink[] = [];
@@ -591,7 +613,7 @@ export default class JobPage extends Vue {
   get paletteColor(): any {
     return (color: string, shade: string | number) => {
       return palette[color][shade];
-    }
+    };
   }
 
   get userId(): string | null {
@@ -649,10 +671,11 @@ export default class JobPage extends Vue {
   }
 
   get bannerSharingLink(): LaxySharingLink | null {
-    if (this.sharingLinks &&
+    if (
+      this.sharingLinks &&
       this.sharingLinks.length > 0 &&
-      !this._linkIsExpired(this.sharingLinks[0])) {
-
+      !this._linkIsExpired(this.sharingLinks[0])
+    ) {
       return this.sharingLinks[0];
     } else {
       return null;
@@ -678,7 +701,7 @@ export default class JobPage extends Vue {
     //if (this.job && !this.jobIsDone) {
     this.refreshPollerId = window.setInterval(() => {
       this.refresh(null);
-    }, 10000);  // ms
+    }, 10000); // ms
     //}
   }
 
@@ -687,11 +710,15 @@ export default class JobPage extends Vue {
   }
 
   get jobIsDone() {
-    return this.job != null && this.job.status !== 'running' && this.job.status !== 'created';
+    return (
+      this.job != null &&
+      this.job.status !== "running" &&
+      this.job.status !== "created"
+    );
   }
 
   get jobIsRunning() {
-    return this.job != null && this.job.status === 'running';
+    return this.job != null && this.job.status === "running";
   }
 
   openFileByPath(filepath: string) {
@@ -711,7 +738,8 @@ export default class JobPage extends Vue {
       // return WebAPI.viewFileByIdUrl(file.id);
       return WebAPI.viewJobFileByPathUrl(
         this.jobId,
-        `${file.path}/${file.name}`);
+        `${file.path}/${file.name}`
+      );
     }
     return null;
   }
@@ -729,47 +757,58 @@ export default class JobPage extends Vue {
   }
 
   openDegustLink(fileId: string) {
-    window.open(WebAPI.getExternalAppRedirectUrl('degust', fileId, this.access_token), '_blank');
+    window.open(
+      WebAPI.getExternalAppRedirectUrl("degust", fileId, this.access_token),
+      "_blank"
+    );
   }
 
   // TODO: This may be better shifted to a dedicated JobParamsCard rather than including it as a row in
   // the generic JobStatusCard
   get genomeDescription(): string | null {
-    const genome_id = get(this.job, 'params.params.genome', null);
+    const genome_id = get(this.job, "params.params.genome", null);
     find(AVAILABLE_GENOMES, { id: genome_id });
     const genome = find(AVAILABLE_GENOMES, { id: genome_id });
     if (genome) {
-      let [organism, centre, build] = genome_id.split('/');
-      organism = organism.replace('_', ' ');
+      let [organism, centre, build] = genome_id.split("/");
+      organism = organism.replace("_", " ");
       return `${build} (${organism})`;
     }
     return null;
   }
 
-  _countsFileInfo(filename: string): { strandedness: string, featureSet: string } {
-    let data: { strandedness: string, featureSet: string } = { strandedness: '', featureSet: '' };
-    if (filename.includes('NonStranded')) data.strandedness = 'non-stranded';
-    if (filename.includes('Forward')) data.strandedness = 'forward-stranded';
-    if (filename.includes('Reverse')) data.strandedness = 'reverse-stranded';
-    if (filename.includes('proteinCoding')) data.featureSet = 'Protein coding';
-    if (!filename.includes('proteinCoding')) data.featureSet = 'All genes';
+  _countsFileInfo(
+    filename: string
+  ): { strandedness: string; featureSet: string } {
+    let data: { strandedness: string; featureSet: string } = {
+      strandedness: "",
+      featureSet: "",
+    };
+    if (filename.includes("NonStranded")) data.strandedness = "non-stranded";
+    if (filename.includes("Forward")) data.strandedness = "forward-stranded";
+    if (filename.includes("Reverse")) data.strandedness = "reverse-stranded";
+    if (filename.includes("proteinCoding")) data.featureSet = "Protein coding";
+    if (!filename.includes("proteinCoding")) data.featureSet = "All genes";
     return data;
   }
 
   get strandBias(): number | null {
-    return get(this.job, 'metadata.results.strandedness.bias', null);
+    return get(this.job, "metadata.results.strandedness.bias", null);
   }
 
   get strandPredictionPrefix(): string | null {
-    return get(this.job, 'metadata.results.strandedness.predicted', null);
+    return get(this.job, "metadata.results.strandedness.predicted", null);
   }
 
   get strandednessGuess(): string {
-    let strandedness = 'unknown';
+    let strandedness = "unknown";
     if (this.strandPredictionPrefix) {
-      if (this.strandPredictionPrefix.startsWith('NonStranded')) strandedness = 'non-stranded';
-      if (this.strandPredictionPrefix.startsWith('Forward')) strandedness = 'forward-stranded';
-      if (this.strandPredictionPrefix.startsWith('Reverse')) strandedness = 'reverse-stranded';
+      if (this.strandPredictionPrefix.startsWith("NonStranded"))
+        strandedness = "non-stranded";
+      if (this.strandPredictionPrefix.startsWith("Forward"))
+        strandedness = "forward-stranded";
+      if (this.strandPredictionPrefix.startsWith("Reverse"))
+        strandedness = "reverse-stranded";
     }
     return strandedness;
   }
@@ -777,13 +816,20 @@ export default class JobPage extends Vue {
   get jobParamRows() {
     let rows = [];
     if (this.job) {
-      const pipeline_version = get(this.job, 'params.params.pipeline_version', null);
+      const pipeline_version = get(
+        this.job,
+        "params.params.pipeline_version",
+        null
+      );
       if (pipeline_version != null) {
-        rows.push(['Pipeline', `${this.job.params.pipeline} ${this.job.params.params.pipeline_version}`]);
+        rows.push([
+          "Pipeline",
+          `${this.job.params.pipeline} ${this.job.params.params.pipeline_version}`,
+        ]);
       }
 
       if (this.genomeDescription != null) {
-        rows.push(['Reference genome', this.genomeDescription]);
+        rows.push(["Reference genome", this.genomeDescription]);
       }
     }
     return rows;
@@ -826,17 +872,17 @@ export default class JobPage extends Vue {
 
       await this.$store.dispatch(FETCH_JOB, {
         job_id: this.jobId,
-        access_token: this.access_token
+        access_token: this.access_token,
       });
       // this.job = this.$store.state.currentViewedJob;
-      const status_changed = (this.job && this.job.status != original_status);
+      const status_changed = this.job && this.job.status != original_status;
 
       let eventlog = null;
       if (this.showTab == "eventlog") {
-        eventlog = (this.$refs.eventlog as any);
+        eventlog = this.$refs.eventlog as any;
       }
       if (this.showTab == "summary") {
-        eventlog = (this.$refs.eventlogSummary as any);
+        eventlog = this.$refs.eventlogSummary as any;
       }
       if (eventlog) await eventlog.refresh();
 
@@ -928,10 +974,9 @@ export default class JobPage extends Vue {
       this.$store.commit(SET_PIPELINE_DESCRIPTION, pipelinerun.description);
 
       // TODO: make a prop on RNASeqSetup to allow a jump to second or last step immediately
-      this.$router.push({ name: 'rnaseq' });
-
+      this.$router.push({ name: "rnaseq" });
     } catch (error) {
-      console.log(error)
+      console.log(error);
     }
   }
 
@@ -971,17 +1016,19 @@ export default class JobPage extends Vue {
   _formatExpiryString(expiry_time: Date | null, add_sentence_words?: boolean) {
     if (expiry_time == null) {
       if (add_sentence_words) {
-        return ', never expires'
+        return ", never expires";
       } else {
-        return 'Never';
+        return "Never";
       }
     }
     const m = moment(expiry_time);
-    let suffix = 'from now';
+    let suffix = "from now";
     if (m.isBefore(Date.now())) {
-      suffix = 'ago';
+      suffix = "ago";
     }
-    let formatted = `${m.format("DD-MMM-YYYY (HH:mm UTCZ)")} (${m.fromNow(true)} ${suffix})`;
+    let formatted = `${m.format("DD-MMM-YYYY (HH:mm UTCZ)")} (${m.fromNow(
+      true
+    )} ${suffix})`;
     if (add_sentence_words) {
       formatted = ` until ${formatted}`;
     }
@@ -998,7 +1045,7 @@ export default class JobPage extends Vue {
     if (this.job && this.job.expiry_time) {
       const expiry_time = moment(this.job.expiry_time || undefined);
       const now = moment();
-      return expiry_time.diff(now, 'days') as number;
+      return expiry_time.diff(now, "days") as number;
     }
     return Infinity;
   }
@@ -1027,8 +1074,7 @@ export default class JobPage extends Vue {
   flashSnackBarEvent(params: any) {
     Snackbar.flashMessage(params.message, params.duration);
   }
-};
-
+}
 </script>
 
 <style scoped>

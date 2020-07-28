@@ -65,10 +65,9 @@ function* randomSample(arr: any[]) {
     time: { type: Number, default: 1.3 },
     colors: { type: Array, default: ["black"] },
     randomSeed: { type: Number, default: 1 },
-  }
+  },
 })
 export default class SpinnerCubeGrid extends Vue {
-
   public width: number;
   public height: number;
   public columns: number;
@@ -141,7 +140,6 @@ export default class SpinnerCubeGrid extends Vue {
     };
   }
 }
-
 </script>
 
 <style scoped>

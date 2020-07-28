@@ -118,16 +118,10 @@ import {
   Model,
   Prop,
   Provide,
-  Watch
+  Watch,
 } from "vue-property-decorator";
 
-import {
-  State,
-  Getter,
-  Action,
-  Mutation,
-  namespace
-} from "vuex-class";
+import { State, Getter, Action, Mutation, namespace } from "vuex-class";
 
 import { Sample, SampleCartItems } from "../model";
 import { SET_SAMPLES } from "../store";
@@ -142,7 +136,7 @@ import CSVSampleListUpload from "./CSVSampleListUpload/CSVSampleListUpload.vue";
   filters: {},
   beforeRouteLeave(to: any, from: any, next: any) {
     (this as any).beforeRouteLeave(to, from, next);
-  }
+  },
 })
 export default class SampleCart extends Vue {
   _DEBUG: boolean = false;
@@ -163,7 +157,7 @@ export default class SampleCart extends Vue {
   public selectable: boolean;
 
   // = ["name", "metadata.condition", "R1", "R2"];
-  @Prop({ default: () => ['name', 'R1', 'R2'], type: Array })
+  @Prop({ default: () => ["name", "R1", "R2"], type: Array })
   public fields: Array<string>;
 
   // = ["name", "metadata.condition"];
@@ -196,8 +190,10 @@ export default class SampleCart extends Vue {
   async beforeCreate() {
     // Example data for debug only
     if (this._DEBUG) {
-      if (this.$store.getters.sample_cart_count === null ||
-        this.$store.getters.sample_cart_count === 0) {
+      if (
+        this.$store.getters.sample_cart_count === null ||
+        this.$store.getters.sample_cart_count === 0
+      ) {
         const s: SampleCartItems = _.cloneDeep(_dummySampleList);
         this.$store.commit(SET_SAMPLES, s);
       }
@@ -247,7 +243,10 @@ export default class SampleCart extends Vue {
     try {
       this.closeDialog("csv_file_select_dialog");
       this.submitting = true;
-      const response = await WebAPI.fetcher.post("/api/v1/samplecart/", data) as AxiosResponse;
+      const response = (await WebAPI.fetcher.post(
+        "/api/v1/samplecart/",
+        data
+      )) as AxiosResponse;
       // TODO: CSV upload doesn't append/merge, it aways creates a new SampleCart.
       //       Implement backend PATCH method so we can append/merge an uploaded CSV
       //       (or parse and merge CSV clientside - probably a bad idea since we really
@@ -263,13 +262,12 @@ export default class SampleCart extends Vue {
       Snackbar.flashMessage("Saved !");
       // coerce JSON into a list of proper Sample objects, ensuring all properties are present
       const _samples: Sample[] = _.map(response.data.samples, (s) => {
-        return new Sample(s)
+        return new Sample(s);
       });
       this.populateSelectionList(_samples);
 
       // TODO: Save and highlight validation issues (eg identical sample names)
       //       Route to next step
-
     } catch (error) {
       console.log(error);
       this.submitting = false;
@@ -335,6 +333,5 @@ export default class SampleCart extends Vue {
     this.$store.commit(SET_SAMPLES, this._samples);
     next();
   }
-};
-
+}
 </script>

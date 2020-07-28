@@ -17,29 +17,23 @@ import {
   Model,
   Prop,
   Provide,
-  Watch
+  Watch,
 } from "vue-property-decorator";
 
-import {
-  State,
-  Getter,
-  Action,
-  Mutation,
-  namespace
-} from "vuex-class";
+import { State, Getter, Action, Mutation, namespace } from "vuex-class";
 // import {State2Way} from 'vuex-class-state2way'
-import { State2Way } from '../vuex/state2way';
+import { State2Way } from "../vuex/state2way";
 
 import {
   SET_POPUPS_ARE_BLOCKED,
   SET_POPUP_BLOCKER_TESTED,
-  SET_POPUP_WARNING_DISMISSED
+  SET_POPUP_WARNING_DISMISSED,
 } from "../store";
 import BannerNotice from "./BannerNotice.vue";
 
 @Component({
   components: { BannerNotice },
-  filters: {}
+  filters: {},
 })
 export default class PopupBlockerBanner extends Vue {
   $store: any;
@@ -53,9 +47,8 @@ export default class PopupBlockerBanner extends Vue {
     }
   }
 
-  @State2Way(SET_POPUP_WARNING_DISMISSED, 'popupWarningDismissed')
+  @State2Way(SET_POPUP_WARNING_DISMISSED, "popupWarningDismissed")
   public popupWarningDismissed: boolean;
-
 
   get popupsAreBlocked(): boolean {
     return this._popupsBlockerTest();
@@ -63,9 +56,9 @@ export default class PopupBlockerBanner extends Vue {
 
   _popupsBlockerTest() {
     if (!this.$store.state.popupBlockerTested) {
-      const w = window.open('', '_blank');
+      const w = window.open("", "_blank");
       window.focus();
-      if (w == null || typeof (w) == undefined) {
+      if (w == null || typeof w == undefined) {
         this.$store.commit(SET_POPUPS_ARE_BLOCKED, true);
       } else {
         w.close();

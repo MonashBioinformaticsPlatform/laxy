@@ -143,10 +143,10 @@ import {
   Model,
   Prop,
   Provide,
-  Watch
+  Watch,
 } from "vue-property-decorator";
 
-import VueMarkdown from 'vue-markdown';
+import VueMarkdown from "vue-markdown";
 
 import ENASearchAboutBox from "./ENASearchAboutBox";
 import { Sample } from "../../model";
@@ -164,9 +164,9 @@ interface DbAccession {
 }
 
 @Component({
-  components: { 'ena-search-about-box': ENASearchAboutBox },
+  components: { "ena-search-about-box": ENASearchAboutBox },
   props: {},
-  filters: {}
+  filters: {},
 })
 export default class ENAFileSelect extends Vue {
   @Prop({ default: true, type: Boolean })
@@ -175,7 +175,7 @@ export default class ENAFileSelect extends Vue {
   @Prop({ default: true, type: Boolean })
   public showAboutBox: boolean;
 
-  public samples: Array<ENASample> = [];  // = _dummysampleList;
+  public samples: Array<ENASample> = []; // = _dummysampleList;
   public selectedSamples: Array<ENASample> = [];
 
   public snackbar_message: string = "Everything is fine. ☃";
@@ -221,11 +221,11 @@ export default class ENAFileSelect extends Vue {
     "run_alias",
     "read_count",
     "center_name",
-    "broker_name"
+    "broker_name",
   ];
 
   public ena_ids: DbAccession[] = [{ accession: "" } as DbAccession];
-  public accession_input: string = "SRR4020122, SRR4020124";  // tiny paired-end yeast example
+  public accession_input: string = "SRR4020122, SRR4020124"; // tiny paired-end yeast example
   public hoveredSampleDetails: string = "";
 
   public submitting: boolean = false;
@@ -235,9 +235,7 @@ export default class ENAFileSelect extends Vue {
     return !(this.samples == null || this.samples.length === 0);
   }
 
-  created() {
-
-  }
+  created() {}
 
   onSelect(rows: any) {
     this.selectedSamples = rows as Array<ENASample>;
@@ -262,29 +260,30 @@ export default class ENAFileSelect extends Vue {
     // console.log(this.selectedSamples);
     const cart_samples: Sample[] = [];
     for (let ena of this.selectedSamples) {
-
       // Turn [{'R1','ftp://bla"}, {'R2': 'ftp://foo'}] into
       //      [{'R1": {'location':'ftp://bla", 'name': 'bla', 'checksum':'md5:ab-cd-ef-gh..'},
       //        'R2': {'location':'ftp://foo", 'name': 'foo', 'checksum':'md5:a0-c0-e0-g0..'}}]
       let files: PairedEndFiles[] = [];
       if (ena.fastq_ftp) {
-        let pair: PairedEndFiles = { 'R1': '' };
+        let pair: PairedEndFiles = { R1: "" };
         for (let i in ena.fastq_ftp) {
           const f = ena.fastq_ftp[i];
           const Rn: string = Object.keys(f)[0]; // first and only key (R1 or R2)
-          const location: string = f[Rn];  // FTP url
+          const location: string = f[Rn]; // FTP url
           if (ena.fastq_md5) {
             const md5sum = ena.fastq_md5[i];
             pair[Rn] = {
-              'location': location,
-              'name': filenameFromUrl(location),
-              'type_tags': ['ena'],
-              'checksum': `md5:${md5sum}`            } as ILaxyFile;
+              location: location,
+              name: filenameFromUrl(location),
+              type_tags: ["ena"],
+              checksum: `md5:${md5sum}`,
+            } as ILaxyFile;
           } else {
             pair[Rn] = {
-              'location': location,
-              'type_tags': ['ena'],
-              'name': filenameFromUrl(location)            } as ILaxyFile;
+              location: location,
+              type_tags: ["ena"],
+              name: filenameFromUrl(location),
+            } as ILaxyFile;
           }
         }
         files.push(pair);
@@ -298,20 +297,27 @@ export default class ENAFileSelect extends Vue {
     }
 
     const last_sample = last(cart_samples);
-    const last_sample_accession = get(last_sample, 'metadata.ena.sample_accession', undefined);
+    const last_sample_accession = get(
+      last_sample,
+      "metadata.ena.sample_accession",
+      undefined
+    );
     if (last_sample && last_sample_accession) {
-      const species_resp =
-        await WebAPI.enaSpeciesInfo(last_sample_accession);
-      const organism = get(species_resp.data, 'scientific_name');
-      const genome_id = get(find(AVAILABLE_GENOMES,
-        { 'organism': organism }),
-        'id', AVAILABLE_GENOMES[0].id);
+      const species_resp = await WebAPI.enaSpeciesInfo(last_sample_accession);
+      const organism = get(species_resp.data, "scientific_name");
+      const genome_id = get(
+        find(AVAILABLE_GENOMES, { organism: organism }),
+        "id",
+        AVAILABLE_GENOMES[0].id
+      );
       this.$store.commit(SET_PIPELINE_GENOME, genome_id);
     }
 
     this.$store.commit(ADD_SAMPLES, cart_samples);
     let count = this.selectedSamples.length;
-    Snackbar.flashMessage(`Added ${count} ${pluralize("sample", count)} to cart.`);
+    Snackbar.flashMessage(
+      `Added ${count} ${pluralize("sample", count)} to cart.`
+    );
 
     this.remove(this.selectedSamples);
     this.selectedSamples = [];
@@ -327,8 +333,9 @@ export default class ENAFileSelect extends Vue {
     this.selectedSamples = [];
 
     // split on commas and spaces, make items unique
-    let accession_list: string[] =
-      uniq(compact(accessions.trim().split(/[\s,]+/)));
+    let accession_list: string[] = uniq(
+      compact(accessions.trim().split(/[\s,]+/))
+    );
 
     try {
       this.submitting = true;
@@ -360,8 +367,7 @@ export default class ENAFileSelect extends Vue {
   openDialog(ref: string) {
     (this.$refs[ref] as MdDialog).open();
   }
-};
-
+}
 </script>
 
 <style lang="css" scoped>

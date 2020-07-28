@@ -145,13 +145,16 @@ import {
   Model,
   Prop,
   Provide,
-  Watch
+  Watch,
 } from "vue-property-decorator";
 
 import {
   SET_SAMPLES,
   SET_PIPELINE_PARAMS,
-  SET_PIPELINE_DESCRIPTION, SET_PIPELINE_PARAMS_VALID, CLEAR_SAMPLE_CART, SET_PIPELINE_GENOME
+  SET_PIPELINE_DESCRIPTION,
+  SET_PIPELINE_PARAMS_VALID,
+  CLEAR_SAMPLE_CART,
+  SET_PIPELINE_GENOME,
 } from "../store";
 
 import { Sample, SampleCartItems } from "../model";
@@ -164,7 +167,6 @@ import { DummyPipelineConfig as _dummyPipelineConfig } from "../test-data";
 import { Snackbar } from "../snackbar";
 import BannerNotice from "./BannerNotice.vue";
 
-
 @Component({
   components: {
     BannerNotice,
@@ -173,10 +175,9 @@ import BannerNotice from "./BannerNotice.vue";
   filters: {},
   beforeRouteLeave(to: any, from: any, next: any) {
     (this as any).beforeRouteLeave(to, from, next);
-  }
+  },
 })
 export default class PipelineParams extends Vue {
-
   @Prop({ default: true, type: Boolean })
   public showButtons: boolean;
   public show_advanced = false;
@@ -194,20 +195,24 @@ export default class PipelineParams extends Vue {
   public reference_genome_valid: boolean = true;
 
   get selected_genome_organism(): string {
-    return this.get_organism_from_genome_id(this.$store.state.pipelineParams.genome)
-      || 'Homo sapiens';
+    return (
+      this.get_organism_from_genome_id(
+        this.$store.state.pipelineParams.genome
+      ) || "Homo sapiens"
+    );
   }
 
   set selected_genome_organism(organism: string) {
-    const id = this.get_first_genome_id_for_organism(organism)
-      || AVAILABLE_GENOMES[0].id;
+    const id =
+      this.get_first_genome_id_for_organism(organism) ||
+      AVAILABLE_GENOMES[0].id;
     this.$store.commit(SET_PIPELINE_GENOME, id);
   }
 
-  public pipeline_versions = ['1.5.3', '1.5.2', '1.5.3-laxydev', '1.5.4'];
+  public pipeline_versions = ["1.5.3", "1.5.2", "1.5.3-laxydev", "1.5.4"];
   public pipeline_aligners = [
-    { text: 'STAR', value: 'star' },
-    { text: 'BWA-MEM', value: 'bwa' },
+    { text: "STAR", value: "star" },
+    { text: "BWA-MEM", value: "bwa" },
   ];
 
   public _samples: SampleCartItems;
@@ -281,28 +286,29 @@ export default class PipelineParams extends Vue {
 
   @Memoize
   get_organism_from_genome_id(genome_id: string): string | undefined {
-    return get(find(AVAILABLE_GENOMES, { 'id': genome_id }), 'organism');
+    return get(find(AVAILABLE_GENOMES, { id: genome_id }), "organism");
   }
 
   @Memoize
   get_first_genome_id_for_organism(organism: string): string | undefined {
-    return get(find(AVAILABLE_GENOMES,
-      { 'organism': organism }), 'id');
+    return get(find(AVAILABLE_GENOMES, { organism: organism }), "id");
   }
 
   @Memoize
   get_genome_description(reference: ReferenceGenome): string {
-    const [org, centre, build] = reference.id.split('/');
+    const [org, centre, build] = reference.id.split("/");
     // return `${build} [${centre}] (${reference.organism})`;
     let desc = `${build} [${centre}]`;
     if (reference.recommended) {
-      desc = `${desc} (recommended)`
+      desc = `${desc} (recommended)`;
     }
     return desc;
   }
 
   onOrganismChange(e: any) {
-    this.reference_genome = this.genomes_for_organism(this.selected_genome_organism)[0].id;
+    this.reference_genome = this.genomes_for_organism(
+      this.selected_genome_organism
+    )[0].id;
   }
 
   created() {
@@ -311,16 +317,16 @@ export default class PipelineParams extends Vue {
 
   prepareData() {
     let data = {
-      "sample_cart": this.$store.state.samples.id,
-      "params": this.$store.getters.pipelineParams,
-      "pipeline": "rnasik",
-      "description": this.description,
+      sample_cart: this.$store.state.samples.id,
+      params: this.$store.getters.pipelineParams,
+      pipeline: "rnasik",
+      description: this.description,
     };
     return data;
   }
 
   get isValid_reference_genome() {
-    return map(this.available_genomes, 'id').includes(this.reference_genome);
+    return map(this.available_genomes, "id").includes(this.reference_genome);
   }
 
   get isValid_samples_added() {
@@ -333,7 +339,7 @@ export default class PipelineParams extends Vue {
     const seen: string[] = [];
     for (let i of samples.items) {
       for (let f of i.files) {
-        for (let pair of ['R1', 'R2']) {
+        for (let pair of ["R1", "R2"]) {
           if (f[pair] == null) continue;
           if (f[pair].location == null) continue;
           if (seen.includes(f[pair].location)) return false;
@@ -347,7 +353,7 @@ export default class PipelineParams extends Vue {
 
   get isValid_mixed_single_paired_check() {
     function isPairedEnd(f: PairedEndFiles) {
-      return (f.R1 != null && f.R2 != null);
+      return f.R1 != null && f.R2 != null;
     }
     const samples = this.$store.state.samples;
     let is_paired: boolean[] = [];
@@ -363,10 +369,12 @@ export default class PipelineParams extends Vue {
 
   get isValid_params() {
     let is_valid = false;
-    if (this.isValid_reference_genome &&
+    if (
+      this.isValid_reference_genome &&
       this.isValid_samples_added &&
       this.isValid_duplicate_samples &&
-      this.isValid_mixed_single_paired_check) {
+      this.isValid_mixed_single_paired_check
+    ) {
       is_valid = true;
     }
     this.$store.commit(SET_PIPELINE_PARAMS_VALID, is_valid);
@@ -383,10 +391,16 @@ export default class PipelineParams extends Vue {
       // console.log(data);
 
       if (this.pipelinerun_uuid == null) {
-        const response = await WebAPI.fetcher.post("/api/v1/pipelinerun/", data) as AxiosResponse;
+        const response = (await WebAPI.fetcher.post(
+          "/api/v1/pipelinerun/",
+          data
+        )) as AxiosResponse;
         this.pipelinerun_uuid = response.data.id;
       } else {
-        await WebAPI.fetcher.put(`/api/v1/pipelinerun/${this.pipelinerun_uuid}/`, data) as AxiosResponse;
+        (await WebAPI.fetcher.put(
+          `/api/v1/pipelinerun/${this.pipelinerun_uuid}/`,
+          data
+        )) as AxiosResponse;
       }
       this.submitting = false;
       Snackbar.flashMessage("Saved !");
@@ -419,8 +433,10 @@ export default class PipelineParams extends Vue {
       try {
         this.submitting = true;
         let response = null;
-        response = await WebAPI.fetcher.post(
-          `/api/v1/job/?pipeline_run_id=${this.pipelinerun_uuid}`, {}) as AxiosResponse;
+        response = (await WebAPI.fetcher.post(
+          `/api/v1/job/?pipeline_run_id=${this.pipelinerun_uuid}`,
+          {}
+        )) as AxiosResponse;
         this.submitting = false;
         Snackbar.flashMessage("Saved !");
         await this.clearCart();
@@ -431,7 +447,6 @@ export default class PipelineParams extends Vue {
         this.error_alert_message = error.toString();
         this.openDialog("error_dialog");
       }
-
     } catch (error) {
       console.error(error);
     }
@@ -459,6 +474,5 @@ export default class PipelineParams extends Vue {
     this.$store.commit(SET_SAMPLES, this._samples);
     next();
   }
-};
-
+}
 </script>

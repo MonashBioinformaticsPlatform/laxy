@@ -7,9 +7,9 @@ import map from 'lodash-es/map';
  * Adapted from: https://github.com/kahwee/truncate-middle
  */
 export function truncateString(str: string,
-                               frontLen: number = 30,
-                               backLen: number = 6,
-                               truncateStr: string = '⋯'): string {
+    frontLen: number = 30,
+    backLen: number = 6,
+    truncateStr: string = '⋯'): string {
     if (str === null) {
         return '';
     }

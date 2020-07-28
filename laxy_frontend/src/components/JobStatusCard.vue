@@ -120,11 +120,7 @@
 import "es6-promise";
 
 import Vue, { ComponentOptions } from "vue";
-import {
-  palette,
-  getStatusColor,
-  themeColors,
-} from "../palette";
+import { palette, getStatusColor, themeColors } from "../palette";
 
 import Component from "vue-class-component";
 import {
@@ -133,7 +129,7 @@ import {
   Model,
   Prop,
   Provide,
-  Watch
+  Watch,
 } from "vue-property-decorator";
 
 import { ComputeJob } from "../model";
@@ -141,7 +137,8 @@ import ExpiryDialog from "./Dialogs/ExpiryDialog.vue";
 
 @Component({
   components: { ExpiryDialog },
-  filters: {}})
+  filters: {},
+})
 export default class JobStatusCard extends Vue {
   @Prop({ type: Object })
   public job: ComputeJob | null;
@@ -164,7 +161,7 @@ export default class JobStatusCard extends Vue {
     if (s.length == 0) return hash;
     for (let i = 0; i < s.length; i++) {
       let char = s.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
+      hash = (hash << 5) - hash + char;
       hash = hash & hash; // Convert to 32bit integer
     }
     return hash;
@@ -187,8 +184,7 @@ export default class JobStatusCard extends Vue {
     // console.log('Closed: ' + refName);
     ((this.$refs as any)[refName] as any).close();
   }
-};
-
+}
 </script>
 
 <style scoped>

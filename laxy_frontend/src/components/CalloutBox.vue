@@ -10,10 +10,9 @@ import Component from "vue-class-component";
 
 @Component({
   components: {},
-  filters: {}
+  filters: {},
 })
-export default class CalloutBox extends Vue {
-}
+export default class CalloutBox extends Vue {}
 </script>
 
 <style lang="css">

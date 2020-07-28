@@ -46,28 +46,36 @@
 
 
 <script lang="ts">
-import * as _ from 'lodash';
-import 'es6-promise';
+import * as _ from "lodash";
+import "es6-promise";
 
-import axios, { AxiosResponse } from 'axios';
-import Vue, { ComponentOptions } from 'vue';
-import Component from 'vue-class-component';
-import { Emit, Inject, Model, Prop, Provide, Watch } from 'vue-property-decorator'
+import axios, { AxiosResponse } from "axios";
+import Vue, { ComponentOptions } from "vue";
+import Component from "vue-class-component";
+import {
+  Emit,
+  Inject,
+  Model,
+  Prop,
+  Provide,
+  Watch,
+} from "vue-property-decorator";
 
 @Component({})
 export default class RNASeqSetup extends Vue {
-
   // This is a string since vue-router only allows strings to be passed as params
-  @Prop({ type: String, default: 'false' })
+  @Prop({ type: String, default: "false" })
   public allowSkipping: string;
 
   get dataSource_stepComplete(): boolean {
-    return this.$store.getters.sample_cart_count > 0 || this.allowSkipping === 'true';
+    return (
+      this.$store.getters.sample_cart_count > 0 || this.allowSkipping === "true"
+    );
   }
 
   _describeSamples_stepComplete: boolean = false;
   get describeSamples_stepComplete(): boolean {
-    return this._describeSamples_stepComplete || this.allowSkipping === 'true';
+    return this._describeSamples_stepComplete || this.allowSkipping === "true";
   }
 
   set describeSamples_stepComplete(state: boolean) {
@@ -93,7 +101,7 @@ export default class RNASeqSetup extends Vue {
       window.scrollTo({
         top: topOfPage.y,
         left: topOfPage.x,
-        behavior: 'smooth'
+        behavior: "smooth",
       });
       setTimeout(() => {
         resolve(topOfPage);
@@ -102,30 +110,29 @@ export default class RNASeqSetup extends Vue {
   }
 
   onExitStep(stepName: string) {
-    if (stepName === 'dataSource') {
+    if (stepName === "dataSource") {
       this.scrollToTop();
-    } else if (stepName === 'describeSamples') {
-      (this.$refs['describeSamples_sampleCart'] as any).save();
+    } else if (stepName === "describeSamples") {
+      (this.$refs["describeSamples_sampleCart"] as any).save();
       this.describeSamples_stepComplete = true;
       this.scrollToTop();
-    } else if (stepName === 'pipelineSettings') {
+    } else if (stepName === "pipelineSettings") {
       this.scrollToTop();
     }
   }
 
   async startJob() {
     try {
-      const response = await (this.$refs['pipelineParams'] as any).run();
+      const response = await (this.$refs["pipelineParams"] as any).run();
       if (response == null) throw Error();
       if (response && response.data && response.data.id) {
-        this.$router.push({ name: 'job', params: { jobId: response.data.id } });
+        this.$router.push({ name: "job", params: { jobId: response.data.id } });
       } else {
-        this.$router.push('jobs');
+        this.$router.push("jobs");
       }
     } catch (error) {
       throw error;
     }
   }
 }
-
 </script>

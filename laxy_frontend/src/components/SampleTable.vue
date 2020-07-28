@@ -62,17 +62,17 @@ import {
   Model,
   Prop,
   Provide,
-  Watch
+  Watch,
 } from "vue-property-decorator";
 
-import { sha1 } from 'object-hash';
+import { sha1 } from "object-hash";
 
 import { Sample, SampleCartItems } from "../model";
 
 import { DummySampleList as _dummySampleList } from "../test-data";
 
 @Component({
-  filters: {}
+  filters: {},
 })
 export default class SampleTable extends Vue {
   // public samples: Array<Sample> = _dummySampleList;
@@ -129,6 +129,5 @@ export default class SampleTable extends Vue {
       this.samples.items.splice(i, 1);
     }
   }
-};
-
+}
 </script>

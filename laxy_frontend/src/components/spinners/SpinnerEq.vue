@@ -34,10 +34,7 @@ import Vue, { ComponentOptions } from "vue";
 import Component from "vue-class-component";
 
 @Component({ props: {} })
-export default class SpinnerEq extends Vue {
-
-}
-
+export default class SpinnerEq extends Vue {}
 </script>
 
 <style scoped>

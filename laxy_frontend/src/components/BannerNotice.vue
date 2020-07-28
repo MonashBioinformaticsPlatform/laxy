@@ -21,15 +21,15 @@ import {
   Model,
   Prop,
   Provide,
-  Watch
+  Watch,
 } from "vue-property-decorator";
 
 @Component({
   components: {},
-  filters: {}
+  filters: {},
 })
 export default class BannerNotice extends Vue {
-  @Prop({ type: String, default: 'warning' })
+  @Prop({ type: String, default: "warning" })
   type: string;
 
   @Prop({ type: Boolean, default: true })
@@ -38,21 +38,21 @@ export default class BannerNotice extends Vue {
   private closed: boolean = false;
 
   get materialClass(): string {
-    if (this.type === 'warning') return 'md-warn';
-    if (this.type === 'info') return 'md-primary';
-    if (this.type === 'clear') return 'md-transparent';
-    if (this.type === 'error') return 'md-accent';
+    if (this.type === "warning") return "md-warn";
+    if (this.type === "info") return "md-primary";
+    if (this.type === "clear") return "md-transparent";
+    if (this.type === "error") return "md-accent";
 
-    return 'md-transparent';
+    return "md-transparent";
   }
 
   onClick(event: any) {
-    this.$emit('click', event);
+    this.$emit("click", event);
   }
 
   onClosed(event: any) {
     this.closed = true;
-    this.$emit('close', event);
+    this.$emit("close", event);
   }
 }
 </script>
