@@ -1651,8 +1651,9 @@ class FileSet(Timestamped, UUIDModel):
     """
     A set of files. Might be used to represent a directory.
 
-    name - The set name (eg directory name)
-    files - The files in this FileSet (RelatedManager from File)
+    name - A free-text human readable name/description for the fileset.
+    path - A directory name or forward-slashed path associated with the FileSet.
+    files - The files in this FileSet (RelatedManager from File).
     """
 
     name = CharField(max_length=2048)
