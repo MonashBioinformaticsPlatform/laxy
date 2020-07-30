@@ -2569,6 +2569,11 @@ class SendFileToDegust(JSONView):
                 name = longest_common_prefix(names)
 
             condition = sample["metadata"].get("condition")
+
+            # TODO: Ensure the same column name doesn't occur twice in a condition ( tuple(set(degust_conditions[condition])) )
+            #       This can happen with techincal replicates where the files haven't been merged into a single sample, but instead
+            #       just have duplicate sample names
+            #       ( eg sampleA = [sampleA_L003_R1, sampleA_L003_R2] and sampleA = [sampleA_L004_R1, sampleA_L004_R2] )
             degust_conditions[condition].append(name)
 
         if not counts_file:

@@ -22,6 +22,7 @@ from laxy_backend.util import unique, is_valid_laxy_sftp_url
 from . import models
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 default_status_codes = (400, 401, 403, 404)
@@ -54,7 +55,7 @@ class SchemalessJsonResponseSerializer(serializers.Serializer):
             data = json.loads(data, object_pairs_hook=OrderedDict)
         data = OrderedDict(data)
         if json.loads(json.dumps(data), object_pairs_hook=OrderedDict) != data:
-            msg = 'Invalid JSON, round-trip serialization failed'
+            msg = "Invalid JSON, round-trip serialization failed"
             raise ValidationError(msg)
         return data
 
@@ -64,11 +65,11 @@ class SchemalessJsonResponseSerializer(serializers.Serializer):
 
 class BaseModelSerializer(serializers.ModelSerializer):
     class Meta:
-        fields = '__all__'
-        read_only_fields = ('id',)
+        fields = "__all__"
+        read_only_fields = ("id",)
 
     def uuid(self, obj):
-        if hasattr(obj, 'uuid'):
+        if hasattr(obj, "uuid"):
             return obj.uuid()
         else:
             return obj.id
@@ -79,8 +80,8 @@ class BaseModelSerializer(serializers.ModelSerializer):
         # passed to the serializer, assign it as the owner
         # of the model
         if self.context:
-            user = self.context.get('request').user
-            if user and hasattr(obj, 'owner'):
+            user = self.context.get("request").user
+            if user and hasattr(obj, "owner"):
                 obj.owner = user
         obj.save()
         return obj
@@ -99,7 +100,7 @@ class BaseModelSerializer(serializers.ModelSerializer):
         :rtype: django.db.models.Model
         """
         for k, v in validated_data.items():
-            if k not in getattr(self.Meta, 'read_only_fields', []):
+            if k not in getattr(self.Meta, "read_only_fields", []):
                 setattr(instance, k, v)
         return instance
 
@@ -113,7 +114,7 @@ class PatchSerializerResponse(serializers.Serializer):
 
     class Meta:
         fields = ()
-        read_only_fields = ('id',)
+        read_only_fields = ("id",)
         error_status_codes = status_codes(*default_status_codes, 204)
 
 
@@ -126,7 +127,7 @@ class PutSerializerResponse(serializers.Serializer):
 
     class Meta:
         fields = ()
-        read_only_fields = ('id',)
+        read_only_fields = ("id",)
         error_status_codes = status_codes(*default_status_codes, 204)
 
 
@@ -140,34 +141,44 @@ class FileSerializer(BaseModelSerializer):
     name = serializers.CharField(max_length=255, required=False)
     path = serializers.CharField(max_length=4096, required=False)
     location = serializers.CharField(
-        max_length=2048,
-        validators=[models.URIValidator()])
-    fileset = serializers.PrimaryKeyRelatedField(queryset=FileSet.objects.all(),
-                                                 required=False)
+        max_length=2048, validators=[models.URIValidator()]
+    )
+    fileset = serializers.PrimaryKeyRelatedField(
+        queryset=FileSet.objects.all(), required=False
+    )
     type_tags = serializers.ListField(default=[])
     # metadata = serializers.JSONField()
-    metadata = SchemalessJsonResponseSerializer(required=False)  # becomes OpenAPI 'object' type
+    metadata = SchemalessJsonResponseSerializer(
+        required=False
+    )  # becomes OpenAPI 'object' type
 
     class Meta:
         model = models.File
-        fields = ('id',
-                  'owner',
-                  'name',
-                  'path',
-                  'location',
-                  'checksum',
-                  'fileset',
-                  'type_tags',
-                  'deleted',
-                  'metadata')
-        read_only_fields = ('id', 'owner',)
+        fields = (
+            "id",
+            "owner",
+            "name",
+            "path",
+            "location",
+            "checksum",
+            "fileset",
+            "type_tags",
+            "deleted",
+            "metadata",
+        )
+        read_only_fields = (
+            "id",
+            "owner",
+        )
         error_status_codes = status_codes()
 
     def create(self, validated_data):
-        location = validated_data.get('location', None)
+        location = validated_data.get("location", None)
         scheme = urlparse(location).scheme.lower()
-        if scheme == 'laxy+sftp' and not is_valid_laxy_sftp_url(location):
-            raise ValidationError("Invalid laxy+ftp:// URL (does ComputeResource exist ?)")
+        if scheme == "laxy+sftp" and not is_valid_laxy_sftp_url(location):
+            raise ValidationError(
+                "Invalid laxy+ftp:// URL (does ComputeResource exist ?)"
+            )
 
         f = models.File.objects.create(**validated_data)
         f.save()
@@ -176,7 +187,7 @@ class FileSerializer(BaseModelSerializer):
     @transaction.atomic
     def update(self, instance, validated_data):
         instance = self._update_attrs(instance, validated_data)
-        for field in getattr(self.Meta.model.ExtraMeta, 'patchable_fields', []):
+        for field in getattr(self.Meta.model.ExtraMeta, "patchable_fields", []):
             if hasattr(instance, field):
                 new_value = validated_data.get(field, getattr(instance, field))
                 setattr(instance, field, new_value)
@@ -184,34 +195,36 @@ class FileSerializer(BaseModelSerializer):
         return instance
 
 
+# TODO: Fix thies serializer to create new File objects, or associate to existing ones by id,
+#       if specified in the files list. Write some tests - the model has tests but the create serializer doesn't !
+#       Currently fails with:
+#         TypeError: Direct assignment to the reverse side of a related set is prohibited. Use files.set() instead.
+#
 class FileSerializerPostRequest(FileSerializer):
     class Meta(FileSerializer.Meta):
-        fields = ('name',
-                  'path',
-                  'location',
-                  'checksum',
-                  'fileset',
-                  'type_tags',
-                  'metadata')
+        fields = (
+            "name",
+            "path",
+            "location",
+            "checksum",
+            "fileset",
+            "type_tags",
+            "metadata",
+        )
 
 
 class FileBulkRegisterSerializer(FileSerializer):
     class Meta(FileSerializer.Meta):
-        fields = ('name',
-                  'path',
-                  'location',
-                  'checksum',
-                  'type_tags',
-                  'metadata')
+        fields = ("name", "path", "location", "checksum", "type_tags", "metadata")
 
     def to_internal_value(self, data):
         row = data
-        if isinstance(row.get('type_tags', ''), str):
-            row['type_tags'] = row['type_tags'].split(',')
-        if 'filepath' in row:
-            row['name'] = Path(row['filepath']).name
-            row['path'] = str(Path(row['filepath']).parent)
-            del row['filepath']
+        if isinstance(row.get("type_tags", ""), str):
+            row["type_tags"] = row["type_tags"].split(",")
+        if "filepath" in row:
+            row["name"] = Path(row["filepath"]).name
+            row["path"] = str(Path(row["filepath"]).parent)
+            del row["filepath"]
 
         # Trim any whitespace in values
         for field in self.Meta.fields:
@@ -234,12 +247,11 @@ class FileBulkRegisterSerializer(FileSerializer):
 # naming is hard
 class JobFileSerializerCreateRequest(FileSerializer):
     location = serializers.CharField(
-        max_length=2048,
-        validators=[models.URIValidator()],
-        required=False)
+        max_length=2048, validators=[models.URIValidator()], required=False
+    )
 
     class Meta(FileSerializer.Meta):
-        fields = ('location', 'checksum', 'type_tags', 'metadata')
+        fields = ("location", "checksum", "type_tags", "metadata")
 
 
 class FileSetSerializer(BaseModelSerializer):
@@ -252,22 +264,36 @@ class FileSetSerializer(BaseModelSerializer):
 
     class Meta:
         model = models.FileSet
-        fields = ('id', 'name', 'owner', 'files',)
-        read_only_fields = ('id', 'owner',)
+        fields = (
+            "id",
+            "name",
+            "owner",
+            "files",
+        )
+        read_only_fields = (
+            "id",
+            "owner",
+        )
         depth = 0
         error_status_codes = status_codes()
 
 
 class FileSetSerializerPostRequest(FileSetSerializer):
     class Meta(FileSetSerializer.Meta):
-        fields = ('id', 'name', 'files',)
+        fields = (
+            "id",
+            "name",
+            "files",
+        )
 
 
 class InputOutputFilesResponse(serializers.Serializer):
-    input_files = FileSerializer(many=True, read_only=True,
-                                 required=False, allow_null=True)
-    output_files = FileSerializer(many=True, read_only=True,
-                                  required=False, allow_null=True)
+    input_files = FileSerializer(
+        many=True, read_only=True, required=False, allow_null=True
+    )
+    output_files = FileSerializer(
+        many=True, read_only=True, required=False, allow_null=True
+    )
 
 
 class SampleCartSerializer(BaseModelSerializer):
@@ -277,78 +303,90 @@ class SampleCartSerializer(BaseModelSerializer):
 
     class Meta:
         model = models.SampleCart
-        fields = ('id', 'name', 'owner', 'samples')
-        read_only_fields = ('id', 'owner',)
+        fields = ("id", "name", "owner", "samples")
+        read_only_fields = (
+            "id",
+            "owner",
+        )
         error_status_codes = status_codes()
 
 
 class ComputeResourceSerializer(BaseModelSerializer):
-    gateway_server = serializers.CharField(required=False,
-                                           max_length=255)
+    gateway_server = serializers.CharField(required=False, max_length=255)
 
     class Meta:
         model = models.ComputeResource
-        fields = '__all__'
+        fields = "__all__"
         # not actually required for id since editable=False on model
-        read_only_fields = ('id',)
+        read_only_fields = ("id",)
         depth = 1
         error_status_codes = status_codes()
 
 
 class JobSerializerBase(BaseModelSerializer):
     owner = serializers.PrimaryKeyRelatedField(
-        read_only=True,
-        default=serializers.CurrentUserDefault()
+        read_only=True, default=serializers.CurrentUserDefault()
     )
 
-    input_fileset_id = serializers.CharField(source='input_files',
-                                             required=False,
-                                             allow_blank=True,
-                                             allow_null=True,
-                                             max_length=24)
-    output_fileset_id = serializers.CharField(source='output_files',
-                                              required=False,
-                                              allow_blank=True,
-                                              allow_null=True,
-                                              max_length=24)
+    input_fileset_id = serializers.CharField(
+        source="input_files",
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        max_length=24,
+    )
+    output_fileset_id = serializers.CharField(
+        source="output_files",
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        max_length=24,
+    )
 
     # params = serializers.JSONField(required=False)
-    params = SchemalessJsonResponseSerializer(required=False)  # becomes OpenAPI 'object' type
+    params = SchemalessJsonResponseSerializer(
+        required=False
+    )  # becomes OpenAPI 'object' type
     metadata = SchemalessJsonResponseSerializer(required=False)
-    compute_resource = serializers.CharField(source='compute_resource.id',
-                                             required=False,
-                                             allow_blank=True,
-                                             allow_null=True,
-                                             max_length=24)
+    compute_resource = serializers.CharField(
+        source="compute_resource.id",
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        max_length=24,
+    )
 
     class Meta:
         model = models.Job
-        fields = '__all__'
+        fields = "__all__"
         # not actually required for id since editable=False on model
-        read_only_fields = ('id',)
+        read_only_fields = ("id",)
         depth = 0
         error_status_codes = status_codes()
 
 
 class JobSerializerResponse(JobSerializerBase):
-    input_fileset_id = serializers.CharField(source='input_files.id',
-                                             max_length=24,
-                                             default='')
-    output_fileset_id = serializers.CharField(source='output_files.id',
-                                              max_length=24,
-                                              default='')
+    input_fileset_id = serializers.CharField(
+        source="input_files.id", max_length=24, default=""
+    )
+    output_fileset_id = serializers.CharField(
+        source="output_files.id", max_length=24, default=""
+    )
     # output_files = FileSerializer(many=True, required=False)
 
     class Meta:
         model = models.Job
-        exclude = ('input_files', 'output_files',)
+        exclude = (
+            "input_files",
+            "output_files",
+        )
         depth = 0
         error_status_codes = status_codes()
 
     @transaction.atomic
     def update(self, instance, validated_data):
         instance = self._update_attrs(instance, validated_data)
-        for field in getattr(self.Meta.model.ExtraMeta, 'patchable_fields', []):
+        for field in getattr(self.Meta.model.ExtraMeta, "patchable_fields", []):
             if hasattr(instance, field):
                 new_value = validated_data.get(field, getattr(instance, field))
                 setattr(instance, field, new_value)
@@ -359,12 +397,11 @@ class JobSerializerResponse(JobSerializerBase):
 # TODO: modify this to trim down unnecessary output,
 #       eg, we don't need the full nested sample_cart etc
 class JobListSerializerResponse(JobSerializerResponse):
-    latest_event = serializers.CharField(source='latest_event.event',
-                                         default='')
+    latest_event = serializers.CharField(source="latest_event.event", default="")
 
     class Meta:
         model = models.Job
-        exclude = ('input_files', 'output_files')
+        exclude = ("input_files", "output_files")
         depth = 0
         error_status_codes = status_codes()
 
@@ -385,13 +422,13 @@ class JobSerializerRequest(JobSerializerBase):
         :rtype:
         """
 
-        input_files_data = validated_data.pop('input_files', [])
-        input_fileset_id = validated_data.pop('input_fileset_id', None)
+        input_files_data = validated_data.pop("input_files", [])
+        input_fileset_id = validated_data.pop("input_fileset_id", None)
         # Output files can only be updated in a PATCH operation
         # output_files_data = validated_data.pop('output_files', [])
-        compute_resource_id = validated_data.pop('compute_resource', None)
+        compute_resource_id = validated_data.pop("compute_resource", None)
         job = models.Job.objects.create(**validated_data)
-        user = self.context.get('request').user
+        user = self.context.get("request").user
         job.owner = user
 
         if compute_resource_id:
@@ -405,11 +442,10 @@ class JobSerializerRequest(JobSerializerBase):
         if not input_fileset_id:
             ifileset = job.input_files
             if not ifileset:
-                ifileset = models.FileSet.objects.create(name='input',
-                                                         owner=job.owner)
-            ifileset.name = f'Input files for job: {job.id}'
+                ifileset = models.FileSet.objects.create(name="input", owner=job.owner)
+            ifileset.name = f"Input files for job: {job.id}"
             for f in input_files_data:
-                f_id = f.get('id', None)
+                f_id = f.get("id", None)
                 if not f_id:
                     input_file = models.File.objects.create(**f)
                 else:
@@ -420,17 +456,19 @@ class JobSerializerRequest(JobSerializerBase):
             ifileset.save()
         else:
             if input_files_data:
-                raise serializers.ValidationError("You should only specify an "
-                                                  "input_fileset ID or a list "
-                                                  "of input_files, not both.")
+                raise serializers.ValidationError(
+                    "You should only specify an "
+                    "input_fileset ID or a list "
+                    "of input_files, not both."
+                )
             ifileset = models.FileSet.objects.get(id=input_fileset_id)
 
         job.input_files = ifileset
 
         if not job.output_files:
             job.output_files = models.FileSet.objects.create(
-                name=f'Output files for job: {job.id}',
-                owner=job.owner)
+                name=f"Output files for job: {job.id}", owner=job.owner
+            )
             job.output_files.save()
 
         job.save()
@@ -439,11 +477,9 @@ class JobSerializerRequest(JobSerializerBase):
 
     @transaction.atomic
     def update(self, instance, validated_data):
-        serializer = JobSerializerRequest(instance,
-                                          data=validated_data,
-                                          partial=True)
+        serializer = JobSerializerRequest(instance, data=validated_data, partial=True)
 
-        output_files_data = validated_data.pop('output_files', [])
+        output_files_data = validated_data.pop("output_files", [])
 
         # status = validated_data.get('status', instance.status)
 
@@ -451,10 +487,10 @@ class JobSerializerRequest(JobSerializerBase):
         for data in output_files_data:
             # We can add files by id if they exist, or create new files
             # from file objects (if id is left unset).
-            file_id = data.get('id', None)
+            file_id = data.get("id", None)
             if file_id is None:
-                if 'id' in data:
-                    del data['id']
+                if "id" in data:
+                    del data["id"]
                 new_file = models.File.objects.create(**data)
                 ofiles.append(new_file)
             else:
@@ -476,14 +512,38 @@ class PipelineRunSerializer(BaseModelSerializer):
         # default=serializers.CurrentUserDefault()
     )
 
+    # TODO: We'd rather this be a FileSet generated from the sample cart, and just store the samplecart_id
+    #       in params for reference.
+    #       Alternatively, create the Job.input_files FileSet in views.JobCreate based on the content of
+    #       sample_cart, only serialize the input_fileset here for use in pipeline_config.json
+    #       (and downstream, laxydl) ?
+    #       Rework the backend the v1/samplecart API to actually only manipulate a FileSet under the hood ?
+    # Plan: * Change PipelineRun to point to a FileSet (input_files) or job.
+    #       * Remove sample_cart from PipelineRun, put sample_cart_id in PipelineRun.params
+    #       * In views.JobCreate, grab the PipelineRun in the usual way (via POST query param)
+    #         extract the sample_cart_id (eg, from PipelineRun.params).
+    #         THEN - write a function that takes a SampleCart and creates a FileSet (input_files).
+    #       * Set PipelineRun.input_files to the new FileSet, ensure it serializes to something
+    #         that laxydl can ingest from pipeline_config.json.
+    #       * Future: get rid of SampleCart altogether, just put the SampleCart JSON blob in PipelineRun.params.
+    #                 In this case, we should associate PipelineRun.job with the Job (if its null we can clean up
+    #                 old PipelineRuns that might represent carts filled but never run as jobs).
+
+    # job = serializers.PrimaryKeyRelatedField()
+
     sample_cart = SampleCartSerializer()
     # sample_metadata = SchemalessJsonResponseSerializer(required=False)  # becomes OpenAPI 'object' type
-    params = SchemalessJsonResponseSerializer(required=False)  # becomes OpenAPI 'object' type
+    params = SchemalessJsonResponseSerializer(
+        required=False
+    )  # becomes OpenAPI 'object' type
 
     class Meta:
         model = models.PipelineRun
-        fields = '__all__'
-        read_only_fields = ('id', 'owner',)
+        fields = "__all__"
+        read_only_fields = (
+            "id",
+            "owner",
+        )
         depth = 1
         error_status_codes = status_codes()
 
@@ -498,7 +558,7 @@ class PipelineRunCreateSerializer(PipelineRunSerializer):
 
     def create(self, validated_data):
         run = models.PipelineRun.objects.create(**validated_data)
-        run.owner = self.context.get('request').user
+        run.owner = self.context.get("request").user
         run.save()
         return run
 
@@ -525,24 +585,34 @@ class EventLogSerializer(BaseModelSerializer):
 
     class Meta:
         model = models.EventLog
-        fields = '__all__'
-        read_only_fields = ('id', 'user',)
+        fields = "__all__"
+        read_only_fields = (
+            "id",
+            "user",
+        )
         depth = 0
         error_status_codes = status_codes()
 
     def create(self, validated_data):
         obj = self.Meta.model.objects.create(**validated_data)
-        obj.user = self.context.get('request').user
+        obj.user = self.context.get("request").user
         obj.save()
         return obj
 
 
 class JobEventLogSerializer(EventLogSerializer):
-
     class Meta:
         model = models.EventLog
-        exclude = ('user', 'timestamp', 'object_id', 'content_type',)
-        read_only_fields = ('id', 'user',)
+        exclude = (
+            "user",
+            "timestamp",
+            "object_id",
+            "content_type",
+        )
+        read_only_fields = (
+            "id",
+            "user",
+        )
         depth = 0
         error_status_codes = status_codes()
 
@@ -605,22 +675,21 @@ class AccessTokenSerializer(BaseModelSerializer):
 
     class Meta:
         model = models.AccessToken
-        fields = '__all__'
-        read_only_fields = ('id', 'created_by', 'token')
+        fields = "__all__"
+        read_only_fields = ("id", "created_by", "token")
         depth = 0
         error_status_codes = status_codes()
 
     def create(self, validated_data):
-        target_id = validated_data['object_id']
-        target_content_type = validated_data['content_type']
+        target_id = validated_data["object_id"]
+        target_content_type = validated_data["content_type"]
         target_obj = ContentType.objects.get(
-            app_label='laxy_backend',
-            model=target_content_type).get_object_for_this_type(
-            id=target_id)
-        del validated_data['content_type']
-        del validated_data['object_id']
+            app_label="laxy_backend", model=target_content_type
+        ).get_object_for_this_type(id=target_id)
+        del validated_data["content_type"]
+        del validated_data["object_id"]
         obj = self.Meta.model.objects.create(**validated_data)
-        obj.created_by = getattr(self.context.get('request'), 'user', None)
+        obj.created_by = getattr(self.context.get("request"), "user", None)
         obj.obj = target_obj
         obj.save()
         return obj
@@ -628,9 +697,21 @@ class AccessTokenSerializer(BaseModelSerializer):
 
 class JobAccessTokenRequestSerializer(AccessTokenSerializer):
     class Meta(AccessTokenSerializer.Meta):
-        fields = ('id', 'object_id', 'content_type',
-                  'token', 'created_by', 'expiry_time', 'created_time', 'modified_time',)
-        read_only_fields = ('id', 'created_by', 'token',)
+        fields = (
+            "id",
+            "object_id",
+            "content_type",
+            "token",
+            "created_by",
+            "expiry_time",
+            "created_time",
+            "modified_time",
+        )
+        read_only_fields = (
+            "id",
+            "created_by",
+            "token",
+        )
 
     object_id = serializers.CharField(required=False)
     content_type = serializers.CharField(required=False)
@@ -638,5 +719,21 @@ class JobAccessTokenRequestSerializer(AccessTokenSerializer):
 
 class JobAccessTokenResponseSerializer(JobAccessTokenRequestSerializer):
     class Meta(JobAccessTokenRequestSerializer.Meta):
-        fields = ('id', 'object_id', 'token', 'created_by', 'expiry_time', 'created_time', 'modified_time',)
-        read_only_fields = ('id', 'object_id', 'created_by', 'token', 'object_id', 'content_type',)
+        fields = (
+            "id",
+            "object_id",
+            "token",
+            "created_by",
+            "expiry_time",
+            "created_time",
+            "modified_time",
+        )
+        read_only_fields = (
+            "id",
+            "object_id",
+            "created_by",
+            "token",
+            "object_id",
+            "content_type",
+        )
+

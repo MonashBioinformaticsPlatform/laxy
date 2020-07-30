@@ -265,6 +265,23 @@ export const Store = new Vuex.Store({
                 throw error;
             }
         },
+        // TODO: Make this work with POST/PUT /api/vi/fileset instead
+        //       Transform ISample objects in samples.items into ILaxyFile's
+        //       in a LaxyFileSet type object.
+        // We want to keep using SampleCartItems/ISample in the frontend for the moment,
+        // but only store FileSet/Files in the backend.
+        // Find API calls to /api/v1/samplecart/ (GET/POST/PUT) - these should be replaced with
+        // a Vuex action (this SET_SAMPLES, and a new one for GET) that converts SampleCartItems/ISample objects
+        // to FileSet/File objects and calls the  /api/vi/fileset API endpoint.
+        // Problem: Current code does wholesale replacement of a SampleCart JSON blob with PUT,
+        //          but the current web API for FileSets won't allow this. POST is also broken
+        //          (eg views.FileSetCreate and the associated serializer FileSetSerializerPostRequest
+        //           don't work if the FileSet is created with a files list - needs fixing. We can
+        //           POST a new empty FileSet if we don't include the files field [empty list fails])
+        // Solution: 1. Fix the FileSetSerializerPostRequest to allow File creation __or__
+        //           2. Continue to use the /api/vi/samplecart endpoint, but convert to
+        //              a FileSet in the backend - either with every call to /api/vi/samplecart or
+        //              when a Job is created with an associated PipelineRun.
         async [SET_SAMPLES]({ commit, state }, samples) {
             const preCommit = cloneDeep(state.samples);
             if (preCommit.id != null && samples.id == null) {

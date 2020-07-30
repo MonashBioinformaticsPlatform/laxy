@@ -979,8 +979,8 @@ def move_job_files_to_archive_task(self, task_data=None, *kwargs):
         job: Job, src_compute: ComputeResource, dst_compute: ComputeResource
     ):
         """
-        Temporary function that moves files not in input/ and output/ directories, that aren't
-        tracked by Laxy File objects in the database.
+        Temporary function that moves files not in input/ and output/ directories, that 
+        may not be tracked by Laxy File objects in the database.
         """
         job_src_path = job_path_on_compute(job, src_compute)
         _, fpaths = src_compute.sftp_storage.listdir(job_src_path)
