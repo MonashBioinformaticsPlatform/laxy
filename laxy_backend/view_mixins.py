@@ -42,27 +42,28 @@ def etag_headers(method):
         response = method(*args, **kwargs)
         if len(args) > 0:
             obj = args[0].get_object()
-            if hasattr(obj, 'modified_time'):
-                if response.get('Last-Modified', None) is None:
-                    response['Last-Modified'] = obj.modified_time.strftime(
-                        "%a, %d %b %Y %H:%M:%S GMT")
-                if response.get('ETag', None) is None:
+            if hasattr(obj, "modified_time"):
+                if response.get("Last-Modified", None) is None:
+                    response["Last-Modified"] = obj.modified_time.strftime(
+                        "%a, %d %b %Y %H:%M:%S GMT"
+                    )
+                if response.get("ETag", None) is None:
                     # NGINX strips out 'strong' ETags by default, so we use a weak (W/) ETag
-                    response['ETag'] = f'W/"{obj.modified_time.isoformat()}"'
+                    response["ETag"] = f'W/"{obj.modified_time.isoformat()}"'
         return response
 
     return add_etag_headers_to_response
 
 
 class JSONView(GenericAPIView):
-    lookup_url_kwarg = 'uuid'
+    lookup_url_kwarg = "uuid"
     # lookup_field = 'id' # same as default, 'pk'
 
     # renderer_classes = (JSONRenderer, SchemaJSRenderer, CoreJSONRenderer,)
     # renderer_classes = (CoreJSONRenderer,)
     renderer_classes = (JSONRenderer,)
     parser_classes = (JSONParser,)
-    api_docs_visible_to = 'public'
+    api_docs_visible_to = "public"
 
     # def get(self, request):
     #     generator = SchemaGenerator()
@@ -110,7 +111,9 @@ class JSONView(GenericAPIView):
         if request.authenticators and not request.successful_authenticator:
             raise NotAuthenticated()
 
-        logger.info(f"Permission denied (but sending 404 Not Found): {request.get_full_path()}")
+        logger.info(
+            f"Permission denied (but sending 404 Not Found): {request.get_full_path()}"
+        )
         # raise PermissionDenied(detail=message)
         raise NotFound()
 
@@ -123,7 +126,8 @@ class CSVTextParser(BaseParser):
     a dialect.
     https://tools.ietf.org/html/rfc4180
     """
-    media_type = 'text/csv'
+
+    media_type = "text/csv"
 
     def parse(self, stream, media_type=None, parser_context=None) -> List[List]:
         """
@@ -131,9 +135,11 @@ class CSVTextParser(BaseParser):
         """
         # return list(csv.reader(stream, dialect='excel'))
 
-        media_type_params = dict([param.strip().split('=') for param in media_type.split(';')[1:]])
-        charset = media_type_params.get('charset', 'utf-8')
-        dialect = media_type_params.get('dialect', 'excel')
+        media_type_params = dict(
+            [param.strip().split("=") for param in media_type.split(";")[1:]]
+        )
+        charset = media_type_params.get("charset", "utf-8")
+        dialect = media_type_params.get("dialect", "excel")
         txt = stream.read().decode(charset)
         csv_table = list(csv.reader(txt.splitlines(), dialect=dialect))
         return csv_table
@@ -147,21 +153,23 @@ class RowsCSVTextParser(BaseParser):
 
     https://tools.ietf.org/html/rfc4180
     """
-    media_type = 'text/csv'
+
+    media_type = "text/csv"
 
     def parse(self, stream, media_type=None, parser_context=None) -> List[dict]:
         """
         Return a list of lists representing the rows of a CSV file.
         """
-        media_type_params = dict([param.strip().split('=') for param in media_type.split(';')[1:]])
-        charset = media_type_params.get('charset', 'utf-8')
-        dialect = media_type_params.get('dialect', 'excel')
+        media_type_params = dict(
+            [param.strip().split("=") for param in media_type.split(";")[1:]]
+        )
+        charset = media_type_params.get("charset", "utf-8")
+        dialect = media_type_params.get("dialect", "excel")
         txt = stream.read()
         try:
-            table = rows.import_from_csv(BytesIO(txt),
-                                         encoding=charset,
-                                         dialect=dialect,
-                                         skip_header=False)
+            table = rows.import_from_csv(
+                BytesIO(txt), encoding=charset, dialect=dialect, skip_header=False
+            )
         except Exception as ex:
             raise ex
         table = json.loads(rows.export_to_json(table))
@@ -183,7 +191,7 @@ class GetMixin:
         -->
         """
         obj = self.get_object()
-        if hasattr(self, 'response_serializer'):
+        if hasattr(self, "response_serializer"):
             serializer = self.response_serializer(obj)
         else:
             serializer = self.get_serializer(instance=obj)
@@ -191,9 +199,7 @@ class GetMixin:
 
 
 class PatchMixin:
-    def patch(self,
-              request: Request,
-              uuid: str) -> Union[Response, HttpResponse]:
+    def patch(self, request: Request, uuid: str) -> Union[Response, HttpResponse]:
         """
 
         PATCH: https://tools.ietf.org/html/rfc5789
@@ -209,30 +215,31 @@ class PatchMixin:
         """
         obj = self.get_object()
 
-        if 'id' in request.data:
-            return HttpResponse(status=status.HTTP_400_BAD_REQUEST,
-                                reason="id cannot be updated")
+        if "id" in request.data:
+            return HttpResponse(
+                status=status.HTTP_400_BAD_REQUEST, reason="id cannot be updated"
+            )
 
         # TODO: Support self.request_serializer and self.response_serializer here
         #       Maybe override get_serializer in JSONView ?
-        serializer = self.get_serializer(instance=obj,
-                                         data=request.data,
-                                         context={'request': request},
-                                         partial=True)
+        serializer = self.get_serializer(
+            instance=obj, data=request.data, context={"request": request}, partial=True
+        )
         if serializer.is_valid():
             serializer.save()
             return Response(status=status.HTTP_204_NO_CONTENT)
             # return Response(serializer.data, status=status.HTTP_200_OK)
 
-        return Response(serializer.errors,
-                        status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class PutMixin:
-    def put(self,
-            request: Request,
-            uuid: str,
-            serializer_class: Union[None, BaseSerializer] = None) -> Union[Response, HttpResponse]:
+    def put(
+        self,
+        request: Request,
+        uuid: str,
+        serializer_class: Union[None, BaseSerializer] = None,
+    ) -> Union[Response, HttpResponse]:
         """
         Replacing an existing resource.
         (Creating a new resource via specifying a UUID is not allowed)
@@ -251,9 +258,10 @@ class PutMixin:
 
         obj = self.get_object()
 
-        if 'id' in request.data:
-            return HttpResponse(status=status.HTTP_400_BAD_REQUEST,
-                                reason="id cannot be updated")
+        if "id" in request.data:
+            return HttpResponse(
+                status=status.HTTP_400_BAD_REQUEST, reason="id cannot be updated"
+            )
 
         # TODO: Support self.request_serializer and self.response_serializer instead
         #       of this serializer_class keyword arg
@@ -261,25 +269,27 @@ class PutMixin:
         if serializer_class is None:
             serializer_class = self.get_serializer_class()
 
-        serializer = serializer_class(instance=obj, data=request.data,
-                                      context={'request': request})
+        serializer = serializer_class(
+            instance=obj, data=request.data, context={"request": request}
+        )
         if serializer.is_valid():
             serializer.save()
             return Response(status=status.HTTP_204_NO_CONTENT)
             # return Response(serializer.data, status=status.HTTP_200_OK)
 
-        return Response(serializer.errors,
-                        status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 # TODO: This would be cleaner as a decorator to a patch method, similar to @etag_headers
 class JSONPatchMixin:
     def _is_json_patch_content_type(self, request):
         content_type = get_content_type(request)
-        return content_type in ['application/merge-patch+json',
-                                'application/json-patch+json']
+        return content_type in [
+            "application/merge-patch+json",
+            "application/json-patch+json",
+        ]
 
-    def _patch_request(self, request: Request, obj=None, field='metadata'):
+    def _patch_request(self, request: Request, obj=None, field="metadata"):
         content_type = get_content_type(request)
 
         if obj is None:
@@ -293,21 +303,21 @@ class JSONPatchMixin:
                 patch = OrderedDict(metadata)
 
             # https://tools.ietf.org/html/rfc7386
-            if content_type == 'application/merge-patch+json':
+            if content_type == "application/merge-patch+json":
                 request.data[field] = json_merge_patch.merge(
-                    OrderedDict(getattr(obj, field)),
-                    patch)
+                    OrderedDict(getattr(obj, field)), patch
+                )
             # https://tools.ietf.org/html/rfc6902
-            if content_type == 'application/json-patch+json':
+            if content_type == "application/json-patch+json":
                 request.data[field] = jsonpatch.apply_patch(
-                    OrderedDict(getattr(obj, field)),
-                    patch)
+                    OrderedDict(getattr(obj, field)), patch
+                )
 
             logger.debug(f"_try_json_patch - patched {field}: {request.data}")
 
         return request
 
-    def _try_json_patch(self, request: Request, obj=None, field='metadata'):
+    def _try_json_patch(self, request: Request, obj=None, field="metadata"):
         """
         Partial update of the 'metadata' field on an object.
 
@@ -351,24 +361,29 @@ class JSONPatchMixin:
             if obj is None:
                 return Response(status=status.HTTP_404_NOT_FOUND)
 
-            if 'id' in request.data:
-                return HttpResponse(status=status.HTTP_400_BAD_REQUEST,
-                                    reason="id cannot be updated")
+            if "id" in request.data:
+                return HttpResponse(
+                    status=status.HTTP_400_BAD_REQUEST, reason="id cannot be updated"
+                )
 
             if not hasattr(obj, field):
-                return HttpResponse(status=status.HTTP_400_BAD_REQUEST,
-                                    reason=f"Invalid field for this object type: {field}")
+                return HttpResponse(
+                    status=status.HTTP_400_BAD_REQUEST,
+                    reason=f"Invalid field for this object type: {field}",
+                )
 
             request = self._patch_request(request, obj=obj, field=field)
 
-            if hasattr(self, 'request_serializer'):
+            if hasattr(self, "request_serializer"):
                 serializer_method = self.request_serializer
             else:
                 serializer_method = self.get_serializer
-            serializer = serializer_method(instance=obj,
-                                           data=request.data,
-                                           context={'request': request},
-                                           partial=True)
+            serializer = serializer_method(
+                instance=obj,
+                data=request.data,
+                context={"request": request},
+                partial=True,
+            )
             if serializer.is_valid():
                 serializer.save()
                 return Response(status=status.HTTP_204_NO_CONTENT)
@@ -377,9 +392,7 @@ class JSONPatchMixin:
 
 
 class DeleteMixin:
-    def delete(self,
-               request: Request,
-               uuid: str) -> Response:
+    def delete(self, request: Request, uuid: str) -> Response:
         """
         Deletes the object specified via UUID.
 
@@ -412,8 +425,9 @@ class PostMixin:
 
         # TODO: Support self.request_serializer and self.response_serializer overrides here (as per GetMixin)
         #       Maybe override get_serializer in JSONView ?
-        serializer = self.get_serializer(data=request.data,
-                                         context={'request': request})
+        serializer = self.get_serializer(
+            data=request.data, context={"request": request}
+        )
         if serializer.is_valid():
             obj = serializer.save()
             # 200 status code since we include the resulting entity in the body

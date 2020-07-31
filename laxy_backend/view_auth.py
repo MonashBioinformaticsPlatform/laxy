@@ -6,10 +6,12 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.http import JsonResponse
 from rest_framework.renderers import JSONRenderer
-from rest_framework.permissions import (AllowAny,
-                                        IsAuthenticated,
-                                        IsAdminUser,
-                                        DjangoObjectPermissions)
+from rest_framework.permissions import (
+    AllowAny,
+    IsAuthenticated,
+    IsAdminUser,
+    DjangoObjectPermissions,
+)
 from rest_framework import status
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt, csrf_protect
@@ -27,10 +29,16 @@ from drf_openapi.utils import view_config
 
 from laxy_backend.models import UserProfile
 from laxy_backend.views import _get_or_create_drf_token
-from .serializers import LoginRequestSerializer, SocialAuthLoginRequest, SocialAuthLoginResponse, UserProfileResponse
+from .serializers import (
+    LoginRequestSerializer,
+    SocialAuthLoginRequest,
+    SocialAuthLoginResponse,
+    UserProfileResponse,
+)
 from .jwt_helpers import create_jwt_user_token, get_jwt_user_header_dict
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 # from .models import User
@@ -48,7 +56,7 @@ def create_or_get_userprofile(user: User) -> UserProfile:
         return user.profile
 
 
-def gravatar_url(email: str, style: str = 'retro', size: int = 64) -> str:
+def gravatar_url(email: str, style: str = "retro", size: int = 64) -> str:
     """
     Return the URL for a Gravatar profile picture based on an email address.
 
@@ -68,8 +76,12 @@ def gravatar_url(email: str, style: str = 'retro', size: int = 64) -> str:
 
     default = style
 
-    gravatar_url = "https://www.gravatar.com/avatar/" + hashlib.md5(email.encode('utf-8').lower()).hexdigest() + "?"
-    gravatar_url += urlencode({'d': default, 's': str(size)})
+    gravatar_url = (
+        "https://www.gravatar.com/avatar/"
+        + hashlib.md5(email.encode("utf-8").lower()).hexdigest()
+        + "?"
+    )
+    gravatar_url += urlencode({"d": default, "s": str(size)})
     return gravatar_url
 
 
@@ -84,10 +96,13 @@ class Login(APIView):
 
     def post(self, request, version=None):
         if not request.data:
-            return Response({'Error': "Please provide username/password"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"Error": "Please provide username/password"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        username = request.data.get('username')
-        password = request.data.get('password')
+        username = request.data.get("username")
+        password = request.data.get("password")
         user = authenticate(username=username, password=password)
 
         if user is not None:
@@ -98,7 +113,10 @@ class Login(APIView):
             return Response()
 
         else:
-            return Response({'error': "Invalid username/password"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Invalid username/password"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 class Logout(APIView):
@@ -134,20 +152,24 @@ class UserProfileView(APIView):
         jwt_token = create_jwt_user_token(user.username)[0]
         drf_token = token.key
 
-        return JsonResponse({'id': user.id,
-                             'username': user.get_username(),
-                             'full_name': user.get_full_name(),
-                             'email': user.email,
-                             'profile_pic': get_profile_pic_url(user),
-
-                             # TODO: Determine if these tokens are used anywhere by clients (eg frontend / run_job.sh)
-                             #       and if not remove them from here. Out of scope for user profile and a potential
-                             #       security issue
-                             'token': jwt_token,
-                             'drf_authtoken': drf_token,
-                             'jwt_authorization_header_prefix': settings.JWT_AUTH.get('JWT_AUTH_HEADER_PREFIX',
-                                                                                      u'Bearer'),
-                             'drf_authorization_header_prefix': 'Token'})
+        return JsonResponse(
+            {
+                "id": user.id,
+                "username": user.get_username(),
+                "full_name": user.get_full_name(),
+                "email": user.email,
+                "profile_pic": get_profile_pic_url(user),
+                # TODO: Determine if these tokens are used anywhere by clients (eg frontend / run_job.sh)
+                #       and if not remove them from here. Out of scope for user profile and a potential
+                #       security issue
+                "token": jwt_token,
+                "drf_authtoken": drf_token,
+                "jwt_authorization_header_prefix": settings.JWT_AUTH.get(
+                    "JWT_AUTH_HEADER_PREFIX", u"Bearer"
+                ),
+                "drf_authorization_header_prefix": "Token",
+            }
+        )
 
 
 @login_required()
@@ -156,7 +178,7 @@ def show_jwt(request):
 
 
 @csrf_exempt
-@api_view(['POST'])
+@api_view(["POST"])
 def check_drf_token(request, format=None):
     """
     Return `{"status": true}` if the Django Rest Framework API Token is valid.
@@ -170,7 +192,7 @@ def check_drf_token(request, format=None):
     :rtype:
     -->
     """
-    token_exists = Token.objects.filter(key=request.data['token']).exists()
+    token_exists = Token.objects.filter(key=request.data["token"]).exists()
     return JsonResponse({"status": token_exists})
 
 
@@ -187,6 +209,7 @@ class CsrfCookieView(APIView):
     for anywhere are allowed (eg `Access-Control-Allow-Origin: *`  via the
     `CORS_ORIGIN_ALLOW_ALL = True` setting).
     """
+
     renderer_classes = (JSONRenderer,)
     permission_classes = (AllowAny,)
 
@@ -200,7 +223,10 @@ class CsrfCookieView(APIView):
 class PublicSocialSessionAuthView(SocialSessionAuthView):
     permission_classes = (AllowAny,)
 
-    @view_config(request_serializer=SocialAuthLoginRequest, response_serializer=SocialAuthLoginResponse)
+    @view_config(
+        request_serializer=SocialAuthLoginRequest,
+        response_serializer=SocialAuthLoginResponse,
+    )
     def post(self, request, *args, **kwargs):
         """
         This method takes authorization code returned by a social OAuth2 service (eg Google) and initiates the
@@ -247,6 +273,7 @@ class PublicSocialSessionAuthView(SocialSessionAuthView):
         -->
         """
         return super(PublicSocialSessionAuthView, self).post(request, *args, **kwargs)
+
 
 #
 # This version of the view is required if we want to override the csrf_required decorator on the parent's method

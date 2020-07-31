@@ -8,7 +8,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-SAFE_METHODS = ('GET', 'HEAD', 'OPTIONS')
+SAFE_METHODS = ("GET", "HEAD", "OPTIONS")
 
 
 def _get_content_types(*models):
@@ -27,12 +27,15 @@ def token_is_valid(token: str, obj_id: str):
     :rtype: bool
     """
 
-    return (AccessToken.objects
-            .filter(token=token,
-                    # content_type__in=self.valid_content_types,
-                    object_id=obj_id)
-            .filter(Q(expiry_time__gt=datetime.now()) | Q(expiry_time=None))
-            .exists())
+    return (
+        AccessToken.objects.filter(
+            token=token,
+            # content_type__in=self.valid_content_types,
+            object_id=obj_id,
+        )
+        .filter(Q(expiry_time__gt=datetime.now()) | Q(expiry_time=None))
+        .exists()
+    )
 
 
 class HasReadonlyObjectAccessToken(permissions.BasePermission):
@@ -45,23 +48,25 @@ class HasReadonlyObjectAccessToken(permissions.BasePermission):
         if request.method not in SAFE_METHODS:
             return False
 
-        token = request.query_params.get('access_token', None)
+        token = request.query_params.get("access_token", None)
         if not token:
-            token = request.COOKIES.get(f'access_token__{obj.id}', None)
+            token = request.COOKIES.get(f"access_token__{obj.id}", None)
 
         if not token:
             return False
 
         is_valid = token_is_valid(token, obj.id)
         if not is_valid:
-            logger.error(f'Invalid or expired AccessToken {token} used when attempting to access {obj.id}')
+            logger.error(
+                f"Invalid or expired AccessToken {token} used when attempting to access {obj.id}"
+            )
         return is_valid
 
 
 class HasAccessTokenForEventLogSubject(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
-        token = request.query_params.get('access_token', None)
-        obj_id = request.query_params.get('object_id', None)  # the Job.id
+        token = request.query_params.get("access_token", None)
+        obj_id = request.query_params.get("object_id", None)  # the Job.id
         if token and obj_id:
             return token_is_valid(token, obj_id)
 
@@ -70,7 +75,7 @@ class HasAccessTokenForEventLogSubject(permissions.BasePermission):
 
 class FileSetHasAccessTokenForJob(permissions.BasePermission):
     def has_object_permission(self, request, view, obj: FileSet):
-        token = request.query_params.get('access_token', None)
+        token = request.query_params.get("access_token", None)
         if token:
             jobs = obj.jobs()
             for job in jobs:
@@ -81,7 +86,7 @@ class FileSetHasAccessTokenForJob(permissions.BasePermission):
 
 class FileHasAccessTokenForJob(permissions.BasePermission):
     def has_object_permission(self, request, view, obj: File):
-        token = request.query_params.get('access_token', None)
+        token = request.query_params.get("access_token", None)
         if token:
             jobs = obj.fileset.jobs()
             for job in jobs:
@@ -99,7 +104,7 @@ class IsSuperuser(permissions.BasePermission):
 
 
 def is_owner(user, obj):
-    owner_field_name = getattr(obj, 'owner_field_name', 'owner')
+    owner_field_name = getattr(obj, "owner_field_name", "owner")
     if hasattr(obj, owner_field_name) and (user == getattr(obj, owner_field_name)):
         return True
 
@@ -107,7 +112,6 @@ def is_owner(user, obj):
 
 
 class IsOwner(permissions.BasePermission):
-
     def has_object_permission(self, request, view, obj):
         user = request.user
         return is_owner(user, obj)
