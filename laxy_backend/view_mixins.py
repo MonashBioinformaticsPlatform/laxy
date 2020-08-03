@@ -71,33 +71,27 @@ class JSONView(GenericAPIView):
     #
     #     return Response(schema)
 
-    # DEPRECATED, in favor of using permission_classes on views (eg with django-guardian).
-    # def _check_owner(self, obj):
-    #     user = self.request.user
-    #     if user.is_superuser:
-    #         return obj
-    #
-    #     if hasattr(obj, 'owner'):
-    #         if user != obj.owner:
-    #             return None
-    #             # return HttpResponse(status=status.HTTP_403_FORBIDDEN,
-    #             #                     reason="Permission denied.")
-    #     return obj
+    def get_request_serializer(self, *args, **kwargs):
+        """
+        Return the serializer instance that should be used for validating and
+        deserializing input (from the Request).
+        """
+        serializer_class = getattr(
+            self, "request_serializer", self.get_serializer_class()
+        )
+        kwargs["context"] = self.get_serializer_context()
+        return serializer_class(*args, **kwargs)
 
-    # DEPRECATED, in favor of self.get_object() from the parent class (GenericAPIView)
-    # def get_obj(self, uuid):
-    #     try:
-    #         # if we are using a native UUIDField on the model (rather than a
-    #         # CharField) we must first turn the UUID Base64 (or Base62) string
-    #         # into an actual uuid.UUID instance to do the query.
-    #         # uuid = Job.b64uuid_to_uuid(uuid)
-    #         queryset = self.get_queryset()
-    #         obj = queryset.get(id=uuid)
-    #         # return self._check_owner(obj)
-    #         return obj
-    #
-    #     except (queryset.model.DoesNotExist, ValueError):
-    #         return None
+    def get_response_serializer(self, *args, **kwargs):
+        """
+        Return the serializer instance that should be used for validating and
+        deserializing output (for the Response).
+        """
+        serializer_class = getattr(
+            self, "response_serializer", self.get_serializer_class()
+        )
+        kwargs["context"] = self.get_serializer_context()
+        return serializer_class(*args, **kwargs)
 
     def permission_denied(self, request, message=None):
         """
@@ -191,10 +185,7 @@ class GetMixin:
         -->
         """
         obj = self.get_object()
-        if hasattr(self, "response_serializer"):
-            serializer = self.response_serializer(obj)
-        else:
-            serializer = self.get_serializer(instance=obj)
+        serializer = self.get_response_serializer(instance=obj)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -220,15 +211,25 @@ class PatchMixin:
                 status=status.HTTP_400_BAD_REQUEST, reason="id cannot be updated"
             )
 
-        # TODO: Support self.request_serializer and self.response_serializer here
-        #       Maybe override get_serializer in JSONView ?
-        serializer = self.get_serializer(
-            instance=obj, data=request.data, context={"request": request}, partial=True
+        serializer = self.get_request_serializer(
+            instance=obj, data=request.data, partial=True
         )
         if serializer.is_valid():
             serializer.save()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            # We currently return an empty response to PATCH.
+            # AFAIK there's no strict standard/RFC around what to return in the
+            # body of the response (if we did return 200 instead of 204).
+            # One way is some convention as part of the Content-Type header.
+            # WebDAV does it with a
+            #   "Prefer: return=representation" or
+            #   "Prefer: return=minimal"
+            # header.
+            #   https://greenbytes.de/tech/webdav/rfc7240.html#return
+            # Empty + status 204 is fine unless we have need for something else.
+            #
             # return Response(serializer.data, status=status.HTTP_200_OK)
+
+            return Response(status=status.HTTP_204_NO_CONTENT)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -241,8 +242,9 @@ class PutMixin:
         serializer_class: Union[None, BaseSerializer] = None,
     ) -> Union[Response, HttpResponse]:
         """
-        Replacing an existing resource.
-        (Creating a new resource via specifying a UUID is not allowed)
+        Replace an existing resource.
+        (Creating a new resource via specifying a UUID is not allowed,
+        since UUIDs are always automatically assigned)
 
         <!--
         :param request:
@@ -263,18 +265,17 @@ class PutMixin:
                 status=status.HTTP_400_BAD_REQUEST, reason="id cannot be updated"
             )
 
-        # TODO: Support self.request_serializer and self.response_serializer instead
-        #       of this serializer_class keyword arg
-        #       Maybe override get_serializer in JSONView ?
-        if serializer_class is None:
-            serializer_class = self.get_serializer_class()
-
-        serializer = serializer_class(
-            instance=obj, data=request.data, context={"request": request}
+        serializer = self.get_request_serializer(
+            instance=obj, data=request.data, partial=True
         )
         if serializer.is_valid():
             serializer.save()
             return Response(status=status.HTTP_204_NO_CONTENT)
+
+            # This is also acceptable, but not required.
+            # If the server modifies/adds fields in the PUT request.data,
+            # it might make sense to do this so the client gets an accurate
+            # state of the updated object.
             # return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -373,16 +374,8 @@ class JSONPatchMixin:
                 )
 
             request = self._patch_request(request, obj=obj, field=field)
-
-            if hasattr(self, "request_serializer"):
-                serializer_method = self.request_serializer
-            else:
-                serializer_method = self.get_serializer
-            serializer = serializer_method(
-                instance=obj,
-                data=request.data,
-                context={"request": request},
-                partial=True,
+            serializer = self.get_request_serializer(
+                instance=obj, data=request.data, partial=True
             )
             if serializer.is_valid():
                 serializer.save()
@@ -423,17 +416,29 @@ class PostMixin:
         -->
         """
 
-        # TODO: Support self.request_serializer and self.response_serializer overrides here (as per GetMixin)
-        #       Maybe override get_serializer in JSONView ?
-        serializer = self.get_serializer(
-            data=request.data, context={"request": request}
-        )
-        if serializer.is_valid():
-            obj = serializer.save()
+        # serializer = self.get_serializer(
+        #     data=request.data, context={"request": request}
+        # )
+
+        # if hasattr(self, "request_serializer"):
+        #     req_serializer = self.request_serializer(data=request.data)
+        # else:
+        #     req_serializer = self.get_serializer(data=request.data)
+
+        # if hasattr(self, "response_serializer"):
+        #     resp_serializer = self.response_serializer(instance=obj)
+        # else:
+        #     resp_serializer = self.get_serializer(instance=obj)
+        req_serializer = self.get_request_serializer(data=request.data)
+
+        if req_serializer.is_valid():
+            obj = req_serializer.save()
+
+            resp_serializer = self.get_response_serializer(instance=obj)
             # 200 status code since we include the resulting entity in the body
             # We'd do 201 if we only returned a link to the entity in the body
             # and a Location header.
             # https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/201
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(resp_serializer.data, status=status.HTTP_200_OK)
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(req_serializer.errors, status=status.HTTP_400_BAD_REQUEST)

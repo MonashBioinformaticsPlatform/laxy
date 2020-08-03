@@ -1693,6 +1693,12 @@ class FileSet(Timestamped, UUIDModel):
             # unsaved Files must be saved before calling self.files.add
             [f.save() for f in files if not f.pk]
 
+            # Files inherit the owner of the FileSet
+            # (unless the FileSet has no owner)
+            if self.owner:
+                for f in files:
+                    f.owner = self.owner
+
             # bulk=False causes Files the File.save() method to be called for
             # each file, including pre_save/post_save hooks.
             self.files.add(*files, bulk=False)

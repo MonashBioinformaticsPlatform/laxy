@@ -10,7 +10,7 @@ from django.db import transaction
 from rest_framework import serializers
 from django.core.validators import URLValidator
 from rest_framework import status
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError, PermissionDenied
 from rest_framework.fields import CurrentUserDefault
 from typing import Sequence
 
@@ -74,15 +74,24 @@ class BaseModelSerializer(serializers.ModelSerializer):
         else:
             return obj.id
 
+    def _set_owner(self, obj):
+        """
+        Set the owner (User) of the model instance (`obj`), based
+        on the user making the request.
+        """
+        if self.context:
+            user = self.context.get("request").user
+            if user and hasattr(obj, "owner"):
+                obj.owner = user
+
+        return obj
+
     def create(self, validated_data):
         obj = self.Meta.model.objects.create(**validated_data)
         # If the request is provided as part of the context
         # passed to the serializer, assign it as the owner
         # of the model
-        if self.context:
-            user = self.context.get("request").user
-            if user and hasattr(obj, "owner"):
-                obj.owner = user
+        obj = self._set_owner(obj)
         obj.save()
         return obj
 
@@ -146,7 +155,7 @@ class FileSerializer(BaseModelSerializer):
     fileset = serializers.PrimaryKeyRelatedField(
         queryset=FileSet.objects.all(), required=False
     )
-    type_tags = serializers.ListField(default=[])
+    type_tags = serializers.ListField(default=[], required=False)
     # metadata = serializers.JSONField()
     metadata = SchemalessJsonResponseSerializer(
         required=False
@@ -195,11 +204,6 @@ class FileSerializer(BaseModelSerializer):
         return instance
 
 
-# TODO: Fix thies serializer to create new File objects, or associate to existing ones by id,
-#       if specified in the files list. Write some tests - the model has tests but the create serializer doesn't !
-#       Currently fails with:
-#         TypeError: Direct assignment to the reverse side of a related set is prohibited. Use files.set() instead.
-#
 class FileSerializerPostRequest(FileSerializer):
     class Meta(FileSerializer.Meta):
         fields = (
@@ -267,6 +271,7 @@ class FileSetSerializer(BaseModelSerializer):
         fields = (
             "id",
             "name",
+            "path",
             "owner",
             "files",
         )
@@ -278,22 +283,72 @@ class FileSetSerializer(BaseModelSerializer):
         error_status_codes = status_codes()
 
 
+class FileSerializerOptionalLocation(FileSerializer):
+    """
+    Allows the `location` field to be omitted - intended to be
+    used when we want to be able to refer to a list of new files
+    where location would be required, or a list of existing files 
+    using `id` only.
+    """
+
+    id = serializers.CharField(max_length=24, required=False)
+    location = serializers.CharField(
+        required=False,
+        allow_null=False,
+        allow_blank=False,
+        max_length=2048,
+        validators=[models.URIValidator()],
+    )
+
+
 class FileSetSerializerPostRequest(FileSetSerializer):
     class Meta(FileSetSerializer.Meta):
         fields = (
             "id",
             "name",
+            "path",
             "files",
         )
 
+    files = FileSerializerOptionalLocation(many=True, required=False, allow_null=True)
 
-class InputOutputFilesResponse(serializers.Serializer):
-    input_files = FileSerializer(
-        many=True, read_only=True, required=False, allow_null=True
-    )
-    output_files = FileSerializer(
-        many=True, read_only=True, required=False, allow_null=True
-    )
+    @transaction.atomic
+    def create(self, validated_data):
+        """
+
+        :param validated_data:
+        :type validated_data:
+        :return:
+        :rtype:
+        """
+        files_data = validated_data.pop("files", [])
+
+        fset = models.FileSet.objects.create(**validated_data)
+        fset = self._set_owner(fset)
+
+        # We create new file objects if the `files` list has details other than
+        # the id set. If only the id is set, we assume it's an existing file
+        # and use that.
+
+        for f in files_data:
+            f_id = f.get("id", None)
+            if not f_id:
+                fobj = models.File.objects.create(**f)
+                fobj.owner = fset.owner
+            else:
+                try:
+                    fobj = models.File.objects.get(id=f_id)
+                except File.DoesNotExist:
+                    raise File.DoesNotExist(f"File {f_id} does not exist.")
+
+                if fobj.owner != fset.owner:
+                    raise PermissionDenied(
+                        detail="Attempt to add Files not owned by the FileSet owner disallowed."
+                    )
+
+            fset.add(fobj)
+
+        return fset
 
 
 class SampleCartSerializer(BaseModelSerializer):
@@ -428,8 +483,7 @@ class JobSerializerRequest(JobSerializerBase):
         # output_files_data = validated_data.pop('output_files', [])
         compute_resource_id = validated_data.pop("compute_resource", None)
         job = models.Job.objects.create(**validated_data)
-        user = self.context.get("request").user
-        job.owner = user
+        job = self._set_owner(job)
 
         if compute_resource_id:
             compute = models.ComputeResource.objects.get(id=compute_resource_id)
@@ -558,7 +612,7 @@ class PipelineRunCreateSerializer(PipelineRunSerializer):
 
     def create(self, validated_data):
         run = models.PipelineRun.objects.create(**validated_data)
-        run.owner = self.context.get("request").user
+        self._set_owner(run)
         run.save()
         return run
 

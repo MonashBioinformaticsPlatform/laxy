@@ -131,7 +131,6 @@ from .serializers import (
     EventLogSerializer,
     JobEventLogSerializer,
     JobFileSerializerCreateRequest,
-    InputOutputFilesResponse,
     RedirectResponseSerializer,
     FileListing,
     AccessTokenSerializer,

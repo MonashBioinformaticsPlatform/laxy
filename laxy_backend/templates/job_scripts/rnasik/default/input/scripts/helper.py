@@ -148,8 +148,8 @@ def generate_samplesheet(pipeline_config: dict):
 
     samplesheet = []
     for sample in samples:
-        # this is the user supplied sample name
-        # (associated with both R1 and R2, maybe file that represent technical replicates)
+        # this is the sanitized user supplied sample name
+        # (associated with both R1 and R2, maybe file that represents technical replicates)
         sane_name = sanitize_filename(sample.get("sanitized_name", sample["name"]))
 
         # We get all the sanitized_filenames for the sample, then
@@ -167,6 +167,13 @@ def generate_samplesheet(pipeline_config: dict):
         sample_prefix = longest_common_prefix(file_name_prefixes)
 
         samplesheet.append((sample_prefix, sane_name))
+        # TODO: If the user enters sample names like:
+        #       sampleA_L003.fq.gz and sampleA_L004.fq.gz
+        #       we actually need sample_prefix as new_prefix ....
+        #       This is essentially user or frontend error in sample naming that results in a 'backward' sample sheet.
+        #       We should automatically strip off any _L00{0-9}_R{1-2}.fastq.gz in step 2 sample table when automatically
+        #       generating names.
+        # samplesheet.append((sane_name, sample_prefix))
 
     return samplesheet
 
