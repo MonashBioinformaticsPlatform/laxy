@@ -1,11 +1,20 @@
-version: '3.7'
+version: "3.7"
 
 services:
-
   db:
-    ports:
-      # postgres accessible on the host at 5433 for debugging
-      - "5433:5432"
+    image: postgres:10-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - test-dbdata:/var/lib/postgresql/data/pgdata
+    networks:
+      - test-net
+    # ports:
+    #   # postgres accessible on the host at 5433 for debugging
+    #   - "5433:5432"
 
   sut:
     image: laxy:dev
@@ -21,6 +30,7 @@ services:
       - LAXY_ADMIN_USERNAME=admin
       - LAXY_ADMIN_PASSWORD=adminpass
       - LAXY_SECRET_KEY=_do_please_change_this_in_production_
+      - LAXY_USE_SSL=no
       # For pytest
       - DJANGO_SETTINGS_MODULE=laxy.settings
     # volumes:
@@ -28,10 +38,42 @@ services:
     # Django app is publicly accessible without reverse proxy
     # ports:
     #   - "8001:8001"
+    networks:
+      - test-net
     depends_on:
       - db
     # command: python3 ./manage.py test
     command: bash -c "pip install -U -r requirements-dev.txt && pytest"
+
+  test-dev:
+    image: laxy:test
+    build:
+      context: .
+      dockerfile: ./docker/laxy-test/Dockerfile
+    environment:
+      - LAXY_DEBUG=yes
+      - LAXY_SSL=no
+      - LAXY_DATABASE_URL=postgres://postgres:postgres@db:5432/postgres
+      - LAXY_BROKER_URL=amqp://guest@rabbitmq
+      - LAXY_ADMIN_EMAIL=admin@example.com
+      - LAXY_ADMIN_USERNAME=admin
+      - LAXY_ADMIN_PASSWORD=adminpass
+      - LAXY_SECRET_KEY=_do_please_change_this_in_production_
+      - LAXY_USE_SSL=no
+      # For pytest
+      - DJANGO_SETTINGS_MODULE=laxy.settings
+    volumes:
+      - .:/app
+    ports:
+      #  Debugger port
+      - "21001:21001"
+    networks:
+      - test-net
+    depends_on:
+      - db
+    # command: python3 ./manage.py test
+    command: pytest
+    # command: pytest laxy_backend/tests/test_util.py
 
   ##
   # Disabled services not required for simple local dev, overridden from base docker-compose.yml
@@ -84,3 +126,9 @@ services:
       - /bin/echo
     command: "Service disabled"
     restart: "no"
+
+volumes:
+  test-dbdata:
+
+networks:
+  test-net:
