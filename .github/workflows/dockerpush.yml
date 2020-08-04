@@ -27,8 +27,8 @@ jobs:
         run: |
           if [ -f docker-compose.test.yml ]; then
             GIT_COMMIT="${{ github.sha }}"
-            docker-compose --file docker-compose.yml --file docker-compose.test.yml build sut \
-                           --build-arg GIT_COMMIT=$GIT_SHORT_COMMIT
+            docker-compose --file docker-compose.yml --file docker-compose.test.yml build \
+                           --build-arg GIT_COMMIT=$GIT_SHORT_COMMIT sut
             docker-compose --file docker-compose.yml --file docker-compose.test.yml run sut
           else
             docker build . --file docker/laxy/Dockerfile
