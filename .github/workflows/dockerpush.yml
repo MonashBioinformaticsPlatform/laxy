@@ -27,7 +27,7 @@ jobs:
         run: |
           if [ -f docker-compose.test.yml ]; then
             GIT_COMMIT="${{ github.sha }}"
-            docker-compose --file docker-compose.yml --file docker-compose.test.yml build \
+            docker-compose --file docker-compose.yml --file docker-compose.test.yml build sut \
                            --build-arg GIT_COMMIT=$GIT_SHORT_COMMIT
             docker-compose --file docker-compose.yml --file docker-compose.test.yml run sut
           else
@@ -74,17 +74,17 @@ jobs:
 
       - name: Build Laxy frontend image (nginx + static assets)
         run: |
-            # We hard-code these for prod, since for dev/localdev you'll either rebuild with a different .env
-            # or host-bind a working copy of laxy_frontend anyway
-            LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID=474709025289-vm2t2ikg08ij9mvl3h813l86nng1e4eh.apps.googleusercontent.com
-            LAXY_FRONTEND_URL=https://laxy.io
-            LAXY_FRONTEND_API_URL=https://api.laxy.io
+          # We hard-code these for prod, since for dev/localdev you'll either rebuild with a different .env
+          # or host-bind a working copy of laxy_frontend anyway
+          LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID=474709025289-vm2t2ikg08ij9mvl3h813l86nng1e4eh.apps.googleusercontent.com
+          LAXY_FRONTEND_URL=https://laxy.io
+          LAXY_FRONTEND_API_URL=https://api.laxy.io
 
-            docker build . --file docker/laxy-static-nginx/Dockerfile --tag laxy-static-nginx \
-                           --build-arg GIT_COMMIT=$GIT_SHORT_COMMIT \
-                           --build-arg LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID=$LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID \
-                           --build-arg LAXY_FRONTEND_URL=$LAXY_FRONTEND_URL \
-                           --build-arg LAXY_FRONTEND_API_URL=$LAXY_FRONTEND_API_URL
+          docker build . --file docker/laxy-static-nginx/Dockerfile --tag laxy-static-nginx \
+                         --build-arg GIT_COMMIT=$GIT_SHORT_COMMIT \
+                         --build-arg LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID=$LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID \
+                         --build-arg LAXY_FRONTEND_URL=$LAXY_FRONTEND_URL \
+                         --build-arg LAXY_FRONTEND_API_URL=$LAXY_FRONTEND_API_URL
 
       - name: Log into registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u ${{ github.actor }} --password-stdin
