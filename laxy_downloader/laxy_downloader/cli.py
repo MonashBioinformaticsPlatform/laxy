@@ -5,7 +5,7 @@ import os
 import logging
 import argparse
 import tarfile
-from typing import Iterable
+from typing import List
 import xmlrpc
 import psutil
 
