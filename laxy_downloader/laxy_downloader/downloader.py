@@ -7,7 +7,7 @@ from contextlib import closing
 from urllib.parse import urlparse, urlsplit, urlunsplit, unquote
 from pathlib import Path
 import shutil
-from typing import Dict, List, Sequence, Union, Mapping, Union, Set
+from typing import Dict, Iterable, List, Sequence, Union, Mapping, Set
 import logging
 import sys
 import os
@@ -398,13 +398,47 @@ def parse_pipeline_config(config_fh):
     return config
 
 
-def get_urls_from_pipeline_config(config: Union[dict, OrderedDict]) -> Dict[str, str]:
+def get_urls_from_pipeline_config_deprecated_sample_cart(
+    config: Union[dict, OrderedDict],
+    required_type_tags: Union[Iterable[str], None] = None,
+) -> Dict[str, str]:
+    """
+    Parse deprecated fields sample_cart and sample_set from pipeline_config.json.
+
+    {"sample_cart": {
+        "id": "1Dgwk9O1TxYooCl3i7dSXo", 
+        "name": "Sample set created on 2020-08-04T11:00:44.896515", 
+        "owner": "3zJrsOmUOqpTxNNou8LkNq", 
+        "samples": [
+            {"name": "sampleA", 
+            "files": 
+            [
+                {
+                "R1": {
+                    "name": "sampleA_R1.fastq.gz", 
+                    "checksum": "md5:b0cb55825c9cec7ad32e4ec82b2524f7", 
+                    "location": "ftp://ftp.example.com/sampleA_R1.fastq.gz", 
+                    "type_tags": ["ena"], 
+                    "sanitized_filename": "sampleA_R1.fastq.gz"},
+                "R2": {
+                    "name": "sampleA_R2.fastq.gz", 
+                    "checksum": "md5:a0cb77825c9cec7ad32e4ec82b25df24f7", 
+                    "location": "ftp://ftp.example.com/sampleA_R2.fastq.gz", 
+                    "type_tags": ["ena"], 
+                    "sanitized_filename": "sampleA_R2.fastq.gz"}
+                }
+            ]
+            }
+        ]
+        }
+    }
+    """
+
     url_filename_mapping = dict()
     samples = config.get("sample_cart", {}).get("samples", [])
-    # TODO: Remove the sample_set alternative in the future
-    # Deprecated: old sample cart name
     if not samples:
         samples = config.get("sample_set", {}).get("samples", [])
+
     for sample in samples:
         for f in sample["files"]:
             for read_number, url_descriptor in f.items():
@@ -420,6 +454,76 @@ def get_urls_from_pipeline_config(config: Union[dict, OrderedDict]) -> Dict[str,
                     continue
 
                 url_filename_mapping[url] = sanitized_filename
+                if required_type_tags is None:
+                    url_filename_mapping[url] = sanitized_filename
+                else:
+                    if set(required_type_tags).issubset(
+                        set(url_descriptor.get("type_tags", []))
+                    ):
+                        url_filename_mapping[url] = sanitized_filename
+
+    return url_filename_mapping
+
+
+def get_urls_from_pipeline_config(
+    config: Union[dict, OrderedDict],
+    required_type_tags: Union[Iterable[str], None] = None,
+) -> Dict[str, str]:
+    """
+    {"params": {
+         "fetch_files": [
+             {
+                "name": "some_file.fasta",
+                "location": "ftp://ftp.example.com/some_file.fasta",
+                "metadata": {"reference_genome_file": "fasta"},
+                "type_tags": ["reference_genome"]
+             },
+             {
+                "name": "some_annot.gff3",
+                "location": "ftp://ftp.example.com/some_file.gff3",
+                "metadata": {"reference_genome_file": "gff"},
+                "type_tags": ["reference_genome"]
+             },
+             {
+                "name": "sampleA_R1.fastq.gz",
+                "checksum": "md5:b0cb55825c9cec7ad32e4ec82b2524f7",
+                "location": "ftp://ftp.example.com/sampleA_R1.fastq.gz",
+                "metadata": {"read_pair": "R1",
+                             "paired_file": "sampleA_R2.fastq.gz"},
+                "type_tags": ["ena"]
+            },
+            {
+                "name": "sampleA_R2.fastq.gz",
+                "checksum": "md5:b0cb55825c9cec7ad32e4ec82b2524f7",
+                "location": "ftp://ftp.example.com/sampleA_R2.fastq.gz",
+                "metadata": {"read_pair": "R2",
+                             "paired_file": "sampleA_R1.fastq.gz"},
+                "type_tags": ["ena"]
+            },
+        ]
+        }
+    }
+    """
+    url_filename_mapping = dict()
+    files = config.get("params", {}).get("fetch_files", [])
+
+    if files:
+        for f in files:
+            fname = f.get("sanitized_filename", None)
+            if fname is None:
+                fname = sanitize_filename(f["name"])
+
+            if required_type_tags is None:
+                url_filename_mapping[f["location"]] = fname
+            else:
+                if set(required_type_tags).issubset(set(f.get("type_tags", []))):
+                    url_filename_mapping[f["location"]] = fname
+
+    # TODO: Remove the deprecated sample_set and sample_cart alternatives in the future
+    else:
+        url_filename_mapping = get_urls_from_pipeline_config_deprecated_sample_cart(
+            config, required_type_tags=required_type_tags
+        )
 
     return url_filename_mapping
 

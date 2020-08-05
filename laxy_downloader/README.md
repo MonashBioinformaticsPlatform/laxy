@@ -27,6 +27,9 @@ mkdir -p ~/.virtualenvs
 virtualenv -p python3 ~/.virtualenvs/laxydl
 source ~/.virtualenvs/laxydl/bin/activate
 
+# Run tests
+pytest
+
 # We need to pip install first, rather than `python setup.py install`, 
 # since one of the dependencies (pyaria) fails otherwise
 pip install .
