@@ -29,6 +29,7 @@ from collections import OrderedDict
 import unicodedata
 from text_unidecode import unidecode
 
+import pyhash
 import requests
 import backoff
 from toolz.dicttoolz import merge as merge_dicts
@@ -56,8 +57,20 @@ def url_to_cache_key(url):
     if is_tar_url_with_fragment(url):
         url = remove_url_fragment(url)
 
-    base64ed = urlsafe_b64encode(url.encode("utf-8")).decode("ascii")
-    return base64ed
+    # This key should be (effectively) unique for every URL, but use a filesystem
+    # safe name. It should always be short, ideally of constant length, irrespective
+    # of the length of the URL.
+    # A URL hashed with Murmur3 and base64 encoded into a constant length (22 character)
+    # string fits these requirements.
+    # We use Murmur3 since it is supposed to have very few collisions for short
+    # strings.
+    return (
+        urlsafe_b64encode(
+            pyhash.murmur3_x64_128()(url).to_bytes(16, byteorder="big", signed=False)
+        )
+        .decode("ascii")
+        .rstrip("=")
+    )
 
 
 def get_url_cached_path(url, cache_path):
