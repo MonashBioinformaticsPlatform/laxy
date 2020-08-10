@@ -69,7 +69,9 @@ User = get_user_model()
 #     return by_url
 
 
-def parse_fastq_table(table: str, key_by='run_accession', url_scheme='ftp') -> Dict[str, Dict]:
+def parse_fastq_table(
+    table: str, key_by="run_accession", url_scheme="ftp"
+) -> Dict[str, Dict]:
     """
     Return a dictionary keyed by run_accession, given the raw text with tab-delimited
     fields:
@@ -111,15 +113,17 @@ def parse_fastq_table(table: str, key_by='run_accession', url_scheme='ftp') -> D
     :rtype:
     """
 
-    table = [row for row in csv.DictReader(table.splitlines(), delimiter='\t')]
+    table = [row for row in csv.DictReader(table.splitlines(), delimiter="\t")]
     by_url = OrderedDict()
-    semicol_fields = ['fastq_ftp', 'fastq_md5', 'fastq_bytes']
+    semicol_fields = ["fastq_ftp", "fastq_md5", "fastq_bytes"]
     for rec in table:
         for f in semicol_fields:
-            rec[f] = rec[f].split(';')
-        rec['read_count'] = int(rec['read_count'])
-        rec['fastq_ftp'] = [f'{url_scheme}://{host_path}' for host_path in rec['fastq_ftp']]
-        rec['fastq_bytes'] = [int(s) for s in rec['fastq_bytes']]
+            rec[f] = rec[f].split(";")
+        rec["read_count"] = int(rec["read_count"])
+        rec["fastq_ftp"] = [
+            f"{url_scheme}://{host_path}" for host_path in rec["fastq_ftp"]
+        ]
+        rec["fastq_bytes"] = [int(s) for s in rec["fastq_bytes"]]
 
         # If there is only one item in the list, make it a value not a list.
         # for field in ['fastq_ftp', 'fastq_md5', 'fastq_bytes']:
@@ -134,7 +138,7 @@ def parse_fastq_table(table: str, key_by='run_accession', url_scheme='ftp') -> D
     return by_url
 
 
-def flatten_fastq_table(table: str, delimiter='\t', inner_sep=';') -> str:
+def flatten_fastq_table(table: str, delimiter="\t", inner_sep=";") -> str:
     """
     Take a TSV table where some fields are semi-colon;separated and create new
     rows with those fields split.
@@ -155,8 +159,7 @@ def flatten_fastq_table(table: str, delimiter='\t', inner_sep=';') -> str:
     :return:
     :rtype:
     """
-    table = [row for row in csv.DictReader(table.splitlines(),
-                                           delimiter=delimiter)]
+    table = [row for row in csv.DictReader(table.splitlines(), delimiter=delimiter)]
     rows = []
 
     for rec in table:
@@ -166,10 +169,10 @@ def flatten_fastq_table(table: str, delimiter='\t', inner_sep=';') -> str:
         for r in fanned_out_rows:
             rows.append(list(zip(list(rec.keys()), r)))
 
-    out = '%s\n' % delimiter.join(rec.keys())
+    out = "%s\n" % delimiter.join(rec.keys())
     for r in rows:
         row_values = OrderedDict(r).values()
-        out += '%s\n' % delimiter.join(row_values)
+        out += "%s\n" % delimiter.join(row_values)
 
     return out
 
@@ -205,8 +208,7 @@ def split_extend(seq, sep, length):
 
 
 @transaction.atomic
-def create_file_objects(urls: dict,
-                        owner: Union[str, int, User] = None) -> List[File]:
+def create_file_objects(urls: dict, owner: Union[str, int, User] = None) -> List[File]:
     """
     Create a set of corresponding file objects, given the raw text with
     tab-delimited fields:
@@ -237,12 +239,15 @@ def create_file_objects(urls: dict,
     file_objs = []
     for url, metadata in urls.items():
         name = Path(urlparse(url).path).name
-        md5 = metadata['fastq_md5']
-        size = metadata['fastq_bytes'][0]
-        f = File(location=url, name=name,
-                 checksum=f'md5:{md5}',
-                 owner=owner,
-                 metadata=metadata)
+        md5 = metadata["fastq_md5"]
+        size = metadata["fastq_bytes"][0]
+        f = File(
+            location=url,
+            name=name,
+            checksum=f"md5:{md5}",
+            owner=owner,
+            metadata=metadata,
+        )
         f.size = size
         file_objs.append(f)
 
@@ -269,17 +274,28 @@ def get_fastq_urls(accessions: List[str], fields: List[str] = None) -> Dict[str,
     """
 
     if fields is None:
-        fields = ['run_accession', 'experiment_accession', 'study_accession',
-                  'sample_accession', 'secondary_sample_accession',
-                  'instrument_platform', 'library_strategy', 'read_count',
-                  'fastq_ftp', 'fastq_md5', 'fastq_bytes']
+        fields = [
+            "run_accession",
+            "experiment_accession",
+            "study_accession",
+            "sample_accession",
+            "secondary_sample_accession",
+            "instrument_platform",
+            "library_strategy",
+            "read_count",
+            "fastq_ftp",
+            "fastq_md5",
+            "fastq_bytes",
+        ]
 
     urls_dict = dict()
     # raises HTTPError on status_code 500 (eg ENA is temporarily down)
     for accession in accessions:
-        table = enasearch.retrieve_run_report(accession=accession, fields=','.join(fields))
+        table = enasearch.retrieve_run_report(
+            accession=accession, fields=",".join(fields)
+        )
         table = flatten_fastq_table(table)
-        urls = parse_fastq_table(table, key_by='fastq_ftp', url_scheme='ftp')
+        urls = parse_fastq_table(table, key_by="fastq_ftp", url_scheme="ftp")
         urls_dict.update(urls)
 
     return urls_dict
@@ -301,33 +317,53 @@ def get_run_table(accessions: List[str], fields: List[str] = None) -> Dict[str, 
     """
 
     if fields is None:
-        fields = ['run_accession', 'experiment_accession', 'study_accession',
-                  'sample_accession', 'secondary_sample_accession',
-                  'instrument_platform', 'instrument_model',
-                  'library_strategy', 'library_source', 'library_layout',
-                  'library_selection', 'library_name', 'broker_name',
-                  'study_alias', 'experiment_alias', 'sample_alias',
-                  'run_alias', 'read_count', 'base_count', 'fastq_ftp',
-                  'fastq_md5', 'fastq_bytes', 'center_name']
+        fields = [
+            "run_accession",
+            "experiment_accession",
+            "study_accession",
+            "sample_accession",
+            "secondary_sample_accession",
+            "instrument_platform",
+            "instrument_model",
+            "library_strategy",
+            "library_source",
+            "library_layout",
+            "library_selection",
+            "library_name",
+            "broker_name",
+            "study_alias",
+            "experiment_alias",
+            "sample_alias",
+            "run_alias",
+            "read_count",
+            "base_count",
+            "fastq_ftp",
+            "fastq_md5",
+            "fastq_bytes",
+            "center_name",
+        ]
 
     runs_dict = dict()
     # raises HTTPError on status_code 500 (eg ENA is temporarily down)
     for accession in accessions:
-        table = enasearch.retrieve_run_report(accession=accession, fields=','.join(fields))
+        table = enasearch.retrieve_run_report(
+            accession=accession, fields=",".join(fields)
+        )
         # table = flatten_fastq_table(table)
-        runs = parse_fastq_table(table, key_by='run_accession', url_scheme='ftp')
+        runs = parse_fastq_table(table, key_by="run_accession", url_scheme="ftp")
         runs_dict.update(runs)
 
     # We turn the list of FTP urls into a list of dicts like
     # [{'R1': 'ftp://bla_1.fastq.gz'}, {'R2': 'ftp://bla_2.fastq.gz'}]
     for run, metadata in runs_dict.items():
-        if metadata.get('fastq_ftp', False):
-            metadata['fastq_ftp'] = [{'R%s' % str(n + 1): url}
-                                     for n, url in enumerate(metadata['fastq_ftp'])]
+        if metadata.get("fastq_ftp", False):
+            metadata["fastq_ftp"] = [
+                {"R%s" % str(n + 1): url} for n, url in enumerate(metadata["fastq_ftp"])
+            ]
     return runs_dict
 
 
-@cache_memoize(timeout=24*60*60, cache_alias='ena-lookups')
+@cache_memoize(timeout=24 * 60 * 60, cache_alias="ena-lookups")
 def get_organism_from_sample_accession(accession: str) -> Dict:
     """
     :param accession:
@@ -335,30 +371,34 @@ def get_organism_from_sample_accession(accession: str) -> Dict:
     :return:
     :rtype:
     """
-    url = (f'https://www.ebi.ac.uk/ena/data/warehouse/search?' +
-           f'query="sample_accession={accession}"' +
-           f'&result=sample&display=xml')
+    url = (
+        f"https://www.ebi.ac.uk/ena/data/warehouse/search?"
+        + f'query="sample_accession={accession}"'
+        + f"&result=sample&display=xml"
+    )
     resp = requests.get(url)
     resp.raise_for_status()
     xml = etree.fromstring(resp.content)
     # organism = xml.xpath("//SAMPLE_NAME/SCIENTIFIC_NAME/text()")[0]
     # taxon_id = xml.xpath("//SAMPLE_NAME/TAXON_ID/text()")[0]
     sample_name_el = xml.xpath("//SAMPLE_NAME")[0]
-    raw_organism_info = dict(xmltodict.parse(etree.tostring(sample_name_el))['SAMPLE_NAME'])
+    raw_organism_info = dict(
+        xmltodict.parse(etree.tostring(sample_name_el))["SAMPLE_NAME"]
+    )
     # Make keys lowercase
     organism_info = {k.lower(): v for k, v in raw_organism_info.items()}
     return organism_info
 
 
 def search_ena_accessions(accessions: List[str]):
-    ids = ','.join(accessions)
+    ids = ",".join(accessions)
     return enasearch.retrieve_data(ids=ids, display="xml")
 
 
 @transaction.atomic
-def create_fastq_fileset(accession: str,
-                         owner: Union[str, int, User] = None,
-                         save=True) -> FileSet:
+def create_fastq_fileset(
+    accession: str, owner: Union[str, int, User] = None, save=True
+) -> FileSet:
     """
     Given an ENA accession, create a set of Files and a FileSet with
     the locations (eg ftp:// URLs) for each associated FASTQ file.
