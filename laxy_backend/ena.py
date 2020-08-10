@@ -371,11 +371,7 @@ def get_organism_from_sample_accession(accession: str) -> Dict:
     :return:
     :rtype:
     """
-    url = (
-        f"https://www.ebi.ac.uk/ena/data/warehouse/search?"
-        + f'query="sample_accession={accession}"'
-        + f"&result=sample&display=xml"
-    )
+    url = f"https://www.ebi.ac.uk/ena/browser/api/xml/{accession}"
     resp = requests.get(url)
     resp.raise_for_status()
     xml = etree.fromstring(resp.content)
