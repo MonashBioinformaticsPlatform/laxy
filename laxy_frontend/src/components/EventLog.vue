@@ -65,11 +65,6 @@ export default class EventLog extends Vue {
 
   public submitting: boolean = false;
 
-  // for lodash in templates
-  get _() {
-    return _;
-  }
-
   created() {
     this.refresh();
   }

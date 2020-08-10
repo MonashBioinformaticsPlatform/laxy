@@ -152,7 +152,6 @@ export default class JobList extends Vue {
   // Mixins<AuthMixin>(AuthMixin) {
   _DEBUG: boolean = false;
 
-  // public jobs: any[] = [];
   public jobToCancel: string = "";
   public pagination: { [k: string]: number } = {
     page_size: 10,
@@ -171,16 +170,10 @@ export default class JobList extends Vue {
     return this.$store.state.jobs.jobs;
   }
 
-  // for lodash in templates
-  get _() {
-    return _;
-  }
-
   created() {
     //(new AuthMixin()).authenticate('google');
     //this.authenticate('google');
 
-    // this.jobs = _dummyJobList;
     this.refresh();
   }
 

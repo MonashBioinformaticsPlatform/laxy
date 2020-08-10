@@ -99,11 +99,6 @@ export default class SampleTable extends Vue {
 
   public selectedSamples: Array<Sample> = [];
 
-  // for lodash in templates
-  // get _() {
-  //     return _;
-  // }
-
   // lodash & object-hash for templates
   get = get;
   filter = filter;

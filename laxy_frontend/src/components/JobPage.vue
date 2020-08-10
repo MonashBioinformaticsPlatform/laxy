@@ -581,10 +581,6 @@ export default class JobPage extends Vue {
 
   public showTopBanner: boolean = true;
 
-  // get popupsAreBlocked(): boolean {
-  //     return this.$store.state.popupsAreBlocked;
-  // }
-
   public refreshing: boolean = false;
   public error_alert_message: string = "Everything is fine. 🐺";
   public snackbar_message: string = "Everything is fine. ☃";

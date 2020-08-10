@@ -227,11 +227,6 @@ export default class InputFilesForm extends Vue {
   password_expiry: Date = this.daysInFuture(2);
   dataset_name_invalid: boolean = false;
 
-  // for lodash in templates
-  get _() {
-    return _;
-  }
-
   email_username() {
     return this.user_email.split("@")[0];
   }
