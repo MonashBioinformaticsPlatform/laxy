@@ -223,7 +223,9 @@ def download_url(
         with closing(
             request_with_retries("GET", url, stream=True, headers=headers, auth=auth)
         ) as download:
-            content_length = int(download.headers.get("content-length", None))
+            content_length = download.headers.get("content-length", None)
+            if content_length is not None:
+                content_length = int(content_length)
             status_code = download.status_code
 
             # TODO: This isn't very smart caching - we don't look at
@@ -269,7 +271,7 @@ def download_url(
             #        header = {'Range': 'bytes=%d-' % file_size}
             #       (and reopen tmpfilepath as mode='ab')
             file_size = os.path.getsize(tmpfilepath)
-            if file_size < content_length:
+            if content_length is not None and file_size < content_length:
                 raise Exception(
                     "Downloaded file appears incomplete based on "
                     "Content-Length header."
