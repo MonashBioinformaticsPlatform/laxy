@@ -490,14 +490,12 @@ def get_urls_from_pipeline_config(
              {
                 "name": "some_file.fasta",
                 "location": "ftp://ftp.example.com/some_file.fasta",
-                "metadata": {"reference_genome_file": "fasta"},
-                "type_tags": ["reference_genome"]
+                "type_tags": ["genome_sequence", "fasta"]
              },
              {
                 "name": "some_annot.gff3",
                 "location": "ftp://ftp.example.com/some_file.gff3",
-                "metadata": {"reference_genome_file": "gff"},
-                "type_tags": ["reference_genome"]
+                "type_tags": ["genome_annotation", "gff"]
              },
              {
                 "name": "sampleA_R1.fastq.gz",

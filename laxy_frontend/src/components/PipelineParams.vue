@@ -28,70 +28,46 @@
       :show-close-button="false"
     >Selected reference genome is invalid.</banner-notice>
     <md-layout md-column>
-      <md-whiteframe style="padding: 32px;">
-        <h2>RNAsik</h2>
-        <h3>Pipeline parameters</h3>
-        <md-input-container>
-          <label>Description</label>
-          <md-input v-model="description" placeholder="Description of pipeline run ..."></md-input>
-        </md-input-container>
-        <md-input-container>
-          <label for="genome_organism">Species</label>
-          <md-select
-            name="genome_organism"
-            id="genome_organism"
-            :required="true"
-            v-model="selected_genome_organism"
-            @change="onOrganismChange"
-          >
-            <md-option
-              v-for="organism in genome_organism_list"
-              :key="organism"
-              :value="organism"
-            >{{ organism }}</md-option>
-          </md-select>
-        </md-input-container>
-        <md-input-container>
-          <label for="genome">Reference genome</label>
-          <md-select name="genome" id="genome" :required="true" v-model="reference_genome">
-            <md-option
-              v-for="genome in genomes_for_organism(selected_genome_organism)"
-              :key="genome.id"
-              :value="genome.id"
-            >{{ get_genome_description(genome) }}</md-option>
-          </md-select>
-        </md-input-container>
-        <md-switch
-          v-model="show_advanced"
-          id="advanced-toggle"
-          name="advanced-toggle"
-          class="md-primary"
-        >Show advanced options</md-switch>
-        <transition name="fade">
-          <md-layout v-if="show_advanced">
-            <md-input-container>
-              <label for="pipeline_version">Pipeline version</label>
-              <md-select name="pipeline_version" id="pipeline_version" v-model="pipeline_version">
-                <md-option
-                  v-for="version in pipeline_versions"
-                  :key="version"
-                  :value="version"
-                >{{ version }}</md-option>
-              </md-select>
-            </md-input-container>
-            <md-input-container>
-              <label for="pipeline_aligner">Aligner</label>
-              <md-select name="pipeline_aligner" id="pipeline_aligner" v-model="pipeline_aligner">
-                <md-option
-                  v-for="aligner in pipeline_aligners"
-                  :key="aligner.text"
-                  :value="aligner.value"
-                >{{ aligner.text }}</md-option>
-              </md-select>
-            </md-input-container>
-          </md-layout>
-        </transition>
-      </md-whiteframe>
+      <form novalidate>
+        <md-whiteframe style="padding: 32px;">
+          <h2>RNAsik</h2>
+          <h3>Pipeline parameters</h3>
+          <md-input-container>
+            <label>Description</label>
+            <md-input v-model="description" placeholder="Description of pipeline run ..."></md-input>
+          </md-input-container>
+          <md-switch
+            v-model="show_advanced"
+            id="advanced-toggle"
+            name="advanced-toggle"
+            class="md-primary"
+          >Show advanced options</md-switch>
+          <transition name="fade">
+            <md-layout v-if="show_advanced">
+              <md-input-container>
+                <label for="pipeline_version">Pipeline version</label>
+                <md-select name="pipeline_version" id="pipeline_version" v-model="pipeline_version">
+                  <md-option
+                    v-for="version in pipeline_versions"
+                    :key="version"
+                    :value="version"
+                  >{{ version }}</md-option>
+                </md-select>
+              </md-input-container>
+              <md-input-container>
+                <label for="pipeline_aligner">Aligner</label>
+                <md-select name="pipeline_aligner" id="pipeline_aligner" v-model="pipeline_aligner">
+                  <md-option
+                    v-for="aligner in pipeline_aligners"
+                    :key="aligner.text"
+                    :value="aligner.value"
+                  >{{ aligner.text }}</md-option>
+                </md-select>
+              </md-input-container>
+            </md-layout>
+          </transition>
+        </md-whiteframe>
+      </form>
 
       <md-whiteframe style="padding: 32px;">
         <h3>Sample summary</h3>
@@ -148,6 +124,8 @@ import {
   Watch,
 } from "vue-property-decorator";
 
+import { Get, Sync, Call } from "vuex-pathify";
+
 import {
   SET_SAMPLES,
   SET_PIPELINE_PARAMS,
@@ -166,10 +144,15 @@ import { DummySampleList as _dummySampleList } from "../test-data";
 import { DummyPipelineConfig as _dummyPipelineConfig } from "../test-data";
 import { Snackbar } from "../snackbar";
 import BannerNotice from "./BannerNotice.vue";
+import RemoteFilesSelect from "./RemoteSelect/RemoteFilesSelect.vue";
+import { FileListItem } from "../file-tree-util";
+import { filenameFromUrl } from "../util";
+import { ReferenceGenome, ILaxyFile, PairedEndFiles } from "../types";
 
 @Component({
   components: {
     BannerNotice,
+    RemoteFilesSelect,
   },
   props: {},
   filters: {},
@@ -190,24 +173,8 @@ export default class PipelineParams extends Vue {
   public pipelinerun_uuid: string | null = null;
   public selectedSamples: Array<Sample> = [];
 
-  public available_genomes: Array<ReferenceGenome> = AVAILABLE_GENOMES;
-
   public reference_genome_valid: boolean = true;
-
-  get selected_genome_organism(): string {
-    return (
-      this.get_organism_from_genome_id(
-        this.$store.state.pipelineParams.genome
-      ) || "Homo sapiens"
-    );
-  }
-
-  set selected_genome_organism(organism: string) {
-    const id =
-      this.get_first_genome_id_for_organism(organism) ||
-      AVAILABLE_GENOMES[0].id;
-    this.$store.commit(SET_PIPELINE_GENOME, id);
-  }
+  public available_genomes: Array<ReferenceGenome> = AVAILABLE_GENOMES;
 
   public pipeline_versions = ["1.5.3", "1.5.2", "1.5.3-laxydev", "1.5.4"];
   public pipeline_aligners = [
@@ -223,37 +190,11 @@ export default class PipelineParams extends Vue {
     return this._samples;
   }
 
-  get description() {
-    return this.$store.getters.pipelineParams.description;
-  }
+  @Sync("pipelineParams@description")
+  public description: string;
 
-  set description(txt: string) {
-    let state = Object.assign({}, this.$store.state.pipelineParams);
-    state.description = txt;
-    this.$store.commit(SET_PIPELINE_PARAMS, state);
-  }
-
-  get reference_genome() {
-    return this.$store.getters.pipelineParams.genome;
-  }
-
-  set reference_genome(id: string) {
-    // let state = Object.assign({}, this.$store.state.pipelineParams);
-    // state.genome = id;
-    this.$store.commit(SET_PIPELINE_GENOME, id);
-
-    //this.validatePipelineParams();
-  }
-
-  get pipeline_version() {
-    return this.$store.getters.pipelineParams.pipeline_version;
-  }
-
-  set pipeline_version(version: string) {
-    let state = Object.assign({}, this.$store.state.pipelineParams);
-    state.pipeline_version = version;
-    this.$store.commit(SET_PIPELINE_PARAMS, state);
-  }
+  @Sync("pipelineParams@pipeline_version")
+  public pipeline_version: string;
 
   get pipeline_aligner() {
     return this.$store.getters.pipelineParams.pipeline_aligner;
@@ -262,60 +203,97 @@ export default class PipelineParams extends Vue {
   set pipeline_aligner(aligner: string) {
     let state = Object.assign({}, this.$store.state.pipelineParams);
     state.pipeline_aligner = aligner;
-    this.$store.commit(SET_PIPELINE_PARAMS, state);
-  }
-
-  get genome_organism_list(): string[] {
-    let organisms = new Set<string>();
-    for (let g of this.available_genomes) {
-      organisms.add(g.organism);
-    }
-    return Array.from(organisms.values());
-  }
-
-  @Memoize
-  genomes_for_organism(organism: string): ReferenceGenome[] {
-    const genomes: ReferenceGenome[] = [];
-    for (let g of this.available_genomes) {
-      if (g.organism === organism) {
-        genomes.push(g);
-      }
-    }
-    return genomes;
-  }
-
-  @Memoize
-  get_organism_from_genome_id(genome_id: string): string | undefined {
-    return get(find(AVAILABLE_GENOMES, { id: genome_id }), "organism");
-  }
-
-  @Memoize
-  get_first_genome_id_for_organism(organism: string): string | undefined {
-    return get(find(AVAILABLE_GENOMES, { organism: organism }), "id");
-  }
-
-  @Memoize
-  get_genome_description(reference: ReferenceGenome): string {
-    const [org, centre, build] = reference.id.split("/");
-    // return `${build} [${centre}] (${reference.organism})`;
-    let desc = `${build} [${centre}]`;
-    if (reference.recommended) {
-      desc = `${desc} (recommended)`;
-    }
-    return desc;
-  }
-
-  onOrganismChange(e: any) {
-    this.reference_genome = this.genomes_for_organism(
-      this.selected_genome_organism
-    )[0].id;
+    this.$store.set("pipelineParams", state);
   }
 
   created() {
     this._samples = cloneDeep(this.$store.state.samples);
   }
 
+  /*
+   *  Populates the pipelineParams.fetch_files list with files
+   *  that should be retrieved by the backend as initial input files.
+   *  For RNAsik runs, this is the reference genome files and input
+   *  FASTQ files.
+   *
+   *  TODO: Deprecate sample_cart on the backend and just use this.
+   *        Keep using the state.samples data structure here on the
+   *        frontend for convenience, but convert it's content into
+   *        fetch_files for use by pipeline_config.json / laxydl.
+   */
+  updateFetchFiles() {
+    if (!this.$store.state.use_custom_genome) {
+      this.$store.set("pipelineParams@user_genome.fasta_url", "");
+      this.$store.set("pipelineParams@user_genome.annotation_url", "");
+    }
+
+    const fastaUrl = this.$store.get("pipelineParams@user_genome.fasta_url");
+    const annotUrl = this.$store.get(
+      "pipelineParams@user_genome.annotation_url"
+    );
+
+    let annotType = "annotation";
+    if (annotUrl.includes(".gff")) {
+      annotType = "gff";
+    } else if (annotUrl.includes(".gtf")) {
+      annotType = "gtf";
+    }
+
+    let params = this.$store.copy("pipelineParams");
+
+    const fetch_files: ILaxyFile[] = [];
+
+    if (this.$store.state.use_custom_genome && fastaUrl && annotUrl) {
+      params.genome = null;
+
+      fetch_files.push(
+        ...[
+          {
+            name: filenameFromUrl(fastaUrl) || "", //"genome.fa.gz",
+            location: fastaUrl.trim(),
+            type_tags: ["reference_genome", "genome_sequence", "fasta"],
+          } as ILaxyFile,
+          {
+            name: filenameFromUrl(annotUrl) || "", //"genes.gff.gz",
+            location: annotUrl.trim(),
+            type_tags: ["reference_genome", "genome_annotation", annotType],
+          } as ILaxyFile,
+        ]
+      );
+    }
+
+    const samples = this.$store.state.samples;
+    for (let i of samples.items) {
+      for (let f of i.files) {
+        for (let pair of Object.keys(f)) {
+          const sampleFile: ILaxyFile = cloneDeep(f[pair]);
+
+          if (sampleFile == null) continue;
+          if (sampleFile.location == null) continue;
+
+          sampleFile.metadata = sampleFile.metadata || {};
+          sampleFile.type_tags = sampleFile.type_tags || [];
+          sampleFile.metadata["read_pair"] = pair;
+
+          let doppelganger = pair == "R1" ? "R2" : "R1";
+          if (f[doppelganger] != null) {
+            sampleFile.metadata["paired_file"] = f[doppelganger].name;
+          }
+
+          sampleFile.type_tags.push("ngs_reads");
+
+          fetch_files.push(sampleFile);
+        }
+      }
+    }
+
+    params.fetch_files = fetch_files;
+    this.$store.set("pipelineParams", params);
+  }
+
   prepareData() {
+    this.updateFetchFiles();
+
     let data = {
       sample_cart: this.$store.state.samples.id,
       params: this.$store.getters.pipelineParams,
@@ -326,7 +304,16 @@ export default class PipelineParams extends Vue {
   }
 
   get isValid_reference_genome() {
-    return map(this.available_genomes, "id").includes(this.reference_genome);
+    const reference_genome = this.$store.get("pipelineParams@genome");
+    const fastaUrl = this.$store.get("pipelineParams@user_genome.fasta_url");
+    const annotUrl = this.$store.get(
+      "pipelineParams@user_genome.annotation_url"
+    );
+
+    const isSet: boolean =
+      map(this.available_genomes, "id").includes(reference_genome) ||
+      (reference_genome == null && fastaUrl && annotUrl);
+    return isSet;
   }
 
   get isValid_samples_added() {
@@ -377,7 +364,7 @@ export default class PipelineParams extends Vue {
     ) {
       is_valid = true;
     }
-    this.$store.commit(SET_PIPELINE_PARAMS_VALID, is_valid);
+    this.$store.set("pipelineParams_valid", is_valid);
 
     return is_valid;
   }
@@ -471,7 +458,7 @@ export default class PipelineParams extends Vue {
 
   beforeRouteLeave(to: any, from: any, next: any) {
     // console.log([to, from, next]);
-    this.$store.commit(SET_SAMPLES, this._samples);
+    this.$store.set("samples", this._samples);
     next();
   }
 }

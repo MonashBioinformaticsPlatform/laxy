@@ -72,3 +72,24 @@ export function basename(path: string): string | undefined {
 export function filenameFromUrl(url: string): string | undefined {
     return basename((new URL(url)).pathname);
 }
+
+export function isValidUrl(str: string, schemes: string[] = []) {
+    let url;
+
+    try {
+        url = new URL(str);
+    } catch (_) {
+        return false;
+    }
+
+    if (schemes) {
+        for (let scheme of schemes) {
+            if (url.protocol === `${scheme}:`) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    return true;
+}

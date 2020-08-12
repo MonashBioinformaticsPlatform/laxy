@@ -30,11 +30,22 @@
         ></sample-cart>
       </md-step>
       <md-step
+        md-label="Reference genome"
+        md-message="Select a reference genome"
+        md-button-continue="Continue"
+        :md-continue="selectGenome_stepComplete"
+        :md-disabled="!selectGenome_stepComplete || !dataSource_stepComplete"
+        @exitstep="onExitStep('selectGenome')"
+        ref="selectGenome"
+      >
+        <select-genome></select-genome>
+      </md-step>
+      <md-step
         md-label="Pipeline settings"
-        md-message="Choose a reference genome"
+        md-message="Finalise settings"
         md-button-continue="Start job"
-        :md-continue="pipelineSettings_stepComplete"
-        :md-disabled="!describeSamples_stepComplete"
+        :md-continue="pipelineSettings_stepComplete && start_job_button_enabled"
+        :md-disabled="!selectGenome_stepComplete || !dataSource_stepComplete"
         @exitstep="onExitStep('pipelineSettings')"
         ref="pipelineSettings"
       >
@@ -61,7 +72,9 @@ import {
   Watch,
 } from "vue-property-decorator";
 
-@Component({})
+import SelectGenome from "./SelectGenome";
+
+@Component({ components: { SelectGenome } })
 export default class RNASeqSetup extends Vue {
   // This is a string since vue-router only allows strings to be passed as params
   @Prop({ type: String, default: "false" })
@@ -82,6 +95,13 @@ export default class RNASeqSetup extends Vue {
     this._describeSamples_stepComplete = state;
   }
 
+  get selectGenome_stepComplete(): boolean {
+    return (
+      this.allowSkipping === "true" || this.$store.get("genome_values_valid")
+    );
+  }
+
+  public start_job_button_enabled = true;
   get pipelineSettings_stepComplete(): boolean {
     return this.$store.state.pipelineParams_valid;
   }
@@ -116,6 +136,8 @@ export default class RNASeqSetup extends Vue {
       (this.$refs["describeSamples_sampleCart"] as any).save();
       this.describeSamples_stepComplete = true;
       this.scrollToTop();
+    } else if (stepName === "selectGenome") {
+      this.scrollToTop();
     } else if (stepName === "pipelineSettings") {
       this.scrollToTop();
     }
@@ -123,14 +145,18 @@ export default class RNASeqSetup extends Vue {
 
   async startJob() {
     try {
+      this.start_job_button_enabled = false;
       const response = await (this.$refs["pipelineParams"] as any).run();
-      if (response == null) throw Error();
+      if (response == null) {
+        throw Error("Request to start job failed");
+      }
       if (response && response.data && response.data.id) {
         this.$router.push({ name: "job", params: { jobId: response.data.id } });
       } else {
         this.$router.push("jobs");
       }
     } catch (error) {
+      this.start_job_button_enabled = true;
       throw error;
     }
   }

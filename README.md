@@ -13,6 +13,7 @@ Laxy can be run under Docker Compose for local development and testing.
 
 ```bash
 git clone --recurse-submodules https://github.com/MonashBioinformaticsPlatform/laxy.git
+cd laxy
 docker-compose -f docker-compose.yml -f docker-compose.local-dev.yml build
 docker-compose --compatibility -f docker-compose.yml -f docker-compose.local-dev.yml up -d
 

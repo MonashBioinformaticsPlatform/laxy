@@ -485,6 +485,7 @@ import DownloadJobFilesTable from "./DownloadJobFilesTable.vue";
 import DownloadHelpDialog from "./Dialogs/DownloadHelpDialog.vue";
 import PopupBlockerBanner from "./PopupBlockerBanner.vue";
 import BannerNotice from "./BannerNotice.vue";
+import { LaxySharingLink } from "../types";
 
 @Component({
   components: {
@@ -968,6 +969,13 @@ export default class JobPage extends Vue {
 
       this.$store.commit(SET_PIPELINE_PARAMS, pipelinerun.params);
       this.$store.commit(SET_PIPELINE_DESCRIPTION, pipelinerun.description);
+
+      if (
+        this.$store.get("pipelineParams@user_genome.fasta_url") ||
+        this.$store.get("pipelineParams@user_genome.annotation_url")
+      ) {
+        this.$store.set("use_custom_genome", true);
+      }
 
       // TODO: make a prop on RNASeqSetup to allow a jump to second or last step immediately
       this.$router.push({ name: "rnaseq" });

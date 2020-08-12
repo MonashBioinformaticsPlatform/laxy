@@ -50,6 +50,7 @@ import { ADD_SAMPLES } from "../../store";
 import { WebAPI } from "../../web-api";
 import CSVAboutBox from "./CSVAboutBox";
 import { Snackbar } from "../../snackbar";
+import { IFormData } from "../../types";
 
 @Component({
   components: { CSVAboutBox },
@@ -72,7 +73,7 @@ export default class CSVSampleListUpload extends Vue {
   async submitCSV(filelist: FileList) {
     console.log(filelist);
     const file: File = filelist[0];
-    const formData = new FormData() as IFormData; // automatically uses 'content-type': 'multipart/form-data' in axios ?
+    const formData = (new FormData() as any) as IFormData; // automatically uses 'content-type': 'multipart/form-data' in axios ?
     formData.append("name", file.name);
     formData.append("file", file, file.name);
     for (const k of formData.entries()) {

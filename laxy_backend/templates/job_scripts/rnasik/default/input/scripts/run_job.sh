@@ -22,7 +22,7 @@ readonly JOB_COMPLETE_CALLBACK_URL="{{ JOB_COMPLETE_CALLBACK_URL }}"
 readonly JOB_EVENT_URL="{{ JOB_EVENT_URL }}"
 readonly JOB_FILE_REGISTRATION_URL="{{ JOB_FILE_REGISTRATION_URL }}"
 readonly JOB_INPUT_STAGED="{{ JOB_INPUT_STAGED }}"
-readonly REFERENCE_GENOME="{{ REFERENCE_GENOME }}"
+readonly REFERENCE_GENOME_ID="{{ REFERENCE_GENOME }}"
 readonly PIPELINE_VERSION="{{ PIPELINE_VERSION }}"
 readonly PIPELINE_ALIGNER="{{ PIPELINE_ALIGNER }}"
 
@@ -30,6 +30,8 @@ readonly PIPELINE_ALIGNER="{{ PIPELINE_ALIGNER }}"
 readonly TMP="${PWD}/../tmp"
 readonly JOB_PATH=${PWD}
 readonly INPUT_READS_PATH="${JOB_PATH}/input/reads"
+# contains symlinks to references, either public or custom reference downloaded to cache
+readonly INPUT_REFERENCE_PATH="${JOB_PATH}/input/reference"
 readonly INPUT_SCRIPTS_PATH="${JOB_PATH}/input/scripts"
 readonly INPUT_CONFIG_PATH="${JOB_PATH}/input/config"
 readonly PIPELINE_CONFIG="${INPUT_CONFIG_PATH}/pipeline_config.json"
@@ -38,7 +40,8 @@ readonly REFERENCE_BASE="${JOB_PATH}/../references/iGenomes"
 readonly DOWNLOAD_CACHE_PATH="${JOB_PATH}/../cache"
 readonly AUTH_HEADER_FILE="${JOB_PATH}/.private_request_headers"
 readonly IGNORE_SELF_SIGNED_CERTIFICATE="{{ IGNORE_SELF_SIGNED_CERTIFICATE }}"
-readonly LAXYDL_BRANCH=master
+#readonly LAXYDL_BRANCH=master
+readonly LAXYDL_BRANCH=feature/custom-genomes3
 readonly LAXYDL_USE_ARIA2C=yes
 readonly LAXYDL_PARALLEL_DOWNLOADS=8
 
@@ -75,9 +78,9 @@ fi
 # will [hopefully!] ask for appropriate resources in the sbatch jobs it launches).
 
 RESOURCE_PROFILE="default"
-[[ "${REFERENCE_GENOME}" == *"Saccharomyces_cerevisiae"* ]] && RESOURCE_PROFILE="low"
-# [[ "${REFERENCE_GENOME}" == *"Acinetobacter"* ]] && RESOURCE_PROFILE="low"
-[[ "${REFERENCE_GENOME}" == *"Escherichia"* ]] && RESOURCE_PROFILE="low"
+[[ "${REFERENCE_GENOME_ID}" == *"Saccharomyces_cerevisiae"* ]] && RESOURCE_PROFILE="low"
+# [[ "${REFERENCE_GENOME_ID}" == *"Acinetobacter"* ]] && RESOURCE_PROFILE="low"
+[[ "${REFERENCE_GENOME_ID}" == *"Escherichia"* ]] && RESOURCE_PROFILE="low"
 
 if [[ ${QUEUE_TYPE} == "local" ]]; then
     # system=local in bds.config - BDS will run each task as local process, not SLURM-aware
@@ -149,7 +152,7 @@ function add_sik_config() {
    # Always copy it to the job input directory to preserve it.
     local SIK_CONFIG
 
-    SIK_CONFIG="${INPUT_CONFIG_PATH}/sik.config"
+    SIK_CONFIG="${JOB_PATH}/../sik.config"
     if [[ ! -f "${SIK_CONFIG}" ]]; then
         SIK_CONFIG="$(dirname $(which RNAsik))/../opt/rnasik-${PIPELINE_VERSION}/configs/sik.config"
     fi
@@ -446,8 +449,13 @@ function download_ref_urls() {
 }
 
 # TODO: Downloads here should probably be handled by laxydl to prevent simultaneous downloads by concurrent jobs
-function get_igenome_aws() {
+function get_reference_genome() {
      local REF_ID=$1
+
+     # noop if we are using a user supplied genome - gets downloaded as part for the fetch_files list instead
+    if [[ -z "${REF_ID}" ]]; then
+        return 0
+     fi
 
      send_event "JOB_INFO" "Getting reference genome (${REF_ID})."
 
@@ -677,7 +685,8 @@ function setup_bds_config() {
 function get_input_data_urls() {
     # Output is one URL one per line
     local urls
-    urls=$(jq '.sample_cart.samples[].files[][]' <"${PIPELINE_CONFIG}" | sed s'/"//g')
+    # urls=$(jq '.sample_cart.samples[].files[][]' <"${PIPELINE_CONFIG}" | sed s'/"//g')
+    urls=$(jq '.params.fetch_files[]' <"${PIPELINE_CONFIG}" | sed s'/"//g')
     echo "${urls}"
 }
 
@@ -701,31 +710,45 @@ function generate_samplesheet() {
 
 function set_genome_index_arg() {
     GENOME_INDEX_ARG=""
-    if [[ -d "${REFERENCE_BASE}/${REFERENCE_GENOME}/Sequence/STARIndex" ]]; then
-        GENOME_INDEX_ARG="-genomeIdx ${REFERENCE_BASE}/${REFERENCE_GENOME}/Sequence/STARIndex"
+    if [[ -d "${REFERENCE_BASE}/${REFERENCE_GENOME_ID}/Sequence/STARIndex" ]]; then
+        GENOME_INDEX_ARG="-genomeIdx ${REFERENCE_BASE}/${REFERENCE_GENOME_ID}/Sequence/STARIndex"
     fi
 
     old_star=$(python -c 'import semver; print(semver.compare("'${PIPELINE_VERSION}'".split("-")[0], "1.5.4"))')
     # Pre-computed indices are different for pre-2.7.0 versions of STAR
     if [[ "${old_star}" == "-1" ]]; then
         GENOME_INDEX_ARG=""
-        if [[ -d "${REFERENCE_BASE}/${REFERENCE_GENOME}/Sequence/STARIndex-pre-2.7.0" ]]; then
-            GENOME_INDEX_ARG="${REFERENCE_BASE}/${REFERENCE_GENOME}/Sequence/STARIndex-pre-2.7.0"
+        if [[ -d "${REFERENCE_BASE}/${REFERENCE_GENOME_ID}/Sequence/STARIndex-pre-2.7.0" ]]; then
+            GENOME_INDEX_ARG="${REFERENCE_BASE}/${REFERENCE_GENOME_ID}/Sequence/STARIndex-pre-2.7.0"
         fi
     fi
 }
 
-function set_annotation_file() {
-    ANNOTATION_FILE="${REFERENCE_BASE}/${REFERENCE_GENOME}/Annotation/Genes/genes"
+function set_reference_paths() {
+    # See if we can find a custom reference in the fetch_files list
+    local _fasta_fn=$(jq --raw-output '.params.fetch_files[] | select(.type_tags[] == "genome_sequence") | .name' "${PIPELINE_CONFIG}" || echo '')
+    local _annot_fn=$(jq --raw-output '.params.fetch_files[] | select(.type_tags[] == "genome_annotation") | .name' "${PIPELINE_CONFIG}" || echo '')
 
-    if [[ -f "${ANNOTATION_FILE}.gtf" ]]; then
-        ANNOTATION_FILE="${ANNOTATION_FILE}.gtf"
-    elif [[ -f "${ANNOTATION_FILE}.gff" ]]; then
-        ANNOTATION_FILE="${ANNOTATION_FILE}.gff"
-    else
-        send_event "JOB_INFO" "This isn't going so well. Unable to find annotation file"
-        send_job_finished 1
-        exit 1
+    [[ -z ${_fasta_fn} ]] || GENOME_FASTA="${INPUT_REFERENCE_PATH}/${_fasta_fn}"
+    [[ -z ${_annot_fn} ]] || ANNOTATION_FILE="${INPUT_REFERENCE_PATH}/${_annot_fn}"
+
+    # If there is no custom genome, then we assume we are using a pre-defined references
+    if [[ -z ${_fasta_fn} ]]; then
+        GENOME_FASTA="${REFERENCE_BASE}/${REFERENCE_GENOME_ID}/Sequence/WholeGenomeFasta/genome.fa"
+    fi
+
+    if [[ -z ${_annot_fn} ]]; then
+        ANNOTATION_FILE="${REFERENCE_BASE}/${REFERENCE_GENOME_ID}/Annotation/Genes/genes"
+
+        if [[ -f "${ANNOTATION_FILE}.gtf" ]]; then
+            ANNOTATION_FILE="${ANNOTATION_FILE}.gtf"
+        elif [[ -f "${ANNOTATION_FILE}.gff" ]]; then
+            ANNOTATION_FILE="${ANNOTATION_FILE}.gff"
+        else
+            send_event "JOB_INFO" "This isn't going so well. Unable to find annotation file"
+            send_job_finished 1
+            exit 1
+        fi
     fi
 }
 
@@ -809,36 +832,49 @@ function download_input_data() {
         readonly urls=$(get_input_data_urls)
 
         mkdir -p "${DOWNLOAD_CACHE_PATH}"
+
+        LAXYDL_EXTRA_ARGS=""
         if [[ "${LAXYDL_USE_ARIA2C}" == "yes" ]]; then
-            laxydl download \
-               ${LAXYDL_INSECURE} \
-               -vvv \
-               --cache-path "${DOWNLOAD_CACHE_PATH}" \
-               --no-progress \
-               --unpack \
-               --parallel-downloads "${LAXYDL_PARALLEL_DOWNLOADS}" \
-               --event-notification-url "${JOB_EVENT_URL}" \
-               --event-notification-auth-file "${AUTH_HEADER_FILE}" \
-               --pipeline-config "${PIPELINE_CONFIG}" \
-               --create-missing-directories \
-               --skip-existing \
-               --destination-path "${INPUT_READS_PATH}"
-        else
-             laxydl download \
-               ${LAXYDL_INSECURE} \
-               -vvv \
-               --no-aria2c \
-               --cache-path "${DOWNLOAD_CACHE_PATH}" \
-               --no-progress \
-               --unpack \
-               --parallel-downloads "${LAXYDL_PARALLEL_DOWNLOADS}" \
-               --event-notification-url "${JOB_EVENT_URL}" \
-               --event-notification-auth-file "${AUTH_HEADER_FILE}" \
-               --pipeline-config "${PIPELINE_CONFIG}" \
-               --create-missing-directories \
-               --skip-existing \
-               --destination-path "${INPUT_READS_PATH}"
+            LAXYDL_EXTRA_ARGS=" ${LAXYDL_EXTRA_ARGS} --no-aria2c "
         fi
+
+        # Download reference genome files. 
+        laxydl download \
+            ${LAXYDL_INSECURE} \
+            -vvv \
+            ${LAXYDL_EXTRA_ARGS} \
+            --cache-path "${DOWNLOAD_CACHE_PATH}" \
+            --no-progress \
+            --unpack \
+            --parallel-downloads "${LAXYDL_PARALLEL_DOWNLOADS}" \
+            --event-notification-url "${JOB_EVENT_URL}" \
+            --event-notification-auth-file "${AUTH_HEADER_FILE}" \
+            --pipeline-config "${PIPELINE_CONFIG}" \
+            --type-tags reference_genome \
+            --create-missing-directories \
+            --skip-existing \
+            --destination-path "${INPUT_REFERENCE_PATH}"
+
+        # RNAsik automatically creates an uncompressed copy of the reference in sikRun/refFiles,
+        # so we don't need to do this (nor do we need laxydl --copy-from-cache to allow it)
+        # find "${INPUT_REFERENCE_PATH}" -maxdepth 1 -name '*.gz' -exec gunzip {} \;
+
+        # Download (FASTQ) reads
+        laxydl download \
+            ${LAXYDL_INSECURE} \
+            -vvv \
+            ${LAXYDL_EXTRA_ARGS} \
+            --cache-path "${DOWNLOAD_CACHE_PATH}" \
+            --no-progress \
+            --unpack \
+            --parallel-downloads "${LAXYDL_PARALLEL_DOWNLOADS}" \
+            --event-notification-url "${JOB_EVENT_URL}" \
+            --event-notification-auth-file "${AUTH_HEADER_FILE}" \
+            --pipeline-config "${PIPELINE_CONFIG}" \
+            --type-tags ngs_reads \
+            --create-missing-directories \
+            --skip-existing \
+            --destination-path "${INPUT_READS_PATH}"
 
         DL_EXIT_CODE=$?
         if [[ $DL_EXIT_CODE != 0 ]]; then
@@ -872,9 +908,7 @@ mkdir -p "${TMP}"
 mkdir -p input
 mkdir -p output
 
-mkdir -p ${INPUT_CONFIG_PATH} ${INPUT_SCRIPTS_PATH} ${INPUT_READS_PATH}
-
-GENOME_FASTA="${REFERENCE_BASE}/${REFERENCE_GENOME}/Sequence/WholeGenomeFasta/genome.fa"
+mkdir -p ${INPUT_CONFIG_PATH} ${INPUT_SCRIPTS_PATH} ${INPUT_READS_PATH} ${INPUT_REFERENCE_PATH}
 
 ####
 #### Setup and import a Conda environment
@@ -888,10 +922,11 @@ init_conda_env "rnasik" "${PIPELINE_VERSION}" || fail_job 'init_conda_env' '' $?
 update_laxydl || send_error 'update_laxydl' '' $?
 
 # get_reference_data_aws
-get_igenome_aws "${REFERENCE_GENOME}" || fail_job 'get_igenome_aws' '' $?
+get_reference_genome "${REFERENCE_GENOME_ID}" || fail_job 'get_reference_genome' '' $?
 
-# Set the ANNOTATION_FILE global variable based on presence of genes.gtf vs. genes.gff
-set_annotation_file
+# Set the GENOME_FASTA and ANNOTATION_FILE global variable based on presence of 
+# custom genomes and genes.gtf vs. genes.gff
+set_reference_paths || send_error 'set_reference_paths' '' $?
 
 # Make a copy of the bds.config in the $JOB_PATH, possibly modified for SLURM
 setup_bds_config || send_error 'setup_bds_config' '' $?
@@ -930,7 +965,8 @@ set +o errexit
 # EXTN=".fastq.gz"
 # detect_pairs || fail_job 'detect_pairs' '' $?
 
-set_genome_index_arg
+# set_genome_index_arg
+GENOME_INDEX_ARG=""
 
 send_event "JOB_INFO" "Starting RNAsik."
 
@@ -958,10 +994,10 @@ while [[ "${EXIT_CODE}" -ne 0 ]] && [[ ${RETRY_COUNT} -le ${MAX_RETRIES} ]]; do
            -configFile ${INPUT_CONFIG_PATH}/sik.config \
            -align ${PIPELINE_ALIGNER} \
            -fastaRef ${GENOME_FASTA} \
+           -gtfFile ${ANNOTATION_FILE} \
            ${GENOME_INDEX_ARG} \
            -fqDir "${INPUT_READS_PATH}" \
            -counts \
-           -gtfFile ${ANNOTATION_FILE} \
            -all \
            ${RNASIK_PAIR_EXTN_ARGS} \
            -samplesSheet ${INPUT_CONFIG_PATH}/samplesSheet.txt \

@@ -10,6 +10,7 @@ import { Store as store } from './store';
 
 import { WebAPI } from './web-api';
 import { LaxyFile } from './model';
+import { LaxyFileSet } from './types';
 
 export interface TreeNode<T> {
     id: string;
