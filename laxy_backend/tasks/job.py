@@ -422,6 +422,9 @@ def index_remote_files(self, task_data=None, **kwargs) -> Sequence[Tuple[str, in
     if task_data is None:
         raise InvalidTaskError("task_data is None")
 
+    if not task_data.get("result", None):  # replace falsy or absent with an empty dict
+        task_data["result"] = {}
+
     job_id = task_data.get("job_id")
     job = Job.objects.get(id=job_id)
     clobber = task_data.get("clobber", False)
@@ -456,8 +459,6 @@ def index_remote_files(self, task_data=None, **kwargs) -> Sequence[Tuple[str, in
     message = "No message."
 
     try:
-        task_data["result"] = task_data.get("result", {})
-
         with fabsettings(
             gateway=gateway, host_string=host, user=remote_username, key=private_key,
         ):
@@ -654,7 +655,15 @@ def kill_remote_job(self, task_data=None, **kwargs):
         self.update_state(state=states.FAILURE, meta=message)
         raise e
 
-    task_data.update(result=result)
+    task_data.update(
+        result={
+            "kill_remote_job": {
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "exit_code": result.return_code,
+            }
+        }
+    )
 
     return task_data
 
