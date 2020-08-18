@@ -51,12 +51,12 @@
                       <md-tooltip md-direction="top">Job ID: {{ job.id }}</md-tooltip>
                       {{ job.params.description }}
                     </md-table-cell>
-                    <md-table-cell v-else="job.id">{{ job.id }}</md-table-cell>
+                    <md-table-cell v-else>{{ job.id }}</md-table-cell>
 
                     <md-table-cell @click.native="routeTo('job', {jobId: job.id})">
                       {{ job.params.pipeline }}
                       <template
-                        v-if="job && job.params && job.params.params"
+                        v-if="job && get(job, 'params.params.genome')"
                       >({{ job.params.params.genome }})</template>
                     </md-table-cell>
                     <md-table-cell @click.native="routeTo('job', {jobId: job.id})">
@@ -115,7 +115,7 @@
 
 
 <script lang="ts">
-import * as _ from "lodash";
+import get from "lodash-es/get";
 import "es6-promise";
 
 import axios, { AxiosResponse } from "axios";
@@ -146,13 +146,13 @@ import { WebAPI } from "../web-api";
 import { DummyJobList as _dummyJobList } from "../test-data";
 import { Snackbar } from "../snackbar";
 import PipelineParams from "./PipelineParams.vue";
+import { ILaxySampleCart, ILaxyFile } from "../types";
 
 @Component({})
 export default class JobList extends Vue {
   // Mixins<AuthMixin>(AuthMixin) {
   _DEBUG: boolean = false;
 
-  // public jobs: any[] = [];
   public jobToCancel: string = "";
   public pagination: { [k: string]: number } = {
     page_size: 10,
@@ -167,20 +167,16 @@ export default class JobList extends Vue {
   public snackbar_message: string = "Everything is fine. ☃";
   public snackbar_duration: number = 2000;
 
+  get: Function = get;
+
   get jobs(): ComputeJob[] {
     return this.$store.state.jobs.jobs;
-  }
-
-  // for lodash in templates
-  get _() {
-    return _;
   }
 
   created() {
     //(new AuthMixin()).authenticate('google');
     //this.authenticate('google');
 
-    // this.jobs = _dummyJobList;
     this.refresh();
   }
 

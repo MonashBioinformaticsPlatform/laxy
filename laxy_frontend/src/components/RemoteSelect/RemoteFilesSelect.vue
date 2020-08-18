@@ -52,7 +52,8 @@
             :hide-search="false"
             :hide-actions="true"
             :show-back-arrow="false"
-            :auto-select-pair="true"
+            :auto-select-pair="autoSelectPair"
+            :single-select="singleSelect"
             search-box-placeholder="Filter"
             @select="onSelect"
             @refresh-error="showErrorDialog"
@@ -73,7 +74,7 @@
         @click="addToCart"
         :disabled="submitting || selectedFiles.length === 0"
         class="md-raised"
-      >Add to cart</md-button>
+      >{{ addButtonLabel }}</md-button>
     </md-layout>
     <md-snackbar md-position="bottom center" ref="snackbar" :md-duration="snackbar_duration">
       <span>{{ snackbar_message }}</span>
@@ -152,8 +153,20 @@ export default class RemoteFileSelect extends Vue {
   @Prop({ default: true, type: Boolean })
   public showButtons: boolean;
 
+  @Prop({ default: "Add to cart", type: String })
+  public addButtonLabel: string;
+
+  @Prop({ default: false, type: Boolean })
+  public singleSelect: boolean;
+
+  @Prop({ default: true, type: Boolean })
+  public autoSelectPair: boolean;
+
   @Prop({ default: true, type: Boolean })
   public showAboutBox: boolean;
+
+  @Prop({ default: "", type: String })
+  public startUrl: string;
 
   public url: string = "";
   public initialUrl: string = ""; // the URL initially submitted to the form, for tracking navigation state
@@ -170,6 +183,18 @@ export default class RemoteFileSelect extends Vue {
   public error_alert_message: string = "Everything is fine.";
 
   created() {}
+
+  @Watch("startUrl")
+  onStartUrlChanged(newVal?: string, oldVal?: string) {
+    if (this.startUrl.trim() !== "") {
+      this.url = this.startUrl.trim();
+      this.submitUrl(this.url);
+    }
+  }
+
+  mounted() {
+    this.onStartUrlChanged();
+  }
 
   get fileTree(): TreeNode<FileListItem> {
     // This file tree isn't actually a tree, but a single (non-nested) list of children on the root node.
@@ -215,7 +240,7 @@ export default class RemoteFileSelect extends Vue {
   }
 
   onSelect(rows: any) {
-    console.log(rows);
+    // console.log(rows);
     // const fileList = this.$refs['remote-files-list'] as NestedFileList;
     // if (fileList) {
     //     this.selectedFiles = fileList.selectedFiles;
@@ -231,53 +256,7 @@ export default class RemoteFileSelect extends Vue {
   }
 
   addToCart() {
-    // console.log(this.selectedFiles);
-    const cart_samples: Sample[] = [];
-    const added_files: FileListItem[] = [];
-
-    const names: string[] = map(this.selectedFiles, (i) => {
-      return simplifyFastqName(i.name);
-    });
-    const commonSuffix = longestCommonSuffix(names);
-
-    for (let f of this.selectedFiles) {
-      if (f.name === "..") {
-        continue;
-      }
-      if (added_files.includes(f)) continue;
-      const pair = findPair(f, this.selectedFiles);
-
-      let sname = f.name;
-      sname = simplifyFastqName(f.name);
-      sname = sname.replace(commonSuffix, "");
-      if (sname === "") sname = commonSuffix;
-
-      // copy and drop 'type' prop (ILaxyFile doesn't want 'type')
-      const _f = Object.assign({}, f) as FileListItem;
-      delete _f.type;
-      let sfiles: any = [{ R1: _f as ILaxyFile }];
-      if (pair != null) {
-        const _pair = Object.assign({}, pair) as FileListItem;
-        delete _pair.type;
-        sfiles = [{ R1: _f as ILaxyFile, R2: _pair as ILaxyFile }];
-      }
-      cart_samples.push({
-        name: sname,
-        files: sfiles,
-        metadata: { condition: "" },
-      } as Sample);
-
-      added_files.push(f);
-      if (pair != null) added_files.push(pair);
-    }
-    this.$store.commit(ADD_SAMPLES, cart_samples);
-    let count = this.selectedFiles.length;
-    Snackbar.flashMessage(
-      `Added ${count} ${pluralize("file", count)} to cart.`
-    );
-
-    //this.remove(this.selectedFiles);
-    //this.selectedFiles = [];
+    this.$emit("files-added", this.selectedFiles);
   }
 
   // rowHover(row: any) {

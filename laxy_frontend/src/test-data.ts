@@ -1,5 +1,6 @@
 // Test data
-import {SampleCartItems, ComputeJob, LaxyFile} from './model';
+import { SampleCartItems, ComputeJob, LaxyFile } from './model';
+import { ILaxyFile, ENASample, LaxyFileSet } from './types';
 
 // For testing Element UI Tree
 const demoTreeData: any[] = [{
@@ -45,7 +46,7 @@ export const DummySampleList: SampleCartItems = {
         {
             'id': 'kazd4mZvmYX0OXw07dGfnV',
             'name': 'SampleA',
-            'metadata': {'condition': 'wildtype'},
+            'metadata': { 'condition': 'wildtype' },
             'files': [
                 {
                     'R1': {
@@ -62,7 +63,7 @@ export const DummySampleList: SampleCartItems = {
         {
             'id': 'lezd4mZvmYX0OXw07dGfnV',
             'name': 'SampleB',
-            'metadata': {'condition': 'mutant'},
+            'metadata': { 'condition': 'mutant' },
             'files': [
                 {
                     'R1': {
@@ -90,29 +91,29 @@ export const DummySampleList: SampleCartItems = {
         {
             'id': 'food4mZvmYX0OXw07dGfnV',
             'name': 'sample_wildtype',
-            'metadata': {'condition': 'wildtype'},
+            'metadata': { 'condition': 'wildtype' },
             'files': [
                 {
-                    'R1': {id: '2VSd4mZvmYX0OXw07dGfnV'} as ILaxyFile,
-                    'R2': {id: '3XSd4mZvmYX0OXw07dGfmZ'} as ILaxyFile
+                    'R1': { id: '2VSd4mZvmYX0OXw07dGfnV' } as ILaxyFile,
+                    'R2': { id: '3XSd4mZvmYX0OXw07dGfmZ' } as ILaxyFile
                 },
                 {
-                    'R1': {id: 'Toopini9iPaenooghaquee'} as ILaxyFile,
-                    'R2': {id: 'Einanoohiew9ungoh3yiev'} as ILaxyFile
+                    'R1': { id: 'Toopini9iPaenooghaquee' } as ILaxyFile,
+                    'R2': { id: 'Einanoohiew9ungoh3yiev' } as ILaxyFile
                 }]
         },
         {
             'id': 'bla7eiPhaiwion6ohniek3',
             'name': 'sample_mutant',
-            'metadata': {'condition': 'mutant'},
+            'metadata': { 'condition': 'mutant' },
             'files': [
                 {
-                    'R1': {id: 'zoo7eiPhaiwion6ohniek3'} as ILaxyFile,
-                    'R2': {id: 'ieshiePahdie0ahxooSaed'} as ILaxyFile
+                    'R1': { id: 'zoo7eiPhaiwion6ohniek3' } as ILaxyFile,
+                    'R2': { id: 'ieshiePahdie0ahxooSaed' } as ILaxyFile
                 },
                 {
-                    'R1': {id: 'nahFoogheiChae5de1iey3'} as ILaxyFile,
-                    'R2': {id: 'Dae7leiZoo8fiesheech5s'} as ILaxyFile
+                    'R1': { id: 'nahFoogheiChae5de1iey3' } as ILaxyFile,
+                    'R2': { id: 'Dae7leiZoo8fiesheech5s' } as ILaxyFile
                 }]
         }
     ]
@@ -121,10 +122,10 @@ export const DummySampleList: SampleCartItems = {
 export const DummyPipelineConfig = {
     'sample_cart': '3NNIIOt8skAuS1w2ZfgOq',
     'sample_metadata': {
-        'kazd4mZvmYX0OXw07dGfnV': {'condition': 'wildtype'},
-        'lezd4mZvmYX0OXw07dGfnV': {'condition': 'mutant'},
-        'food4mZvmYX0OXw07dGfnV': {'condition': 'wildtype'},
-        'bla7eiPhaiwion6ohniek3': {'condition': 'mutant'},
+        'kazd4mZvmYX0OXw07dGfnV': { 'condition': 'wildtype' },
+        'lezd4mZvmYX0OXw07dGfnV': { 'condition': 'mutant' },
+        'food4mZvmYX0OXw07dGfnV': { 'condition': 'wildtype' },
+        'bla7eiPhaiwion6ohniek3': { 'condition': 'mutant' },
     },
     'params': {
         'genome': 'mm10'
@@ -166,7 +167,7 @@ export const DummyJobList: ComputeJob[] = [
         'owner': '3Cx3N2QmRw3WCSuI65qfkw',
         'input_fileset_id': '5cUMhEHPl7tusyWQWRdXCV',
         'output_fileset_id': 'lte5G15TXSkfmF6dlP1aj',
-        'metadata': {"results": {"strandedness": {"bias": -0.5961538461538461, "predicted": "NonStrandedCounts"}}},
+        'metadata': { "results": { "strandedness": { "bias": -0.5961538461538461, "predicted": "NonStrandedCounts" } } },
         'params': {
             'id': '2CjwU7RJtFq8u60DBiORik',
             'owner': '3Cx3N2QmRw3WCSuI65qfkw',
@@ -317,7 +318,7 @@ export const DummyJobList: ComputeJob[] = [
         'owner': '3Cx3N2QmRw3WCSuI65qfkw',
         'input_fileset_id': '3mcv4wK66q6xwPuLhLSlc0',
         'output_fileset_id': '1ZoPXThJx8zniui7Fg2k1q',
-        'metadata': {"results": {"strandedness": {"bias": 0.99999, "predicted": "ForwardStrandedCounts"}}},
+        'metadata': { "results": { "strandedness": { "bias": 0.99999, "predicted": "ForwardStrandedCounts" } } },
         'params': {
             'id': '4AZpf19PMqDrq9clvID1DY',
             'owner': '3Cx3N2QmRw3WCSuI65qfkw',

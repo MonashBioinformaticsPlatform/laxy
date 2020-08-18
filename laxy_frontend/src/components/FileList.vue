@@ -61,7 +61,7 @@
               </md-menu>
               <!--</div>-->
             </md-table-cell>
-            <md-table-cell v-else="file.deleted">
+            <md-table-cell v-else>
               <md-button class="md-icon-button push-right">
                 <md-tooltip md-direction="left">File has expired and is no longer available.</md-tooltip>
                 <md-icon style="color: #bdbdbd;">info</md-icon>
@@ -119,6 +119,7 @@ import {
 
 // import {DummyFileSet as _dummyFileSet} from "../test-data";
 import { Snackbar } from "../snackbar";
+import { ViewMethod } from "../types";
 
 @Component({
   filters: {},

@@ -1,6 +1,17 @@
+import Vuex from 'vuex';
 // import {LaxyFile} from './model';
 
 declare function require(path: string): any;
+
+declare module 'vuex' {
+    interface Store<S> {
+        get(path: string): any;
+
+        set(path: string, value: any): any;
+
+        copy(path: string): any;
+    }
+}
 
 // So we can access process.env environment variables (like NODE_ENV) at build time
 declare var process: {
@@ -100,4 +111,6 @@ declare interface IFormData {
     has(name: string): boolean;
 
     set(name: string, value: string | Blob | File, fileName?: string): void;
+
+    forEach(callbackfn: (value: FormDataEntryValue, key: string, parent: FormData) => void, thisArg?: any): void;
 }

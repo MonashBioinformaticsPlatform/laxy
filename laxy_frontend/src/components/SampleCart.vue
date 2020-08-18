@@ -170,10 +170,6 @@ export default class SampleCart extends Vue {
   public snackbar_duration: number = 2000;
   public csv_file: string = "";
 
-  // public samplecart_uuid: string | null = null;
-
-  //public sample_list_name: string = "";
-
   // For Vuex, we make 'samples' a readonly computed attribute that deep clones
   // the object held by the vuex store. 'samples' in the vuex store is
   // only modified by wholesale replacement upon 'Save' or navigation
@@ -181,11 +177,6 @@ export default class SampleCart extends Vue {
   // public samples: Sample[];
 
   public selectedSamples: Sample[] = [];
-
-  // for lodash in templates
-  get _() {
-    return _;
-  }
 
   async beforeCreate() {
     // Example data for debug only
@@ -283,7 +274,6 @@ export default class SampleCart extends Vue {
   }
 
   removeSelected() {
-    // const cartTable: any = this.$refs['cartTable'];
     for (const row of this.selectedSamples) {
       const i = this.samples.items.indexOf(row);
       this.samples.items.splice(i, 1);
@@ -329,7 +319,6 @@ export default class SampleCart extends Vue {
   // decorator so `this` works correctly.
   // https://router.vuejs.org/en/advanced/navigation-guards.html
   beforeRouteLeave(to: any, from: any, next: any) {
-    // console.log([to, from, next]);
     this.$store.commit(SET_SAMPLES, this._samples);
     next();
   }

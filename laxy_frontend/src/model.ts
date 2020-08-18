@@ -1,3 +1,5 @@
+import { PairedEndFiles, ISample, ILaxyFile } from "./types";
+
 class UUIDModel {
     // public id: string | undefined;
     private _id?: string;

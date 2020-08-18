@@ -5,6 +5,7 @@ import os
 import logging
 import argparse
 import tarfile
+from typing import List
 import xmlrpc
 import psutil
 
@@ -44,6 +45,9 @@ logging.basicConfig(
 
 
 def add_commandline_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+    def _split_comma_sep_args(txt: str) -> List[str]:
+        return txt.split(",")
+
     subparsers = parser.add_subparsers(help="sub-command help", dest="command")
 
     dl_parser = subparsers.add_parser("download", help="Download files.")
@@ -74,6 +78,13 @@ def add_commandline_args(parser: argparse.ArgumentParser) -> argparse.ArgumentPa
         help="Path to a pipeline_config.json file from Laxy. You must provide this if URLs aren't "
         "specified on the commandline",
         type=argparse.FileType("r"),
+    )
+    dl_parser.add_argument(
+        "--type-tags",
+        help="When using --pipeline-config, only download files tagged with all these type_tags "
+        "('--type-tag=tag_one,tag_two' means must have both tag_one _and_ tag_two). ",
+        type=_split_comma_sep_args,
+        default=None,
     )
     dl_parser.add_argument(
         "--unpack",
@@ -210,7 +221,9 @@ def _run_download_cli(args, rpc_secret=None):
     url_filenames = dict()
     if args.pipeline_config:
         config = parse_pipeline_config(args.pipeline_config)
-        url_filenames = get_urls_from_pipeline_config(config)
+        url_filenames = get_urls_from_pipeline_config(
+            config, required_type_tags=args.type_tags
+        )
         config_urls = set(url_filenames.keys())
 
     if config_urls is not None and args.urls:

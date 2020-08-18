@@ -27,7 +27,7 @@ async function requireAuth(to: any, from: any, next: Function) {
         next();
         return;
     }
-    if (Store.state.user_profile === null) {
+    if (Store.get('user_profile') === null) {
         try {
             await Store.dispatch(FETCH_USER_PROFILE);
         } catch (error) {
@@ -35,7 +35,7 @@ async function requireAuth(to: any, from: any, next: Function) {
             return;
         }
     }
-    if (!Store.getters.is_authenticated) {
+    if (!Store.get('is_authenticated')) {
         next('/login');
         return;
     } else {

@@ -1863,6 +1863,11 @@ class JobCreate(JSONView):
 
         if request.data.get("params"):
             _params = json.loads(request.data["params"])
+
+            #
+            # TODO: Also add sanitize_filename to every file in the _params["fetch_files"] list
+            #
+
             if _params.get("sample_cart", None) is not None:
                 _params["sample_cart"] = add_sanitized_names_to_samplecart_json(
                     _params["sample_cart"]
@@ -1950,7 +1955,19 @@ class JobCreate(JSONView):
 
             # TODO: This ID check should probably move into the PipelineRun
             #       params serializer.
-            if reference_genome_id not in REFERENCE_GENOME_MAPPINGS:
+            reference_genome_fasta_url = pydash.get(
+                job.params, "params.user_genome.fasta_url", None
+            )
+            reference_genome_annotation_url = pydash.get(
+                job.params, "params.user_genome.annotation_url", None
+            )
+
+            if (
+                reference_genome_id not in REFERENCE_GENOME_MAPPINGS
+                and not reference_genome_fasta_url
+                and not reference_genome_annotation_url
+                # TODO: Check URLS are valid with http/https/ftp scheme
+            ):
                 job.status = Job.STATUS_FAILED
                 job.save()
                 # job.delete()
@@ -2425,6 +2442,9 @@ class JobClone(JSONView):
         #
         if samplecart_id is None:
             samplecart_id = job.params.get("sample_set", {}).get("id", None)
+            logger.warning(
+                f"Use of `sample_set` in Job.params is deprecated, please use `sample_cart` (when cloning Job {job_id})"
+            )
 
         if samplecart_id is None:
             return HttpResponse(

@@ -158,6 +158,7 @@ import AVAILABLE_GENOMES from "../../config/genomics/genomes";
 import { ENADummySampleList as _dummysampleList } from "../../test-data";
 import { Snackbar } from "../../snackbar";
 import { filenameFromUrl } from "../../util";
+import { ILaxyFile, ENASample, PairedEndFiles } from "../../types";
 
 interface DbAccession {
   accession: string;
@@ -259,68 +260,74 @@ export default class ENAFileSelect extends Vue {
 
     // console.log(this.selectedSamples);
     const cart_samples: Sample[] = [];
-    for (let ena of this.selectedSamples) {
-      // Turn [{'R1','ftp://bla"}, {'R2': 'ftp://foo'}] into
-      //      [{'R1": {'location':'ftp://bla", 'name': 'bla', 'checksum':'md5:ab-cd-ef-gh..'},
-      //        'R2': {'location':'ftp://foo", 'name': 'foo', 'checksum':'md5:a0-c0-e0-g0..'}}]
-      let files: PairedEndFiles[] = [];
-      if (ena.fastq_ftp) {
-        let pair: PairedEndFiles = { R1: "" };
-        for (let i in ena.fastq_ftp) {
-          const f = ena.fastq_ftp[i];
-          const Rn: string = Object.keys(f)[0]; // first and only key (R1 or R2)
-          const location: string = f[Rn]; // FTP url
-          if (ena.fastq_md5) {
-            const md5sum = ena.fastq_md5[i];
-            pair[Rn] = {
-              location: location,
-              name: filenameFromUrl(location),
-              type_tags: ["ena"],
-              checksum: `md5:${md5sum}`,
-            } as ILaxyFile;
-          } else {
-            pair[Rn] = {
-              location: location,
-              type_tags: ["ena"],
-              name: filenameFromUrl(location),
-            } as ILaxyFile;
+    this.submitting = true;
+    try {
+      for (let ena of this.selectedSamples) {
+        // Turn [{'R1','ftp://bla"}, {'R2': 'ftp://foo'}] into
+        //      [{'R1": {'location':'ftp://bla", 'name': 'bla', 'checksum':'md5:ab-cd-ef-gh..'},
+        //        'R2': {'location':'ftp://foo", 'name': 'foo', 'checksum':'md5:a0-c0-e0-g0..'}}]
+        let files: PairedEndFiles[] = [];
+        if (ena.fastq_ftp) {
+          let pair: PairedEndFiles = { R1: "" };
+          for (let i in ena.fastq_ftp) {
+            const f = ena.fastq_ftp[i];
+            const Rn: string = Object.keys(f)[0]; // first and only key (R1 or R2)
+            const location: string = f[Rn]; // FTP url
+            if (ena.fastq_md5) {
+              const md5sum = ena.fastq_md5[i];
+              pair[Rn] = {
+                location: location,
+                name: filenameFromUrl(location),
+                type_tags: ["ena"],
+                checksum: `md5:${md5sum}`,
+              } as ILaxyFile;
+            } else {
+              pair[Rn] = {
+                location: location,
+                type_tags: ["ena"],
+                name: filenameFromUrl(location),
+              } as ILaxyFile;
+            }
           }
+          files.push(pair);
         }
-        files.push(pair);
+
+        cart_samples.push({
+          name: ena.run_accession,
+          files: files,
+          metadata: { condition: "", ena: ena },
+        } as Sample);
       }
 
-      cart_samples.push({
-        name: ena.run_accession,
-        files: files,
-        metadata: { condition: "", ena: ena },
-      } as Sample);
-    }
-
-    const last_sample = last(cart_samples);
-    const last_sample_accession = get(
-      last_sample,
-      "metadata.ena.sample_accession",
-      undefined
-    );
-    if (last_sample && last_sample_accession) {
-      const species_resp = await WebAPI.enaSpeciesInfo(last_sample_accession);
-      const organism = get(species_resp.data, "scientific_name");
-      const genome_id = get(
-        find(AVAILABLE_GENOMES, { organism: organism }),
-        "id",
-        AVAILABLE_GENOMES[0].id
+      const last_sample = last(cart_samples);
+      const last_sample_accession = get(
+        last_sample,
+        "metadata.ena.sample_accession",
+        undefined
       );
-      this.$store.commit(SET_PIPELINE_GENOME, genome_id);
+      if (last_sample && last_sample_accession) {
+        const species_resp = await WebAPI.enaSpeciesInfo(last_sample_accession);
+        const organism = get(species_resp.data, "scientific_name");
+        const genome_id = get(
+          find(AVAILABLE_GENOMES, { organism: organism }),
+          "id",
+          AVAILABLE_GENOMES[0].id
+        );
+        this.$store.commit(SET_PIPELINE_GENOME, genome_id);
+      }
+
+      this.$store.commit(ADD_SAMPLES, cart_samples);
+      let count = this.selectedSamples.length;
+      Snackbar.flashMessage(
+        `Added ${count} ${pluralize("sample", count)} to cart.`
+      );
+
+      this.remove(this.selectedSamples);
+      this.selectedSamples = [];
+    } catch {
+      this.submitting = false;
     }
-
-    this.$store.commit(ADD_SAMPLES, cart_samples);
-    let count = this.selectedSamples.length;
-    Snackbar.flashMessage(
-      `Added ${count} ${pluralize("sample", count)} to cart.`
-    );
-
-    this.remove(this.selectedSamples);
-    this.selectedSamples = [];
+    this.submitting = false;
   }
 
   rowHover(row: any) {

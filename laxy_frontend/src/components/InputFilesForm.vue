@@ -43,6 +43,7 @@
             <remote-files-select
               :show-about-box="false"
               :show-buttons="true"
+              @files-added="addToCart"
               placeholder="https://cloudstor.aarnet.edu.au/plus/s/lnSmyyug1fexY8l"
             ></remote-files-select>
           </div>
@@ -168,8 +169,12 @@
 </template>
 
 <script lang="ts">
-import * as _ from "lodash";
 import "es6-promise";
+
+import map from "lodash-es/map";
+import filter from "lodash-es/filter";
+import includes from "lodash-es/includes";
+import * as pluralize from "pluralize";
 
 import axios, { AxiosResponse } from "axios";
 import Vue, { ComponentOptions } from "vue";
@@ -184,12 +189,34 @@ import {
 } from "vue-property-decorator";
 import VueMarkdown from "vue-markdown";
 
-import ENAFileSelect from "./ENA/ENAFileSelect";
-import ENASearchAboutBox from "./ENA/ENASearchAboutBox";
-import RemoteFilesSelect from "./RemoteSelect/RemoteFilesSelect";
-import RemoteFileSelectAboutBox from "./RemoteSelect/RemoteFileSelectAboutBox";
-import CSVSampleListUpload from "./CSVSampleListUpload/CSVSampleListUpload";
-import CSVAboutBox from "./CSVSampleListUpload/CSVAboutBox";
+import { Snackbar } from "../snackbar";
+
+import { LaxyFile, Sample } from "../model";
+
+import {
+  EMPTY_TREE_ROOT,
+  FileListItem,
+  fileListToTree,
+  findPair,
+  flattenTree,
+  is_archive_url,
+  objListToTree,
+  simplifyFastqName,
+  TreeNode,
+} from "../file-tree-util";
+
+import { longestCommonSuffix } from "../prefix";
+import { escapeRegExp, reverseString } from "../util";
+
+import { ADD_SAMPLES } from "../store";
+
+import ENAFileSelect from "./ENA/ENAFileSelect.vue";
+import ENASearchAboutBox from "./ENA/ENASearchAboutBox.vue";
+import RemoteFilesSelect from "./RemoteSelect/RemoteFilesSelect.vue";
+import RemoteFileSelectAboutBox from "./RemoteSelect/RemoteFileSelectAboutBox.vue";
+import CSVSampleListUpload from "./CSVSampleListUpload/CSVSampleListUpload.vue";
+import CSVAboutBox from "./CSVSampleListUpload/CSVAboutBox.vue";
+import { ILaxyFile } from "../types";
 
 interface DbAccession {
   accession: string;
@@ -226,11 +253,6 @@ export default class InputFilesForm extends Vue {
   password_valid_days: number = 2;
   password_expiry: Date = this.daysInFuture(2);
   dataset_name_invalid: boolean = false;
-
-  // for lodash in templates
-  get _() {
-    return _;
-  }
 
   email_username() {
     return this.user_email.split("@")[0];
@@ -272,7 +294,7 @@ export default class InputFilesForm extends Vue {
     return (
       a.host != null &&
       a.host != window.location.host &&
-      _.includes(valid_protocols, a.protocol)
+      includes(valid_protocols, a.protocol)
     );
   }
 
@@ -283,9 +305,59 @@ export default class InputFilesForm extends Vue {
     return (
       a.host != null &&
       a.host != window.location.host &&
-      _.includes(valid_protocols, a.protocol) &&
+      includes(valid_protocols, a.protocol) &&
       a.host == "cloudstor.aarnet.edu.au"
     );
+  }
+
+  addToCart(selectedFiles: FileListItem[]) {
+    // console.log(this.selectedFiles);
+    const cart_samples: Sample[] = [];
+    const added_files: FileListItem[] = [];
+
+    const names: string[] = map(selectedFiles, (i) => {
+      return simplifyFastqName(i.name);
+    });
+    const commonSuffix = longestCommonSuffix(names);
+
+    for (let f of selectedFiles) {
+      if (f.name === "..") {
+        continue;
+      }
+      if (added_files.includes(f)) continue;
+      const pair = findPair(f, selectedFiles);
+
+      let sname = f.name;
+      sname = simplifyFastqName(f.name);
+      sname = sname.replace(commonSuffix, "");
+      if (sname === "") sname = commonSuffix;
+
+      // copy and drop 'type' prop (ILaxyFile doesn't want 'type')
+      const _f = Object.assign({}, f) as FileListItem;
+      delete _f.type;
+      let sfiles: any = [{ R1: _f as ILaxyFile }];
+      if (pair != null) {
+        const _pair = Object.assign({}, pair) as FileListItem;
+        delete _pair.type;
+        sfiles = [{ R1: _f as ILaxyFile, R2: _pair as ILaxyFile }];
+      }
+      cart_samples.push({
+        name: sname,
+        files: sfiles,
+        metadata: { condition: "" },
+      } as Sample);
+
+      added_files.push(f);
+      if (pair != null) added_files.push(pair);
+    }
+    this.$store.commit(ADD_SAMPLES, cart_samples);
+    let count = selectedFiles.length;
+    Snackbar.flashMessage(
+      `Added ${count} ${pluralize("file", count)} to cart.`
+    );
+
+    //this.remove(this.selectedFiles);
+    //this.selectedFiles = [];
   }
 
   openDialog(refName: string) {
