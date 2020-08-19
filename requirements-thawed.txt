@@ -55,11 +55,10 @@ django-rest-framework-social-oauth2
 # whitenoise
 # whitenoise[brotli]
 
-# The Bitbucket one
-# django-jsonfield  # https://bitbucket.org/schinckel/django-jsonfield
-hg+https://bitbucket.org/schinckel/django-jsonfield#egg=django-jsonfield
+# django-jsonfield, the schinckel one, now at https://github.com/adamchainz/django-jsonfield
+git+https://github.com/adamchainz/django-jsonfield#egg=django-jsonfield
 
-# The Github one
+# The 'other' json field library
 # jsonfield  # https://github.com/dmkoch/django-jsonfield
 # compatibility layer for jsonfield<->Django native Postgres JSONField
 # django-jsonfield-compat  # broken ?
