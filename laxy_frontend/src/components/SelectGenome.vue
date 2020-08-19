@@ -332,11 +332,13 @@ export default class SelectGenome extends Vue {
       for (let ext of this.ref_sequence_extensions) {
         if (f.name.endsWith(ext)) {
           this.custom_genome_fasta_url = f.location;
+          this.onFastaUrlChange(this.custom_genome_fasta_url);
         }
       }
       for (let ext of this.ref_annotation_extensions) {
         if (f.name.endsWith(ext)) {
           this.custom_genome_annotation_url = f.location;
+          this.onAnnotationUrlChange(this.custom_genome_annotation_url);
         }
       }
     }
