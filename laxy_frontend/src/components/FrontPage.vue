@@ -48,7 +48,7 @@ import "es6-promise";
 
 import axios, { AxiosResponse } from "axios";
 import Vue, { ComponentOptions } from "vue";
-import CalloutBox from "./CalloutBox";
+import CalloutBox from "./CalloutBox.vue";
 import NullarborLaunch from "./FrontPageCards/NullarborLaunch.vue";
 import VariantCallsLaunch from "./FrontPageCards/VariantCallsLaunch.vue";
 import RnaSeqLaunch from "./FrontPageCards/RnaSeqLaunch.vue";
