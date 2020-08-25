@@ -834,7 +834,7 @@ function download_input_data() {
         mkdir -p "${DOWNLOAD_CACHE_PATH}"
 
         LAXYDL_EXTRA_ARGS=""
-        if [[ "${LAXYDL_USE_ARIA2C}" == "yes" ]]; then
+        if [[ "${LAXYDL_USE_ARIA2C}" != "yes" ]]; then
             LAXYDL_EXTRA_ARGS=" ${LAXYDL_EXTRA_ARGS} --no-aria2c "
         fi
 
