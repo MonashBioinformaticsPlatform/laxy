@@ -171,8 +171,12 @@ def move_file_task(self, task_data=None, **kwargs):
         try:
             # self.update_state(state="PROGRESS", meta={"running": "delete_old_copy"})
             self.send_event("progress", step="delete_old_copy")
-            # TODO: Empty directories don't get removed when the last file is gone (do we care ?)
-            file.delete_at_location(from_location, allow_delete_default=make_default)
+
+            if file.exists(loc=to_location):
+                file.delete_at_location(
+                    from_location, allow_delete_default=make_default
+                )
+
             result["deleted_old_copy"] = True
 
         except BaseException as ex:
