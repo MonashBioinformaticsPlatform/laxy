@@ -29,7 +29,7 @@
           add-button-label="Select"
           :start-url="custom_genome_fileselect_url"
           @files-added="addCustomGenomeFiles"
-          placeholder="http://ftp.ensembl.org/pub/release-97/fasta/vicugna_pacos/dna/"
+          :placeholder="`${ensemblReleaseUrl}/fasta/vicugna_pacos/dna/`"
         ></remote-files-select>
       </md-sidenav>
     </div>
@@ -92,7 +92,7 @@
                       <md-icon style="font-size: 16px;">info</md-icon>
                       <md-tooltip
                         md-direction="right"
-                      >A URL to a gzipped FASTA format reference genome, eg http://ftp.ensembl.org/pub/release-97/fasta/vicugna_pacos/dna/Vicugna_pacos.vicPac1.dna.toplevel.fa.gz</md-tooltip>
+                      >A URL to a gzipped FASTA format reference genome, eg {{ ensemblReleaseUrl }}/fasta/vicugna_pacos/dna/Vicugna_pacos.vicPac1.dna.toplevel.fa.gz</md-tooltip>
                     </span>
                   </label>
                   <md-input
@@ -100,11 +100,11 @@
                     id="custom-genome-fasta"
                     :readonly="false"
                     @change="onFastaUrlChange"
-                    placeholder="URL to FASTA (eg http://ftp.ensembl.org/pub/release-97/fasta/vicugna_pacos/dna/Vicugna_pacos.vicPac1.dna.toplevel.fa.gz)"
+                    :placeholder="`URL to FASTA (eg ${ensemblReleaseUrl}/fasta/vicugna_pacos/dna/Vicugna_pacos.vicPac1.dna.toplevel.fa.gz)`"
                   ></md-input>
                   <md-button
                     class="md-icon-button"
-                    @click="toggleFileSelect('http://ftp.ensembl.org/pub/release-97/fasta/')"
+                    @click="toggleFileSelect(`${ensemblReleaseUrl}/fasta/`)"
                   >
                     <md-icon type="submit">attach_file</md-icon>
                   </md-button>
@@ -122,7 +122,7 @@
                       <md-icon style="font-size: 16px;">info</md-icon>
                       <md-tooltip
                         md-direction="right"
-                      >A URL to a gzipped GTF or GFF format genome annotation, eg https://ftp.ensembl.org/pub/release-97/gtf/vicugna_pacos/Vicugna_pacos.vicPac1.97.gtf.gz</md-tooltip>
+                      >A URL to a gzipped GTF or GFF format genome annotation, eg {{ ensemblReleaseUrl }}/gtf/vicugna_pacos/Vicugna_pacos.vicPac1.97.gtf.gz</md-tooltip>
                     </span>
                   </label>
                   <md-input
@@ -130,11 +130,11 @@
                     id="custom-genome-annotation"
                     :readonly="false"
                     @change="onAnnotationUrlChange"
-                    placeholder="URL to GTF / GFF (eg http://ftp.ensembl.org/pub/release-97/gtf/vicugna_pacos/Vicugna_pacos.vicPac1.97.gtf.gz)"
+                    :placeholder="`URL to GTF / GFF (eg ${ensemblReleaseUrl}/gtf/vicugna_pacos/Vicugna_pacos.vicPac1.97.gtf.gz)`"
                   ></md-input>
                   <md-button
                     class="md-icon-button"
-                    @click="toggleFileSelect('http://ftp.ensembl.org/pub/release-97/gtf/')"
+                    @click="toggleFileSelect(`${ensemblReleaseUrl}/gtf/`)"
                   >
                     <md-icon type="submit">attach_file</md-icon>
                   </md-button>
@@ -190,6 +190,8 @@ import { isValidUrl } from "../util";
   filters: {},
 })
 export default class SelectGenome extends Vue {
+  public ensemblReleaseUrl: string = "http://ftp.ensembl.org/pub/release-100";
+
   @Sync("pipelineParams@user_genome.fasta_url")
   public custom_genome_fasta_url: string;
 
@@ -199,8 +201,7 @@ export default class SelectGenome extends Vue {
   @Sync("pipelineParams@genome")
   public reference_genome: string;
 
-  public custom_genome_fileselect_url: string =
-    "http://ftp.ensembl.org/pub/release-100/fasta/";
+  public custom_genome_fileselect_url: string = `${this.ensemblReleaseUrl}/fasta/`;
 
   public available_genomes: Array<ReferenceGenome> = AVAILABLE_GENOMES;
 
