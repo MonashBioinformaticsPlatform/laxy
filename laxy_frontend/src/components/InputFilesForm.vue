@@ -36,6 +36,7 @@
             <remote-files-select
               :show-about-box="false"
               :show-buttons="true"
+              @files-added="addToCart"
               placeholder="https://bioinformatics.erc.monash.edu/home/andrewperry/test/sample_data/"
             ></remote-files-select>
           </div>
