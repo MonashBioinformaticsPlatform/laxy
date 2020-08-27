@@ -32,6 +32,13 @@ from . import models
 from pathlib import Path
 
 
+def has_method(obj, method_name: str) -> bool:
+    """
+    Returns True if the provided object (`obj`) has the named method (`method_name`).
+    """
+    return callable(getattr(obj, method_name, None))
+
+
 def sh_bool(boolean: bool) -> Literal["yes", "no"]:
     """
     Formats a boolean to be passed to a bash script environment (eg run_job.sh)

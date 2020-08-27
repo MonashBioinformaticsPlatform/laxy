@@ -47,12 +47,13 @@ from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 import reversion
 from rest_framework.authtoken.models import Token
-from storages.backends.sftpstorage import SFTPStorage
+from storages.backends.sftpstorage import SFTPStorage, SFTPStorageFile
 
 from .tasks import orchestration
 from .cfncluster import generate_cluster_stack_name
 from .util import (
     unique,
+    has_method,
     generate_uuid,
     generate_secret_key,
     find_filename_and_size_from_url,
@@ -1460,7 +1461,7 @@ class File(Timestamped, UUIDModel):
 
     def _file(
         self, location: Union[str, FileLocation]
-    ) -> Union[None, typing.IO[AnyStr]]:
+    ) -> Union[None, SFTPStorageFile, typing.IO[AnyStr]]:
         """
         Return a file-like object for the given location.
         
@@ -1504,7 +1505,7 @@ class File(Timestamped, UUIDModel):
             )
 
     @property
-    def file(self) -> Union[None, typing.IO[AnyStr]]:
+    def file(self) -> Union[None, SFTPStorageFile, typing.IO[AnyStr]]:
         """
         Return a file-like object for the default location.
 
@@ -1535,7 +1536,7 @@ class File(Timestamped, UUIDModel):
         :rtype:
         """
         size = None
-        if hasattr(self.metadata, "get"):
+        if has_method(self.metadata, "get"):
             size = self.metadata.get("size", None)
         try:
             if size is None and self.file is not None and hasattr(self.file, "size"):
@@ -1579,7 +1580,10 @@ class File(Timestamped, UUIDModel):
         loc = str(loc)
         try:
             f = self._file(loc)
-            return f.exists()
+            if has_method(f, "exists"):
+                return f.exists()
+            elif isinstance(f, SFTPStorageFile):
+                return f._storage.exists(f.name)
         except FileNotFoundError:
             return False
 
