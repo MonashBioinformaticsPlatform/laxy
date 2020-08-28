@@ -28,14 +28,9 @@ ADD --chown=laxy:laxy . /app/
 
 # RUN chown -R laxy:laxy /app
 
-RUN pip3 install -U pip==19.2.2 && \
+RUN export PIP_DISABLE_PIP_VERSION_CHECK=1 && \
+    pip3 install -U pip==19.2.2 && \
     pip3 install -U -r requirements.txt
-
-# Temporary workaround for paramiko new OpenSSH key format (PR https://github.com/paramiko/paramiko/pull/1343)
-# Alternative workaround - generate PEM format keys like:
-#   ssh-keygen -t rsa -b 4096 -f ~/.ssh/my-compute-key -m PEM
-RUN PARAMIKO_REPLACE=1 pip3 install -U --ignore-installed --force-reinstall \
-    https://github.com/ploxiln/paramiko-ng/archive/2.8.0.tar.gz#egg=paramiko
 
 # We collect Django admin staticfiles, to be shared with the nginx container
 # (via volume or COPY --from laxy:latest at container build time)
