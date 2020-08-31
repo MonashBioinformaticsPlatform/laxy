@@ -126,7 +126,28 @@ def simplify_fastq_name(filename: str) -> str:
     return fn
 
 
-def generate_samplesheet(pipeline_config: dict):
+def config_contains_tar(pipeline_config: dict, tags=None) -> bool:
+    """
+    Check if the input file list contains a `.tar` archive.
+    """
+    if tags is None:
+        tags = ["archive", "inside_archive"]
+
+    params = pipeline_config.get("params", {})
+    ffiles = params.get("fetch_files", [])
+
+    for ff in ffiles:
+        # For tar archives, we don't attempt to make a samplesSheet
+        ftags = ff.get("tags", [])
+        if any([t in ftags for t in tags]):
+            return True
+
+    return False
+
+
+def generate_samplesheet(
+    pipeline_config: dict,
+) -> Union[None, Sequence[Tuple[str, str]]]:
     """
     Given a pipeline_config.json dict, return lines for an RNAsik sampleSheet.txt (v1.5.4).
 
@@ -156,7 +177,8 @@ def generate_samplesheet(pipeline_config: dict):
         # find the longest common prefix. This essentially mimicks what
         # RNAsik does when it automatically generates a samplesheet
         # print(sample["files"])
-        sample_files = flatten(([list(f.values()) for f in sample["files"]]))
+        sample_files = flatten([list(f.values()) for f in sample["files"]])
+
         file_name_prefixes = [
             simplify_fastq_name(
                 f.get("sanitized_filename", sanitize_filename(f["name"]))
@@ -220,13 +242,18 @@ if __name__ == "__main__":
         with open(args.pipeline_config_fn) as pc:
             pipeline_config = json.loads(pc.read())
 
-        samplesheet = generate_samplesheet(pipeline_config)
+        if not config_contains_tar(pipeline_config):
+            samplesheet = generate_samplesheet(pipeline_config)
 
-        # with open("sampleSheet.txt", "wt") as fh:
-        with sys.stdout as fh:
-            fh.write(to_tsv_line(["old_prefix", "new_prefix"]))
-            for l in samplesheet:
-                fh.write(to_tsv_line(l))
+            # with open("sampleSheet.txt", "wt") as fh:
+            with sys.stdout as fh:
+                fh.write(to_tsv_line(["old_prefix", "new_prefix"]))
+                for l in samplesheet:
+                    fh.write(to_tsv_line(l))
+        else:
+            sys.stderr.write(
+                "No samplesSheet.txt output generated - at least one input file is a tar archive.\n"
+            )
 
     def _fastq_detect_extension(files: Sequence) -> Union[None, str]:
         """

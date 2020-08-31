@@ -1,10 +1,5 @@
 #!/usr/bin/env bash
 
-# shellcheck disable=SC1054,SC1083
-{% if SLURM_ACCOUNT %}
-#SBATCH --account={{ SLURM_ACCOUNT }}
-# shellcheck disable=SC1054,SC1083
-{% endif %}
 set -o nounset
 set -o pipefail
 set -o xtrace
@@ -50,10 +45,11 @@ readonly JOB_FILE_PERMS='ug+rw-s,o='
 readonly JOB_DIR_PERMS='ug+rwx-s,o='
 
 # shellcheck disable=SC1054,SC1083,SC1009
-{% if SLURM_ACCOUNT %}
-export SLURM_ACCOUNT="{{ SLURM_ACCOUNT }}"
+{% if SLURM_EXTRA_ARGS %}
+export SLURM_EXTRA_ARGS="{{ SLURM_EXTRA_ARGS }}"
 # shellcheck disable=SC1073
 {% endif %}
+
 readonly QUEUE_TYPE="{{ QUEUE_TYPE }}"
 # readonly QUEUE_TYPE="local"
 
@@ -111,8 +107,8 @@ readonly SLURM_OPTIONS="--parsable \
                         -t 3-0:00 \
                         --ntasks-per-node=1 \
                         --ntasks=1 \
-                        {% if SLURM_ACCOUNT %}
-                        --account=${SLURM_ACCOUNT} \
+                        {% if SLURM_EXTRA_ARGS %}
+                        ${SLURM_EXTRA_ARGS} \
                         {% endif %}
                         --job-name=laxy:${JOB_ID}"
 
@@ -121,6 +117,18 @@ PREFIX_JOB_CMD="/usr/bin/env bash -l -c "
 
 if [[ "${QUEUE_TYPE}" == "slurm" ]]; then
     PREFIX_JOB_CMD="sbatch ${SLURM_OPTIONS} --wait --wrap "
+fi
+
+# In this mode we run the bds workflow manager process on the head or login node, 
+# but still use SLURM for other tasks (eg mash runs on SLURM, we use bds.config 
+# system=generic or system=slurm to still).
+# This is because a small SLURM queue which INCLUDES the head node can become deadlocked
+# with multiple bds processess waiting for tasks to complete that can't get resources,
+# since all the bds processes themselves are using those resource. The easiet solution
+# is to run the bds process itself outside of SLURM so it's resources aren't counted
+# (and hope that we don't exceed available RAM to often)
+if [[ "${QUEUE_TYPE}" == "slurm-hybrid" ]]; then
+    echo $$ >>"${JOB_PATH}/job.pids"
 fi
 
 if [[ "${QUEUE_TYPE}" == "local" ]]; then
@@ -196,7 +204,7 @@ function send_event() {
          --retry-max-time 600 \
          -d '{"event":"'"${event}"'","message":"'"${message}"'","extra":'"${extra}"'}' \
          ${VERBOSITY} \
-         "${JOB_EVENT_URL}" || true
+         "${JOB_EVENT_URL}" || true &
 }
 
 function send_job_finished() {
@@ -785,8 +793,8 @@ function run_mash_screen() {
 #SBATCH --ntasks=1
 #SBATCH --job-name="laxy:mash:${JOB_ID}"
 #SBATCH --error="${JOB_PATH}/output/mash_screen.err"
-{% if SLURM_ACCOUNT %}
-#SBATCH --account={{ SLURM_ACCOUNT }}
+{% if SLURM_EXTRA_ARGS %}
+#SBATCH {{ SLURM_EXTRA_ARGS }}
 {% endif %}
 # #SBATCH --qos=shortq
 # #SBATCH --partition=short,comp
@@ -803,7 +811,7 @@ grep '_ViralProj\|_ViralMultiSegProj' "\${mash_outfile}" >"${mash_outdir}/\${sam
 grep -v '_ViralProj\|_ViralMultiSegProj' "\${mash_outfile}" >"${mash_outdir}/\${sample_base}_mash_screen_nonvirus.tab"
 EOM
 
-    if [[ "${QUEUE_TYPE}" == "slurm" ]]; then
+    if [[ "${QUEUE_TYPE}" == "slurm" || "${QUEUE_TYPE}" == "slurm-hybrid" ]]; then
         for f in $mash_reads; do
             sbatch --output="${mash_outdir}/slurm.out" \
                    --error="${mash_outdir}/slurm.err" \
@@ -946,6 +954,11 @@ detect_pairs
 
 generate_samplesheet || fail_job 'generate_samplesheet' '' $?
 
+RNASIK_SAMPLESHEET_ARG=""
+if [[ -s "${INPUT_CONFIG_PATH}/samplesSheet.txt" ]]; then
+    RNASIK_SAMPLESHEET_ARG=" -samplesSheet ${INPUT_CONFIG_PATH}/samplesSheet.txt "
+fi
+
 cd "${JOB_PATH}/output"
 
 ####
@@ -1000,7 +1013,7 @@ while [[ "${EXIT_CODE}" -ne 0 ]] && [[ ${RETRY_COUNT} -le ${MAX_RETRIES} ]]; do
            -counts \
            -all \
            ${RNASIK_PAIR_EXTN_ARGS} \
-           -samplesSheet ${INPUT_CONFIG_PATH}/samplesSheet.txt \
+           ${RNASIK_SAMPLESHEET_ARG} \
            >>rnasik.out 2>>rnasik.err" \
     >>"${JOB_PATH}/slurm.jids"
 

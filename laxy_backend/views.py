@@ -1478,13 +1478,14 @@ class ComputeResourceCreate(PostMixin, JSONView):
           the commandline like `base64 < ~/.ssh/id_rsa`).
           * `base_dir` - the absolute path to where job processing directories
              will be created on the ComputeResource.
-          * `queue_type` - `slurm` or `local` - determines to do job submission,
-             monitoring and cancellation for this host. This is passed to the job
-             script (eg `run_job.sh`), to tell it to either submit long-running
-             tasks to a SLURM queue (via sbatch/srun), or run all processes on the
-             local compute node.
-          * `slurm_account` (optional) - the SLURM account name to use
-             (eg for the `sbatch --account=` option).
+          * `queue_type` - `slurm`, `local` or another custom value - determines
+             how to do job submission, monitoring and cancellation for this host.
+             This is passed to the job script (eg `run_job.sh`), to tell it to
+             either submit long-running tasks to a SLURM queue (via sbatch/srun),
+             or run all processes on the local compute node, or do something else.
+          * `slurm` (optional) - configuration options for SLURM jobs. `account`
+             is used for the `sbatch --account=` option, `extra_args` are any additional
+             commandline arguments (eg `--partition=fast`) to add to sbatch calls.
 
         <!--
         :param request: The request object.
@@ -1976,7 +1977,9 @@ class JobCreate(JSONView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            slurm_account = job.compute_resource.extra.get("slurm_account", None)
+            slurm_config = job.compute_resource.extra.get("slurm", {})
+            # slurm_account = slurm_config.get("account", None)
+            slurm_extra_args = slurm_config.get("extra_args", None)
 
             environment = dict(
                 DEBUG=sh_bool(getattr(settings, "DEBUG", False)),
@@ -1992,7 +1995,8 @@ class JobCreate(JSONView):
                 PIPELINE_ALIGNER=shlex.quote(pipeline_aligner),
                 QUEUE_TYPE=job.compute_resource.queue_type or "local",
                 # BDS_SINGLE_NODE=sh_bool(False),
-                SLURM_ACCOUNT=slurm_account or "",
+                # SLURM_ACCOUNT=slurm_account or "",
+                SLURM_EXTRA_ARGS=slurm_extra_args or "",
             )
 
             task_data = dict(
