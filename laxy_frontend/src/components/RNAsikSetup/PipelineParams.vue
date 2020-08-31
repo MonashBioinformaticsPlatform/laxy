@@ -133,21 +133,21 @@ import {
   SET_PIPELINE_PARAMS_VALID,
   CLEAR_SAMPLE_CART,
   SET_PIPELINE_GENOME,
-} from "../store";
+} from "../../store";
 
-import { Sample, SampleCartItems } from "../model";
-import { WebAPI } from "../web-api";
+import { Sample, SampleCartItems } from "../../model";
+import { WebAPI } from "../../web-api";
 
-import AVAILABLE_GENOMES from "../config/genomics/genomes";
+import AVAILABLE_GENOMES from "../../config/genomics/genomes";
 
-import { DummySampleList as _dummySampleList } from "../test-data";
-import { DummyPipelineConfig as _dummyPipelineConfig } from "../test-data";
-import { Snackbar } from "../snackbar";
-import BannerNotice from "./BannerNotice.vue";
-import RemoteFilesSelect from "./RemoteSelect/RemoteFilesSelect.vue";
-import { FileListItem } from "../file-tree-util";
-import { filenameFromUrl } from "../util";
-import { ReferenceGenome, ILaxyFile, PairedEndFiles } from "../types";
+import { DummySampleList as _dummySampleList } from "../../test-data";
+import { DummyPipelineConfig as _dummyPipelineConfig } from "../../test-data";
+import { Snackbar } from "../../snackbar";
+import BannerNotice from "../BannerNotice.vue";
+import RemoteFilesSelect from "../RemoteSelect/RemoteFilesSelect.vue";
+import { FileListItem } from "../../file-tree-util";
+import { filenameFromUrl } from "../../util";
+import { ReferenceGenome, ILaxyFile, PairedEndFiles } from "../../types";
 
 @Component({
   components: {

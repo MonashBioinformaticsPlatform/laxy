@@ -73,10 +73,10 @@ import {
 } from './store';
 import { truncateString, widthAwareStringTruncate } from './util';
 
-import InputDataForm from './components/InputFilesForm.vue';
+import InputDataForm from './components/RNAsikSetup/InputFilesForm.vue';
 import SampleCart from './components/SampleCart.vue';
 import SampleTable from './components/SampleTable.vue';
-import PipelineParams from './components/PipelineParams.vue';
+import PipelineParams from './components/RNAsikSetup/PipelineParams.vue';
 import JobPage from './components/JobPage.vue';
 import JobStatusCard from './components/JobStatusCard.vue';
 import FileList from './components/FileList.vue';

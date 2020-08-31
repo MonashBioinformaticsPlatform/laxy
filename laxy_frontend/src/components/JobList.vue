@@ -145,7 +145,7 @@ import { WebAPI } from "../web-api";
 
 import { DummyJobList as _dummyJobList } from "../test-data";
 import { Snackbar } from "../snackbar";
-import PipelineParams from "./PipelineParams.vue";
+import PipelineParams from "./RNAsikSetup/PipelineParams.vue";
 import { ILaxySampleCart, ILaxyFile } from "../types";
 
 @Component({})

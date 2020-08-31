@@ -190,9 +190,9 @@ import {
 } from "vue-property-decorator";
 import VueMarkdown from "vue-markdown";
 
-import { Snackbar } from "../snackbar";
+import { Snackbar } from "../../snackbar";
 
-import { LaxyFile, Sample } from "../model";
+import { LaxyFile, Sample } from "../../model";
 
 import {
   EMPTY_TREE_ROOT,
@@ -204,20 +204,20 @@ import {
   objListToTree,
   simplifyFastqName,
   TreeNode,
-} from "../file-tree-util";
+} from "../../file-tree-util";
 
-import { longestCommonSuffix } from "../prefix";
-import { escapeRegExp, reverseString } from "../util";
+import { longestCommonSuffix } from "../../prefix";
+import { escapeRegExp, reverseString } from "../../util";
 
-import { ADD_SAMPLES } from "../store";
+import { ADD_SAMPLES } from "../../store";
 
-import ENAFileSelect from "./ENA/ENAFileSelect.vue";
-import ENASearchAboutBox from "./ENA/ENASearchAboutBox.vue";
-import RemoteFilesSelect from "./RemoteSelect/RemoteFilesSelect.vue";
-import RemoteFileSelectAboutBox from "./RemoteSelect/RemoteFileSelectAboutBox.vue";
-import CSVSampleListUpload from "./CSVSampleListUpload/CSVSampleListUpload.vue";
-import CSVAboutBox from "./CSVSampleListUpload/CSVAboutBox.vue";
-import { ILaxyFile } from "../types";
+import ENAFileSelect from "../ENA/ENAFileSelect.vue";
+import ENASearchAboutBox from "../ENA/ENASearchAboutBox.vue";
+import RemoteFilesSelect from "../RemoteSelect/RemoteFilesSelect.vue";
+import RemoteFileSelectAboutBox from "../RemoteSelect/RemoteFileSelectAboutBox.vue";
+import CSVSampleListUpload from "../CSVSampleListUpload/CSVSampleListUpload.vue";
+import CSVAboutBox from "../CSVSampleListUpload/CSVAboutBox.vue";
+import { ILaxyFile } from "../../types";
 
 interface DbAccession {
   accession: string;

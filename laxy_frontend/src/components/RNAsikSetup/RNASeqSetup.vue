@@ -72,7 +72,7 @@ import {
   Watch,
 } from "vue-property-decorator";
 
-import SelectGenome from "./SelectGenome";
+import SelectGenome from "./SelectGenome.vue";
 
 @Component({ components: { SelectGenome } })
 export default class RNASeqSetup extends Vue {

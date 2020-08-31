@@ -172,18 +172,18 @@ import {
   Provide,
   Watch,
 } from "vue-property-decorator";
-import { FileListItem } from "../file-tree-util";
+import { FileListItem } from "../../file-tree-util";
 import { Sync } from "vuex-pathify";
 
-import AVAILABLE_GENOMES from "../config/genomics/genomes";
+import AVAILABLE_GENOMES from "../../config/genomics/genomes";
 
-import RemoteFilesSelect from "./RemoteSelect/RemoteFilesSelect.vue";
-import RemoteFileSelectAboutBox from "./RemoteSelect/RemoteFileSelectAboutBox.vue";
+import RemoteFilesSelect from "../RemoteSelect/RemoteFilesSelect.vue";
+import RemoteFileSelectAboutBox from "../RemoteSelect/RemoteFileSelectAboutBox.vue";
 
-import BannerNotice from "./BannerNotice.vue";
+import BannerNotice from "../BannerNotice.vue";
 
-import { ReferenceGenome } from "../types";
-import { isValidUrl } from "../util";
+import { ReferenceGenome } from "../../types";
+import { isValidUrl } from "../../util";
 
 @Component({
   components: { RemoteFilesSelect, BannerNotice },
@@ -201,7 +201,7 @@ export default class SelectGenome extends Vue {
   @Sync("pipelineParams@genome")
   public reference_genome: string;
 
-  public custom_genome_fileselect_url: string = `${this.ensemblReleaseUrl}/fasta/`;
+  public custom_genome_fileselect_url: string = "";
 
   public available_genomes: Array<ReferenceGenome> = AVAILABLE_GENOMES;
 
