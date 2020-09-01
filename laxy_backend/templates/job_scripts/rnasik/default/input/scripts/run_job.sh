@@ -760,6 +760,32 @@ function set_reference_paths() {
     fi
 }
 
+function fastq_sanity_check() {
+    #
+    # Read every FASTQ with seqkit, exit with error if any fail
+    #
+
+    local orig_errexit=${-//[^e]/}
+    set -o errexit
+    local _cpus=4
+
+    mkdir -p "${JOB_PATH}/output/seqkit_stats"
+    echo -e "This directory contains the output from 'seqkit stats' for the FASTQ input files provided. "\
+            "It is primarily intended to catch corrupted FASTQ files early, before the main pipeline runs." \
+            >"${JOB_PATH}/output/seqkit_stats/README.txt"
+    for fq in $(find "${INPUT_READS_PATH}" -name "*.f*[q,a].gz"); do
+        local _fn=$(basename "${fq}")
+        seqkit stats -j $_cpus $fq >"${JOB_PATH}/output/seqkit_stats/${_fn}.tsv" || \
+          { send_event "JOB_INFO" "Something wrong with input file: ${_fn}" & \
+            send_job_metadata '{"metadata": {"error": {"bad_input_file": "'${_fn}'"}}}'; \
+            return 1; }
+    done
+
+    if [[ -z "${orig_errexit}" ]]; then
+        set +o errexit
+    fi
+}
+
 function run_mash_screen() {
     # This is additional 'pre-pipeline' step - might make sense integrating it as an option to RNAsik
     # in the future.
@@ -949,6 +975,8 @@ add_sik_config || send_error 'add_sik_config' '' $?
 download_input_data || fail_job 'download_input_data' '' $?
 
 capture_environment_variables || true
+
+fastq_sanity_check || fail_job 'fastq_sanity_check' '' $?
 
 detect_pairs
 

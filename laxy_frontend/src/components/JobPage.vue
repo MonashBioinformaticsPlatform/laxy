@@ -75,6 +75,35 @@
       </md-layout>
       <md-layout v-if="job" md-gutter="16">
         <md-layout
+          id="top-panel-banner"
+          v-show="showTab === 'summary' || showTab == null"
+          v-if="job && jobIsDone && badInputFile"
+          md-flex="100"
+          md-gutter="16"
+          md-column
+          style="padding-right: 24px;"
+        >
+          <generic-pip
+            class="fill-width"
+            cardClass
+            stripeColor="warn"
+            icon="broken_image"
+            buttonIcon
+            buttonText
+          >
+            <template>
+              <span slot="title">Bad input file(s)</span>
+              <span slot="subtitle">
+                It appears your job failed due to a problem with the input file:
+                <strong>{{ badInputFile }}</strong>
+                <br />The file may be corrupt or not a valid FASTQ file - please verify before trying again.
+                <br />If you believe your input file is okay and the problem persists, please don't hestiate to contact us for further assistance.
+              </span>
+            </template>
+          </generic-pip>
+        </md-layout>
+
+        <md-layout
           v-show="showTab === 'summary' || showTab == null"
           id="top-panel"
           md-flex="100"
@@ -172,7 +201,7 @@
               class="fill-width"
               @click="openDialog('expiryInfoDialog')"
               :cardClass="jobExpiresSoon ? (job.expired ? 'accent': 'warn') : ''"
-              :cardStripe="jobExpiresSoon ? '': 'warn'"
+              :stripeColor="jobExpiresSoon ? '': 'warn'"
               :icon="jobExpiresSoon ? 'warning': ''"
               buttonIcon
               buttonText
@@ -808,6 +837,10 @@ export default class JobPage extends Vue {
         strandedness = "reverse-stranded";
     }
     return strandedness;
+  }
+
+  get badInputFile(): number | null {
+    return get(this.job, "metadata.error.bad_input_file", null);
   }
 
   get jobParamRows() {
