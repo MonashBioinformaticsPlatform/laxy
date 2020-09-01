@@ -35,7 +35,7 @@ dependencies:
   - aria2
   # older openssl and icu required to support aria2 on some systems
   - openssl=1.0.2p
-  - 'icu=58.*'
+  - "icu=58.*"
   - curl
   - wget
   - awscli
@@ -44,10 +44,10 @@ dependencies:
   # Pipeline specific
   - rnasik
   - mash
+  - seqkit
   - qualimap=2.2.2b=0
   - pandas<1
   - pip:
-    # General run_job.sh dependency, for the laxydl downloader tool
-    - git+https://github.com/MonashBioinformaticsPlatform/laxy@master#egg=laxy_downloader&subdirectory=laxy_downloader
-    - semver
-
+      # General run_job.sh dependency, for the laxydl downloader tool
+      - git+https://github.com/MonashBioinformaticsPlatform/laxy@master#egg=laxy_downloader&subdirectory=laxy_downloader
+      - semver
