@@ -775,7 +775,7 @@ function fastq_sanity_check() {
             >"${JOB_PATH}/output/seqkit_stats/README.txt"
     for fq in $(find "${INPUT_READS_PATH}" -name "*.f*[q,a].gz"); do
         local _fn=$(basename "${fq}")
-        seqkit stats -j $_cpus $fq >"${JOB_PATH}/output/seqkit_stats/${_fn}.tsv" || \
+        seqkit stats -j $_cpus $fq >"${JOB_PATH}/output/seqkit_stats/${_fn}.tsv" 2>"${JOB_PATH}/output/seqkit_stats/${_fn}.err" || \
           { send_event "JOB_INFO" "Something wrong with input file: ${_fn}" & \
             send_job_metadata '{"metadata": {"error": {"bad_input_file": "'${_fn}'"}}}'; \
             return 1; }
