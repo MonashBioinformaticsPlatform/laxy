@@ -156,6 +156,15 @@ export class WebAPI {
         }
     }
 
+    public static async getAvailablePipelines(): Promise<AxiosResponse> {
+        try {
+            return await this.fetcher.get(
+                `/api/v1/pipelines/`) as AxiosResponse;
+        } catch (error) {
+            throw error;
+        }
+    }
+
     public static async enaSearch(accession_list: string[]): Promise<AxiosResponse> {
         const accessions = accession_list.join(',');
         const url = `/api/v1/ena/fastqs/?accessions=${accessions}`;

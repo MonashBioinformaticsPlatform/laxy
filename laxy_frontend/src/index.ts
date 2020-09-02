@@ -28,7 +28,7 @@ import Vuex from 'vuex';
 
 Vue.use(Vuex);
 
-import VueRouter, { RouterOptions } from 'vue-router';
+import VueRouter, { RouterOptions, RouteConfig } from 'vue-router';
 
 Vue.use(VueRouter);
 
@@ -57,7 +57,7 @@ const VueMoment = require('vue-moment');  // for date formatting
 Vue.use(VueMoment);
 
 import { WebAPI } from './web-api';
-import { router } from './routes';
+import { router, requireAuth } from './routes';
 
 // Import per component, not globally
 // import VueMarkdown from 'vue-markdown';
@@ -66,6 +66,7 @@ import { router } from './routes';
 import {
     AUTHENTICATE_USER,
     FETCH_USER_PROFILE,
+    FETCH_PIPELINES,
     PING_BACKEND,
     SET_GLOBAL_SNACKBAR,
     SET_USER_PROFILE,
@@ -81,6 +82,7 @@ import JobPage from './components/JobPage.vue';
 import JobStatusCard from './components/JobStatusCard.vue';
 import FileList from './components/FileList.vue';
 import EventLog from './components/EventLog.vue';
+import RNASeqSetup from './components/RNAsikSetup/RNASeqSetup.vue';
 
 Vue.component('input-files-form', InputDataForm);
 Vue.component('sample-table', SampleTable);
@@ -159,6 +161,7 @@ const App = new Vue({
         });
 
         await this.$store.dispatch(FETCH_USER_PROFILE);
+        await this.$store.dispatch(FETCH_PIPELINES);
     },
     mounted() {
         const snackbar = (this.$refs.global_snackbar as any);

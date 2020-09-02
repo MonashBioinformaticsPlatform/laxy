@@ -108,6 +108,8 @@ import get from "lodash-es/get";
 import find from "lodash-es/find";
 import map from "lodash-es/map";
 import every from "lodash-es/every";
+import sortBy from "lodash-es/sortBy";
+import last from "lodash-es/last";
 import { Memoize } from "lodash-decorators";
 
 import "es6-promise";
@@ -161,6 +163,8 @@ import { ReferenceGenome, ILaxyFile, PairedEndFiles } from "../../types";
   },
 })
 export default class PipelineParams extends Vue {
+  public pipeline_name: string = "rnaseq";
+
   @Prop({ default: true, type: Boolean })
   public showButtons: boolean;
   public show_advanced = false;
@@ -176,7 +180,27 @@ export default class PipelineParams extends Vue {
   public reference_genome_valid: boolean = true;
   public available_genomes: Array<ReferenceGenome> = AVAILABLE_GENOMES;
 
-  public pipeline_versions = ["1.5.3", "1.5.2", "1.5.3-laxydev", "1.5.4"];
+  get pipeline_versions() {
+    // const versions = = ["1.5.3", "1.5.2", "1.5.3-laxydev", "1.5.4"];
+    return get(
+      this.$store.state.availablePipelines[this.pipeline_name],
+      "metadata.versions",
+      []
+    );
+  }
+
+  get default_pipeline_version() {
+    return get(
+      this.$store.state.availablePipelines[this.pipeline_name],
+      "metadata.default_version",
+      last(
+        sortBy(this.pipeline_versions, (v) => {
+          return v;
+        })
+      )
+    );
+  }
+
   public pipeline_aligners = [
     { text: "STAR", value: "star" },
     { text: "BWA-MEM", value: "bwa" },
@@ -185,7 +209,7 @@ export default class PipelineParams extends Vue {
   public _samples: SampleCartItems;
   get samples(): SampleCartItems {
     this._samples = cloneDeep(this.$store.state.samples);
-    // We do this so that if samples change validation runs
+    // We trigger the computed property so that if samples change validation runs
     const _ = this.isValid_params;
     return this._samples;
   }
@@ -208,6 +232,10 @@ export default class PipelineParams extends Vue {
 
   created() {
     this._samples = cloneDeep(this.$store.state.samples);
+  }
+
+  mounted() {
+    this.pipeline_version = this.default_pipeline_version;
   }
 
   /*

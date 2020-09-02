@@ -336,6 +336,25 @@ class EventLog(UUIDModel):
         return event
 
 
+class Pipeline(Timestamped, UUIDModel):
+    """
+    A record for a pipeline that may be available to run.
+    """
+
+    owner = ForeignKey(
+        User, blank=True, null=True, on_delete=models.CASCADE, related_name="pipelines",
+    )
+    name = CharField(max_length=256)
+    public = BooleanField(default=False)
+
+    # Contains extra pipeline info like:
+    #    {"versions": ["1.5.3", "1.5.4"]}
+    # Ideally we should keep the data here independent
+    # of platform specific details (eg shouldn't be specific
+    # to a particular ComputeResource).
+    metadata = JSONField(default=OrderedDict)
+
+
 class ComputeResourceDecommissioned(Exception):
     pass
 

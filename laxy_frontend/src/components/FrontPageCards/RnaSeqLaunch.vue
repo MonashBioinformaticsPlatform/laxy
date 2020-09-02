@@ -41,7 +41,7 @@ import { Prop } from "vue-property-decorator";
   filters: {},
 })
 export default class RnaSeqLaunch extends Vue {
-  @Prop({ type: String, default: "/rnaseq" })
+  @Prop({ type: String, default: "/run/rnaseq" })
   routeTo: string;
 }
 </script>

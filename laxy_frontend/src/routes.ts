@@ -1,4 +1,6 @@
-import VueRouter, { RouterOptions } from 'vue-router';
+import get from "lodash-es/get";
+
+import VueRouter, { RouterOptions, RouteConfig } from 'vue-router';
 // const multiguard = require('vue-router-multiguard');
 
 import { FETCH_USER_PROFILE, Store } from './store';
@@ -14,7 +16,7 @@ import JobPage from './components/JobPage.vue';
 import PrivacyPolicy from './docs/PrivacyPolicy.vue';
 import LoadingExternalPage from "./components/LoadingExternalPage.vue";
 
-async function requireAuth(to: any, from: any, next: Function) {
+export async function requireAuth(to: any, from: any, next: Function) {
     // If profile isn't set, user MAY be authenticated (by existing an cookie/token) but
     // during a fresh page load where the Vuex store is empty the initial request
     // to grab the user profile may not be complete yet. We wait for the user profile request, when check
@@ -56,6 +58,7 @@ async function preserveQueryParams(to: any, from: any, next: Function) {
 }
 */
 
+
 export const router = new VueRouter({
     routes: [
         {
@@ -89,13 +92,14 @@ export const router = new VueRouter({
             props: true,
             beforeEnter: requireAuth,
         },
-        {
-            path: '/rnaseq',
-            name: 'rnaseq',
-            component: RNASeqSetup,
-            props: true,
-            beforeEnter: requireAuth,
-        },
+        // Now populated via routes.addPipelineRoutes() and WebAPI.getAvailablePipelines()
+        // {
+        //     path: '/run/rnaseq',
+        //     name: 'rnaseq',
+        //     component: RNASeqSetup,
+        //     props: true,
+        //     beforeEnter: requireAuth,
+        // },
         {
             path: '/remoteselect',
             name: 'remoteselect',
@@ -162,3 +166,39 @@ export const router = new VueRouter({
         // return {x: 0, y: 0};
     }
 } as RouterOptions);
+
+
+const _addedRoutes: string[] = [];
+/*
+* A wrapper around VueRouter.addRoutes that tracks already added routes by path,
+* silently ignores those already added.
+*/
+export function addRoute(route: RouteConfig) {
+    if (!_addedRoutes.includes(route.path)) {
+        router.addRoutes([route]);
+        _addedRoutes.push(route.path);
+    }
+}
+
+export function addPipelineRoutes(pipelines: { name: string }[]) {
+    const pipelineComponentMapping = {
+        rnaseq: RNASeqSetup,
+        seqkit_stats: RemoteFilesSelect,
+    };
+    const routes = [];
+    for (let p of pipelines) {
+        // if (state.availablePipelines.includes(p.name)) continue;
+
+        const r = {
+            path: `/run/${encodeURIComponent(p.name.replace('_', '-'))}`,
+            name: p.name,
+            component: get(pipelineComponentMapping, p.name, FrontPage),
+            props: true,
+            beforeEnter: requireAuth,
+        } as RouteConfig;
+        // routes.push(r);
+        addRoute(r);
+    }
+
+    // router.addRoutes(routes);
+}

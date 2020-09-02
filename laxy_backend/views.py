@@ -104,6 +104,7 @@ from .jwt_helpers import get_jwt_user_header_dict, get_jwt_user_header_str
 from .models import (
     Job,
     ComputeResource,
+    Pipeline,
     File,
     FileSet,
     SampleCart,
@@ -128,6 +129,7 @@ from .serializers import (
     PipelineRunCreateSerializer,
     SchemalessJsonResponseSerializer,
     JobListSerializerResponse,
+    PipelineSerializer,
     EventLogSerializer,
     JobEventLogSerializer,
     JobFileSerializerCreateRequest,
@@ -2062,7 +2064,7 @@ class JobPagination(PageNumberPagination):
 # http://www.django-rest-framework.org/api-guide/viewsets/#modelviewset
 class JobListView(generics.ListAPIView):
     """
-    Retrieve a list of job for the current user.
+    Retrieve a list of jobs for the current user.
     """
 
     serializer_class = JobListSerializerResponse
@@ -2082,6 +2084,28 @@ class JobListView(generics.ListAPIView):
     #     serializer = JobSerializerResponse(queryset, many=True)
     #     self.transform_output(serializer.data)
     #     return Response(serializer.data)
+
+
+class PipelineView(JSONView, GetMixin):
+    queryset = Pipeline.objects.all()
+    serializer_class = PipelineSerializer
+    permission_classes = (IsAuthenticated & (IsOwner | IsSuperuser),)
+
+
+class PipelineListView(generics.ListAPIView):
+    """
+    Retrieve a list of pipelines available to the current user.
+    """
+
+    serializer_class = PipelineSerializer
+    # permission_classes = [IsAuthenticated]
+    pagination_class = JobPagination
+
+    def get_queryset(self):
+        # return Pipeline.objects.all()
+        return Pipeline.objects.filter(
+            Q(owner=self.request.user) | Q(public=True)
+        ).order_by("-created_time")
 
 
 class BigPageNumberPagination(PageNumberPagination):

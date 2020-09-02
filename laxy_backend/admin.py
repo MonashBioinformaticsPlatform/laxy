@@ -30,6 +30,7 @@ from .models import (
     FileSet,
     SampleCart,
     PipelineRun,
+    Pipeline,
     EventLog,
     UserProfile,
     AccessToken,
@@ -687,6 +688,24 @@ class PipelineRunAdmin(Timestamped, VersionAdmin):
     pass
 
 
+class PipelineAdmin(admin.ModelAdmin):
+    ordering = ("name",)
+    list_filter = (
+        "name",
+        "owner",
+    )
+    list_display = (
+        "name",
+        "uuid",
+        "owner",
+    )
+    search_fields = (
+        "id",
+        "name",
+        "owner",
+    )
+
+
 class EventLogAdmin(admin.ModelAdmin):
     ordering = ("-timestamp",)
     raw_id_fields = ("user",)
@@ -737,5 +756,6 @@ admin.site.register(FileLocation, FileLocationAdmin)
 admin.site.register(FileSet, FileSetAdmin)
 admin.site.register(SampleCart, SampleCartAdmin)
 admin.site.register(PipelineRun, PipelineRunAdmin)
+admin.site.register(Pipeline, PipelineAdmin)
 admin.site.register(EventLog, EventLogAdmin)
 admin.site.register(AccessToken, AccessTokenAdmin)

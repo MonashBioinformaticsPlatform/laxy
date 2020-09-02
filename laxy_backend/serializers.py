@@ -378,6 +378,17 @@ class ComputeResourceSerializer(BaseModelSerializer):
         error_status_codes = status_codes()
 
 
+class PipelineSerializer(BaseModelSerializer):
+
+    metadata = SchemalessJsonResponseSerializer(required=False)
+
+    class Meta:
+        model = models.Pipeline
+        fields = "__all__"
+        depth = 0
+        error_status_codes = status_codes()
+
+
 class JobSerializerBase(BaseModelSerializer):
     owner = serializers.PrimaryKeyRelatedField(
         read_only=True, default=serializers.CurrentUserDefault()

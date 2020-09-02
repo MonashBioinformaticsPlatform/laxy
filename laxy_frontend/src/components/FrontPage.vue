@@ -28,8 +28,8 @@
             <h1 class="md-display-1">Latest news</h1>
             <latest-news></latest-news>
             <h1 class="md-display-1">Launch a pipeline</h1>
-            <router-link to="/rnaseq">
-              <rna-seq-launch route-to="/rnaseq"></rna-seq-launch>
+            <router-link to="/run/rnaseq">
+              <rna-seq-launch route-to="/run/rnaseq"></rna-seq-launch>
             </router-link>
             <variant-calls-launch></variant-calls-launch>
             <nullarbor-launch></nullarbor-launch>

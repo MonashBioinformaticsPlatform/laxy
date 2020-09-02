@@ -4,6 +4,7 @@ import pick from 'lodash-es/pick';
 import cloneDeep from 'lodash-es/cloneDeep';
 import update from 'lodash-es/update';
 import head from 'lodash-es/head';
+import keyBy from 'lodash-es/keyBy';
 
 import Vue from 'vue';
 import Vuex from 'vuex';
@@ -17,6 +18,7 @@ import { vueAuth, AuthOptions } from './auth';
 
 import AVAILABLE_GENOMES from "./config/genomics/genomes";
 import { ILaxyFile, LaxyFileSet, ISample } from './types';
+import { addPipelineRoutes } from './routes';
 
 export const SET_ONLINE_STATUS = 'set_online_status';
 export const SET_BACKEND_VERSION = 'set_backend_version';
@@ -39,12 +41,14 @@ export const SET_VIEWED_JOB = 'set_viewed_job';
 export const SET_API_URL = 'set_api_url';
 export const SET_JOB_ACCESS_TOKEN = 'set_job_access_token';
 export const SET_GLOBAL_SNACKBAR = 'set_global_snackbar';
+export const SET_PIPELINES = 'set_pipelines';
 
 export const PING_BACKEND = 'ping_backend';
 export const FETCH_USER_PROFILE = 'fetch_user_profile';
 export const FETCH_JOBS = 'fetch_jobs';
 export const FETCH_FILESET = 'fetch_fileset';
 export const FETCH_JOB = 'fetch_job';
+export const FETCH_PIPELINES = 'fetch_pipelines';
 
 interface JobsPage {
     total: number;  // total number of jobs on all pages
@@ -64,6 +68,7 @@ const initial_state: any = {
     popupWarningDismissed: false,
     user_profile: null as any,
     samples: new SampleCartItems(),
+    availablePipelines: {},
     pipelineParams: {
         // a list of files the backend will fetch as input
         fetch_files: [] as ILaxyFile[],
@@ -223,7 +228,7 @@ const mutations: any = {
         state.jobs = jobs;
     },
     [SET_FILESET](state: any, fileset: LaxyFileSet) {
-        // state.filesets[fileset.id] = fileset; // don't preserve reactivity
+        // state.filesets[fileset.id] = fileset; // doesn't preserve reactivity
         Vue.set(state.filesets, fileset.id, fileset); // reactive
     },
     [SET_VIEWED_JOB](state: any, job: ComputeJob) {
@@ -232,6 +237,10 @@ const mutations: any = {
     [SET_JOB_ACCESS_TOKEN](state: any, params: any) {
         const { job_id, token } = params;
         Vue.set(state.jobAccessTokens, job_id, token);
+    },
+    [SET_PIPELINES](state: any, pipelines: any) {
+        addPipelineRoutes(pipelines);
+        Vue.set(state, 'availablePipelines', keyBy(pipelines, p => p.name));
     },
     ...make.mutations(initial_state),
 };
@@ -353,6 +362,17 @@ const actions: any = {
         try {
             const response = await WebAPI.getJob(job_id, access_token);
             commit(SET_VIEWED_JOB, response.data);
+        } catch (error) {
+            throw error;
+        }
+    },
+    async [FETCH_PIPELINES]({ commit, state }: any) {
+        try {
+            const response = await WebAPI.getAvailablePipelines();
+            if (response.data.next != null) {
+                throw new Error("WebAPI.getAvailablePipelines returned more than one page of results, but pagination is not yet implemented.")
+            }
+            commit(SET_PIPELINES, response.data.results);
         } catch (error) {
             throw error;
         }
