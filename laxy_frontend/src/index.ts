@@ -74,20 +74,17 @@ import {
 } from './store';
 import { truncateString, widthAwareStringTruncate } from './util';
 
-import InputDataForm from './components/RNAsikSetup/InputFilesForm.vue';
+import MainSidenav from './components/MainSidenav.vue';
 import SampleCart from './components/SampleCart.vue';
 import SampleTable from './components/SampleTable.vue';
-import PipelineParams from './components/RNAsikSetup/PipelineParams.vue';
 import JobPage from './components/JobPage.vue';
 import JobStatusCard from './components/JobStatusCard.vue';
 import FileList from './components/FileList.vue';
 import EventLog from './components/EventLog.vue';
-import RNASeqSetup from './components/RNAsikSetup/RNASeqSetup.vue';
 
-Vue.component('input-files-form', InputDataForm);
+Vue.component('main-sidenav', MainSidenav);
 Vue.component('sample-table', SampleTable);
 Vue.component('sample-cart', SampleCart);
-Vue.component('pipeline-params', PipelineParams);
 Vue.component('file-list', FileList);
 Vue.component('event-log', EventLog);
 Vue.component('job-page', JobPage);
@@ -160,8 +157,16 @@ const App = new Vue({
             return Promise.reject(error);
         });
 
-        await this.$store.dispatch(FETCH_USER_PROFILE);
-        await this.$store.dispatch(FETCH_PIPELINES);
+        try {
+            await this.$store.dispatch(FETCH_USER_PROFILE);
+        } catch (e) {
+            console.warn(e)
+        }
+        try {
+            await this.$store.dispatch(FETCH_PIPELINES);
+        } catch (e) {
+            console.warn(e)
+        }
     },
     mounted() {
         const snackbar = (this.$refs.global_snackbar as any);

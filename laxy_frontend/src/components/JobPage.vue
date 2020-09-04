@@ -160,7 +160,10 @@
                 See the "Count files" section below for other options.
               </span>
               <template slot="content" style="list-style-type: none;">
-                <span v-for="countsFile in filterByTag(outputFiles, ['degust'])">
+                <span
+                  v-for="countsFile in filterByTag(outputFiles, ['degust'])"
+                  :key="countsFile.id"
+                >
                   <template
                     v-if="countsFile && countsFile.name.startsWith(strandPredictionPrefix) && countsFile.name.includes('withNames')"
                   >
@@ -470,8 +473,6 @@ import {
 } from "vue-property-decorator";
 
 import { State, Getter, Action, Mutation, namespace } from "vuex-class";
-// import { State2Way } from 'vuex-class-state2way'
-import { State2Way } from "../vuex/state2way";
 
 import { NotImplementedError } from "../exceptions";
 import { ComputeJob, LaxyFile, SampleCartItems } from "../model";
@@ -501,11 +502,11 @@ import {
 } from "../file-tree-util";
 
 import { DummyJobList as _dummyJobList } from "../test-data";
-import JobStatusPip from "./JobStatusPip";
-import FileLinkPip from "./FileLinkPip";
-import NestedFileList from "./NestedFileList";
+import JobStatusPip from "./JobStatusPip.vue";
+import FileLinkPip from "./FileLinkPip.vue";
+import NestedFileList from "./NestedFileList.vue";
 import { EMPTY_TREE_ROOT, fileListToTree, TreeNode } from "../file-tree-util";
-import SharingLinkList from "./SharingLinkList";
+import SharingLinkList from "./SharingLinkList.vue";
 import { Snackbar } from "../snackbar";
 import ExpiryDialog from "./Dialogs/ExpiryDialog.vue";
 import AVAILABLE_GENOMES from "../config/genomics/genomes";
@@ -986,6 +987,7 @@ export default class JobPage extends Vue {
     try {
       const response = await WebAPI.cloneJob(id);
       const pipelinerun_id = response.data.pipelinerun_id;
+      const pipeline_name = response.data.pipeline;
       const samplecart_id = response.data.samplecart_id;
 
       const p_response = await WebAPI.getPipelineRun(pipelinerun_id);
@@ -1011,7 +1013,7 @@ export default class JobPage extends Vue {
       }
 
       // TODO: make a prop on RNASeqSetup to allow a jump to second or last step immediately
-      this.$router.push({ name: "rnaseq" });
+      this.$router.push({ name: pipeline_name });
     } catch (error) {
       console.log(error);
     }

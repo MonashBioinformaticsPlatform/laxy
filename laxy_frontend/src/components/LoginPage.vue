@@ -1,7 +1,7 @@
 <template>
   <md-layout md-align="center" md-gutter="16">
     <md-layout md-flex="25" md-flex-small="100" md-column>
-      <md-card v-if="!is_authenticated" style="margin-top: 32px;">
+      <md-card v-if="!is_authenticated" style="margin-top: 32px">
         <md-card-content>
           <md-layout md-column>
             <transition name="slide-fade">
@@ -10,7 +10,7 @@
                 <md-button
                   @click="login('google')"
                   class="md-raised login-button"
-                  style="background-color: #4385F4;"
+                  style="background-color: #4385f4"
                   type="submit"
                 >
                   <img src="assets/btn_google_signin_dark_normal_web.png" />
@@ -18,14 +18,21 @@
                 <md-button
                   @click="login('google_monash')"
                   class="md-raised md-primary login-button"
-                  style="background-color: #4385F4;"
+                  style="background-color: #4385f4"
                   type="submit"
-                >Monash Login via Google</md-button>
+                  >Monash Login via Google</md-button
+                >
               </md-layout>
             </transition>
             <hr />
             <md-list>
-              <md-list-item @click="() => { showExternalButtons = !showExternalButtons }">
+              <md-list-item
+                @click="
+                  () => {
+                    showExternalButtons = !showExternalButtons;
+                  }
+                "
+              >
                 <md-icon md-src="assets/favicon-grey-24.png"></md-icon>
                 <span>Other options</span>
                 <md-list-expand>
@@ -33,7 +40,9 @@
                     <md-list>
                       <li>
                         <br />
-                        <div class="md-subtitle">Login with a local Laxy account</div>
+                        <div class="md-subtitle">
+                          Login with a local Laxy account
+                        </div>
                       </li>
                       <li>
                         <md-input-container>
@@ -44,7 +53,10 @@
                       <li>
                         <md-input-container md-has-password>
                           <label>Password</label>
-                          <md-input v-model="login_form_password" type="password"></md-input>
+                          <md-input
+                            v-model="login_form_password"
+                            type="password"
+                          ></md-input>
                         </md-input-container>
                       </li>
                       <li>
@@ -52,7 +64,8 @@
                           @click="login('laxy')"
                           class="md-raised md-primary fill-width login-button"
                           type="submit"
-                        >Login</md-button>
+                          >Login</md-button
+                        >
                       </li>
                     </md-list>
                   </form>
@@ -62,16 +75,18 @@
           </md-layout>
         </md-card-content>
       </md-card>
-      <md-card v-if="is_authenticated" style="margin-top: 32px;">
+      <md-card v-if="is_authenticated" style="margin-top: 32px">
         <md-card-content>
           <md-layout md-column>
             <br />
             <span class="md-title">
-              You are logged in as {{ full_name }} (
-              <em>{{ username }}</em>).
+              You are logged in as {{ full_name }} ( <em>{{ username }}</em
+              >).
             </span>
             <br />
-            <md-button @click="logout" class="md-primary md-raised fill-width">Logout</md-button>
+            <md-button @click="logout" class="md-primary md-raised fill-width"
+              >Logout</md-button
+            >
           </md-layout>
         </md-card-content>
       </md-card>
@@ -92,6 +107,7 @@ import { Prop } from "vue-property-decorator";
 
 import {
   AUTHENTICATE_USER,
+  FETCH_PIPELINES,
   SET_GLOBAL_SNACKBAR,
   SET_USER_PROFILE,
 } from "../store";
@@ -133,6 +149,7 @@ export default class LoginPage extends Vue {
     }
     try {
       await this.$store.dispatch(AUTHENTICATE_USER, providerData);
+      await this.$store.dispatch(FETCH_PIPELINES);
       this.clearLoginForm();
       this.$router.push({ path: this.redirectPath });
     } catch (error) {

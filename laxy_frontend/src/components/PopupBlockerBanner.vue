@@ -21,8 +21,7 @@ import {
 } from "vue-property-decorator";
 
 import { State, Getter, Action, Mutation, namespace } from "vuex-class";
-// import {State2Way} from 'vuex-class-state2way'
-import { State2Way } from "../vuex/state2way";
+import { Get, Sync, Call } from "vuex-pathify";
 
 import {
   SET_POPUPS_ARE_BLOCKED,
@@ -47,7 +46,7 @@ export default class PopupBlockerBanner extends Vue {
     }
   }
 
-  @State2Way(SET_POPUP_WARNING_DISMISSED, "popupWarningDismissed")
+  @Sync("popupWarningDismissed")
   public popupWarningDismissed: boolean;
 
   get popupsAreBlocked(): boolean {

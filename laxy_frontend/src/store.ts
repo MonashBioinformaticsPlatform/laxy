@@ -9,7 +9,9 @@ import keyBy from 'lodash-es/keyBy';
 import Vue from 'vue';
 import Vuex from 'vuex';
 
-import pathify, { make } from 'vuex-pathify';
+import pathify from './config/pathify';
+import { make } from 'vuex-pathify';
+//import pathify, { make } from 'vuex-pathify';
 
 import axios, { AxiosResponse } from 'axios';
 import { ComputeJob, LaxyFile, Sample, SampleCartItems } from './model';
@@ -72,14 +74,17 @@ const initial_state: any = {
     pipelineParams: {
         // a list of files the backend will fetch as input
         fetch_files: [] as ILaxyFile[],
-        genome: AVAILABLE_GENOMES[0].id,
-        user_genome: {
-            fasta_url: '',
-            annotation_url: '',
-        },
         description: '',
-        pipeline_version: '1.5.4',
-        pipeline_aligner: 'star',
+
+        // params: {},
+
+        // genome: AVAILABLE_GENOMES[0].id,
+        // user_genome: {
+        //     fasta_url: '',
+        //     annotation_url: '',
+        // },
+        // pipeline_version: '1.5.4',
+        // pipeline_aligner: 'star',
     },
     pipelineParams_valid: false,
     use_custom_genome: false,

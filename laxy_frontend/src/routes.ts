@@ -7,7 +7,8 @@ import { FETCH_USER_PROFILE, Store } from './store';
 
 import FrontPage from './components/FrontPage.vue';
 import LoginPage from './components/LoginPage.vue';
-import RNASeqSetup from './components/RNAsikSetup/RNASeqSetup.vue';
+import RNASeqSetup from './components/pipelines/rnaseq/ui/RNASeqSetup.vue';
+import SeqkitStatsSetup from './components/pipelines/seqkit_stats/ui/SeqkitStatsSetup.vue';
 import RemoteFilesSelect from './components/RemoteSelect/RemoteFilesSelect.vue';
 import SampleCart from './components/SampleCart.vue';
 import ENAFlow from './components/ENA/ENAFlow.vue';
@@ -183,7 +184,8 @@ export function addRoute(route: RouteConfig) {
 export function addPipelineRoutes(pipelines: { name: string }[]) {
     const pipelineComponentMapping = {
         rnaseq: RNASeqSetup,
-        seqkit_stats: RemoteFilesSelect,
+        rnasik: RNASeqSetup,
+        seqkit_stats: SeqkitStatsSetup,
     };
     const routes = [];
     for (let p of pipelines) {

@@ -43,7 +43,6 @@
 
 
 <script lang="ts">
-import * as _ from "lodash";
 import "es6-promise";
 
 import axios, { AxiosResponse } from "axios";
@@ -74,5 +73,5 @@ export default Vue.extend({
   methods: {},
   computed: {},
   watch: {},
-}); // as ComponentOptions<RNASeqSetup>;
+});
 </script>

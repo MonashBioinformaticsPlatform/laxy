@@ -1939,10 +1939,21 @@ class JobCreate(JSONView):
             # JWT access token for user (expiring by default, so better)
             callback_auth_header = get_jwt_user_header_str(request.user.username)
 
+            pipeline_name = job.params.get("pipeline", None)
+
+            # TODO: Given a pipeline, look up the appropriate validation and param prep functions,
+            #       call these on job.params (or pipeline_run.params ?)
+            #       We need to refactor out the RNAsik specific stuff here, maybe into a
+            #       laxy_backend/pipelines/rnasik.py and laxy_backend/pipelines/seqkit_stats.py,
+            #       and maybe some generic stuff in laxy_backend/pipelines/__init__.py
+            #
+            # validate_pipeline_params[pipeline_name](job.params)
+            # run_job_params = prepare_pipeline_params[pipeline_name](job.params)
+
             # TODO: Maybe use the mappings in templates/genomes.json
             #       Maybe do all genome_id to path resolution in run_job.sh
             # reference_genome_id = "Saccharomyces_cerevisiae/Ensembl/R64-1-1"
-            reference_genome_id = job.params.get("params").get("genome")
+            reference_genome_id = job.params.get("params").get("genome", None)
 
             # TODO: Validate that pipeline_version and pipeline_aligner are
             #       one of the valid values, as per reference_genome_id
@@ -2098,7 +2109,8 @@ class PipelineListView(generics.ListAPIView):
     """
 
     serializer_class = PipelineSerializer
-    # permission_classes = [IsAuthenticated]
+    # permission_classes = (IsAuthenticated,)
+    permission_classes = (AllowAny,)
     pagination_class = JobPagination
 
     def get_queryset(self):
@@ -2330,11 +2342,7 @@ class JobAccessTokenView(JSONView, GetMixin):
     lookup_url_kwarg = "job_id"
     queryset = AccessToken.objects.all()
     serializer_class = JobAccessTokenRequestSerializer
-    permission_classes = (
-        IsSuperuser,
-        IsOwner,
-        HasReadonlyObjectAccessToken,
-    )
+    permission_classes = (IsSuperuser | IsOwner | HasReadonlyObjectAccessToken,)
 
     @cached_property
     def _job_ct(self) -> ContentType:
@@ -2494,9 +2502,14 @@ class JobClone(JSONView):
         pipelinerun.sample_cart = new_samplecart
         pipelinerun.save()
         new_pipelinerun = pipelinerun
+        pipeline_name = job.params.get("pipeline", None)
 
         return JsonResponse(
-            {"pipelinerun_id": new_pipelinerun.id, "samplecart_id": new_samplecart.id}
+            {
+                "pipelinerun_id": new_pipelinerun.id,
+                "pipeline": pipeline_name,
+                "samplecart_id": new_samplecart.id,
+            }
         )
 
 

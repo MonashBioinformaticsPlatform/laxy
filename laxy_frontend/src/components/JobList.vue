@@ -145,7 +145,7 @@ import { WebAPI } from "../web-api";
 
 import { DummyJobList as _dummyJobList } from "../test-data";
 import { Snackbar } from "../snackbar";
-import PipelineParams from "./RNAsikSetup/PipelineParams.vue";
+import PipelineParams from "./pipelines/rnaseq/ui/PipelineParams.vue";
 import { ILaxySampleCart, ILaxyFile } from "../types";
 
 @Component({})
@@ -270,6 +270,7 @@ export default class JobList extends Vue {
     try {
       const response = await WebAPI.cloneJob(id);
       const pipelinerun_id = response.data.pipelinerun_id;
+      const pipeline_name = response.data.pipeline;
       const samplecart_id = response.data.samplecart_id;
 
       const p_response = await WebAPI.getPipelineRun(pipelinerun_id);
@@ -309,7 +310,10 @@ export default class JobList extends Vue {
       this.$store.commit(SET_PIPELINE_DESCRIPTION, pipelinerun.description);
 
       // TODO: make a prop on RNASeqSetup to allow a jump to second or last step immediately
-      this.$router.push({ name: "rnaseq", params: { allowSkipping: "true" } });
+      this.$router.push({
+        name: pipeline_name,
+        params: { allowSkipping: "true" },
+      });
     } catch (error) {
       console.log(error);
     }

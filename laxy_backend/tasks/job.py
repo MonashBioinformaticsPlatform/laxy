@@ -196,6 +196,7 @@ def start_job(self, task_data=None, **kwargs):
         ("kill_job.sh", 0o700),
         ("input/scripts/add_to_manifest.py", 0o700),
         ("input/scripts/helper.py", 0o700),
+        ("input/scripts/laxy.lib.sh", 0o700),
         # From: conda env export >conda_environment.yml
         ("input/config/conda_environment.yml", 0o600),
         # From: conda list --explicit >conda_environment_explicit.txt

@@ -54,14 +54,29 @@
       "owner": [
         "admin"
       ],
-      "name": "rnaseq",
+      "name": "rnasik",
       "public": true,
       "metadata": {
         "versions": [
           "1.5.4"
         ],
-        "default_version": "1.5.4"
+        "default_version": "1.5.4",
+        "short_description": "an RNA-Seq analysis"
       }
+    }
+  },
+  {
+    "model": "laxy_backend.pipeline",
+    "pk": "12do34v2HwX1r2dPd4Q8pO",
+    "fields": {
+      "created_time": "2020-09-02T00:37:30.877Z",
+      "modified_time": "2020-09-02T06:13:15.242Z",
+      "owner": [
+        "admin"
+      ],
+      "name": "seqkit_stats",
+      "public": true,
+      "metadata": {}
     }
   }
 ]

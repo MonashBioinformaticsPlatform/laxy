@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, minimal-ui">
@@ -26,11 +27,9 @@
     <link rel="mask-icon" href="/assets/favicon/safari-pinned-tab.svg" color="#212121">
     -->
 
-    <link rel="shortcut icon" type="image/png" href="assets/favicon.ico"/>
-    <link rel="stylesheet"
-          href="//fonts.googleapis.com/css?family=Roboto:300,400,500,700,400italic">
-    <link rel="stylesheet"
-          href="//fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="shortcut icon" type="image/png" href="assets/favicon.ico" />
+    <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Roboto:300,400,500,700,400italic">
+    <link rel="stylesheet" href="//fonts.googleapis.com/icon?family=Material+Icons">
     <link href="https://unpkg.com/ionicons@4.4.6/dist/css/ionicons.min.css" rel="stylesheet">
 
     <!--    <link rel="stylesheet" href="vue-material/dist/vue-material.css">-->
@@ -87,12 +86,22 @@
             padding: 16px;
         }
 
+        .pad-16-sides {
+            padding-left: 16px;
+            padding-right: 16px;
+        }
+
         .pad-32 {
             padding: 32px;
         }
 
+        .pad-32-sides {
+            padding-left: 32px;
+            padding-right: 32px;
+        }
+
         .truncate-text {
-            width: 100%;
+            max-width: 90%;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -117,17 +126,22 @@
             margin-right: auto !important;
         }
 
-        .fade-enter-active, .fade-leave-active {
+        .fade-enter-active,
+        .fade-leave-active {
             transition: opacity .5s;
         }
 
-        .fade-enter, .fade-leave-to {
+        .fade-enter,
+        .fade-leave-to {
             opacity: 0;
         }
 
-        .logo-text {
-            font-family: 'Pacifico', cursive;
+        .large-text {
             font-size: 96px;
+        }
+
+        .logo-font {
+            font-family: 'Pacifico', cursive;
             color: rgba(112, 112, 112, 1);
         }
 
@@ -141,7 +155,8 @@
         }
 
         .main-router-content {
-            margin-top: 64px; /* spaces main content down from fixed position top toolbar */
+            margin-top: 64px;
+            /* spaces main content down from fixed position top toolbar */
         }
 
         /* equivalent to vue-material 2.x's  md-elevation-2 class */
@@ -149,138 +164,195 @@
             box-shadow: 0 3px 1px -2px rgba(0, 0, 0, .2), 0 2px 2px 0 rgba(0, 0, 0, .14), 0 1px 5px 0 rgba(0, 0, 0, .12);
         }
 
-        #rightSideNav > div.md-sidenav-content {
+        #rightSideNav>div.md-sidenav-content {
             width: 90%;
+        }
+
+        .wideSideNav > div.md-sidenav-content {
+            width: 90%;
+        }
+
+        .footer {
+            text-align: right;
+        }
+
+        .footer a:link {
+            color: white !important;
+        }
+
+        .footer a:visited {
+            color: white !important;
+        }
+
+        .footer a:hover {
+            background: #e91e63 !important;
+        }
+
+        .footer img {
+            transition: .5s ease;
+        }
+
+        .footer img:hover {
+            transition: .5s ease;
+            filter: drop-shadow(4px 4px 4px #000000);
         }
     </style>
     <title>Laxy</title>
 </head>
+
 <body>
-<div id="app">
-    <div v-cloak>
-        <md-toolbar class="bolt-to-top shadow">
-            <md-button class="md-icon-button" @click="toggleSidenav('leftSidenav')">
-                <md-icon>menu</md-icon>
-            </md-button>
-            <h1 class="md-title logo-text">
-                <router-link to="/" class="title-link">Laxy</router-link>
-                <span style="font-family: monospace; font-size: 50%; color: white">ALPHA</span>
-            </h1>
-            <!--
+    <div id="app">
+        <div v-cloak>
+            <md-toolbar class="bolt-to-top shadow">
+                <md-button class="md-icon-button" @click="toggleSidenav('leftSidenav')">
+                    <md-icon>menu</md-icon>
+                </md-button>
+                <h1 class="md-title logo-font">
+                    <router-link to="/" class="title-link">Laxy</router-link>
+                    <span style="font-family: monospace; font-size: 50%; color: white">ALPHA</span>
+                </h1>
+                <!--
             <h2 class="md-subheading">/ˈlaksi/ <em>noun</em>: some combination of lazy, lax and sexy.</h2>
             -->
 
-            <span style="flex: 1"></span>
+                <span style="flex: 1"></span>
 
-            <h4 v-if="showHeaderMessage">
-                <a href="https://github.com/MonashBioinformaticsPlatform/laxy/issues"
-                   target="_blank" style="color: white;">Please report issues and suggestions on Github</a> &nbsp;
-                <a href="https://github.com/MonashBioinformaticsPlatform/laxy/issues"
-                   target="_blank" style="color: white; text-decoration: none">
-                    <md-icon md-iconset="ion-logo-github" class="md-size-1x" style="padding-bottom: 4px"></md-icon>
-                </a>
-            </h4>
+                <h4 v-if="showHeaderMessage" class="md-hide-small md-hide-xsmall">
+                    <a href="https://github.com/MonashBioinformaticsPlatform/laxy/issues" target="_blank"
+                        style="color: white;">Please report issues and suggestions on Github</a> &nbsp;
+                    <a href="https://github.com/MonashBioinformaticsPlatform/laxy/issues" target="_blank"
+                        style="color: white; text-decoration: none">
+                        <md-icon md-iconset="ion-logo-github" class="md-size-1x" style="padding-bottom: 4px"></md-icon>
+                    </a>
+                </h4>
 
-            <span style="flex: 1"></span>
+                <span style="flex: 1"></span>
 
-            <div v-if="logged_in" style="padding-left: 32px; padding-right: 32px;">
-                <md-button class="md-icon-button" @click="toggleSidenav('rightSidenav')">
-                    <!-- <md-button href="#/cart" class="md-icon-button"> -->
-                    <md-icon>shopping_cart</md-icon>
-                </md-button>
-                {{ sample_cart_count }}
-            </div>
-
-            <div v-if="logged_in">
-                <md-menu md-size="4" md-direction="bottom left"
-                         ref="avatarMenu">
-                    <md-button class="md-fab md-raised" md-menu-trigger>
-                        <md-avatar>
-                            <img :src="user_profile.profile_pic" alt="Avatar">
-                        </md-avatar>
+                <div>
+                    <md-icon v-if="online">cloud_done
+                        <md-tooltip md-direction="bottom">Connected to Laxy backend server
+                            <template v-if="backendVersion">(version {{ backendVersion }})</template>
+                        </md-tooltip>
+                    </md-icon>
+                    <md-icon v-else="online">cloud_off
+                        <md-tooltip md-direction="bottom">Laxy backend server is OFFLINE</md-tooltip>
+                    </md-icon>
+                </div>
+                <div v-if="logged_in" style="padding-left: 32px; padding-right: 32px;">
+                    <md-button class="md-icon-button" @click="toggleSidenav('rightSidenav')">
+                        <!-- <md-button href="#/cart" class="md-icon-button"> -->
+                        <md-icon>shopping_cart</md-icon>
                     </md-button>
-                    <md-menu-content>
-                        <div class="author-card">
-                            <div class="author-card-info">
-                                <md-subheader>{{ user_profile.full_name }}</md-subheader>
-                                <md-menu-item @selected="routeTo('jobs')">Jobs
-                                </md-menu-item>
-                                <!-- TODO: https://github.com/MonashBioinformaticsPlatform/laxy/issues/13
+                    {{ sample_cart_count }}
+                </div>
+
+                <div v-if="logged_in">
+                    <md-menu md-size="4" md-direction="bottom left" ref="avatarMenu">
+                        <md-button class="md-fab md-raised" md-menu-trigger>
+                            <md-avatar>
+                                <img :src="user_profile.profile_pic" alt="Avatar">
+                            </md-avatar>
+                        </md-button>
+                        <md-menu-content>
+                            <div class="author-card">
+                                <div class="author-card-info">
+                                    <md-subheader>{{ user_profile.full_name }}</md-subheader>
+                                    <md-menu-item @selected="routeTo('jobs')">Jobs
+                                    </md-menu-item>
+                                    <!-- TODO: https://github.com/MonashBioinformaticsPlatform/laxy/issues/13
                                 <md-menu-item @selected="routeTo('profile')">Profile
                                 </md-menu-item>
                                 -->
-                                <md-menu-item @selected="logout">Logout
-                                </md-menu-item>
+                                    <md-menu-item @selected="logout">Logout
+                                    </md-menu-item>
+                                </div>
                             </div>
-                            Version: {{ appVersion }}
-                        </div>
-                    </md-menu-content>
-                </md-menu>
-            </div>
-            <div v-show="!logged_in">
-                <!--<md-icon class="md-primary">account_circle</md-icon>-->
-                <router-link tag="md-button"
-                             :to="{name: 'login', params: {redirectPath: $router.currentRoute.path} }"
-                             class="md-raised md-primary" md-menu-trigger>Sign in</router-link>
-            </div>
-        </md-toolbar>
-
-        <md-sidenav class="md-left" ref="leftSidenav"
-                    @open="open('Left')"
-                    @close="close('Left')">
-            <md-toolbar class="md-large">
-                <h3 class="md-title">~</h3>
-            </md-toolbar>
-            <md-list md-dense>
-                <md-list-item>
-                    <router-link :to="{name: 'home'}" exact>
-                        <span @click="toggleSidenav('leftSidenav')"><md-icon>home</md-icon>&nbsp;&nbsp;Home</span>
+                        </md-menu-content>
+                    </md-menu>
+                </div>
+                <div v-show="!logged_in">
+                    <!--<md-icon class="md-primary">account_circle</md-icon>-->
+                    <router-link tag="md-button"
+                        :to="{name: 'login', params: {redirectPath: $router.currentRoute.path} }"
+                        class="md-raised md-primary" md-menu-trigger>Sign in
                     </router-link>
-                </md-list-item>
-                <md-list-item>
-                    <router-link to="/rnaseq">
-                        <span @click="toggleSidenav('leftSidenav')"><md-icon>play_circle_outline</md-icon>&nbsp;&nbsp;Run an RNA-Seq analysis</span>
-                    </router-link>
-                </md-list-item>
-                <md-list-item v-if="logged_in">
-                    <router-link to="/jobs">
-                        <span @click="toggleSidenav('leftSidenav')"><md-icon>view_list</md-icon>&nbsp;&nbsp;Jobs</span>
-                    </router-link>
-                </md-list-item>
-            </md-list>
-        </md-sidenav>
-
-        <md-sidenav v-if="logged_in"
-                    id="rightSideNav"
-                    class="md-right" ref="rightSidenav"
-                    @open="open('Right')"
-                    @close="close('Right')">
-            <md-toolbar>
-                <div class="md-toolbar-container">
-                    <h3 class="md-title">Sample cart</h3>
-                    <div class="push-right">
-                        <md-button @click="toggleSidenav('rightSidenav')"
-                                   class="md-icon-button md-mini md-dense md-clean">
-                            <md-icon>close</md-icon>
-                        </md-button>
-                    </div>
                 </div>
             </md-toolbar>
-            <sample-cart></sample-cart>
-        </md-sidenav>
-        <router-view class="main-router-content"></router-view>
 
-        <md-snackbar md-position="bottom center" ref="global_snackbar"
-                     :md-duration="snackbar_duration">
-            <span>{{ snackbar_message }}</span>
-            <md-button class="md-accent" @click="$refs.global_snackbar.close()">
-                Dismiss
-            </md-button>
-        </md-snackbar>
+            <md-sidenav class="md-left" ref="leftSidenav" @open="open('Left')" @close="close('Left')">
+                <md-toolbar class="md-large">
+                    <h3 class="md-title">~</h3>
+                </md-toolbar>
+                <md-list md-dense>
+                    <md-list-item>
+                        <router-link :to="{name: 'home'}" exact>
+                            <span @click="toggleSidenav('leftSidenav')">
+                                <md-icon>home</md-icon>&nbsp;&nbsp;Home
+                            </span>
+                        </router-link>
+                    </md-list-item>
+                    <md-list-item>
+                        <router-link to="/run/rnaseq">
+                            <span @click="toggleSidenav('leftSidenav')">
+                                <md-icon>play_circle_outline</md-icon>&nbsp;&nbsp;Run an RNA-Seq analysis
+                            </span>
+                        </router-link>
+                    </md-list-item>
+                    <md-list-item v-if="logged_in">
+                        <router-link to="/jobs">
+                            <span @click="toggleSidenav('leftSidenav')">
+                                <md-icon>view_list</md-icon>&nbsp;&nbsp;Jobs
+                            </span>
+                        </router-link>
+                    </md-list-item>
+                </md-list>
+                <div>
+                    <span style="position: absolute; bottom: 0; padding: 16px;" class="md-caption">Frontend version:
+                        {{ appVersion }}</span>
+                </div>
+            </md-sidenav>
 
+            <md-sidenav v-if="logged_in" id="rightSideNav" class="md-right" ref="rightSidenav" @open="open('Right')"
+                @close="close('Right')">
+                <md-toolbar>
+                    <div class="md-toolbar-container">
+                        <h3 class="md-title">Sample cart</h3>
+                        <div class="push-right">
+                            <md-button @click="toggleSidenav('rightSidenav')"
+                                class="md-icon-button md-mini md-dense md-clean">
+                                <md-icon>close</md-icon>
+                            </md-button>
+                        </div>
+                    </div>
+                </md-toolbar>
+                <sample-cart></sample-cart>
+            </md-sidenav>
+            <router-view class="main-router-content"></router-view>
+
+            <md-toolbar class="footer">
+                <template v-if="showFooterMessage">
+                    <span style="flex: 1"></span>
+                    <div class="pad-32">Supported by the
+                        <a href="https://platforms.monash.edu/bioinformatics" target="_blank">
+                            <strong>Monash Bioinformatics Platform</strong></a> and
+                        <a href="https://monash.edu" target="_blank"><strong>Monash University</strong></a>
+                    </div>
+                    <div class="pad-32-sides"><a href="https://monash.edu" target="_blank"><img
+                                src="assets/Monash_Big_M_42x96.png" /></a></div>
+                </template>
+            </md-toolbar>
+
+            <md-snackbar md-position="bottom center" ref="global_snackbar" :md-duration="snackbar_duration">
+                <span>{{ snackbar_message }}</span>
+                <md-button class="md-accent" @click="$refs.global_snackbar.close()">
+                    Dismiss
+                </md-button>
+            </md-snackbar>
+
+        </div>
     </div>
-</div>
-<!-- Hashed cache-busting version added automatically by webpack -->
-<!-- <script src="bundle.js" type="text/javascript"></script> -->
-<script type="text/javascript" src="bundle.41ac4c399dc5a7c8f0bd.js?41ac4c399dc5a7c8f0bd"></script></body>
+    <!-- Hashed cache-busting version added automatically by webpack -->
+    <!-- <script src="bundle.js" type="text/javascript"></script> -->
+<script type="text/javascript" src="bundle.js?3c1a24146b6ecd210c0a"></script></body>
+
 </html>

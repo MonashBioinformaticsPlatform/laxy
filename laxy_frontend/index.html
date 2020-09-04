@@ -279,38 +279,11 @@
                 </div>
             </md-toolbar>
 
-            <md-sidenav class="md-left" ref="leftSidenav" @open="open('Left')" @close="close('Left')">
-                <md-toolbar class="md-large">
-                    <h3 class="md-title">~</h3>
-                </md-toolbar>
-                <md-list md-dense>
-                    <md-list-item>
-                        <router-link :to="{name: 'home'}" exact>
-                            <span @click="toggleSidenav('leftSidenav')">
-                                <md-icon>home</md-icon>&nbsp;&nbsp;Home
-                            </span>
-                        </router-link>
-                    </md-list-item>
-                    <md-list-item>
-                        <router-link to="/run/rnaseq">
-                            <span @click="toggleSidenav('leftSidenav')">
-                                <md-icon>play_circle_outline</md-icon>&nbsp;&nbsp;Run an RNA-Seq analysis
-                            </span>
-                        </router-link>
-                    </md-list-item>
-                    <md-list-item v-if="logged_in">
-                        <router-link to="/jobs">
-                            <span @click="toggleSidenav('leftSidenav')">
-                                <md-icon>view_list</md-icon>&nbsp;&nbsp;Jobs
-                            </span>
-                        </router-link>
-                    </md-list-item>
-                </md-list>
-                <div>
-                    <span style="position: absolute; bottom: 0; padding: 16px;" class="md-caption">Frontend version:
-                        {{ appVersion }}</span>
-                </div>
-            </md-sidenav>
+            <main-sidenav class="md-left" ref="leftSidenav" :show-jobs-link="logged_in" @open="open('Left')" @close="close('Left')">
+                <template v-slot:footer>
+                    Frontend version: {{ appVersion }}
+                </template>
+            </main-sidenav>
 
             <md-sidenav v-if="logged_in" id="rightSideNav" class="md-right" ref="rightSidenav" @open="open('Right')"
                 @close="close('Right')">
