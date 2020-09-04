@@ -35,8 +35,7 @@ readonly REFERENCE_BASE="${JOB_PATH}/../references/iGenomes"
 readonly DOWNLOAD_CACHE_PATH="${JOB_PATH}/../cache"
 readonly AUTH_HEADER_FILE="${JOB_PATH}/.private_request_headers"
 readonly IGNORE_SELF_SIGNED_CERTIFICATE="{{ IGNORE_SELF_SIGNED_CERTIFICATE }}"
-#readonly LAXYDL_BRANCH=master
-readonly LAXYDL_BRANCH=feature/custom-genomes3
+readonly LAXYDL_BRANCH=master
 readonly LAXYDL_USE_ARIA2C=yes
 readonly LAXYDL_PARALLEL_DOWNLOADS=8
 
