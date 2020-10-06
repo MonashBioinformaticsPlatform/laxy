@@ -1945,6 +1945,7 @@ class JobCreate(JSONView):
             # callback_auth_header = 'Authorization: Token %s' % token.key
 
             # JWT access token for user (expiring by default, so better)
+            # TODO: Set the expiry of this token based on the maximum allowed job walltime
             callback_auth_header = get_jwt_user_header_str(request.user.username)
 
             pipeline_name = job.params.get("pipeline", None)
