@@ -153,7 +153,7 @@ def get_git_commit():
     git_commit = None
     try:
         git_commit = (
-            subprocess.check_output(["git", "log", "-1", "--format=%h 2>/dev/null"])
+            subprocess.check_output(["git", "log", "-1", "--format=%h"])
             .strip()
             .decode("utf-8")
         )
