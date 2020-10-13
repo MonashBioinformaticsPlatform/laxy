@@ -360,7 +360,11 @@ CELERYBEAT_SCHEDULE = {
         "schedule": timedelta(hours=6)
         # "schedule": timedelta(seconds=60)
         # "schedule": crontab(minute='*/15')
-    }
+    },
+    "clean_orphan_obj_perms": {
+        "task": "guardian.utils.clean_orphan_obj_perms",
+        "schedule": timedelta(hours=24),
+    },
 }
 
 MEDIA_ROOT = str(env("MEDIA_ROOT"))
@@ -392,6 +396,7 @@ INSTALLED_APPS = [
     "django_celery_results",
     "django_celery_beat",
     "django.db.migrations",  # enables viewing of migrations in /admin
+    "guardian",
     "django_object_actions",
     "rest_framework",
     "rest_framework.authtoken",
@@ -522,7 +527,11 @@ AUTHENTICATION_BACKENDS = (
     # 'laxy.auth_backends.GoogleOAuth2NoState',
     "rest_framework_social_oauth2.backends.DjangoOAuth2",
     "django.contrib.auth.backends.ModelBackend",
+    "guardian.backends.ObjectPermissionBackend",
 )
+
+GUARDIAN_MONKEY_PATCH = False
+GUARDIAN_RAISE_403 = True
 
 SOCIAL_AUTH_RAISE_EXCEPTIONS = DEBUG
 SOCIAL_AUTH_URL_NAMESPACE = "social"

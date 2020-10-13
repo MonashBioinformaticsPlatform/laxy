@@ -38,7 +38,8 @@ django-cors-headers==2.4.0
 django-environ==0.4.5
 django-extensions==2.1.4
 django-filter==2.0.0
-django-guardian==1.4.9
+django-guardian==2.3.0
+djangorestframework-guardian==0.3.0
 django-oauth-toolkit==1.2.0
 django-object-actions==1.0.0
 django-rest-framework-social-oauth2==1.1.0

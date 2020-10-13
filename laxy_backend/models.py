@@ -42,6 +42,7 @@ from django.contrib.postgres.fields import ArrayField
 
 # from django.contrib.auth.models import User
 from django.contrib.auth.models import AbstractUser
+from guardian.mixins import GuardianUserMixin
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
@@ -50,7 +51,6 @@ from rest_framework.authtoken.models import Token
 from storages.backends.sftpstorage import SFTPStorage, SFTPStorageFile
 
 from .tasks import orchestration
-from .cfncluster import generate_cluster_stack_name
 from .util import (
     unique,
     has_method,
@@ -58,6 +58,7 @@ from .util import (
     generate_secret_key,
     find_filename_and_size_from_url,
     laxy_sftp_url,
+    generate_cluster_stack_name,
 )
 
 import logging
@@ -243,7 +244,7 @@ class UUIDModel(Model):
         return self.id
 
 
-class User(AbstractUser, UUIDModel):
+class User(AbstractUser, UUIDModel, GuardianUserMixin):
     pass
 
 
@@ -341,6 +342,9 @@ class Pipeline(Timestamped, UUIDModel):
     A record for a pipeline that may be available to run.
     """
 
+    class Meta:
+        permissions = (("run_pipeline", "Can run this pipeline"),)
+
     owner = ForeignKey(
         User, blank=True, null=True, on_delete=models.CASCADE, related_name="pipelines",
     )
@@ -353,6 +357,9 @@ class Pipeline(Timestamped, UUIDModel):
     # of platform specific details (eg shouldn't be specific
     # to a particular ComputeResource).
     metadata = JSONField(default=OrderedDict)
+
+    def allowed_to_run(self, user: User):
+        return user.has_perm("laxy_backend.run_pipeline", self)
 
 
 class ComputeResourceDecommissioned(Exception):

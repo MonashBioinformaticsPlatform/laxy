@@ -76,7 +76,9 @@
       ],
       "name": "seqkit_stats",
       "public": true,
-      "metadata": {}
+      "metadata": {
+        "": ""
+      }
     }
   }
 ]

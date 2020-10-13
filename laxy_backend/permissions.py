@@ -38,6 +38,22 @@ def token_is_valid(token: str, obj_id: str):
     )
 
 
+class DefaultObjectPermissions(permissions.DjangoObjectPermissions):
+    """
+    Similar to `DjangoObjectPermissions`, but adding 'view' permissions.
+    """
+
+    perms_map = {
+        "GET": ["%(app_label)s.view_%(model_name)s"],
+        "OPTIONS": ["%(app_label)s.view_%(model_name)s"],
+        "HEAD": ["%(app_label)s.view_%(model_name)s"],
+        "POST": ["%(app_label)s.add_%(model_name)s"],
+        "PUT": ["%(app_label)s.change_%(model_name)s"],
+        "PATCH": ["%(app_label)s.change_%(model_name)s"],
+        "DELETE": ["%(app_label)s.delete_%(model_name)s"],
+    }
+
+
 class HasReadonlyObjectAccessToken(permissions.BasePermission):
     # We don't check content_type, but rely on uniqueness of object UUID primary keys
     # valid_content_types = _get_content_types(Job, File, FileSet)
@@ -115,3 +131,9 @@ class IsOwner(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         user = request.user
         return is_owner(user, obj)
+
+
+class IsPublic(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        return getattr(obj, "public", False)
+

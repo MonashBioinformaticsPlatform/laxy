@@ -40,7 +40,8 @@ from django.db import transaction
 from django.http import HttpResponse, StreamingHttpResponse, JsonResponse, FileResponse
 from django.urls import reverse
 from django.utils.encoding import force_text
-from django_filters.rest_framework import DjangoFilterBackend, OrderingFilter
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import OrderingFilter
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from fs.errors import DirectoryExpected
@@ -59,6 +60,7 @@ from rest_framework.decorators import (
     authentication_classes,
 )
 from rest_framework.filters import BaseFilterBackend
+from rest_framework_guardian.filters import ObjectPermissionsFilter
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
@@ -66,6 +68,8 @@ from rest_framework.renderers import JSONRenderer, BaseRenderer, TemplateHTMLRen
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from guardian.shortcuts import get_objects_for_user
+
 from typing import Dict, List, Union
 import urllib
 from urllib.parse import urlparse, parse_qs, unquote
@@ -78,8 +82,10 @@ from laxy_backend.storage.http_remote import (
     _check_content_size_and_resolve_redirects,
 )
 from .permissions import (
+    DefaultObjectPermissions,
     HasReadonlyObjectAccessToken,
     IsOwner,
+    IsPublic,
     IsSuperuser,
     is_owner,
     HasAccessTokenForEventLogSubject,
@@ -87,7 +93,9 @@ from .permissions import (
     FileSetHasAccessTokenForJob,
     FileHasAccessTokenForJob,
 )
-from . import bcbio
+
+from .filters import IsOwnerFilter, IsPublicFilter
+
 from . import ena
 from .tasks.job import (
     start_job,
@@ -1940,6 +1948,16 @@ class JobCreate(JSONView):
             callback_auth_header = get_jwt_user_header_str(request.user.username)
 
             pipeline_name = job.params.get("pipeline", None)
+            pipeline_obj = Pipeline.objects.get(name=pipeline_name)
+
+            if not pipeline_obj.public and not pipeline_obj.allowed_to_run(
+                request.user
+            ):
+                return HttpResponse(
+                    reason='Sorry, you do not have permission to run the pipeline "%s"'
+                    % pipeline_name,
+                    status=status.HTTP_403_FORBIDDEN,
+                )
 
             # TODO: Given a pipeline, look up the appropriate validation and param prep functions,
             #       call these on job.params (or pipeline_run.params ?)
@@ -1961,7 +1979,9 @@ class JobCreate(JSONView):
             #       maybe with a DRF Serializer.
             #       (probably the frontend should request valid values from the backend to populate forms,
             #        and then use the same data to validate serverside, as per REFERENCE_GENOME_MAPPINGS)
-            default_pipeline_version = "1.5.4"  # '1.5.1+c53adf6'  # '1.5.1'
+            default_pipeline_version = (
+                "default"  # "1.5.4"  # '1.5.1+c53adf6'  # '1.5.1'
+            )
             pipeline_version = job.params.get("params").get(
                 "pipeline_version", default_pipeline_version
             )
@@ -2105,18 +2125,36 @@ class PipelineView(JSONView, GetMixin):
 
 class PipelineListView(generics.ListAPIView):
     """
-    Retrieve a list of pipelines available to the current user.
+    Retrieve a (read-only) list of pipelines available to the current user.
     """
 
     serializer_class = PipelineSerializer
-    # permission_classes = (IsAuthenticated,)
-    permission_classes = (AllowAny,)
+
+    # Not working ?
+    permission_classes = (IsPublic | DefaultObjectPermissions | IsOwner,)
+
+    # filter_backends would in theory be a nice declarative way to handle
+    # the subset of Pipelines a user sees in the list, however there doesn't
+    # seem to be a clean way to do unions of filtered results, and we'd like
+    # to do (IsPublic | ObjectPermissionsFilter,) to see public pipelines
+    # + private ones. Doing  (IsPublic, ObjectPermissionsFilter,) is equivalent
+    # (IsPublic & ObjectPermissionsFilter,), which is not what we want.
+    #
+    # filter_backends = (
+    #    ObjectPermissionsFilter,
+    #    OrderingFilter,
+    # )
+    ordering_fields = ["-created_time"]
     pagination_class = JobPagination
 
     def get_queryset(self):
-        # return Pipeline.objects.all()
-        return Pipeline.objects.filter(
-            Q(owner=self.request.user) | Q(public=True)
+        viewable_pipelines = get_objects_for_user(
+            self.request.user, ["laxy_backend.view_pipeline"]
+        )
+        return (
+            Pipeline.objects.filter(Q(owner=self.request.user) | Q(public=True)).union(
+                viewable_pipelines
+            )
         ).order_by("-created_time")
 
 

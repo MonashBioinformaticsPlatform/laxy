@@ -3,6 +3,8 @@ from typing import Union, Sequence
 from datetime import datetime, timedelta
 
 from django.contrib import admin
+from guardian.admin import GuardedModelAdmin
+from guardian.models import UserObjectPermission, GroupObjectPermission
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin
@@ -121,6 +123,22 @@ class LaxyUserAdmin(UserAdmin):
 
 
 class UserProfileAdmin(admin.ModelAdmin):
+    pass
+
+
+class GuardianUserObjectPermissionAdmin(admin.ModelAdmin):
+    """
+    Manage django-guardian object level permissions directly (user-level) in Django admin.
+    """
+
+    pass
+
+
+class GuardianGroupObjectPermissionAdmin(admin.ModelAdmin):
+    """
+    Manage django-guardian object level permissions directly (group-level) in Django admin.
+    """
+
     pass
 
 
@@ -688,7 +706,7 @@ class PipelineRunAdmin(Timestamped, VersionAdmin):
     pass
 
 
-class PipelineAdmin(admin.ModelAdmin):
+class PipelineAdmin(GuardedModelAdmin):
     ordering = ("name",)
     list_filter = (
         "name",
@@ -749,6 +767,8 @@ admin.site.register(MigrationRecorder.Migration, MigrationAdmin)
 
 admin.site.register(User, LaxyUserAdmin)  # for our custom User model
 admin.site.register(UserProfile, UserProfileAdmin)
+admin.site.register(UserObjectPermission, GuardianUserObjectPermissionAdmin)
+admin.site.register(GroupObjectPermission, GuardianGroupObjectPermissionAdmin)
 admin.site.register(Job, JobAdmin)
 admin.site.register(ComputeResource, ComputeResourceAdmin)
 admin.site.register(File, FileAdmin)

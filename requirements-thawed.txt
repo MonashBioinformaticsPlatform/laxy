@@ -52,6 +52,8 @@ social-auth-core>=3.0.0,<4.0.0
 social-auth-app-django>=3.0.0,<4.0.0
 rest-social-auth>=1.5.0
 django-rest-framework-social-oauth2
+django-guardian
+djangorestframework-guardian
 # whitenoise
 # whitenoise[brotli]
 
