@@ -10,28 +10,37 @@
         <md-whiteframe class="pad-32">
           <h2>seqkit stats</h2>
           <md-whiteframe class="pad-32" md-elevation="8">
-            <a href="https://bioinf.shenwei.me/seqkit/usage/#stats">seqkit stats</a> calculates simple statistics from a set of FASTQ (or multi-FASTA) files.
-            For example:
+            <a href="https://bioinf.shenwei.me/seqkit/usage/#stats"
+              >seqkit stats</a
+            >
+            calculates simple statistics from a set of FASTQ (or multi-FASTA)
+            files. For example:
             <pre>
 file           format  type  num_seqs    sum_len  min_len  avg_len  max_len
 hairpin.fa.gz  FASTA   RNA     28,645  2,949,871       39      103    2,354
 mature.fa.gz   FASTA   RNA     35,828    781,222       15     21.8       34
 reads_1.fq.gz  FASTQ   DNA      2,500    567,516      226      227      229
 reads_2.fq.gz  FASTQ   DNA      2,500    560,002      223      224      225
-</pre>
-            <br />This 'pipeline' mostly exists for testing, but can be useful to pre-cache input FASTQs and verify that they are not corrupted, prior to running another analysis on Laxy.
+</pre
+            >
+            <br />This 'pipeline' mostly exists for testing, but can be useful
+            to pre-cache input FASTQs and verify that they are not corrupted,
+            prior to running another analysis on Laxy.
           </md-whiteframe>
           <h3>Pipeline parameters</h3>
           <md-input-container>
             <label>Description</label>
-            <md-input v-model="description" placeholder="Description of pipeline run ..."></md-input>
+            <md-input
+              v-model="description"
+              placeholder="Description of pipeline run ..."
+            ></md-input>
           </md-input-container>
         </md-whiteframe>
       </form>
 
       <input-files-form></input-files-form>
 
-      <md-whiteframe style="padding: 32px;">
+      <md-whiteframe style="padding: 32px">
         <h3>Sample summary</h3>
         <sample-cart
           v-if="samples.items.length > 0"
@@ -52,13 +61,20 @@ reads_2.fq.gz  FASTQ   DNA      2,500    560,002      223      224      225
           :disabled="!isValid_params"
           class="md-primary md-raised"
           @click="run"
-        >Run the pipeline</md-button>
+          >Run the pipeline</md-button
+        >
       </md-layout>
     </md-layout>
 
-    <md-snackbar md-position="bottom center" ref="snackbar" :md-duration="snackbar_duration">
+    <md-snackbar
+      md-position="bottom center"
+      ref="snackbar"
+      :md-duration="snackbar_duration"
+    >
       <span>{{ snackbar_message }}</span>
-      <md-button class="md-accent" @click="$refs.snackbar.close()">Dismiss</md-button>
+      <md-button class="md-accent" @click="$refs.snackbar.close()"
+        >Dismiss</md-button
+      >
     </md-snackbar>
   </div>
 </template>
@@ -105,7 +121,7 @@ import AVAILABLE_GENOMES from "../../../../config/genomics/genomes";
 
 import { Snackbar } from "../../../../snackbar";
 import BannerNotice from "../../../BannerNotice.vue";
-import InputFilesForm from "../../rnaseq/ui/InputFilesForm.vue";
+import InputFilesForm from "../../rnasik/ui/InputFilesForm.vue";
 import RemoteFilesSelect from "../../../RemoteSelect/RemoteFilesSelect.vue";
 import { FileListItem } from "../../../../file-tree-util";
 import { filenameFromUrl } from "../../../../util";
