@@ -1,12 +1,19 @@
 <template>
   <div>
     <md-layout md-column md-gutter>
-      <md-layout style="margin: 40px 10% 0 10%;" md-vertical-align="stretch" md-column>
+      <md-layout
+        style="margin: 40px 10% 0 10%"
+        md-vertical-align="stretch"
+        md-column
+      >
         <md-whiteframe md-elevation="2" class="pad-32">
           <div class="pad-32" style="background: #2196f3">
             <h1 class="md-display-2" style="text-align: center">
-              <span class="large-text logo-font" style="color: white;">Laxy</span> &nbsp;&nbsp;
-              <span class="md-subheading" style="color: white;">
+              <span class="large-text logo-font" style="color: white"
+                >Laxy</span
+              >
+              &nbsp;&nbsp;
+              <span class="md-subheading" style="color: white">
                 <em>
                   Streamlined Genomics Pipelines
                   <!--
@@ -28,8 +35,8 @@
             <h1 class="md-display-1">Latest news</h1>
             <latest-news></latest-news>
             <h1 class="md-display-1">Launch a pipeline</h1>
-            <router-link to="/run/rnaseq">
-              <rna-seq-launch route-to="/run/rnaseq"></rna-seq-launch>
+            <router-link to="/run/rnasik">
+              <rna-seq-launch route-to="/run/rnasik"></rna-seq-launch>
             </router-link>
             <variant-calls-launch></variant-calls-launch>
             <nullarbor-launch></nullarbor-launch>

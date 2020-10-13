@@ -9,8 +9,13 @@
       v-if="!isValid_samples_added"
       type="error"
       :show-close-button="false"
-    >Please add some samples before submitting your job.</banner-notice>
-    <banner-notice v-if="!isValid_duplicate_samples" type="error" :show-close-button="false">
+      >Please add some samples before submitting your job.</banner-notice
+    >
+    <banner-notice
+      v-if="!isValid_duplicate_samples"
+      type="error"
+      :show-close-button="false"
+    >
       Input sample files contain duplicates (based on URL/location).
       <br />Please remove duplicates before continuing.
     </banner-notice>
@@ -20,48 +25,64 @@
       :show-close-button="false"
     >
       Mixing single-end and paired-end samples is not currently supported.
-      <br />Please remove either the single-end or the paired-end samples to continue.
+      <br />Please remove either the single-end or the paired-end samples to
+      continue.
     </banner-notice>
     <banner-notice
       v-if="!isValid_reference_genome"
       type="error"
       :show-close-button="false"
-    >Selected reference genome is invalid.</banner-notice>
+      >Selected reference genome is invalid.</banner-notice
+    >
     <md-layout md-column>
       <form novalidate>
-        <md-whiteframe style="padding: 32px;">
+        <md-whiteframe style="padding: 32px">
           <h2>RNAsik</h2>
           <h3>Pipeline parameters</h3>
           <md-input-container>
             <label>Description</label>
-            <md-input v-model="description" placeholder="Description of pipeline run ..."></md-input>
+            <md-input
+              v-model="description"
+              placeholder="Description of pipeline run ..."
+            ></md-input>
           </md-input-container>
           <md-switch
             v-model="show_advanced"
             id="advanced-toggle"
             name="advanced-toggle"
             class="md-primary"
-          >Show advanced options</md-switch>
+            >Show advanced options</md-switch
+          >
           <transition name="fade">
             <md-layout v-if="show_advanced">
               <md-input-container>
                 <label for="pipeline_version">Pipeline version</label>
-                <md-select name="pipeline_version" id="pipeline_version" v-model="pipeline_version">
+                <md-select
+                  name="pipeline_version"
+                  id="pipeline_version"
+                  v-model="pipeline_version"
+                >
                   <md-option
                     v-for="version in pipeline_versions"
                     :key="version"
                     :value="version"
-                  >{{ version }}</md-option>
+                    >{{ version }}</md-option
+                  >
                 </md-select>
               </md-input-container>
               <md-input-container>
                 <label for="pipeline_aligner">Aligner</label>
-                <md-select name="pipeline_aligner" id="pipeline_aligner" v-model="pipeline_aligner">
+                <md-select
+                  name="pipeline_aligner"
+                  id="pipeline_aligner"
+                  v-model="pipeline_aligner"
+                >
                   <md-option
                     v-for="aligner in pipeline_aligners"
                     :key="aligner.text"
                     :value="aligner.value"
-                  >{{ aligner.text }}</md-option>
+                    >{{ aligner.text }}</md-option
+                  >
                 </md-select>
               </md-input-container>
             </md-layout>
@@ -69,7 +90,7 @@
         </md-whiteframe>
       </form>
 
-      <md-whiteframe style="padding: 32px;">
+      <md-whiteframe style="padding: 32px">
         <h3>Sample summary</h3>
         <sample-cart
           v-if="samples.items.length > 0"
@@ -90,13 +111,20 @@
           :disabled="isValid_params"
           class="md-primary md-raised"
           @click="run"
-        >Run the pipeline</md-button>
+          >Run the pipeline</md-button
+        >
       </md-layout>
     </md-layout>
 
-    <md-snackbar md-position="bottom center" ref="snackbar" :md-duration="snackbar_duration">
+    <md-snackbar
+      md-position="bottom center"
+      ref="snackbar"
+      :md-duration="snackbar_duration"
+    >
       <span>{{ snackbar_message }}</span>
-      <md-button class="md-accent" @click="$refs.snackbar.close()">Dismiss</md-button>
+      <md-button class="md-accent" @click="$refs.snackbar.close()"
+        >Dismiss</md-button
+      >
     </md-snackbar>
   </div>
 </template>
@@ -163,7 +191,7 @@ import { ReferenceGenome, ILaxyFile, PairedEndFiles } from "../../../../types";
   },
 })
 export default class PipelineParams extends Vue {
-  public pipeline_name: string = "rnaseq";
+  public pipeline_name: string = "rnasik";
 
   @Prop({ default: true, type: Boolean })
   public showButtons: boolean;
@@ -221,7 +249,10 @@ export default class PipelineParams extends Vue {
   public pipeline_version: string;
 
   get pipeline_aligner() {
-    return this.$store.getters.pipelineParams.pipeline_aligner;
+    return (
+      this.$store.getters.pipelineParams.pipeline_aligner ||
+      this.pipeline_aligners[0].value
+    );
   }
 
   set pipeline_aligner(aligner: string) {

@@ -7,7 +7,7 @@ import { FETCH_USER_PROFILE, Store } from './store';
 
 import FrontPage from './components/FrontPage.vue';
 import LoginPage from './components/LoginPage.vue';
-import RNASeqSetup from './components/pipelines/rnaseq/ui/RNASeqSetup.vue';
+import RNASeqSetup from './components/pipelines/rnasik/ui/RNASeqSetup.vue';
 import SeqkitStatsSetup from './components/pipelines/seqkit_stats/ui/SeqkitStatsSetup.vue';
 import RemoteFilesSelect from './components/RemoteSelect/RemoteFilesSelect.vue';
 import SampleCart from './components/SampleCart.vue';
@@ -95,8 +95,8 @@ export const router = new VueRouter({
         },
         // Now populated via routes.addPipelineRoutes() and WebAPI.getAvailablePipelines()
         // {
-        //     path: '/run/rnaseq',
-        //     name: 'rnaseq',
+        //     path: '/run/rnasik',
+        //     name: 'rnasik',
         //     component: RNASeqSetup,
         //     props: true,
         //     beforeEnter: requireAuth,

@@ -1,18 +1,23 @@
 <template>
-  <md-sidenav class="md-left" ref="sidenav" @open="open('Left')" @close="close('Left')">
+  <md-sidenav
+    class="md-left"
+    ref="sidenav"
+    @open="open('Left')"
+    @close="close('Left')"
+  >
     <md-toolbar class="md-large">
       <h3 class="md-title">~</h3>
     </md-toolbar>
     <md-list md-dense>
       <md-list-item>
-        <router-link :to="{name: 'home'}" exact>
+        <router-link :to="{ name: 'home' }" exact>
           <span @click="toggle('sidenav')">
             <md-icon>home</md-icon>&nbsp;&nbsp;Home
           </span>
         </router-link>
       </md-list-item>
       <!-- <md-list-item>
-        <router-link to="/run/rnaseq">
+        <router-link to="/run/rnasik">
           <span @click="toggle('sidenav')">
             <md-icon>play_circle_outline</md-icon>&nbsp;&nbsp;Run an RNA-Seq analysis
           </span>
@@ -26,7 +31,9 @@
           </span>
           <span>
             <md-icon v-if="!pipeline.public">lock</md-icon>
-            <md-tooltip md-direction="right">Private pipeline (not publicly available)</md-tooltip>
+            <md-tooltip md-direction="right"
+              >Private pipeline (not publicly available)</md-tooltip
+            >
           </span>
         </router-link>
       </md-list-item>
@@ -39,7 +46,10 @@
       </md-list-item>
     </md-list>
     <div>
-      <span style="position: absolute; bottom: 0; padding: 16px;" class="md-caption">
+      <span
+        style="position: absolute; bottom: 0; padding: 16px"
+        class="md-caption"
+      >
         <slot name="footer"></slot>
       </span>
     </div>

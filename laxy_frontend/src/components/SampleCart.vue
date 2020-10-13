@@ -17,8 +17,12 @@
         Choose a CSV file to upload.
         <md-input-container>
           <label>From CSV</label>
-          <md-file v-model="csv_file" :disabled="submitting" @selected="submitCSV"></md-file>
-        </md-input-container>Example format (Sample name, R1, R2):
+          <md-file
+            v-model="csv_file"
+            :disabled="submitting"
+            @selected="submitCSV"
+          ></md-file> </md-input-container
+        >Example format (Sample name, R1, R2):
         <pre>
                         SampleA,ftp://bla_lane1_R1.fastq.gz,ftp://bla_lane1_R2.fastq.gz
                         SampleA,ftp://bla_lane2_R1.fastq.gz,ftp://bla_lane2_R2.fastq.gz
@@ -26,16 +30,20 @@
                                ,ftp://bla2_R1_002.fastq.gz,ftp://bla2_R2_002.fastq.gz
                         SampleC,ftp://foo2_lane4_1.fastq.gz,ftp://foo2_lane4_2.fastq.gz
                         SampleC,ftp://foo2_lane5_1.fastq.gz,ftp://foo2_lane5_2.fastq.gz
-                </pre>Each row represents a biological replicate (sample + condition +
-        biological replicate).
-        Rows with identical sample names are considered technical
-        replicates and may be merged for
-        analysis.
-        For single-end data, omit the R2 column.
+                </pre
+        >
+        Each row represents a biological replicate (sample + condition +
+        biological replicate). Rows with identical sample names are considered
+        technical replicates and may be merged for analysis. For single-end
+        data, omit the R2 column.
       </md-dialog-content>
 
       <md-dialog-actions>
-        <md-button class="md-primary" @click="closeDialog('csv_file_select_dialog')">Close</md-button>
+        <md-button
+          class="md-primary"
+          @click="closeDialog('csv_file_select_dialog')"
+          >Close</md-button
+        >
       </md-dialog-actions>
     </md-dialog>
 
@@ -45,7 +53,10 @@
           <md-layout v-if="samples != null">
             <md-input-container v-if="editableSetName">
               <label>Sample list name</label>
-              <md-input v-model="_samples.name" placeholder="My sample list"></md-input>
+              <md-input
+                v-model="_samples.name"
+                placeholder="My sample list"
+              ></md-input>
             </md-input-container>
             <div v-else>
               <h4>{{ samples.name }}</h4>
@@ -63,24 +74,34 @@
               v-if="showToolbar"
               class="md-dense"
               :disabled="submitting"
-              style="width: 100%;"
+              style="width: 100%"
             >
               <md-menu v-if="showAddMenu" md-size="5">
-                <md-button id="add_menu_button" class="md-icon-button" md-menu-trigger>
+                <md-button
+                  id="add_menu_button"
+                  class="md-icon-button"
+                  md-menu-trigger
+                >
                   <md-icon>add</md-icon>
                   <md-tooltip md-direction="top">Add samples</md-tooltip>
                 </md-button>
 
                 <md-menu-content>
-                  <md-menu-item @click="openDialog('csv_file_select_dialog')">From CSV / Excel</md-menu-item>
+                  <md-menu-item @click="openDialog('csv_file_select_dialog')"
+                    >From CSV / Excel</md-menu-item
+                  >
                 </md-menu-content>
               </md-menu>
               <md-button class="md-icon-button" @click="removeSelected">
                 <md-icon>delete</md-icon>
                 <md-tooltip md-direction="top">Remove selected</md-tooltip>
               </md-button>
-              <span style="flex: 1;"></span>
-              <md-button class="md-icon-button" @click="save" :disabled="submitting">
+              <span style="flex: 1"></span>
+              <md-button
+                class="md-icon-button"
+                @click="save"
+                :disabled="submitting"
+              >
                 <md-icon>save</md-icon>
                 <md-tooltip md-direction="top">Save</md-tooltip>
               </md-button>
@@ -94,12 +115,23 @@
         </md-layout>
       </md-layout>
       <md-layout v-if="showButtons" md-gutter>
-        <md-button @click="saveAndContinue" :disabled="submitting" class="md-raised">Save & continue</md-button>
+        <md-button
+          @click="saveAndContinue"
+          :disabled="submitting"
+          class="md-raised"
+          >Save & continue</md-button
+        >
       </md-layout>
     </md-layout>
-    <md-snackbar md-position="bottom center" ref="snackbar" :md-duration="snackbar_duration">
+    <md-snackbar
+      md-position="bottom center"
+      ref="snackbar"
+      :md-duration="snackbar_duration"
+    >
       <span>{{ snackbar_message }}</span>
-      <md-button class="md-accent" @click="$refs.snackbar.close()">Dismiss</md-button>
+      <md-button class="md-accent" @click="$refs.snackbar.close()"
+        >Dismiss</md-button
+      >
     </md-snackbar>
   </div>
 </template>
@@ -290,7 +322,7 @@ export default class SampleCart extends Vue {
       await this.submit();
       // TODO: We should fire an event here to let the parent component do something
       //  (eg catch event in index.ts, do toggleSidenav('rightSidenav') )
-      // this.routeTo("rnaseq");
+      // this.routeTo("rnasik");
     } catch (error) {
       throw error;
     }
