@@ -768,18 +768,36 @@ function fastq_sanity_check() {
     set -o errexit
     local _cpus=4
 
+    send_event "JOB_INFO" "Starting seqkit stats sanity check."
+
     mkdir -p "${JOB_PATH}/output/seqkit_stats"
-    echo -e "This directory contains the output from 'seqkit stats' for the FASTQ input files provided. "\
+    echo -e "This directory contains the output from 'seqkit stats' for the FASTQ input files provided. " \
             "It is primarily intended to catch corrupted FASTQ files early, before the main pipeline runs." \
             >"${JOB_PATH}/output/seqkit_stats/README.txt"
-    for fq in $(find "${INPUT_READS_PATH}" -name "*.f*[q,a].gz"); do
+    
+    pushd "${INPUT_READS_PATH}"
+    # Get just the header that seqkit stats will output
+    echo ">dummy_seq\nXXX\n" | seqkit stats --tabular | head -n 1 >"${JOB_PATH}/output/seqkit_stats/seqkit_stats.tsv"
+    local _error=0
+    for fq in $(find . -name "*.f*[q,a].gz" -printf '%P\n'); do
         local _fn=$(basename "${fq}")
-        seqkit stats -j $_cpus $fq >"${JOB_PATH}/output/seqkit_stats/${_fn}.tsv" 2>"${JOB_PATH}/output/seqkit_stats/${_fn}.err" || \
-          { send_event "JOB_INFO" "Something wrong with input file: ${_fn}" & \
-            send_job_metadata '{"metadata": {"error": {"bad_input_file": "'${_fn}'"}}}'; \
-            return 1; }
+        seqkit stats --tabular --threads $_cpus $fq \
+                > >(tail -n +2 >>"${JOB_PATH}/output/seqkit_stats/seqkit_stats.tsv") \
+                2>> "${JOB_PATH}/output/seqkit_stats/seqkit_stats.err"
+
+        # Unforturnately seqkit stats doesn't return a non-zero error code for corrupt files !
+        grep -q "[ERRO]" "${JOB_PATH}/output/seqkit_stats/seqkit_stats.err" && \
+            { send_event "JOB_INFO" "Something wrong with input file: ${_fn}" & \
+              send_job_metadata '{"metadata": {"error": {"bad_input_file": "'${_fn}'"}}}';
+              if [[ -z "${orig_errexit}" ]]; then
+                set +o errexit
+              fi
+              popd
+              return 1
+            }
     done
 
+    popd
     if [[ -z "${orig_errexit}" ]]; then
         set +o errexit
     fi

@@ -153,7 +153,7 @@ def get_git_commit():
     git_commit = None
     try:
         git_commit = (
-            subprocess.check_output(["git", "log", "-1", "--format=%h 2>/dev/null"])
+            subprocess.check_output(["git", "log", "-1", "--format=%h"])
             .strip()
             .decode("utf-8")
         )
@@ -669,7 +669,7 @@ JWT_AUTH = {
     "JWT_VERIFY": True,
     "JWT_VERIFY_EXPIRATION": True,
     "JWT_LEEWAY": 0,
-    "JWT_EXPIRATION_DELTA": timedelta(days=4),
+    "JWT_EXPIRATION_DELTA": timedelta(days=7),
     "JWT_AUDIENCE": None,
     "JWT_ISSUER": None,
     "JWT_ALLOW_REFRESH": True,
