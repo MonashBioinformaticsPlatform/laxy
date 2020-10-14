@@ -710,11 +710,13 @@ class PipelineAdmin(GuardedModelAdmin):
     ordering = ("name",)
     list_filter = (
         "name",
+        "public",
         "owner",
     )
     list_display = (
         "name",
         "uuid",
+        "public",
         "owner",
     )
     search_fields = (
