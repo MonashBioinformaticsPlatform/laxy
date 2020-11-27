@@ -48,7 +48,11 @@ jobs:
       - name: Set environment variables for all steps
         run: |
           export GIT_COMMIT="${{ github.sha }}"
+<<<<<<< HEAD
           echo "GIT_COMMIT=${GIT_COMMIT}" >>$GITHUB_ENV
+=======
+          echo "GIT_COMMIT=$GIT_COMMIT" >>$GITHUB_ENV
+>>>>>>> Fix Github docker push action (third time lucky ?)
           echo "GIT_SHORT_COMMIT=${GIT_COMMIT:0:8}" >>$GITHUB_ENV
 
           # Strip git ref prefix from version
@@ -56,16 +60,28 @@ jobs:
           # Strip "v" prefix from tag name
           [ "${{ github.ref }}" == "refs/tags/"* ] && BRANCH_OR_TAG=$(echo $BRANCH_OR_TAG | sed -e 's/^v//')
 
+<<<<<<< HEAD
           echo "BRANCH_OR_TAG=${BRANCH_OR_TAG}" >>$GITHUB_ENV
 
           [ "$BRANCH_OR_TAG" == "master" ] && LAXY_ENV=prod
           [ "$BRANCH_OR_TAG" == "develop" ] && LAXY_ENV=dev
           echo "LAXY_ENV=${LAXY_ENV}" >>$GITHUB_ENV
+=======
+          echo "BRANCH_OR_TAG=$BRANCH_OR_TAG" >>$GITHUB_ENV
+
+          [ "$BRANCH_OR_TAG" == "master" ] && LAXY_ENV=prod
+          [ "$BRANCH_OR_TAG" == "develop" ] && LAXY_ENV=dev
+          echo "LAXY_ENV=$LAXY_ENV" >>$GITHUB_ENV
+>>>>>>> Fix Github docker push action (third time lucky ?)
 
           IMAGE_TAG=$BRANCH_OR_TAG
           [ "$BRANCH_OR_TAG" == "master" ] && IMAGE_TAG=latest
           [ "$BRANCH_OR_TAG" == "develop" ] && IMAGE_TAG=dev
+<<<<<<< HEAD
           echo "IMAGE_TAG=${IMAGE_TAG}" >>$GITHUB_ENV
+=======
+          echo "IMAGE_TAG=$IMAGE_TAG" >>$GITHUB_ENV
+>>>>>>> Fix Github docker push action (third time lucky ?)
 
       - name: Build Laxy backend image (Django)
         run: |
