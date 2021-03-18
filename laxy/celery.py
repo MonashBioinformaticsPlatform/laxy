@@ -31,7 +31,8 @@ app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
 
 # We don't start the debugger when CELERY_ALWAYS_EAGER is True to avoid attempting to
 # open the debugger port twice (With CELERY_ALWAYS_EAGER celery jobs run as blocking
-# function calls on the Django app rather than a seperate worker process)
+# function calls on the Django app rather than a seperate worker process, so you can
+# just connect the remote debugger to Django instead, not this worker)
 if settings.DEBUG and not settings.CELERY_ALWAYS_EAGER:
     import traceback
 

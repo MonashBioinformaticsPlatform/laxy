@@ -43,6 +43,8 @@ dependencies:
   - parallel
   # Pipeline specific
   - rnasik
+  - star
+  - bwa
   - mash
   - seqkit
   - qualimap=2.2.2b=0

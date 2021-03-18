@@ -15,10 +15,12 @@ import os
 from datetime import timedelta
 import tempfile
 import subprocess
+from pathlib import Path
 import json
 from django.core.exceptions import ImproperlyConfigured
 import environ
-from celery.schedules import crontab
+
+# from celery.schedules import crontab
 
 from laxy.utils import get_secret_key
 
@@ -42,7 +44,7 @@ class PrefixedEnv(environ.Env):
         self.scheme = dict([("%s%s" % (prefix, k), v) for k, v in scheme.items()])
 
 
-def permissive_json_loads(text: str):
+def dictify_json_loads(text: str):
     """
     Like json.loads, but returns an empty dict for an empty or whitespace string.
 
@@ -95,13 +97,14 @@ default_env = PrefixedEnv(
     CSRF_TRUSTED_ORIGINS=(list, []),
     USE_SSL=(bool, False),
     SENTRY_DSN=(str, ""),
+    JOB_TEMPLATE_PATHS=(list, []),
     JOB_EXPIRY_TTL_DEFAULT=(int, 30 * 24 * 60 * 60),  # 30 days
     JOB_EXPIRY_TTL_CANCELLED=(int, 1 * 60 * 60),  # 1 hour
     JOB_EXPIRY_TTL_FAILED=(int, 3 * 24 * 60 * 60),  # 3 days
     WEB_SCRAPER_BACKEND=(str, "simple"),
     WEB_SCRAPER_SPLASH_HOST=(str, "http://localhost:8050"),
     DEGUST_URL=(str, "http://degust.erc.monash.edu"),
-    EMAIL_DOMAIN_ALLOWED_COMPUTE=(permissive_json_loads, {"*": ["*"]}),
+    EMAIL_DOMAIN_ALLOWED_COMPUTE=(dictify_json_loads, {"*": ["*"]}),
 )
 
 
@@ -135,7 +138,7 @@ def env(env_key=None, default=environ.Env.NOTSET, transform=None):
 
 def _cleanup_env_list(l):
     """
-    Remove quota characters and strip whitespace.
+    Remove quote characters and strip whitespace.
     Intended to cleanup environment variables that are comma-separated lists parsed by `environ`.
 
     >>> _cleanup_quoted_list(['" something'])
@@ -281,7 +284,7 @@ to one the don't actually own and access compute resources you don't intend them
 
 """
 
-ALLOWED_HOSTS = env("ALLOWED_HOSTS")
+ALLOWED_HOSTS = env("ALLOWED_HOSTS", transform=_cleanup_env_list)
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.11/howto/deployment/checklist/
@@ -362,7 +365,7 @@ CELERYBEAT_SCHEDULE = {
         # "schedule": crontab(minute='*/15')
     },
     "clean_orphan_obj_perms": {
-        "task": "guardian.utils.clean_orphan_obj_perms",
+        "task": "laxy_backend.tasks.job.clean_orphan_obj_perms",
         "schedule": timedelta(hours=24),
     },
 }
@@ -410,6 +413,7 @@ INSTALLED_APPS = [
     "rest_framework_social_oauth2",  # OAuth2 callback ('complete') endpoints
     "rest_social_auth",  # Login endpoints, hands off to social login services
     "laxy_backend",
+    "laxy_pipeline_apps.seqkit_stats",  # a pipeline plugin for Laxy
 ]
 
 MIDDLEWARE = [
@@ -442,8 +446,33 @@ TEMPLATES = [
                 "social_django.context_processors.login_redirect",
             ],
         },
-    },
+    }
 ]
+
+
+def validate_and_fix_job_template_paths(pathlist):
+    # Make all relative JOB_TEMPLATE_PATHS absolute (relative to the app root)
+    for i, jtp in enumerate(pathlist):
+        p = Path(jtp)
+        if not p.is_absolute():
+            abs_p = app_root / p
+            if not abs_p.is_dir():
+                raise ValueError(
+                    f"JOB_TEMPLATE_PATHS setting: Directory {str(abs_p)} cannot be found."
+                )
+            pathlist[i] = str(abs_p)
+
+    # Add the default job_scripts path if it's not in the list already
+    _default_job_template_path = Path(app_root, "laxy_backend/templates/")
+    if not any([_default_job_template_path.samefile(Path(p)) for p in pathlist]):
+        pathlist.insert(0, str(_default_job_template_path))
+
+    return pathlist
+
+
+JOB_TEMPLATE_PATHS = validate_and_fix_job_template_paths(
+    env("JOB_TEMPLATE_PATHS", transform=_cleanup_env_list)
+)
 
 # Options for the django_extensions shell_plus Jupyter notebook
 if DEBUG:

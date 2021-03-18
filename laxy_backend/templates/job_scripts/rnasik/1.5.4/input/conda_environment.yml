@@ -3,7 +3,6 @@
 # rather than installing this conda_environment.yml. For large environments this is faster, and generally
 # aids reproducibility.
 ---
-
 # This environment contains the minimal packages required without listing automatically installed
 # dependencies or specific versions.
 # It can be used as a template for building an environment with a specific version of a pipeline,
@@ -38,7 +37,7 @@ dependencies:
   - aria2
   # older openssl and icu required to support aria2 on some systems
   - openssl=1.0.2p
-  - 'icu=58.*'
+  - "icu=58.*"
   - curl
   - wget
   - awscli
@@ -46,11 +45,14 @@ dependencies:
   - parallel
   # Pipeline specific
   - rnasik=1.5.4
+  - samtools=1.9
+  - star=2.7.2b
+  - bwa=0.7.17
   - mash
   - qualimap=2.2.2b=0
   # Appears to be missing from dependencies
   - pandas<1
   - pip:
-    # General run_job.sh dependency, for the laxydl downloader tool
-    - git+https://github.com/MonashBioinformaticsPlatform/laxy@master#egg=laxy_downloader&subdirectory=laxy_downloader
-    - semver
+      # General run_job.sh dependency, for the laxydl downloader tool
+      - git+https://github.com/MonashBioinformaticsPlatform/laxy@master#egg=laxy_downloader&subdirectory=laxy_downloader
+      - semver

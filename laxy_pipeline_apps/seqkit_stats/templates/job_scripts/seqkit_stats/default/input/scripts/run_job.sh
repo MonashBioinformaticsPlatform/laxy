@@ -44,11 +44,21 @@ export SLURM_EXTRA_ARGS="{{ SLURM_EXTRA_ARGS }}"
 readonly QUEUE_TYPE="{{ QUEUE_TYPE }}"
 # readonly QUEUE_TYPE="local"
 
+if [[ ${IGNORE_SELF_SIGNED_CERTIFICATE} == "yes" ]]; then
+    readonly CURL_INSECURE="--insecure"
+    readonly LAXYDL_INSECURE="--ignore-self-signed-ssl-certificate"
+else
+    readonly CURL_INSECURE=""
+    readonly LAXYDL_INSECURE=""
+fi
+
 ##
 # Load the laxy bash helper functions.
 # These functions use some of the variables defined above
 ##
 source "${INPUT_SCRIPTS_PATH}/laxy.lib.sh" || exit 1
+
+send_event "JOB_INFO" "Running using the laxy_pipeline_apps.seqkit-stats pluggable pipeline app."
 
 # We exit on any uncaught error signal. The 'trap finalize_job EXIT' 
 # below does sends a job fail HTTP request and cleans up when an error 
@@ -82,14 +92,6 @@ trap job_done EXIT
 if [[ ! -f "${AUTH_HEADER_FILE}" ]]; then
     echo "No auth token file (${AUTH_HEADER_FILE}) - exiting."
     exit 1
-fi
-
-if [[ ${IGNORE_SELF_SIGNED_CERTIFICATE} == "yes" ]]; then
-    readonly CURL_INSECURE="--insecure"
-    readonly LAXYDL_INSECURE="--ignore-self-signed-ssl-certificate"
-else
-    readonly CURL_INSECURE=""
-    readonly LAXYDL_INSECURE=""
 fi
 
 # For QUEUE_TYPE=='local'
@@ -139,7 +141,7 @@ function register_files() {
      --max-time 10 \
      --retry 8 \
      --retry-max-time 600 \
-     --data-binary @${JOB_PATH}/manifest.csv \
+     --data-binary @"${JOB_PATH}/manifest.csv" \
      "${JOB_FILE_REGISTRATION_URL}"
 }
 
@@ -183,6 +185,13 @@ function download_input_data() {
         # send_event "INPUT_DATA_DOWNLOAD_FINISHED" "Input data download completed."
     fi
 }
+# Extract the pipeline parameter seqkit_stats.flags.all from the pipeline_config.json
+# Set the --all flag appropriately.
+_flags_all=$(jq --raw-output '.params.seqkit_stats.flags.all' "${PIPELINE_CONFIG}" || echo "false")
+ALL_FLAG=" "
+if [[ "${_flags_all}" == "true" ]]; then
+    ALL_FLAG=" --all "
+fi
 
 update_permissions || true
 
@@ -190,7 +199,7 @@ mkdir -p "${TMP}"
 mkdir -p input
 mkdir -p output
 
-mkdir -p ${INPUT_CONFIG_PATH} ${INPUT_SCRIPTS_PATH} ${INPUT_READS_PATH}
+mkdir -p "${INPUT_CONFIG_PATH}" "${INPUT_SCRIPTS_PATH}" "${INPUT_READS_PATH}"
 
 ####
 #### Setup and import a Conda environment
@@ -225,9 +234,10 @@ send_event "JOB_INFO" "Starting pipeline."
 
 # Note: Using xargs like this will fail if the commandline gets too long (many fastqs, or very long filenames)
 # seqkit stats -j $CPUS $(find ${INPUT_READS_PATH} -name "*.f*[q,a].gz" | xargs) >${JOB_PATH}/output/seqkit_stats/seqkit_stats.tsv
-${PREFIX_JOB_CMD} "seqkit stats -j $CPUS $(find ${INPUT_READS_PATH} -name "*.f*[q,a].gz" | xargs) \
+${PREFIX_JOB_CMD} "find ${INPUT_READS_PATH} -name "*.f*[q,a].gz" -exec \
+                   seqkit stats ${ALL_FLAG} -j ${CPUS} {} + \
                      >${JOB_PATH}/output/seqkit_stats.tsv \
-                     2>${JOB_PATH}/output/seqkit_stats.err"\
+                     2>${JOB_PATH}/output/seqkit_stats.err" \
   >>"${JOB_PATH}/job.pids"
   # >>"${JOB_PATH}/slurm.jids"
 
@@ -269,3 +279,5 @@ job_done $?
 # Remove the trap so job_done doesn't get called a second time when the script naturally exits
 trap - EXIT
 exit 0
+
+#}}

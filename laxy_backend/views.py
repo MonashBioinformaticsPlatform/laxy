@@ -1819,19 +1819,20 @@ def add_sanitized_names_to_samplecart_json(cart_json):
     return updated_json
 
 
-class JobCreate(JSONView):
-    queryset = Job.objects.all()
-    serializer_class = JobSerializerRequest
-
-    @shared_task(bind=True)
-    def _task_err_handler(self, cxt, ex, job_id):
-        # job_id = task_data.get('job_id', None)
+@shared_task(bind=True)
+def _task_err_handler(cxt=None, ex=None, job_id=None):
+    if job_id is not None:
         job = Job.objects.get(id=job_id)
         job.status = Job.STATUS_FAILED
         job.save()
 
         if job.compute_resource and job.compute_resource.disposable:
             job.compute_resource.dispose()
+
+
+class JobCreate(JSONView):
+    queryset = Job.objects.all()
+    serializer_class = JobSerializerRequest
 
     @view_config(
         request_serializer=JobSerializerRequest,
@@ -1949,7 +1950,13 @@ class JobCreate(JSONView):
             callback_auth_header = get_jwt_user_header_str(request.user.username)
 
             pipeline_name = job.params.get("pipeline", None)
-            pipeline_obj = Pipeline.objects.get(name=pipeline_name)
+            try:
+                pipeline_obj = Pipeline.objects.get(name=pipeline_name)
+            except Pipeline.DoesNotExist as ex:
+                return HttpResponse(
+                    reason=f'Pipeline "{pipeline_name}" does not exist."',
+                    status=status.HTTP_404_NOT_FOUND,
+                )
 
             if not pipeline_obj.public and not pipeline_obj.allowed_to_run(
                 request.user
@@ -2050,7 +2057,7 @@ class JobCreate(JSONView):
             # tasks.run_job_chain(task_data)
 
             result = start_job.apply_async(
-                args=(task_data,), link_error=self._task_err_handler.s(job_id)
+                args=(task_data,), link_error=_task_err_handler.s(job_id=job_id)
             )
             # Non-async for testing
             # result = start_job(task_data)

@@ -1,14 +1,15 @@
 import fnmatch
 import shlex
 import traceback
+from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
-from typing import Sequence, Union, Iterable, List, Tuple
+from typing import Dict, Mapping, Sequence, Union, Iterable, List, Tuple
 from datetime import datetime, timedelta
 from pathlib import Path
 from urllib.parse import urlparse
 import logging
 import os
-from os.path import join, expanduser
+from os.path import join, expanduser, relpath, dirname
 import random
 import time
 import json
@@ -35,6 +36,9 @@ from celery.exceptions import (
     TimeLimitExceeded,
     SoftTimeLimitExceeded,
 )
+
+from guardian.utils import clean_orphan_obj_perms as guardian_clean_orphan_obj_perms
+
 import requests
 import cgi
 import backoff
@@ -104,25 +108,128 @@ def _init_fabric_env():
     return env
 
 
-def get_template_files(must_contain="/job_scripts/"):
-    from django.conf import settings
-    from django.template.loaders.app_directories import get_app_template_dirs
-    import os
+def get_app_job_template_paths() -> Mapping[str, str]:
+    """
+    Iterate over installed apps, find the path to the job skeleton templates
+    for any app that defines apps.LAXY_PIPELINE_NAME (in apps.py for each
+    app). Returns a dictionary of {pipeline_name: job_templates_absolute_path}.
+    """
 
-    template_dir_list = list(get_app_template_dirs("templates"))
+    from django.apps import apps
+    import importlib
 
-    # Or just for this app ...
-    #       from django.apps import apps
-    #       app = apps.get_app_config(app_name)
-    #       template_dir = os.path.abspath(os.path.join(app.path, 'templates'))
+    job_template_paths = {}
+    for app in apps.get_app_configs():
 
-    template_list = []
-    for template_dir in template_dir_list + settings.TEMPLATES[0]["DIRS"]:
-        for base_dir, dirnames, filenames in os.walk(template_dir):
-            for filename in filenames:
-                template_list.append(os.path.join(base_dir, filename))
+        app_settings = None
+        try:
+            # app_settings = importlib.import_module(f"{app.module.__name__}.settings")
+            app_settings = importlib.import_module(f"{app.module.__name__}.apps")
+        except ModuleNotFoundError:
+            pass
 
-    return [p for p in template_list if must_contain in p]
+        pipeline_name = getattr(app_settings, "LAXY_PIPELINE_NAME", None)
+        tmpl_path = getattr(app_settings, "LAXY_JOB_TEMPLATES", None)
+        if (pipeline_name is not None) and (tmpl_path is not None):
+            if not Path(tmpl_path).is_absolute():
+                tmpl_path_abs = str(Path(app.path, tmpl_path))
+            else:
+                tmpl_path_abs = str(Path(tmpl_path))
+            job_template_paths[pipeline_name] = tmpl_path_abs
+
+    return job_template_paths
+
+
+def get_job_template_files(pipeline_name, pipeline_version):
+    """[summary]
+    Recursively searches paths containing job skeleton templates
+    for the given pipeline and version, returning a dictionary
+    of files found ({relpath: abspath}). There may be default
+    and version specific copies of the template. Order of precedence is:
+      - A 'common' fallback template set for all jobs.
+      - A 'default' template set for that pipeline.
+      - A 'version' specific template set, which takes precedence over
+        any 'common' or 'default' templates with the same relative path.
+
+    Job skeleton templates are searched for in the path specified by
+    settings.JOB_TEMPLATE_PATHS, as well as any installed Django apps
+    that set LAXY_JOB_TEMPLATES in their own apps.py.
+
+    Args:
+        pipeline_name (str): the Pipeline.name
+
+    Raises:
+        ImproperlyConfigured: when job_scripts root path can't be found.
+
+    Returns:
+        dict: a mapping of relative paths to absolute paths for each file
+              discovered.
+    """
+    from glob import glob
+    from toolz.dicttoolz import merge as merge_dicts
+
+    def rglobdict(pathspec: str, relative_to: str = "") -> Mapping[str, str]:
+        """
+        >>> rglobdict('/tmp/bla/foo/*.txt', relative_to='/tmp/bla')
+        {'foo/bar.txt': '/tmp/bla/foo/bar.txt'}
+        """
+        return {
+            os.path.relpath(p, relative_to): p
+            for p in set(glob(pathspec, recursive=True))
+            if not Path(p).is_dir()
+        }
+
+    # baseline templates to always be included for every job,
+    # unless overridden by a pipeline specific default or version-level template
+    common_template_path = str(
+        Path(settings.BASE_DIR, "laxy_backend/templates/common/job")
+    )
+
+    # job_template_dirs = ["job_scripts"]  # search paths for job templates from settings
+    job_template_dirs = getattr(
+        settings, "JOB_TEMPLATE_PATHS", [str(Path(settings.BASE_DIR, "job_scripts"))],
+    )
+
+    job_template_base = None
+
+    # First see if a matching installed pipeline app exists
+    pipeline_app_template_paths = get_app_job_template_paths()
+    job_template_base = pipeline_app_template_paths.get(pipeline_name, None)
+    if job_template_base is not None:
+        job_template_base = str(Path(job_template_base, "job_scripts", pipeline_name))
+
+    # Otherwise fallback to templates included with laxy_backend and in
+    # configurable path JOB_TEMPLATE_PATHS
+    if job_template_base is None:
+        for d in job_template_dirs:
+            p = Path(d, "job_scripts", pipeline_name)
+            if p.is_dir():
+                job_template_base = str(p)
+
+    if job_template_base is None:
+        raise ImproperlyConfigured(
+            f"Cannot find job templates for {pipeline_name}. "
+            f"Searched {', '.join([str(j) for j in job_template_dirs])}."
+            f" Please add job template files for this pipeline to one of these paths, "
+            f"or add your job templates path to settings"
+        )
+
+    job_version_files = rglobdict(
+        f"{job_template_base}/{pipeline_version}/**/*",
+        relative_to=f"{job_template_base}/{pipeline_version}",
+    )
+    job_default_files = rglobdict(
+        f"{job_template_base}/default/**/*", relative_to=f"{job_template_base}/default",
+    )
+    common_files = rglobdict(
+        f"{common_template_path}/**/*", relative_to=common_template_path
+    )
+
+    out_paths = merge_dicts(
+        common_files, job_default_files, job_version_files
+    )  # later takes precedence
+
+    return out_paths
 
 
 @shared_task(bind=True, track_started=True)
@@ -138,9 +245,6 @@ def start_job(self, task_data=None, **kwargs):
     host = job.compute_resource.host
     gateway = job.compute_resource.gateway_server
 
-    webhook_notify_url = ""
-    # secret = None
-
     environment = task_data.get("environment", {})
     job_auth_header = task_data.get("job_auth_header", "")
     # environment.update(JOB_ID=job_id)
@@ -150,27 +254,6 @@ def start_job(self, task_data=None, **kwargs):
 
     pipeline_name = job.params.get("pipeline")
     pipeline_version = job.params.get("params", {}).get("pipeline_version", "default")
-
-    def find_job_file(script: str) -> Union[str, None]:
-        base = f"job_scripts/{pipeline_name}"
-        options = [f"{base}/{pipeline_version}/{script}", f"{base}/default/{script}"]
-        try:
-            template = select_template(options)
-            return template.origin.name
-        except TemplateDoesNotExist:
-            logger.warning(f"Unable to find job template file in: {str(options)}")
-            return None
-
-        # for fpath in options:
-        #     # if os.path.exists(fpath):
-        #     #    return fpath
-        #     try:
-        #         template = get_template(fpath)
-        #     except TemplateDoesNotExist:
-        #         continue
-
-        # raise IOError(f"Unable to find job template file: {script}")
-
     job_script_template_vars = dict(environment)
 
     def template_filelike(fpath):
@@ -182,26 +265,26 @@ def start_job(self, task_data=None, **kwargs):
     job_script_template_vars["JOB_AUTH_HEADER"] = job_auth_header
     curl_headers = BytesIO(b"%s\n" % job_auth_header.encode("utf-8"))
 
-    # TODO: This should be refactored to just grab EVERY file recursively in job_scripts/{pipeline_name}/default/,
-    #       then overwriting / overriding with any files in job_scripts/{pipeline_name}/{pipeline_version}.
-    #       Treat every file as it as a template (or maybe only if it has a .j2 extension ?), and copy it
-    #       to the equivalent relative path on the compute node (eg input/ and output/).
-    #       Possibly using the get_template_files() function. But things might be easier at this point if
-    #       we just ignored the Django template system and just worked with os.walk and the laxy_backend/templates path.
-
     job_script_path = "input/scripts/run_job.sh"
 
-    job_template_files = [
-        (job_script_path, 0o700),
-        ("kill_job.sh", 0o700),
-        ("input/scripts/add_to_manifest.py", 0o700),
-        ("input/scripts/helper.py", 0o700),
-        ("input/scripts/laxy.lib.sh", 0o700),
-        # From: conda env export >conda_environment.yml
-        ("input/config/conda_environment.yml", 0o600),
-        # From: conda list --explicit >conda_environment_explicit.txt
-        ("input/config/conda_environment_explicit.txt", 0o600),
-    ]
+    # We prepare a dictionary like {remote_relative_path: local_absolute_path} of
+    # job skeleton template files. eg:
+    # {
+    #  'kill_job.sh': ' /app/laxy_backend/templates/common/job/kill_job.sh',
+    #  'input/scripts/laxy.lib.sh': '/app/laxy_backend/templates/common/job/input/scripts/laxy.lib.sh',
+    #  'input/scripts/add_to_manifest.py': '/app/seqkit-stats-laxy-pipeline-app/templates/job_scripts/seqkit_stats/default/input/scripts/add_to_manifest.py',
+    #  'input/scripts/run_job.sh': '/app/seqkit-stats-laxy-pipeline-app/templates/job_scripts/seqkit_stats/default/input/scripts/run_job.sh',
+    #  'input/config/conda_environment.yml': '/app/seqkit-stats-laxy-pipeline-app/templates/job_scripts/seqkit_stats/default/input/config/conda_environment.yml'
+    # }
+    job_template_files = get_job_template_files(pipeline_name, pipeline_version)
+
+    extension_chmod_mappings = {".py": 0o700, ".sh": 0o700}
+
+    def infer_chmod(filename, default=0o600, mappings=extension_chmod_mappings):
+        for ext, chmod in mappings.items():
+            if filename.endswith(ext):
+                return chmod
+        return default
 
     remote_id = None
     message = "Failure, without exception."
@@ -214,19 +297,24 @@ def start_job(self, task_data=None, **kwargs):
             # key_filename=expanduser("~/.ssh/id_rsa"),
         ):
             working_dir = job.abs_path_on_compute
-            subdirs = [
-                join(working_dir, d)
-                for d in ("output", "input/scripts", "input/config",)
+            remote_subdirs = [
+                join(working_dir, os.path.dirname(remote_relpath))
+                for remote_relpath in job_template_files.keys()
             ]
+            # Ensure input and output exist
+            remote_subdirs.append(join(working_dir, "input/config"))
+            remote_subdirs.append(join(working_dir, "output"))
 
-            for d in subdirs:
+            for d in set(remote_subdirs):
                 result = run(f"mkdir -p {d} && chmod 700 {d}")
 
-            for fpath, fmode in job_template_files:
-                template_fn = find_job_file(fpath)
-                if template_fn:
-                    flike = template_filelike(template_fn)
-                    put(flike, join(working_dir, fpath), mode=fmode)
+            # TODO/IDEA: Treat only .j2 files as templates where we apply a context dict,
+            #       remove the .j2 extension when copying
+            for remote_relpath, local_fpath in job_template_files.items():
+                fmode = infer_chmod(remote_relpath)
+                if local_fpath:
+                    flike = template_filelike(local_fpath)
+                    put(flike, join(working_dir, remote_relpath), mode=fmode)
 
             result = put(
                 curl_headers, join(working_dir, ".private_request_headers"), mode=0o600
@@ -765,7 +853,8 @@ def estimate_job_tarball_size(self, task_data=None, optional=False, **kwargs):
 # TODO: This function is very pipeline specific (RNAsik) - we need to refactor
 #       to take the pipeline into account (eg based on name in Job.params.params.pipeline)
 #       The various variables/rules for this function could also be declarative and
-#       stored on a new PipelineConfig object.
+#       stored in the Pipeline model, or a new PipelineConfig object. The defaults
+#       could come from the Django app that defines the pipeline.
 #       IDEA: Maybe the behaviour should change so that every job has it's own cleanup script
 #       that is run on expiry. Or, during the File.type_tag tagging / manifest-md5.csv phase,
 #       also tag files for future expiry (explicitly, or via adding an 'expires' type_tag
@@ -1116,3 +1205,8 @@ def move_job_files_to_archive_task(self, task_data=None, *kwargs):
     results["skipped"] = skipped
     task_data["result"] = results
     return task_data
+
+
+@shared_task(bind=True, track_started=True)
+def clean_orphan_obj_perms():
+    return guardian_clean_orphan_obj_perms()

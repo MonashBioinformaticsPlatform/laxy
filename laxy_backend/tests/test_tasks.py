@@ -1,5 +1,6 @@
 import os
 import tempfile
+from pathlib import Path
 
 from datetime import datetime
 
@@ -8,7 +9,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 
 from .. import util
-from ..models import Job, File, FileSet, SampleCart, ComputeResource, EventLog
+from ..models import Job, File, ComputeResource, EventLog
 from django.contrib.auth import get_user_model
 
 from ..util import laxy_sftp_url
@@ -20,12 +21,15 @@ from ..tasks.job import (
     _finalize_job_task_err_handler,
     set_job_status,
     file_should_be_deleted,
+    get_job_template_files,
 )
 
 from ..tasks.file import (
     add_file_replica_records,
     remove_file_replica_records,
 )
+
+tests_path = os.path.dirname(os.path.abspath(__file__))
 
 
 def _create_user_and_login(username="testuser", password="testpass", is_superuser=True):
@@ -45,6 +49,8 @@ def get_tmp_dir():
 
 
 class TasksTest(TestCase):
+    maxDiff = None
+
     def setUp(self):
         self.admin_user = User.objects.create_user("adminuser", "", "testpass")
         self.admin_user.is_superuser = True
@@ -149,6 +155,29 @@ class TasksTest(TestCase):
 
         for f in self.files:
             f.delete()
+
+    def test_job_template_discovery(self):
+        common_basepath = Path(tests_path, "..", "templates/common").resolve()
+        pipeline_templates_relpath = (
+            "test_data/templates/job_scripts/test_pipeline_name"
+        )
+        pathdict = get_job_template_files("test_pipeline_name", "0.01")
+
+        self.assertTrue(
+            "/test_data/templates/job_scripts/test_pipeline_name/0.01/"
+            in pathdict["input/scripts/run_job.sh"]
+        )
+
+        self.assertDictEqual(
+            pathdict,
+            {
+                "input/config/conda_environment.yml": f"{tests_path}/{pipeline_templates_relpath}/default/input/config/conda_environment.yml",
+                "input/scripts/add_to_manifest.py": f"{common_basepath}/job/input/scripts/add_to_manifest.py",
+                "input/scripts/laxy.lib.sh": f"{common_basepath}/job/input/scripts/laxy.lib.sh",
+                "input/scripts/run_job.sh": f"{tests_path}/{pipeline_templates_relpath}/0.01/input/scripts/run_job.sh",
+                "kill_job.sh": f"{common_basepath}/job/kill_job.sh",
+            },
+        )
 
     def test_file_expiry_matching(self):
         self.assertTrue(file_should_be_deleted(self.file_bam))

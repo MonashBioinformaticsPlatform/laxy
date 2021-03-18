@@ -1,0 +1,18 @@
+#
+# A test environment file
+#
+
+name: test_pipeline_name
+channels:
+  - conda-forge
+  - bioconda
+  - anaconda
+  - defaults
+  - r
+  # conda-forge occasionally re-labels packages from 'main' to 'broken',
+  # so we need this to make the environment reproducible
+  - conda-forge/label/broken
+dependencies:
+  - python=3.6.*
+  - pip
+  - curl

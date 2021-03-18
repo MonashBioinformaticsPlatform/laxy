@@ -9,18 +9,20 @@ import keyBy from 'lodash-es/keyBy';
 import Vue from 'vue';
 import Vuex from 'vuex';
 
-import pathify from './config/pathify';
+import pathify from '../config/pathify';
 import { make } from 'vuex-pathify';
 //import pathify, { make } from 'vuex-pathify';
 
 import axios, { AxiosResponse } from 'axios';
-import { ComputeJob, LaxyFile, Sample, SampleCartItems } from './model';
-import { WebAPI } from './web-api';
-import { vueAuth, AuthOptions } from './auth';
+import { ComputeJob, LaxyFile, Sample, SampleCartItems } from '../model';
+import { WebAPI } from '../web-api';
+import { vueAuth, AuthOptions } from '../auth';
 
-import AVAILABLE_GENOMES from "./config/genomics/genomes";
-import { ILaxyFile, LaxyFileSet, ISample } from './types';
-import { addPipelineRoutes } from './routes';
+import AVAILABLE_GENOMES from "../config/genomics/genomes";
+import { ILaxyFile, LaxyFileSet, ISample } from '../types';
+import { addPipelineRoutes } from '../routes';
+
+import pipelineParams from './modules/pipelineParams';
 
 export const SET_ONLINE_STATUS = 'set_online_status';
 export const SET_BACKEND_VERSION = 'set_backend_version';
@@ -391,6 +393,9 @@ export const Store = new Vuex.Store({
     getters: getters,
     mutations: mutations,
     actions: actions,
+    modules: {
+        pipelineParams,
+    }
 });
 
 (window as any).store = Store;

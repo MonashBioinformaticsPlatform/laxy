@@ -27,6 +27,7 @@ from .downloader import (
     untar,
     unzip,
     find_filename_and_size_from_url,
+    url_to_cache_key,
     get_url_cached_path,
     create_symlink_to_cache,
     create_copy_from_cache,
@@ -153,6 +154,20 @@ def add_commandline_args(parser: argparse.ArgumentParser) -> argparse.ArgumentPa
         action="store_true",
     )
 
+    url_to_cachekey_parser = subparsers.add_parser(
+        "get-cache-key",
+        help="Return the cache key associated with a URL. Useful if you'd like to verify if a URL exists in the cache directory.",
+    )
+    url_to_cachekey_parser.add_argument(
+        "url", nargs=1, default=str, help="URL to find cache key for.",
+    )
+    url_to_cachekey_parser.add_argument(
+        "--cache-path",
+        help="If provided, returns the full path to the cache file if it exists, or nothing and a non-zero exit code otherwise.",
+        default=None,
+        type=str,
+    )
+
     # Add common options to the main parser and most subparsers
     for p in [parser, dl_parser, cache_parser]:
         p.add_argument(
@@ -163,7 +178,7 @@ def add_commandline_args(parser: argparse.ArgumentParser) -> argparse.ArgumentPa
         )
         p.add_argument(
             "--cache-path",
-            help="URL to send progress events to",
+            help="Path to the laxydl cache directory.",
             default=get_default_cache_path(),
             type=str,
         )
@@ -412,6 +427,18 @@ def main():
             format="%(levelname)s: %(asctime)s -- %(message)s", level=logging.DEBUG
         )
         logger.setLevel(logging.DEBUG)
+
+    if args.command == "get-cache-key":
+        if args.cache_path:
+            _c_path = get_url_cached_path(args.url[0], args.cache_path)
+            if os.path.exists(_c_path) and os.path.isfile(_c_path):
+                print(_c_path)
+            else:
+                logger.error(f"URL is not in cache, {_c_path} does not exist.")
+                sys.exit(1)
+        else:
+            print(url_to_cache_key(args.url[0]))
+            sys.exit(0)
 
     if args.cache_path:
         if not (os.path.exists(args.cache_path) and os.path.isdir(args.cache_path)):

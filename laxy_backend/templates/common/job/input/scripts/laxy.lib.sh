@@ -1,5 +1,9 @@
 #!/bin/bash
 
+#
+# laxy_backend/templates/common/job/input/scripts/laxy.lib.sh
+#
+
 function remove_secrets() {
     if [[ ${DEBUG} != "yes" ]]; then
       rm -f "${AUTH_HEADER_FILE}"
@@ -187,6 +191,10 @@ function install_miniconda() {
 }
 
 function init_conda_env() {
+
+    CONDA_INSTALL_BINARY=mamba
+    #CONDA_INSTALL_BINARY=conda
+
     # By convention, we name our Conda environments after {pipeline}-{version}
     # Each new pipeline version has it's own Conda env
     local env_name="${1}-${2}"
@@ -203,9 +211,15 @@ function init_conda_env() {
 
         # First we update conda itself
         conda update --yes -n base conda || return 1
+
+        # Install mamba, for faster environment installs
+        if [[ "${CONDA_INSTALL_BINARY}" == "mamba" ]]; then
+            conda install --yes -n base -c conda-forge mamba || CONDA_INSTALL_BINARY="conda"
+        fi
+
         # Put git and curl in the base env, since we generally need them
         # We need gcc to compile some pip dependencies for laxydl, so grab that too :/
-        conda install --yes -n base curl git gcc_linux-64 || return 1
+        ${CONDA_INSTALL_BINARY} install --yes -n base -c conda-forge curl git gcc_linux-64 || return 1
 
         # Create an empty environment
         # conda create --yes -m -n "${env_name}" || return 1
@@ -222,10 +236,10 @@ function init_conda_env() {
 
         if [[ -f "${INPUT_CONFIG_PATH}/conda_environment_explicit.txt" ]]; then
             # Create environment with explicit dependencies
-            conda create --name "${env_name}" --file "${INPUT_CONFIG_PATH}/conda_environment_explicit.txt" || return 1
+            ${CONDA_INSTALL_BINARY} create --name "${env_name}" --file "${INPUT_CONFIG_PATH}/conda_environment_explicit.txt" || return 1
         else
             # Create from an environment (yml) file
-            conda env create --name "${env_name}" --file "${INPUT_CONFIG_PATH}/conda_environment.yml" || return 1
+            ${CONDA_INSTALL_BINARY} env create --name "${env_name}" --file "${INPUT_CONFIG_PATH}/conda_environment.yml" || return 1
         fi
     fi
 

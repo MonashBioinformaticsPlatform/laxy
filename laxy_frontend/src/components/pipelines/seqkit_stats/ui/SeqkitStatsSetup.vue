@@ -35,6 +35,9 @@ reads_2.fq.gz  FASTQ   DNA      2,500    560,002      223      224      225
               placeholder="Description of pipeline run ..."
             ></md-input>
           </md-input-container>
+          <md-switch v-model="allFlag"
+            >Calculate all stats (use the <code>--all</code> flag)</md-switch
+          >
         </md-whiteframe>
       </form>
 
@@ -107,12 +110,15 @@ import {
 import { Get, Sync, Call } from "vuex-pathify";
 
 import {
+  Store,
   SET_SAMPLES,
   SET_PIPELINE_PARAMS,
   SET_PIPELINE_DESCRIPTION,
   SET_PIPELINE_PARAMS_VALID,
   CLEAR_SAMPLE_CART,
 } from "../../../../store";
+
+import storeModule from "../store/module";
 
 import { Sample, SampleCartItems } from "../../../../model";
 import { WebAPI } from "../../../../web-api";
@@ -187,7 +193,15 @@ export default class PipelineParams extends Vue {
   @Sync("pipelineParams@pipeline_version")
   public pipeline_version: string;
 
+  @Sync("pipelineParams@seqkit_stats.flags.all")
+  public allFlag: boolean;
+
   created() {
+    this.$store.registerModule(
+      ["pipelineParams", this.pipeline_name],
+      storeModule
+    );
+
     this._samples = cloneDeep(this.$store.state.samples);
   }
 
