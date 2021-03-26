@@ -611,7 +611,7 @@ def index_remote_files(self, task_data=None, **kwargs) -> Sequence[Tuple[str, in
 
 
 @shared_task(bind=True)
-def _finalize_job_task_err_handler(self, uuid, job_id=None):
+def _finalize_job_task_err_handler(uuid, job_id=None):
     logger.info(
         f"_finalize_job_task_err_handler: failed task: {uuid}, job_id: {job_id}"
     )

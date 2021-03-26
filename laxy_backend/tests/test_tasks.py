@@ -6,6 +6,7 @@ from datetime import datetime
 
 import unittest
 from django.test import TestCase
+from django.conf import settings
 from rest_framework.test import APIClient
 
 from .. import util
@@ -157,10 +158,14 @@ class TasksTest(TestCase):
             f.delete()
 
     def test_job_template_discovery(self):
-        common_basepath = Path(tests_path, "..", "templates/common").resolve()
-        pipeline_templates_relpath = (
-            "test_data/templates/job_scripts/test_pipeline_name"
+        settings.JOB_TEMPLATE_PATHS = [
+            str(Path(tests_path, "test_data/templates").resolve())
+        ]
+        common_basepath = str(Path(tests_path, "..", "templates", "common").resolve())
+        pipeline_templates_relpath = str(
+            Path(settings.JOB_TEMPLATE_PATHS[0], "job_scripts/test_pipeline_name")
         )
+
         pathdict = get_job_template_files("test_pipeline_name", "0.01")
 
         self.assertTrue(
@@ -171,10 +176,10 @@ class TasksTest(TestCase):
         self.assertDictEqual(
             pathdict,
             {
-                "input/config/conda_environment.yml": f"{tests_path}/{pipeline_templates_relpath}/default/input/config/conda_environment.yml",
-                "input/scripts/add_to_manifest.py": f"{common_basepath}/job/input/scripts/add_to_manifest.py",
+                "input/config/conda_environment.yml": f"{pipeline_templates_relpath}/default/input/config/conda_environment.yml",
+                "input/scripts/run_job.sh": f"{pipeline_templates_relpath}/0.01/input/scripts/run_job.sh",
                 "input/scripts/laxy.lib.sh": f"{common_basepath}/job/input/scripts/laxy.lib.sh",
-                "input/scripts/run_job.sh": f"{tests_path}/{pipeline_templates_relpath}/0.01/input/scripts/run_job.sh",
+                "input/scripts/add_to_manifest.py": f"{common_basepath}/job/input/scripts/add_to_manifest.py",
                 "kill_job.sh": f"{common_basepath}/job/kill_job.sh",
             },
         )

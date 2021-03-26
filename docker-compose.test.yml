@@ -31,6 +31,7 @@ services:
       - LAXY_ADMIN_PASSWORD=adminpass
       - LAXY_SECRET_KEY=_do_please_change_this_in_production_
       - LAXY_USE_SSL=no
+      - LAXY_JOB_TEMPLATE_PATHS=/app/laxy_backend/tests/test_data/templates
       # For pytest
       - DJANGO_SETTINGS_MODULE=laxy.settings
     # volumes:
@@ -75,7 +76,8 @@ services:
     # command: python3 ./manage.py test
     # There are various ways we can run pytest, eg if we want to run just a subset of tests,
     # or drop into the PDB debugger when an uncaught exception is raised
-    command: pytest -vvv
+    command: pytest -vvv --showlocals --tb=auto
+    # command: pytest -ra
     # command: pytest -vvv --pdb
     # command: pytest -vvv --pdb laxy_backend/tests/test_tasks.py
     # command: pytest -vvv laxy_backend/tests/test_util.py
