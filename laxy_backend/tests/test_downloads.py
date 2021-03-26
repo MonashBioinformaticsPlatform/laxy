@@ -34,8 +34,8 @@ class DownloadTaskTest(TestCase):
         self.file_sra_ftp.save()
 
         self.file_ftp = File(
-            name="ls-lR.gz",
-            location="ftp://ftp.monash.edu.au/pub/linux/debian/ls-lR.gz",
+            name="SRR4020122.fastq.gz",
+            location="ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR402/002/SRR4020122/SRR4020122.fastq.gz",
             # location="ftp://ftp.gnu.org/gnu/Licenses/gpl-3.0.txt",
             # location="ftp://ftp.ubuntu.com/ubuntu/ls-lR.gz",
             # name='testfile',
