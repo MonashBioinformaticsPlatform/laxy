@@ -102,10 +102,11 @@ jobs:
           docker tag "${IMAGE_NAME}" "${IMAGE_ID}:${{ env.IMAGE_TAG }}"
           docker tag "${IMAGE_NAME}" "${IMAGE_ID}:${{ env.GIT_SHORT_COMMIT }}"
 
-          echo "IMAGE_ID: ${IMAGE_ID}"
+          echo "IMAGE_ID:IMAGE_TAG ${IMAGE_ID}:${{ env.IMAGE_TAG }}"
+
           docker images
 
-          docker push "${IMAGE_ID}"
+          docker push "${IMAGE_ID}:${{ env.IMAGE_TAG }}"
 
       - name: Push laxy-static-nginx image
         run: |
@@ -118,7 +119,8 @@ jobs:
           docker tag "${IMAGE_NAME}" "${IMAGE_ID}:${{ env.IMAGE_TAG }}"
           docker tag "${IMAGE_NAME}" "${IMAGE_ID}:${{ env.GIT_SHORT_COMMIT }}"
 
-          echo "IMAGE_ID: ${IMAGE_ID}"
+          echo "IMAGE_ID:IMAGE_TAG ${IMAGE_ID}:${{ env.IMAGE_TAG }}"
+
           docker images
 
-          docker push "${IMAGE_ID}"
+          docker push "${IMAGE_ID}:${{ env.IMAGE_TAG }}"
