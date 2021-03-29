@@ -97,12 +97,15 @@ jobs:
             echo $1 | tr '[:upper:]' '[:lower:]'
           }
 
-          IMAGE_NAME=laxy
-          IMAGE_ID=docker.pkg.github.com/${{ github.repository }}/$IMAGE_NAME
-          docker tag $IMAGE_NAME $(to_lower $IMAGE_ID:${{ env.IMAGE_TAG }})
-          docker tag $IMAGE_NAME $(to_lower $IMAGE_ID:${{ env.GIT_SHORT_COMMIT }})
-          # Push all tags
-          docker push $(to_lower $IMAGE_ID)
+          export IMAGE_NAME=laxy
+          export IMAGE_ID=$(to_lower "docker.pkg.github.com/${{ github.repository }}/${IMAGE_NAME}")
+          docker tag "${IMAGE_NAME}" "${IMAGE_ID}:${{ env.IMAGE_TAG }}"
+          docker tag "${IMAGE_NAME}" "${IMAGE_ID}:${{ env.GIT_SHORT_COMMIT }}"
+
+          echo "IMAGE_ID: ${IMAGE_ID}"
+          docker images
+
+          docker push "${IMAGE_ID}"
 
       - name: Push laxy-static-nginx image
         run: |
@@ -110,9 +113,12 @@ jobs:
             echo $1 | tr '[:upper:]' '[:lower:]'
           }
 
-          IMAGE_NAME=laxy-static-nginx
-          IMAGE_ID=docker.pkg.github.com/${{ github.repository }}/$IMAGE_NAME
-          docker tag $IMAGE_NAME $(to_lower $IMAGE_ID:${{ env.IMAGE_TAG }})
-          docker tag $IMAGE_NAME $(to_lower $IMAGE_ID:${{ env.GIT_SHORT_COMMIT }})
-          # Push all tags
-          docker push $(to_lower $IMAGE_ID)
+          export IMAGE_NAME=laxy-static-nginx
+          export IMAGE_ID=$(to_lower "docker.pkg.github.com/${{ github.repository }}/${IMAGE_NAME}")
+          docker tag "${IMAGE_NAME}" "${IMAGE_ID}:${{ env.IMAGE_TAG }}"
+          docker tag "${IMAGE_NAME}" "${IMAGE_ID}:${{ env.GIT_SHORT_COMMIT }}"
+
+          echo "IMAGE_ID: ${IMAGE_ID}"
+          docker images
+
+          docker push "${IMAGE_ID}"
