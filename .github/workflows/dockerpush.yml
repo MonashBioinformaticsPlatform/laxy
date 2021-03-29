@@ -26,9 +26,8 @@ jobs:
       - name: Run tests
         run: |
           if [ -f docker-compose.test.yml ]; then
-            GIT_COMMIT="${{ github.sha }}"
             docker-compose --file docker-compose.yml --file docker-compose.test.yml build \
-                           --build-arg GIT_COMMIT=$GIT_SHORT_COMMIT sut
+                           --build-arg GIT_COMMIT=${{ github.sha }} sut
             docker-compose --file docker-compose.yml --file docker-compose.test.yml run sut
           else
             docker build . --file docker/laxy/Dockerfile
@@ -49,31 +48,34 @@ jobs:
       - name: Set environment variables for all steps
         run: |
           export GIT_COMMIT="${{ github.sha }}"
-          echo "::set-env name=GIT_COMMIT::$GIT_COMMIT"
-          echo "::set-env name=GIT_SHORT_COMMIT::${GIT_COMMIT:0:8}"
+          echo "GIT_COMMIT=${GIT_COMMIT}" >>$GITHUB_ENV
+          echo "GIT_SHORT_COMMIT=${GIT_COMMIT:0:8}" >>$GITHUB_ENV
 
           # Strip git ref prefix from version
           BRANCH_OR_TAG=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
           # Strip "v" prefix from tag name
           [ "${{ github.ref }}" == "refs/tags/"* ] && BRANCH_OR_TAG=$(echo $BRANCH_OR_TAG | sed -e 's/^v//')
 
-          echo "::set-env name=BRANCH_OR_TAG::$BRANCH_OR_TAG"
+          echo "BRANCH_OR_TAG=${BRANCH_OR_TAG}" >>$GITHUB_ENV
 
           [ "$BRANCH_OR_TAG" == "master" ] && LAXY_ENV=prod
           [ "$BRANCH_OR_TAG" == "develop" ] && LAXY_ENV=dev
-          echo "::set-env name=LAXY_ENV::$LAXY_ENV"
+          echo "LAXY_ENV=${LAXY_ENV}" >>$GITHUB_ENV
 
           IMAGE_TAG=$BRANCH_OR_TAG
           [ "$BRANCH_OR_TAG" == "master" ] && IMAGE_TAG=latest
           [ "$BRANCH_OR_TAG" == "develop" ] && IMAGE_TAG=dev
-          echo "::set-env name=IMAGE_TAG::$IMAGE_TAG"
+          echo "IMAGE_TAG=${IMAGE_TAG}" >>$GITHUB_ENV
 
       - name: Build Laxy backend image (Django)
         run: |
-          docker build . --file docker/laxy/Dockerfile --tag laxy --build-arg GIT_COMMIT=$GIT_SHORT_COMMIT
+          export LAXY_ENV=${{ env.LAXY_ENV }}
+          docker build . --file docker/laxy/Dockerfile --tag laxy --build-arg GIT_COMMIT=${{ env.GIT_SHORT_COMMIT }}
 
       - name: Build Laxy frontend image (nginx + static assets)
         run: |
+          export LAXY_ENV=${{ env.LAXY_ENV }}
+
           # We hard-code these for prod, since for dev/localdev you'll either rebuild with a different .env
           # or host-bind a working copy of laxy_frontend anyway
           LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID=474709025289-vm2t2ikg08ij9mvl3h813l86nng1e4eh.apps.googleusercontent.com
@@ -81,7 +83,7 @@ jobs:
           LAXY_FRONTEND_API_URL=https://api.laxy.io
 
           docker build . --file docker/laxy-static-nginx/Dockerfile --tag laxy-static-nginx \
-                         --build-arg GIT_COMMIT=$GIT_SHORT_COMMIT \
+                         --build-arg GIT_COMMIT=${{ env.GIT_SHORT_COMMIT }} \
                          --build-arg LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID=$LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID \
                          --build-arg LAXY_FRONTEND_URL=$LAXY_FRONTEND_URL \
                          --build-arg LAXY_FRONTEND_API_URL=$LAXY_FRONTEND_API_URL
@@ -97,8 +99,8 @@ jobs:
 
           IMAGE_NAME=laxy
           IMAGE_ID=docker.pkg.github.com/${{ github.repository }}/$IMAGE_NAME
-          docker tag $IMAGE_NAME $(to_lower $IMAGE_ID:$IMAGE_TAG)
-          docker tag $IMAGE_NAME $(to_lower $IMAGE_ID:$GIT_SHORT_COMMIT)
+          docker tag $IMAGE_NAME $(to_lower $IMAGE_ID:${{ env.IMAGE_TAG }})
+          docker tag $IMAGE_NAME $(to_lower $IMAGE_ID:${{ env.GIT_SHORT_COMMIT }})
           # Push all tags
           docker push $(to_lower $IMAGE_ID)
 
@@ -110,7 +112,7 @@ jobs:
 
           IMAGE_NAME=laxy-static-nginx
           IMAGE_ID=docker.pkg.github.com/${{ github.repository }}/$IMAGE_NAME
-          docker tag $IMAGE_NAME $(to_lower $IMAGE_ID:$IMAGE_TAG)
-          docker tag $IMAGE_NAME $(to_lower $IMAGE_ID:$GIT_SHORT_COMMIT)
+          docker tag $IMAGE_NAME $(to_lower $IMAGE_ID:${{ env.IMAGE_TAG }})
+          docker tag $IMAGE_NAME $(to_lower $IMAGE_ID:${{ env.GIT_SHORT_COMMIT }})
           # Push all tags
           docker push $(to_lower $IMAGE_ID)
