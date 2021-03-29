@@ -103,7 +103,7 @@ fi
 readonly SLURM_OPTIONS="--parsable \
                         --cpus-per-task=${CPUS} \
                         --mem=${MEM} \
-                        -t 3-0:00 \
+                        -t 7-0:00 \
                         --ntasks-per-node=1 \
                         --ntasks=1 \
                         {% if SLURM_EXTRA_ARGS %}
