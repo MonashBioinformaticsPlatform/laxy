@@ -1,4 +1,4 @@
-version: '3.7'
+version: "3.7"
 
 networks:
   private:
@@ -12,7 +12,7 @@ volumes:
 
 services:
   django:
-    image: '${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest'
+    image: "${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest"
     # user: laxy
     # We must specify the .env file so that it gets sourced - otherwise every variable in .env would
     # need to be explicitly defined like: LAXY_DEBUG=${LAXY_DEBUG} in the environment section below.
@@ -33,7 +33,7 @@ services:
     #   - static_assets:/usr/share/nginx/html
     # Internal Docker network only
     expose:
-      - '8001'
+      - "8001"
     # Publicly accessible
     # ports:
     #   - "8001:8001"
@@ -42,11 +42,11 @@ services:
     command: bash -c "sleep 10 &&
       python3 manage.py makemigrations --no-input &&
       python3 manage.py migrate --no-input &&
-      gunicorn laxy.wsgi -b 0.0.0.0:8001 --forwarded-allow-ips='*' --worker-class gevent --timeout 60"
+      gunicorn laxy.wsgi -b 0.0.0.0:8001 --forwarded-allow-ips='*' --worker-class gevent --timeout 120"
 
   dev-frontend-server:
-    image: '${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest'
-    restart: 'no'
+    image: "${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest"
+    restart: "no"
     command: echo "Service disabled in prod (but still required to be defined to override the image name)"
   # If we wanted to do a ninja frontend rebuild into static_assets
   #    command: bash -c "curl -sL https://deb.nodesource.com/setup_12.x | bash - &&
@@ -94,13 +94,22 @@ services:
       - private
 
   queue-high:
-    image: '${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest'
+    image: "${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest"
     # user: laxy
-    command: ["celery", "-A", "laxy", "worker", "-E", "-l", "info", "-Ofair", 
-              "--broker=${LAXY_BROKER_URL}", 
-              "--concurrency=2",
-              # "--pool=solo",  # for use when remote debugging
-    ]
+    command:
+      [
+        "celery",
+        "-A",
+        "laxy",
+        "worker",
+        "-E",
+        "-l",
+        "info",
+        "-Ofair",
+        "--broker=${LAXY_BROKER_URL}",
+        "--concurrency=2",
+      ]
+    # "--pool=solo",  # for use when remote debugging
     stop_grace_period: 5m
     stop_signal: SIGTERM
     env_file:
@@ -120,14 +129,24 @@ services:
       - private
 
   queue-low:
-    image: '${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest'
+    image: "${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest"
     # user: laxy
-    command: ["celery", "-A", "laxy", "worker", "-E", "-l", "info", "-Ofair", 
-              "--broker=${LAXY_BROKER_URL}", 
-              "-Q", "low-priority",
-              "--concurrency=4",
-              # "--pool=solo",  # for use when remote debugging
-    ]
+    command:
+      [
+        "celery",
+        "-A",
+        "laxy",
+        "worker",
+        "-E",
+        "-l",
+        "info",
+        "-Ofair",
+        "--broker=${LAXY_BROKER_URL}",
+        "-Q",
+        "low-priority",
+        "--concurrency=4",
+      ]
+    # "--pool=solo",  # for use when remote debugging
     stop_grace_period: 5m
     stop_signal: SIGTERM
     env_file:
@@ -147,7 +166,7 @@ services:
       - private
 
   celery-beat:
-    image: '${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest'
+    image: "${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest"
     # user: laxy
     env_file:
       - .env
@@ -157,7 +176,7 @@ services:
       - private
 
   flower:
-    image: '${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest'
+    image: "${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest"
     env_file:
       - .env
     environment:
@@ -167,12 +186,12 @@ services:
       restart_policy:
         condition: any
     ports:
-      - '5556:5556'
+      - "5556:5556"
     networks:
       - private
 
   nginx:
-    image: '${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy-static-nginx:latest'
+    image: "${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy-static-nginx:latest"
     command: >
       sh -c "
         until [ -f /certs/fullchain.pem ] && [ -f /certs/key.pem ]; do
@@ -197,8 +216,8 @@ services:
         condition: any
     ports:
       # we need port 80 so nginx can redirect to 443, also for Let's Encrypt http-01 challenge
-      - '80:80'
-      - '443:443'
+      - "80:80"
+      - "443:443"
     depends_on:
       - ssl-certs-cron
     networks:
@@ -212,7 +231,7 @@ services:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
 
   ssl-certs-cron:
-    image: '${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/ssl-certs:latest'
+    image: "${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/ssl-certs:latest"
     environment:
       # No quotes !
       - ACME_SSL_DOMAINS=${ACME_SSL_DOMAINS-laxy.io api.laxy.io}
