@@ -279,38 +279,11 @@
                 </div>
             </md-toolbar>
 
-            <md-sidenav class="md-left" ref="leftSidenav" @open="open('Left')" @close="close('Left')">
-                <md-toolbar class="md-large">
-                    <h3 class="md-title">~</h3>
-                </md-toolbar>
-                <md-list md-dense>
-                    <md-list-item>
-                        <router-link :to="{name: 'home'}" exact>
-                            <span @click="toggleSidenav('leftSidenav')">
-                                <md-icon>home</md-icon>&nbsp;&nbsp;Home
-                            </span>
-                        </router-link>
-                    </md-list-item>
-                    <md-list-item>
-                        <router-link to="/run/rnaseq">
-                            <span @click="toggleSidenav('leftSidenav')">
-                                <md-icon>play_circle_outline</md-icon>&nbsp;&nbsp;Run an RNA-Seq analysis
-                            </span>
-                        </router-link>
-                    </md-list-item>
-                    <md-list-item v-if="logged_in">
-                        <router-link to="/jobs">
-                            <span @click="toggleSidenav('leftSidenav')">
-                                <md-icon>view_list</md-icon>&nbsp;&nbsp;Jobs
-                            </span>
-                        </router-link>
-                    </md-list-item>
-                </md-list>
-                <div>
-                    <span style="position: absolute; bottom: 0; padding: 16px;" class="md-caption">Frontend version:
-                        {{ appVersion }}</span>
-                </div>
-            </md-sidenav>
+            <main-sidenav class="md-left" ref="leftSidenav" :show-jobs-link="logged_in" @open="open('Left')" @close="close('Left')">
+                <template v-slot:footer>
+                    Frontend version: {{ appVersion }}
+                </template>
+            </main-sidenav>
 
             <md-sidenav v-if="logged_in" id="rightSideNav" class="md-right" ref="rightSidenav" @open="open('Right')"
                 @close="close('Right')">
@@ -353,6 +326,6 @@
     </div>
     <!-- Hashed cache-busting version added automatically by webpack -->
     <!-- <script src="bundle.js" type="text/javascript"></script> -->
-<script type="text/javascript" src="bundle.js?3c1a24146b6ecd210c0a"></script></body>
+<script type="text/javascript" src="bundle.js?7aac1cd2335e35209c98"></script></body>
 
 </html>
