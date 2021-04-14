@@ -8,6 +8,8 @@ import shlex
 import backoff
 import coreapi
 import coreschema
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.utils.functional import cached_property
@@ -1173,6 +1175,7 @@ class FileSetView(GetMixin, DeleteMixin, PatchMixin, JSONView):
 
     # permission_classes = (DjangoObjectPermissions,)
 
+    # @method_decorator(cache_page(60 * 60 * 1))
     @view_config(response_serializer=FileSetSerializer)
     @etag_headers
     def get(self, request: Request, uuid, version=None):
