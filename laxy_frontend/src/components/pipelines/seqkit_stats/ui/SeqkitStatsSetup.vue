@@ -61,7 +61,7 @@ reads_2.fq.gz  FASTQ   DNA      2,500    560,002      223      224      225
       <md-layout v-if="showButtons">
         <!-- <md-button class="md-primary md-raised" @click="save">Save</md-button> -->
         <md-button
-          :disabled="!isValid_params"
+          :disabled="!isValid_params || submitting"
           class="md-primary md-raised"
           @click="run"
           >Run the pipeline</md-button
@@ -300,15 +300,17 @@ export default class PipelineParams extends Vue {
 
   async run() {
     try {
+      this.submitting = true;
       await this.save();
+      this.submitting = true;
 
       if (!this.isValid_params) {
         Snackbar.flashMessage("Please correct errors before submitting.");
+        this.submitting = false;
         return null;
       }
 
       try {
-        this.submitting = true;
         let response = null;
         response = (await WebAPI.fetcher.post(
           `/api/v1/job/?pipeline_run_id=${this.pipelinerun_uuid}`,
@@ -341,6 +343,8 @@ export default class PipelineParams extends Vue {
     } catch (error) {
       console.error(error);
     }
+    
+    this.submitting = false;
     return null;
   }
 
