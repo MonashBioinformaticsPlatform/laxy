@@ -791,6 +791,19 @@ class FileView(
         else:
             # File view/download is the default when no Content-Type is specified
             try:
+                try:
+                    f = File.objects.get(id=uuid)
+                except File.DoesNotExist as ex:
+                    return HttpResponse(
+                        status=status.HTTP_404_NOT_FOUND,
+                        reason="File with this ID does not exist.",
+                    )
+                if not f.location:
+                    return HttpResponse(
+                        status=status.HTTP_404_NOT_FOUND,
+                        reason="File has no default download location.",
+                    )
+
                 if "download" in request.query_params:
                     return super().download(uuid, filename=filename)
                 else:
