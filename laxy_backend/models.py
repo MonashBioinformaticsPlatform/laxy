@@ -797,7 +797,6 @@ class Job(Expires, Timestamped, UUIDModel):
         """
         from laxy_backend.serializers import FileBulkRegisterSerializer
 
-        # https://colab.research.google.com/drive/1pWRRlthtJ1FGjmPJLRivlsJk716Ckaze
         if isinstance(tsv_table, str) or isinstance(tsv_table, bytes):
             table = rows.import_from_csv(BytesIO(tsv_table), skip_header=False)
             table = json.loads(rows.export_to_json(table))
@@ -817,24 +816,21 @@ class Job(Expires, Timestamped, UUIDModel):
 
                 # Check if file exists by path in input/output filesets already,
                 # if so, update existing file
-                fullpath = Path(f.validated_data["path"]) / Path(
-                    f.validated_data["name"]
-                )
-                existing_infile = self.input_files.get_files_by_path(fullpath).first()
-                existing_outfile = self.output_files.get_files_by_path(fullpath).first()
-                for existing in [existing_infile, existing_outfile]:
-                    if existing:
-                        f = FileBulkRegisterSerializer(existing, data=row, partial=True)
-                        f.is_valid(raise_exception=True)
-                        f_obj = f.instance
+                fpath = f.validated_data["path"]
+                fname = f.validated_data["name"]
+                existing = self.get_files().filter(name=fname, path=fpath).first()
+                if existing:
+                    f = FileBulkRegisterSerializer(existing, data=row, partial=True)
+                    f.is_valid(raise_exception=True)
+                    f_obj = f.instance
 
-                if not any([existing_infile, existing_outfile]):
+                if not existing:
                     f_obj = f.create(f.validated_data)
 
                 f_obj.owner = self.owner
                 if not f_obj.location and self.compute_resource is not None:
-                    location_base = laxy_sftp_url(self)
-                    f_obj.location = f"{location_base}/{f_obj.path}/{f_obj.name}"
+                    location = laxy_sftp_url(self, path=f"{f_obj.path}/{f_obj.name}")
+                    f_obj.location = location
                 if save:
                     f_obj = f.save()
 
