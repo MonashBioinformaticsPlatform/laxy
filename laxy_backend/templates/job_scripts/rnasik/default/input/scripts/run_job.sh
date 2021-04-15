@@ -711,10 +711,10 @@ function get_input_data_urls() {
 function detect_pairs() {
     RNASIK_PAIR_EXTN_ARGS=$(${INPUT_SCRIPTS_PATH}/helper.py pairids "${INPUT_READS_PATH}") || fail_job 'detect_pairs' '' $?
 
-    if [[ "${RNASIK_PAIR_EXTN_ARGS}" == *" -paired "* ]]; then
-        send_event "JOB_INFO" "(Looks like unpaired reads)"
+    if [[ "${RNASIK_PAIR_EXTN_ARGS}" =~ " -paired " ]]; then
+        send_event "JOB_INFO" "(Looks like paired reads)"
     else
-        send_event "JOB_INFO" "(Looks like paired end data) 👍"
+        send_event "JOB_INFO" "(Looks like unpaired end data) 👍"
     fi
 }
 
