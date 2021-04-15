@@ -18,7 +18,7 @@
               </div>
               <div
                 class="no-line-break"
-                :class="{ strikethrough: file.deleted }"
+                :class="{ strikethrough: file.deleted, unavailable: !file.location }"
               >{{ file.name | magic_truncate }}</div>
             </md-table-cell>
             <md-table-cell md-numeric v-if="!file.deleted">
@@ -30,12 +30,16 @@
                 md-indeterminate
               ></md-spinner>
               <md-button
-                v-else-if="getDefaultViewMethod(file)"
+                v-else-if="getDefaultViewMethod(file) && file.location"
                 class="md-icon-button push-right"
                 @click="getDefaultViewMethod(file).method(file)"
               >
                 <md-tooltip md-direction="top">{{ getDefaultViewMethod(file).text }}</md-tooltip>
                 <md-icon>{{ getDefaultViewMethod(file).icon }}</md-icon>
+              </md-button>
+              <md-button v-else-if="!file.location" class="md-icon-button push-right">
+                <md-tooltip md-direction="left">File has no recorded location. This may be a temporary situtation, or an error.</md-tooltip>
+                <md-icon>not_listed_location</md-icon>
               </md-button>
               <md-button v-else :disabled="true" class="md-icon-button">
                 <!-- empty placeholder button to preserve layout -->
@@ -49,19 +53,27 @@
                 <md-menu-content>
                   <i class="md-caption" style="padding-left: 16px">{{ file.id }}</i>
                   <!--  -->
-                  <md-menu-item
-                    v-for="view in getViewMethodsForTags(file.type_tags)"
-                    :key="view.text"
-                    @click="view.method(file)"
-                  >
-                    <md-icon>{{ view.icon }}</md-icon>
-                    <span>{{ view.text }}</span>
-                  </md-menu-item>
+                  <template v-if="file.location">
+                    <md-menu-item
+                      v-for="view in getViewMethodsForTags(file.type_tags)"
+                      :key="view.text"
+                      @click="view.method(file)"
+                    >
+                      <md-icon>{{ view.icon }}</md-icon>
+                      <span>{{ view.text }}</span>
+                    </md-menu-item>
+                  </template>
+                  <template v-else>
+                    <md-menu-item>
+                      <md-icon>not_listed_location</md-icon>
+                      <span><i>Not available</i></span>
+                    </md-menu-item>
+                  </template>
                 </md-menu-content>
               </md-menu>
               <!--</div>-->
             </md-table-cell>
-            <md-table-cell v-else>
+            <md-table-cell v-if="file.deleted">
               <md-button class="md-icon-button push-right">
                 <md-tooltip md-direction="left">File has expired and is no longer available.</md-tooltip>
                 <md-icon style="color: #bdbdbd;">info</md-icon>
@@ -295,5 +307,10 @@ export default class FileList extends Vue {
 
 .strikethrough {
   text-decoration-line: line-through;
+}
+
+.unavailable {
+  font-style: italic;
+  color: #7d7d7d;
 }
 </style>
