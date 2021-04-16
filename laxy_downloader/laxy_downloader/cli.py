@@ -462,6 +462,7 @@ def main():
                 f"If you are REALLY sure, you can `touch {os.path.join(args.cache_path, '.laxydl_cache')}` "
                 f"and try again, AT YOUR OWN RISK."
             )
+            sys.exit(1)
         if args.urls:
             for url in args.urls:
                 filepath = get_url_cached_path(url, args.cache_path)
