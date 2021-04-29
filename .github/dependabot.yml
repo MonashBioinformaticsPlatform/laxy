@@ -1,0 +1,39 @@
+version: 2
+updates:
+- package-ecosystem: docker
+  directory: "/docker/laxy"
+  schedule:
+    interval: weekly
+    time: "19:00"
+    timezone: Australia/Melbourne
+  open-pull-requests-limit: 10
+  target-branch: develop
+  assignees:
+  - pansapiens
+- package-ecosystem: docker
+  directory: "/docker/ssl-certs"
+  schedule:
+    interval: weekly
+    time: "19:00"
+    timezone: Australia/Melbourne
+  open-pull-requests-limit: 10
+  target-branch: develop
+  assignees:
+  - pansapiens
+  ignore:
+  - dependency-name: python
+    versions:
+    - 3.9.1
+    - 3.9.2
+    - 3.9.3
+    - 3.9.4
+- package-ecosystem: docker
+  directory: "/docker/fake-cluster"
+  schedule:
+    interval: weekly
+    time: "19:00"
+    timezone: Australia/Melbourne
+  open-pull-requests-limit: 10
+  target-branch: develop
+  assignees:
+  - pansapiens
