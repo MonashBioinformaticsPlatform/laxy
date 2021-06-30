@@ -528,6 +528,7 @@ def main():
             logger.error(
                 f"Or if that fails, try killing the aria2c process(es):  kill {aria_pids}"
             )
+            sys.exit(1)
 
 
 if __name__ == "__main__":
