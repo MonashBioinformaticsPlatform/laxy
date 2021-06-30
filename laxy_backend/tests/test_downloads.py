@@ -24,10 +24,11 @@ class DownloadTaskTest(TestCase):
         self.admin_user.is_superuser = True
         self.admin_user.save()
 
+        base_url = "ftp://ftp.ebi.ac.uk"
+
         self.file_sra_ftp = File(
             name="SRR950078_1.fastq.gz",
-            location="ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR950/SRR950078/"
-            "SRR950078_1.fastq.gz",
+            location=f"{base_url}/vol1/fastq/SRR950/SRR950078/" "SRR950078_1.fastq.gz",
             # name='SRR950078_1.fastq.gz',
             owner_id=1,
         )
@@ -35,7 +36,7 @@ class DownloadTaskTest(TestCase):
 
         self.file_ftp = File(
             name="SRR4020122.fastq.gz",
-            location="ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR402/002/SRR4020122/SRR4020122.fastq.gz",
+            location=f"{base_url}/vol1/fastq/SRR402/002/SRR4020122/SRR4020122.fastq.gz",
             # location="ftp://ftp.gnu.org/gnu/Licenses/gpl-3.0.txt",
             # location="ftp://ftp.ubuntu.com/ubuntu/ls-lR.gz",
             # name='testfile',
@@ -44,26 +45,26 @@ class DownloadTaskTest(TestCase):
         self.file_ftp.save()
 
         self.ena_expected_urls = [
-            "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR950/SRR950078/SRR950078_1.fastq.gz",
-            "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR950/SRR950078/SRR950078_2.fastq.gz",
-            "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR950/SRR950079/SRR950079_1.fastq.gz",
-            "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR950/SRR950079/SRR950079_2.fastq.gz",
-            "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR950/SRR950080/SRR950080_1.fastq.gz",
-            "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR950/SRR950080/SRR950080_2.fastq.gz",
-            "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR950/SRR950081/SRR950081_1.fastq.gz",
-            "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR950/SRR950081/SRR950081_2.fastq.gz",
-            "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR950/SRR950082/SRR950082_1.fastq.gz",
-            "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR950/SRR950082/SRR950082_2.fastq.gz",
-            "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR950/SRR950083/SRR950083_1.fastq.gz",
-            "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR950/SRR950083/SRR950083_2.fastq.gz",
-            "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR950/SRR950084/SRR950084_1.fastq.gz",
-            "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR950/SRR950084/SRR950084_2.fastq.gz",
-            "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR950/SRR950085/SRR950085_1.fastq.gz",
-            "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR950/SRR950085/SRR950085_2.fastq.gz",
-            "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR950/SRR950086/SRR950086_1.fastq.gz",
-            "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR950/SRR950086/SRR950086_2.fastq.gz",
-            "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR950/SRR950087/SRR950087_1.fastq.gz",
-            "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR950/SRR950087/SRR950087_2.fastq.gz",
+            f"{base_url}/vol1/fastq/SRR950/SRR950078/SRR950078_1.fastq.gz",
+            f"{base_url}/vol1/fastq/SRR950/SRR950078/SRR950078_2.fastq.gz",
+            f"{base_url}/vol1/fastq/SRR950/SRR950079/SRR950079_1.fastq.gz",
+            f"{base_url}/vol1/fastq/SRR950/SRR950079/SRR950079_2.fastq.gz",
+            f"{base_url}/vol1/fastq/SRR950/SRR950080/SRR950080_1.fastq.gz",
+            f"{base_url}/vol1/fastq/SRR950/SRR950080/SRR950080_2.fastq.gz",
+            f"{base_url}/vol1/fastq/SRR950/SRR950081/SRR950081_1.fastq.gz",
+            f"{base_url}/vol1/fastq/SRR950/SRR950081/SRR950081_2.fastq.gz",
+            f"{base_url}/vol1/fastq/SRR950/SRR950082/SRR950082_1.fastq.gz",
+            f"{base_url}/vol1/fastq/SRR950/SRR950082/SRR950082_2.fastq.gz",
+            f"{base_url}/vol1/fastq/SRR950/SRR950083/SRR950083_1.fastq.gz",
+            f"{base_url}/vol1/fastq/SRR950/SRR950083/SRR950083_2.fastq.gz",
+            f"{base_url}/vol1/fastq/SRR950/SRR950084/SRR950084_1.fastq.gz",
+            f"{base_url}/vol1/fastq/SRR950/SRR950084/SRR950084_2.fastq.gz",
+            f"{base_url}/vol1/fastq/SRR950/SRR950085/SRR950085_1.fastq.gz",
+            f"{base_url}/vol1/fastq/SRR950/SRR950085/SRR950085_2.fastq.gz",
+            f"{base_url}/vol1/fastq/SRR950/SRR950086/SRR950086_1.fastq.gz",
+            f"{base_url}/vol1/fastq/SRR950/SRR950086/SRR950086_2.fastq.gz",
+            f"{base_url}/vol1/fastq/SRR950/SRR950087/SRR950087_1.fastq.gz",
+            f"{base_url}/vol1/fastq/SRR950/SRR950087/SRR950087_2.fastq.gz",
         ]
 
     def tearDown(self):
