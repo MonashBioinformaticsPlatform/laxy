@@ -48,7 +48,7 @@ export NXF_TEMP=${TMP}
 export NXF_SINGULARITY_CACHEDIR="${SINGULARITY_CACHEDIR}"
 export NXF_OPTS='-Xms1g -Xmx7g'
 export NXF_ANSI_LOG='false'
-# export NXF_VER=21.04.0
+export NXF_VER=21.04.0
 # export NXF_DEBUG=1  # 2 # 3
 
 # shellcheck disable=SC1054,SC1083,SC1009
