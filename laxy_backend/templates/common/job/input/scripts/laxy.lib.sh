@@ -204,7 +204,7 @@ function init_conda_env() {
     # https://github.com/conda/conda/issues/3200
     set +o nounset
 
-    source "${CONDA_BASE}/etc/profile.d/conda.sh"
+    source "${CONDA_BASE}/bin/activate"
 
     if [[ ! -d "${CONDA_BASE}/envs/${env_name}" ]]; then
         send_event "JOB_INFO" "Installing dependencies (conda environment ${env_name})"
