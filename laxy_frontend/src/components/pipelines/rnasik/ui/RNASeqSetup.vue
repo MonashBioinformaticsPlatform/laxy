@@ -7,7 +7,11 @@
         @exitstep="onExitStep('dataSource')"
         ref="dataSource"
       >
-        <input-files-form v-on:stepDone v-on:invalidData v-on:dataSourceChanged></input-files-form>
+        <input-files-form
+          v-on:stepDone
+          v-on:invalidData
+          v-on:dataSourceChanged
+        ></input-files-form>
       </md-step>
       <!--<md-step md-label="Analysis" md-message="Select one" :md-disabled="true" ref="analysis">-->
       <!--<p>Select your analysis: RNAseq, ChIPSeq</p>-->
@@ -49,7 +53,10 @@
         @exitstep="onExitStep('pipelineSettings')"
         ref="pipelineSettings"
       >
-        <pipeline-params :show-buttons="false" ref="pipelineParams"></pipeline-params>
+        <pipeline-params
+          :show-buttons="false"
+          ref="pipelineParams"
+        ></pipeline-params>
       </md-step>
     </md-stepper>
   </div>
@@ -74,7 +81,7 @@ import {
 
 import InputFilesForm from "./InputFilesForm.vue";
 import PipelineParams from "./PipelineParams.vue";
-import SelectGenome from "./SelectGenome.vue";
+import SelectGenome from "../../../SelectGenome.vue";
 
 @Component({ components: { InputFilesForm, SelectGenome, PipelineParams } })
 export default class RNASeqSetup extends Vue {

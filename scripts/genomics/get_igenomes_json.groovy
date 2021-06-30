@@ -40,7 +40,7 @@ text.eachLine {
 def params = [params: [igenomes_base:'iGenomes']]
 def slurper = new ConfigSlurper()
 slurper.setBinding(params)
-final ConfigObject config = slurper.parse("https://raw.githubusercontent.com/SciLifeLab/NGI-RNAseq/master/conf/igenomes.config".toURI().toURL())
+final ConfigObject config = slurper.parse("https://raw.githubusercontent.com/nf-core/rnaseq/master/conf/igenomes.config".toURI().toURL())
 // println config.toString()
 
 println JsonOutput.prettyPrint(JsonOutput.toJson(config)).stripIndent()

@@ -11,6 +11,8 @@ set -o xtrace
 # These variables are overridden by environment vars if present
 export DEBUG="${DEBUG:-{{ DEBUG }}}"
 
+export PIPELINE_NAME='rnasik'
+
 # These variables are set via templating when the script file is created
 readonly JOB_ID="{{ JOB_ID }}"
 readonly JOB_COMPLETE_CALLBACK_URL="{{ JOB_COMPLETE_CALLBACK_URL }}"
@@ -22,8 +24,8 @@ readonly PIPELINE_VERSION="{{ PIPELINE_VERSION }}"
 readonly PIPELINE_ALIGNER="{{ PIPELINE_ALIGNER }}"
 
 # Global variables used throughout the script
-readonly TMP="${PWD}/../tmp"
-readonly JOB_PATH=${PWD}
+readonly JOB_PATH="${PWD}"
+readonly TMP="${JOB_PATH}/../../tmp"
 readonly INPUT_READS_PATH="${JOB_PATH}/input/reads"
 # contains symlinks to references, either public or custom reference downloaded to cache
 readonly INPUT_REFERENCE_PATH="${JOB_PATH}/input/reference"
@@ -32,7 +34,10 @@ readonly INPUT_CONFIG_PATH="${JOB_PATH}/input/config"
 readonly PIPELINE_CONFIG="${INPUT_CONFIG_PATH}/pipeline_config.json"
 readonly CONDA_BASE="${JOB_PATH}/../miniconda3"
 readonly REFERENCE_BASE="${JOB_PATH}/../references/iGenomes"
-readonly DOWNLOAD_CACHE_PATH="${JOB_PATH}/../cache"
+readonly SITE_CONFIGS="${JOB_PATH}/../../config"
+readonly DOWNLOAD_CACHE_PATH="${JOB_PATH}/../../cache/downloads"
+readonly SINGULARITY_CACHEDIR="${JOB_PATH}/../../cache/singularity"
+readonly PIPELINES_CACHE_PATH="${JOB_PATH}/../../cache/pipelines"
 readonly AUTH_HEADER_FILE="${JOB_PATH}/.private_request_headers"
 readonly IGNORE_SELF_SIGNED_CERTIFICATE="{{ IGNORE_SELF_SIGNED_CERTIFICATE }}"
 readonly LAXYDL_BRANCH=master
@@ -159,7 +164,7 @@ function add_sik_config() {
    # Always copy it to the job input directory to preserve it.
     local SIK_CONFIG
 
-    SIK_CONFIG="${JOB_PATH}/../sik.config"
+    SIK_CONFIG="${SITE_CONFIGS}/${PIPELINE_NAME}/sik.config"
     if [[ ! -f "${SIK_CONFIG}" ]]; then
         SIK_CONFIG="$(dirname $(which RNAsik))/../opt/rnasik-${PIPELINE_VERSION}/configs/sik.config"
     fi
@@ -167,7 +172,7 @@ function add_sik_config() {
     # special lower resource sik.config for yeast
     if [[ "${RESOURCE_PROFILE}" == "low" ]]; then
         echo "Using low resource sik.config."
-        SIK_CONFIG="${JOB_PATH}/../sik.yeast.config"
+        SIK_CONFIG="${SITE_CONFIGS}/${PIPELINE_NAME}/sik.yeast.config"
     fi
 
     cp -n "${SIK_CONFIG}" "${INPUT_CONFIG_PATH}/sik.config" || true
@@ -673,8 +678,8 @@ function setup_bds_config() {
     job_bds_config="${INPUT_CONFIG_PATH}/bds.config"
 
     # Check for custom bds.config
-    if [[ -f "${JOB_PATH}/../bds.config" ]]; then
-        default_bds_config="${JOB_PATH}/../bds.config"
+    if [[ -f "${SITE_CONFIGS}/${PIPELINE_NAME}/bds.config" ]]; then
+        default_bds_config="${SITE_CONFIGS}/${PIPELINE_NAME}/bds.config"
     fi
 
     # TODO: This won't work yet since the default bds.config contains
@@ -684,13 +689,13 @@ function setup_bds_config() {
     #     sed -i 's/#system = "local"/system = "generic"/' ${job_bds_config}
     # fi
 
-    if [[ "${QUEUE_TYPE}" == "local" ]] && [[ -f "${JOB_PATH}/../bds.local.config" ]]; then
+    if [[ "${QUEUE_TYPE}" == "local" ]] && [[ -f "${SITE_CONFIGS}/${PIPELINE_NAME}/bds.local.config" ]]; then
         echo "Using system=local (non-queued) bds.config."
-        default_bds_config="${JOB_PATH}/../bds.local.config"
+        default_bds_config="${SITE_CONFIGS}/${PIPELINE_NAME}/bds.local.config"
     # special lower resource bds.config for yeast
-    elif [[ "${RESOURCE_PROFILE}" == "low" ]] && [[ -f "${JOB_PATH}/../bds.yeast.config" ]]; then
+    elif [[ "${RESOURCE_PROFILE}" == "low" ]] && [[ -f "${SITE_CONFIGS}/${PIPELINE_NAME}/bds.yeast.config" ]]; then
         echo "Using low resource bds.yeast.config."
-        default_bds_config="${JOB_PATH}/../bds.yeast.config"
+        default_bds_config="${SITE_CONFIGS}/${PIPELINE_NAME}/bds.yeast.config"
     fi
 
     cp -n "${default_bds_config}" "${job_bds_config}" || true
@@ -821,14 +826,17 @@ function run_mash_screen() {
     #local _globstat_state=$(shopt -p globstar)
     #shopt -s globstar
 
+    export MASH_REF_DB_URL="https://gembox.cbcb.umd.edu/mash/refseq.genomes%2Bplasmid.k21s1000.msh"
+    export MASH_REF_DB="refseq.genomes+plasmid.k21s1000.msh"
+
     send_event "JOB_INFO" "Starting Mash screen (detects organism/contamination)."
 
     local -r mash_db_base="${REFERENCE_BASE}/../mash"
-    local -r mash_reference_sketches="${mash_db_base}/refseq.genomes.k21s1000.msh"
+    local -r mash_reference_sketches="${mash_db_base}/${MASH_REF_DB}"
 
     mkdir -p "${mash_db_base}"
-    if [[ ! -f "${mash_reference_sketches}/refseq.genomes.k21s1000.msh" ]]; then
-        curl -L -o "${mash_reference_sketches}" -C - "https://gembox.cbcb.umd.edu/mash/refseq.genomes.k21s1000.msh" || true
+    if [[ ! -f "${mash_reference_sketches}/${MASH_REF_DB}" ]]; then
+        curl -L -o "${mash_reference_sketches}" -C - "${MASH_REF_DB_URL}" || true
     fi
 
     local mash_reads=$(find "${INPUT_READS_PATH}" -name "*.f*[q,a].gz" | xargs)

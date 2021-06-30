@@ -324,6 +324,7 @@ export default class PipelineParams extends Vue {
     const samples = this.$store.state.samples;
     for (let i of samples.items) {
       for (let f of i.files) {
+        // ['R1', 'R2']
         for (let pair of Object.keys(f)) {
           const sampleFile: ILaxyFile = cloneDeep(f[pair]);
 
@@ -498,7 +499,7 @@ export default class PipelineParams extends Vue {
     } catch (error) {
       console.error(error);
     }
-    
+
     this.submitting = false;
     return null;
   }

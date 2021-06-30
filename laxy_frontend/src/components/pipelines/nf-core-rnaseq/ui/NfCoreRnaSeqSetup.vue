@@ -8,24 +8,12 @@
     <md-layout md-column>
       <form novalidate>
         <md-whiteframe class="pad-32">
-          <h2>seqkit stats</h2>
+          <h2>nf-core/rnaseq</h2>
           <md-whiteframe class="pad-32" md-elevation="8">
-            <a href="https://bioinf.shenwei.me/seqkit/usage/#stats"
-              >seqkit stats</a
-            >
-            calculates simple statistics from a set of FASTQ (or multi-FASTA)
-            files. For example:
-            <pre>
-file           format  type  num_seqs    sum_len  min_len  avg_len  max_len
-hairpin.fa.gz  FASTA   RNA     28,645  2,949,871       39      103    2,354
-mature.fa.gz   FASTA   RNA     35,828    781,222       15     21.8       34
-reads_1.fq.gz  FASTQ   DNA      2,500    567,516      226      227      229
-reads_2.fq.gz  FASTQ   DNA      2,500    560,002      223      224      225
-</pre
-            >
-            <br />This 'pipeline' mostly exists for testing, but can be useful
-            to pre-cache input FASTQs and verify that they are not corrupted,
-            prior to running another analysis on Laxy.
+            <a href="https://nf-co.re/rnaseq">nf-core/rnaseq</a>
+            <br />nf-core/rnaseq is a bioinformatics pipeline that can be used
+            to analyse RNA sequencing data obtained from organisms with a
+            reference genome and annotation.
           </md-whiteframe>
           <h3>Pipeline parameters</h3>
           <md-input-container>
@@ -35,15 +23,30 @@ reads_2.fq.gz  FASTQ   DNA      2,500    560,002      223      224      225
               placeholder="Description of pipeline run ..."
             ></md-input>
           </md-input-container>
-          <md-switch v-model="allFlag"
-            >Calculate all stats (use the <code>--all</code> flag)</md-switch
-          >
+          <md-input-container>
+            <label for="strandedness">Strandedness</label>
+            <md-select
+              name="strandedness"
+              id="strandedness"
+              v-model="strandedness"
+            >
+              <md-option value="unstranded">unstranded</md-option>
+              <md-option value="reverse">reverse</md-option>
+              <md-option value="forward">forward</md-option>
+            </md-select>
+          </md-input-container>
         </md-whiteframe>
       </form>
 
-      <input-files-form></input-files-form>
+      <md-whiteframe class="pad-16" md-elevation="2">
+        <select-genome></select-genome>
+      </md-whiteframe>
 
-      <md-whiteframe style="padding: 32px">
+      <md-whiteframe class="pad-16" md-elevation="2">
+        <input-files-form></input-files-form>
+      </md-whiteframe>
+
+      <md-whiteframe class="pad-32" md-elevation="8">
         <h3>Sample summary</h3>
         <sample-cart
           v-if="samples.items.length > 0"
@@ -86,12 +89,12 @@ reads_2.fq.gz  FASTQ   DNA      2,500    560,002      223      224      225
 <script lang="ts">
 import cloneDeep from "lodash-es/cloneDeep";
 import get from "lodash-es/get";
-import find from "lodash-es/find";
-import map from "lodash-es/map";
-import every from "lodash-es/every";
+//import find from "lodash-es/find";
+//import map from "lodash-es/map";
+//import every from "lodash-es/every";
 import sortBy from "lodash-es/sortBy";
 import last from "lodash-es/last";
-import { Memoize } from "lodash-decorators";
+//import { Memoize } from "lodash-decorators";
 
 import "es6-promise";
 
@@ -123,19 +126,21 @@ import storeModule from "../store/module";
 import { Sample, SampleCartItems } from "../../../../model";
 import { WebAPI } from "../../../../web-api";
 
-import AVAILABLE_GENOMES from "../../../../config/genomics/genomes";
+//import AVAILABLE_GENOMES from "../../../../config/genomics/genomes";
 
 import { Snackbar } from "../../../../snackbar";
-import BannerNotice from "../../../BannerNotice.vue";
+//import BannerNotice from "../../../BannerNotice.vue";
 import InputFilesForm from "../../rnasik/ui/InputFilesForm.vue";
-import RemoteFilesSelect from "../../../RemoteSelect/RemoteFilesSelect.vue";
-import { FileListItem } from "../../../../file-tree-util";
-import { filenameFromUrl } from "../../../../util";
+//import RemoteFilesSelect from "../../../RemoteSelect/RemoteFilesSelect.vue";
+import SelectGenome from "../../../SelectGenome.vue";
+//import { FileListItem } from "../../../../file-tree-util";
+//import { filenameFromUrl } from "../../../../util";
 import { ILaxyFile, PairedEndFiles } from "../../../../types";
 
 @Component({
   components: {
-    InputFilesForm
+    InputFilesForm,
+    SelectGenome
   },
   props: {},
   filters: {},
@@ -144,7 +149,7 @@ import { ILaxyFile, PairedEndFiles } from "../../../../types";
   }
 })
 export default class PipelineParams extends Vue {
-  public pipeline_name: string = "seqkit_stats";
+  public pipeline_name: string = "nf-core-rnaseq";
 
   @Prop({ default: true, type: Boolean })
   public showButtons: boolean;
@@ -193,8 +198,8 @@ export default class PipelineParams extends Vue {
   @Sync("pipelineParams@pipeline_version")
   public pipeline_version: string;
 
-  @Sync("pipelineParams@seqkit_stats.flags.all")
-  public allFlag: boolean;
+  @Sync("pipelineParams@nf-core-rnaseq.strandedness")
+  public strandedness: string;
 
   created() {
     this.$store.registerModule(
@@ -214,6 +219,7 @@ export default class PipelineParams extends Vue {
    *  from the sample cart that should be retrieved by the backend as
    *  initial input files.
    */
+
   updateFetchFiles() {
     const fetch_files = this.$store.get(
       "pipelineParams/generateFetchFilesList"

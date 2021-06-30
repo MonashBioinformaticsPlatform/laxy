@@ -9,6 +9,7 @@ import FrontPage from './components/FrontPage.vue';
 import LoginPage from './components/LoginPage.vue';
 import RNASeqSetup from './components/pipelines/rnasik/ui/RNASeqSetup.vue';
 import SeqkitStatsSetup from './components/pipelines/seqkit_stats/ui/SeqkitStatsSetup.vue';
+import NfCoreRnaSeqSetup from './components/pipelines/nf-core-rnaseq/ui/NfCoreRnaSeqSetup.vue';
 import RemoteFilesSelect from './components/RemoteSelect/RemoteFilesSelect.vue';
 import SampleCart from './components/SampleCart.vue';
 import ENAFlow from './components/ENA/ENAFlow.vue';
@@ -183,9 +184,10 @@ export function addRoute(route: RouteConfig) {
 
 export function addPipelineRoutes(pipelines: { name: string }[]) {
     const pipelineComponentMapping = {
-        rnaseq: RNASeqSetup,
-        rnasik: RNASeqSetup,
-        seqkit_stats: SeqkitStatsSetup,
+        'rnaseq': RNASeqSetup,
+        'rnasik': RNASeqSetup,
+        'seqkit_stats': SeqkitStatsSetup,
+        'nf-core-rnaseq': NfCoreRnaSeqSetup,
     };
     const routes = [];
     for (let p of pipelines) {

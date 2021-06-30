@@ -414,6 +414,7 @@ INSTALLED_APPS = [
     "rest_social_auth",  # Login endpoints, hands off to social login services
     "laxy_backend",
     "laxy_pipeline_apps.seqkit_stats",  # a pipeline plugin for Laxy
+    "laxy_pipeline_apps.nf-core-rnaseq",  # a pipeline plugin for Laxy
 ]
 
 MIDDLEWARE = [
