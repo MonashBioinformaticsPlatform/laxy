@@ -92,6 +92,7 @@ function job_done() {
     # [[ -n ${EXIT_CODE} ]] || _exit_code=${EXIT_CODE}
 
     cd "${JOB_PATH}"
+    cleanup_nextflow_intermediates || true
     register_files || true
     finalize_job ${_exit_code}
 }
@@ -144,6 +145,9 @@ function register_files() {
     add_to_manifest "**/multiqc_report.html" "report,html,multiqc"
     add_to_manifest "**/*_fastqc.html" "report,html,fastqc"
     add_to_manifest "**/salmon.merged.gene_counts.tsv" "counts,degust"
+
+    # Nextflow reports
+    add_to_manifest "output/results/pipeline_info/*.html" "report,html,nextflow"
 
     add_to_manifest "input/*" ""
     add_to_manifest "output/*" ""
