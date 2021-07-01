@@ -16,24 +16,39 @@
       <md-dialog-content>Are you sure ?</md-dialog-content>
 
       <md-dialog-actions>
-        <md-button class="md-primary" @click="cancelJobConfirmed">Yes, cancel it.</md-button>
-        <md-button class="md-primary" @click="closeDialog('cancel_job_dialog')">Close</md-button>
+        <md-button class="md-primary" @click="cancelJobConfirmed"
+          >Yes, cancel it.</md-button
+        >
+        <md-button class="md-primary" @click="closeDialog('cancel_job_dialog')"
+          >Close</md-button
+        >
       </md-dialog-actions>
     </md-dialog>
 
     <ExpiryDialog ref="expiryInfoDialog" :job="job"></ExpiryDialog>
-    <DownloadHelpDialog ref="downloadHelpDialog" :tarballUrl="tarballUrl"></DownloadHelpDialog>
+    <DownloadHelpDialog
+      ref="downloadHelpDialog"
+      :tarballUrl="tarballUrl"
+    ></DownloadHelpDialog>
 
     <banner-notice
       v-if="job && jobExpiresSoon && showTopBanner"
       @click="openDialog('expiryInfoDialog')"
-      :type="jobExpiresSoon && !job.expired ? 'warning': (job.expired ? 'error': 'clear')"
+      :type="
+        jobExpiresSoon && !job.expired
+          ? 'warning'
+          : job.expired
+          ? 'error'
+          : 'clear'
+      "
     >
       <span v-if="!job.expired">
-        Job expires {{ jobExpiresSoon ? 'in less than 7 days': '' }} on &nbsp;{{
-        job.expiry_time }}
+        Job expires {{ jobExpiresSoon ? "in less than 7 days" : "" }} on
+        &nbsp;{{ job.expiry_time }}
       </span>
-      <span v-if="job.expired">Job has expired - large files are no longer available</span>
+      <span v-if="job.expired"
+        >Job has expired - large files are no longer available</span
+      >
     </banner-notice>
 
     <!-- <PopupBlockerBanner :do-test-on-create="false"></PopupBlockerBanner> -->
@@ -45,7 +60,10 @@
             <md-list-item v-for="tab in tabs" :key="tab.name">
               <router-link
                 v-if="tab.showWithoutAuth || isAuthenticated"
-                :to="{path: `/job/${jobId}${tab.path}`, query: persistQueryParams}"
+                :to="{
+                  path: `/job/${jobId}${tab.path}`,
+                  query: persistQueryParams
+                }"
                 replace
                 :exact="tab.exact"
               >
@@ -65,10 +83,14 @@
                 v-if="tab.showWithoutAuth || isAuthenticated"
                 tag="md-button"
                 active-class="md-primary"
-                :to="{path: `/job/${jobId}${tab.path}`, query: persistQueryParams}"
+                :to="{
+                  path: `/job/${jobId}${tab.path}`,
+                  query: persistQueryParams
+                }"
                 replace
                 :exact="tab.exact"
-              >{{ tab.text }}</router-link>
+                >{{ tab.text }}</router-link
+              >
             </template>
           </nav>
         </md-toolbar>
@@ -96,8 +118,10 @@
               <span slot="subtitle">
                 It appears your job failed due to a problem with the input file:
                 <strong>{{ badInputFile }}</strong>
-                <br />The file may be corrupt or not a valid FASTQ file - please verify before trying again.
-                <br />If you believe your input file is okay and the problem persists, please don't hestiate to contact us for further assistance.
+                <br />The file may be corrupt or not a valid FASTQ file - please
+                verify before trying again. <br />If you believe your input file
+                is okay and the problem persists, please don't hestiate to
+                contact us for further assistance.
               </span>
             </template>
           </generic-pip>
@@ -113,7 +137,11 @@
           <!-- smaller iconish boxes in here. eg simple status -->
           <!-- -->
           <md-layout md-flex="25" md-flex-medium="100">
-            <job-status-pip class="fill-width" :job="job" v-on:cancel="onAskCancelJob"></job-status-pip>
+            <job-status-pip
+              class="fill-width"
+              :job="job"
+              v-on:cancel="onAskCancelJob"
+            ></job-status-pip>
           </md-layout>
           <!-- -->
           <md-layout v-if="hasMultiQCReport" md-flex="25" md-flex-medium="100">
@@ -149,13 +177,14 @@
                   <strong>
                     <em>{{ strandednessGuess }}</em>
                   </strong>
-                  with an overall strand bias of {{ strandBias | numeral_format('0.00') }}.
+                  with an overall strand bias of
+                  {{ strandBias | numeral_format("0.00") }}.
                 </template>
                 <template v-else>
                   This library appears to be
                   <strong>
-                    <em>{{ strandednessGuess }}</em>
-                  </strong>.
+                    <em>{{ strandednessGuess }}</em> </strong
+                  >.
                 </template>
                 See the "Count files" section below for other options.
               </span>
@@ -165,7 +194,11 @@
                   :key="countsFile.id"
                 >
                   <template
-                    v-if="countsFile && countsFile.name.startsWith(strandPredictionPrefix) && countsFile.name.includes('withNames')"
+                    v-if="
+                      countsFile &&
+                        countsFile.name.startsWith(strandPredictionPrefix) &&
+                        countsFile.name.includes('withNames')
+                    "
                   >
                     <md-button
                       class="md-dense"
@@ -184,7 +217,12 @@
           <md-layout v-if="bannerSharingLink" md-flex="25" md-flex-medium="100">
             <generic-pip
               class="fill-width"
-              @click="$router.push({path: `/job/${jobId}/sharing`, query: persistQueryParams})"
+              @click="
+                $router.push({
+                  path: `/job/${jobId}/sharing`,
+                  query: persistQueryParams
+                })
+              "
               stripeColor="warn"
               icon="share"
               buttonIcon
@@ -192,34 +230,50 @@
             >
               <span slot="title">Shared via secret link</span>
               <span slot="subtitle">
-                This job is accessible by anyone with the secret
-                link
-                <strong>{{ _formatExpiryString(bannerSharingLink.expiry_time, true) }}</strong>.
+                This job is accessible by anyone with the secret link
+                <strong>{{
+                  _formatExpiryString(bannerSharingLink.expiry_time, true)
+                }}</strong
+                >.
               </span>
             </generic-pip>
           </md-layout>
 
-          <md-layout v-if="job && job.expiry_time && jobIsDone" md-flex="25" md-flex-medium="100">
+          <md-layout
+            v-if="job && job.expiry_time && jobIsDone"
+            md-flex="25"
+            md-flex-medium="100"
+          >
             <generic-pip
               class="fill-width"
               @click="openDialog('expiryInfoDialog')"
-              :cardClass="jobExpiresSoon ? (job.expired ? 'accent': 'warn') : ''"
-              :stripeColor="jobExpiresSoon ? '': 'warn'"
-              :icon="jobExpiresSoon ? 'warning': ''"
+              :cardClass="
+                jobExpiresSoon ? (job.expired ? 'accent' : 'warn') : ''
+              "
+              :stripeColor="jobExpiresSoon ? '' : 'warn'"
+              :icon="jobExpiresSoon ? 'warning' : ''"
               buttonIcon
               buttonText
             >
               <template v-if="!job.expired">
-                <span slot="title">Job expiry {{ jobExpiresSoon ? 'in less than 7 days': '' }}</span>
+                <span slot="title"
+                  >Job expiry
+                  {{ jobExpiresSoon ? "in less than 7 days" : "" }}</span
+                >
                 <span slot="subtitle">
                   Large files associated with this job will be deleted on
                   <br />
-                  <strong>{{ job.expiry_time | moment('DD-MMM-YYYY (HH:mm UTCZ)') }}</strong>
+                  <strong>{{
+                    job.expiry_time | moment("DD-MMM-YYYY (HH:mm UTCZ)")
+                  }}</strong>
                 </span>
               </template>
               <template v-else>
                 <span slot="title">Job has expired.</span>
-                <span slot="subtitle">Large files associated with this job are no longer available</span>
+                <span slot="subtitle"
+                  >Large files associated with this job are no longer
+                  available</span
+                >
               </template>
             </generic-pip>
           </md-layout>
@@ -347,11 +401,11 @@
                 <md-whiteframe class="pad-32 fill-width">
                   <div>
                     <h3 style="display: inline; float: left; margin-top:-8px;">
-                      Download all job
-                      files
-                      <span
-                        v-if="job && job.params && job.params.tarball_size"
-                      >(~ {{ job.params.tarball_size | humanize_bytes }})</span>
+                      Download all job files
+                      <span v-if="job && job.params && job.params.tarball_size"
+                        >(~
+                        {{ job.params.tarball_size | humanize_bytes }})</span
+                      >
                     </h3>
                     <md-button
                       id="helpButton"
@@ -389,15 +443,22 @@
           <transition name="fade">
             <md-layout v-show="showTab === 'eventlog'" md-column-medium>
               <md-layout id="eventlog-panel">
-                <event-log ref="eventlog" :job-id="jobId" @refresh-error="showErrorDialog"></event-log>
+                <event-log
+                  ref="eventlog"
+                  :job-id="jobId"
+                  @refresh-error="showErrorDialog"
+                ></event-log>
               </md-layout>
             </md-layout>
           </transition>
           <transition name="fade">
             <md-layout v-show="showTab === 'sharing'" md-column-medium>
               <md-layout v-if="isAuthenticated" id="sharing-panel" md-column>
-                <md-whiteframe v-if="sharingLinks && sharingLinks.length > 0" class="pad-32">
-                  <h3>Sharing {{ sharingLinks.length | pluralize('Link') }}</h3>
+                <md-whiteframe
+                  v-if="sharingLinks && sharingLinks.length > 0"
+                  class="pad-32"
+                >
+                  <h3>Sharing {{ sharingLinks.length | pluralize("Link") }}</h3>
                   <sharing-link-list
                     @flash-message="flashSnackBarEvent"
                     @change-link="onChangeLinkEvent"
@@ -422,9 +483,9 @@
                         :key="expires_in"
                         :value="expires_in"
                       >
-                        <span
-                          v-if="typeof expires_in == 'number'"
-                        >{{ expires_in | duration('seconds').humanize() }}</span>
+                        <span v-if="typeof expires_in == 'number'">{{
+                          expires_in | duration("seconds").humanize()
+                        }}</span>
                         <span v-else>{{ expires_in }}</span>
                       </md-option>
                     </md-select>
@@ -432,7 +493,8 @@
                   <md-button
                     class="md-raised md-primary"
                     @click="updateSharingLink(jobId, sharing.lifetime)"
-                  >Create</md-button>
+                    >Create</md-button
+                  >
                 </md-whiteframe>
               </md-layout>
             </md-layout>
@@ -440,9 +502,15 @@
         </md-layout>
       </md-layout>
     </md-layout>
-    <md-snackbar md-position="bottom center" ref="snackbar" :md-duration="snackbar_duration">
+    <md-snackbar
+      md-position="bottom center"
+      ref="snackbar"
+      :md-duration="snackbar_duration"
+    >
       <span>{{ snackbar_message }}</span>
-      <md-button class="md-accent" @click="$refs.snackbar.close()">Dismiss</md-button>
+      <md-button class="md-accent" @click="$refs.snackbar.close()"
+        >Dismiss</md-button
+      >
     </md-snackbar>
   </div>
 </template>
@@ -469,7 +537,7 @@ import {
   Model,
   Prop,
   Provide,
-  Watch,
+  Watch
 } from "vue-property-decorator";
 
 import { State, Getter, Action, Mutation, namespace } from "vuex-class";
@@ -483,7 +551,7 @@ import {
   themeColors,
   getThemeColor,
   getThemedStatusColor,
-  cssColorVars,
+  cssColorVars
 } from "../palette";
 
 import {
@@ -491,14 +559,14 @@ import {
   FETCH_JOB,
   SET_PIPELINE_DESCRIPTION,
   SET_PIPELINE_PARAMS,
-  SET_SAMPLES,
+  SET_SAMPLES
 } from "../store";
 
 import {
   filterByTag,
   filterByRegex,
   filterByFullPath,
-  filterByFilename,
+  filterByFilename
 } from "../file-tree-util";
 
 import { DummyJobList as _dummyJobList } from "../test-data";
@@ -528,13 +596,13 @@ import { LaxySharingLink } from "../types";
     JobStatusPip,
     NestedFileList,
     ExpiryDialog,
-    DownloadJobFilesTable,
+    DownloadJobFilesTable
   },
   props: {
     jobId: { type: String, default: "" },
-    showTab: { type: String, default: "summary" },
+    showTab: { type: String, default: "summary" }
   },
-  filters: {},
+  filters: {}
 })
 export default class JobPage extends Vue {
   $store: any;
@@ -562,7 +630,7 @@ export default class JobPage extends Vue {
       text: "Summary",
       icon: "dashboard",
       exact: true,
-      showWithoutAuth: true,
+      showWithoutAuth: true
     },
     {
       name: "input",
@@ -570,7 +638,7 @@ export default class JobPage extends Vue {
       text: "Input",
       icon: "folder_open",
       exact: false,
-      showWithoutAuth: true,
+      showWithoutAuth: true
     },
     {
       name: "output",
@@ -578,7 +646,7 @@ export default class JobPage extends Vue {
       text: "Output",
       icon: "folder_open",
       exact: false,
-      showWithoutAuth: true,
+      showWithoutAuth: true
     },
     {
       name: "eventlog",
@@ -586,7 +654,7 @@ export default class JobPage extends Vue {
       text: "Event Log",
       icon: "view_list",
       exact: false,
-      showWithoutAuth: true,
+      showWithoutAuth: true
     },
     {
       name: "sharing",
@@ -594,8 +662,8 @@ export default class JobPage extends Vue {
       text: "Sharing",
       icon: "share",
       exact: false,
-      showWithoutAuth: false,
-    },
+      showWithoutAuth: false
+    }
   ];
 
   private _days = 24 * 60 * 60; // seconds in a day
@@ -604,7 +672,7 @@ export default class JobPage extends Vue {
     2 * this._days,
     7 * this._days,
     30 * this._days,
-    "Never (∞)",
+    "Never (∞)"
   ];
   public sharing: any = { lifetime: this.access_token_lifetime_options[3] };
 
@@ -809,7 +877,7 @@ export default class JobPage extends Vue {
   ): { strandedness: string; featureSet: string } {
     let data: { strandedness: string; featureSet: string } = {
       strandedness: "",
-      featureSet: "",
+      featureSet: ""
     };
     if (filename.includes("NonStranded")) data.strandedness = "non-stranded";
     if (filename.includes("Forward")) data.strandedness = "forward-stranded";
@@ -855,7 +923,9 @@ export default class JobPage extends Vue {
       if (pipeline_version != null) {
         rows.push([
           "Pipeline",
-          `${this.job.params.pipeline} ${this.job.params.params.pipeline_version}`,
+          `${this.job.params.pipeline} ${
+            this.job.params.params.pipeline_version
+          }`
         ]);
       }
 
@@ -883,7 +953,7 @@ export default class JobPage extends Vue {
   }
 
   filesByTag(tag: string): LaxyFile[] {
-    return filter(this.files, (f) => {
+    return filter(this.files, f => {
       return f.type_tags.includes(tag);
     });
   }
@@ -903,7 +973,7 @@ export default class JobPage extends Vue {
 
       await this.$store.dispatch(FETCH_JOB, {
         job_id: this.jobId,
-        access_token: this.access_token,
+        access_token: this.access_token
       });
       // this.job = this.$store.state.currentViewedJob;
       const status_changed = this.job && this.job.status != original_status;
