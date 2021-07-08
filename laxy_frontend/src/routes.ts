@@ -6,6 +6,7 @@ import VueRouter, { RouterOptions, RouteConfig } from 'vue-router';
 import { FETCH_USER_PROFILE, Store } from './store';
 
 import FrontPage from './components/FrontPage.vue';
+import AboutPage from './components/AboutPage.vue';
 import LoginPage from './components/LoginPage.vue';
 import RNASeqSetup from './components/pipelines/rnasik/ui/RNASeqSetup.vue';
 import SeqkitStatsSetup from './components/pipelines/seqkit_stats/ui/SeqkitStatsSetup.vue';
@@ -67,6 +68,12 @@ export const router = new VueRouter({
             path: '/',
             name: 'home',
             component: FrontPage,
+            props: true,
+        },
+        {
+            path: '/about',
+            name: 'about',
+            component: AboutPage,
             props: true,
         },
         {

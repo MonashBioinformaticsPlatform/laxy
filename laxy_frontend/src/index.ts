@@ -12,6 +12,8 @@ import 'vue-material/dist/vue-material.css';
 
 import 'es6-promise';
 
+import get from "lodash-es/get";
+
 const numeral = require('numeral');
 import axios, { AxiosResponse, AxiosRequestConfig } from 'axios';
 
@@ -209,7 +211,7 @@ const App = new Vue({
     },
     computed: {
         online(): boolean {
-            return this.$store.state.online;
+            return get(this.$store.state, "online", false);
         },
         backendVersion(): string {
             return this.$store.state.backend_version;
@@ -228,6 +230,12 @@ const App = new Vue({
         },
         snackbar_duration(): number {
             return this.$store.state.global_snackbar_duration;
+        },
+        statusMessage(): string {
+            return get(this.$store.state, "system_status.message", "");
+        },
+        systemStatus(): string {
+            return get(this.$store.state, "system_status", null);
         }
     }
 });

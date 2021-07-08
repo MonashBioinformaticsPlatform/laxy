@@ -362,6 +362,23 @@ class Pipeline(Timestamped, UUIDModel):
         return user.has_perm("laxy_backend.run_pipeline", self)
 
 
+class SystemStatus(Timestamped, UUIDModel):
+    """
+    A system status message to be displayed to the user, like a MOTD banner 
+    (eg under conditions where there may be a compute backend outage).
+    """
+
+    message = CharField(max_length=256, blank=True, null=True)
+    long_message = CharField(max_length=2048, blank=True, null=True)
+    link_url = ExtendedURIField(max_length=2048, blank=True, null=True)
+    status = CharField(max_length=32, default="online")
+    active = BooleanField(default=False)
+    start_time = DateTimeField(blank=True, null=True)  # becomes shown after this time
+    end_time = DateTimeField(blank=True, null=True)  # not shown after this time
+    # if two SystemStatus messages are active together, highest priority wins
+    priority = IntegerField(default=0)
+
+
 class ComputeResourceDecommissioned(Exception):
     pass
 

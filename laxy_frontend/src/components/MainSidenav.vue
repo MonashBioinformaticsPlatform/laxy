@@ -16,6 +16,20 @@
           </span>
         </router-link>
       </md-list-item>
+      <md-list-item>
+        <router-link :to="{ name: 'about' }" exact>
+          <span @click="toggle('sidenav')">
+            <md-icon>help_center</md-icon>&nbsp;&nbsp;About
+          </span>
+        </router-link>
+      </md-list-item>
+      <md-list-item v-if="showJobsLink">
+        <router-link to="/jobs">
+          <span @click="toggle('sidenav')">
+            <md-icon>view_list</md-icon>&nbsp;&nbsp;My Jobs
+          </span>
+        </router-link>
+      </md-list-item>
       <!-- <md-list-item>
         <router-link to="/run/rnasik">
           <span @click="toggle('sidenav')">
@@ -34,13 +48,6 @@
             <md-tooltip md-direction="right"
               >Private pipeline (not publicly available)</md-tooltip
             >
-          </span>
-        </router-link>
-      </md-list-item>
-      <md-list-item v-if="showJobsLink">
-        <router-link to="/jobs">
-          <span @click="toggle('sidenav')">
-            <md-icon>view_list</md-icon>&nbsp;&nbsp;Jobs
           </span>
         </router-link>
       </md-list-item>
@@ -71,13 +78,13 @@ import {
   Model,
   Prop,
   Provide,
-  Watch,
+  Watch
 } from "vue-property-decorator";
 
 @Component({
   components: {},
   props: {},
-  filters: {},
+  filters: {}
 })
 export default class MainSidenav extends Vue {
   @Prop({ default: false, type: Boolean })
@@ -86,7 +93,7 @@ export default class MainSidenav extends Vue {
   get availablePipelines() {
     return sortBy(
       this.$store.state.availablePipelines,
-      (p) => !get(p, "public", true)
+      p => !get(p, "public", true)
     );
   }
 

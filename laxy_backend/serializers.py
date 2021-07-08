@@ -140,8 +140,23 @@ class PutSerializerResponse(serializers.Serializer):
         error_status_codes = status_codes(*default_status_codes, 204)
 
 
+class SystemStatusSerializer(BaseModelSerializer):
+    class Meta:
+        model = models.SystemStatus
+        fields = (
+            "status",
+            "message",
+            "long_message",
+            "link_url",
+            "start_time",
+            "end_time",
+        )
+
+
 class PingResponseSerializer(serializers.Serializer):
-    status = serializers.CharField(max_length=255, required=False)
+    system_status = SystemStatusSerializer(
+        required=False, read_only=True, allow_null=True
+    )
     version = serializers.CharField(max_length=255, required=False)
     env = serializers.CharField(max_length=255, required=False)
 

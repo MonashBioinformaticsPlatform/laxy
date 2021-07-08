@@ -168,7 +168,7 @@
             width: 90%;
         }
 
-        .wideSideNav > div.md-sidenav-content {
+        .wideSideNav>div.md-sidenav-content {
             width: 90%;
         }
 
@@ -217,13 +217,22 @@
 
                 <span style="flex: 1"></span>
 
-                <h4 v-if="showHeaderMessage" class="md-hide-small md-hide-xsmall">
-                    <a href="https://github.com/MonashBioinformaticsPlatform/laxy/issues" target="_blank"
-                        style="color: white;">Please report issues and suggestions on Github</a> &nbsp;
-                    <a href="https://github.com/MonashBioinformaticsPlatform/laxy/issues" target="_blank"
-                        style="color: white; text-decoration: none">
-                        <md-icon md-iconset="ion-logo-github" class="md-size-1x" style="padding-bottom: 4px"></md-icon>
-                    </a>
+                <h4 v-if="showHeaderMessage && statusMessage" class="md-hide-small md-hide-xsmall">
+
+                    <span style="color: white; text-decoration: none">
+                        <md-icon class="md-size-1x" style="padding-bottom: 4px">info</md-icon>
+                    </span>&nbsp;
+                    <template v-if="systemStatus.link_url">
+                        <a :href="systemStatus.link_url" target="_blank">
+                            <span style="color: white;">{{ statusMessage }}</span>
+                        </a>
+                    </template>
+                    <template v-else>
+                        <span style="color: white;">{{ statusMessage }}</span>
+                    </template>
+
+                    <md-tooltip v-if="systemStatus.long_message" md-direction="bottom">{{ systemStatus.long_message }}
+                    </md-tooltip>
                 </h4>
 
                 <span style="flex: 1"></span>
@@ -257,7 +266,7 @@
                             <div class="author-card">
                                 <div class="author-card-info">
                                     <md-subheader>{{ user_profile.full_name }}</md-subheader>
-                                    <md-menu-item @selected="routeTo('jobs')">Jobs
+                                    <md-menu-item @selected="routeTo('jobs')">My Jobs
                                     </md-menu-item>
                                     <!-- TODO: https://github.com/MonashBioinformaticsPlatform/laxy/issues/13
                                 <md-menu-item @selected="routeTo('profile')">Profile
@@ -279,7 +288,8 @@
                 </div>
             </md-toolbar>
 
-            <main-sidenav class="md-left" ref="leftSidenav" :show-jobs-link="logged_in" @open="open('Left')" @close="close('Left')">
+            <main-sidenav class="md-left" ref="leftSidenav" :show-jobs-link="logged_in" @open="open('Left')"
+                @close="close('Left')">
                 <template v-slot:footer>
                     Frontend version: {{ appVersion }}
                 </template>
@@ -304,6 +314,16 @@
 
             <md-toolbar class="footer">
                 <template v-if="showFooterMessage">
+
+                    <div class="pad-32">
+                        <a href="https://github.com/MonashBioinformaticsPlatform/laxy/issues" target="_blank"
+                            style="color: white;">Please report issues and suggestions on Github</a> &nbsp;
+                        <a href="https://github.com/MonashBioinformaticsPlatform/laxy/issues" target="_blank"
+                            style="color: white; text-decoration: none">
+                            <md-icon md-iconset="ion-logo-github" class="md-size-1x" style="padding-bottom: 4px">
+                            </md-icon>
+                        </a>
+                    </div>
                     <span style="flex: 1"></span>
                     <div class="pad-32">Supported by the
                         <a href="https://platforms.monash.edu/bioinformatics" target="_blank">

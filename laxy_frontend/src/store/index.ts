@@ -1,4 +1,5 @@
 // import * as _ from 'lodash';
+import get from "lodash-es/get";
 import filter from 'lodash-es/filter';
 import pick from 'lodash-es/pick';
 import cloneDeep from 'lodash-es/cloneDeep';
@@ -26,6 +27,7 @@ import pipelineParams from './modules/pipelineParams';
 
 export const SET_ONLINE_STATUS = 'set_online_status';
 export const SET_BACKEND_VERSION = 'set_backend_version';
+export const SET_SYSTEM_STATUS = 'set_system_status';
 export const SET_POPUPS_ARE_BLOCKED = 'set_popups_are_blocked';
 export const SET_POPUP_BLOCKER_TESTED = 'set_popup_blocker_tested';
 export const SET_POPUP_WARNING_DISMISSED = 'set_popup_warning_dismissed';
@@ -67,6 +69,7 @@ const initial_state: any = {
     //state: {
     online: false,
     backend_version: '',
+    system_status: null,
     popupsAreBlocked: false,
     popupBlockerTested: false,
     popupWarningDismissed: false,
@@ -190,6 +193,9 @@ const mutations: any = {
     [SET_BACKEND_VERSION](state: any, version: string) {
         state.backend_version = version;
     },
+    [SET_SYSTEM_STATUS](state: any, status: string) {
+        state.system_status = status;
+    },
     [SET_POPUPS_ARE_BLOCKED](state: any, blocked: boolean) {
         state.popupsAreBlocked = blocked;
     },
@@ -257,11 +263,17 @@ const actions: any = {
     async [PING_BACKEND]({ commit, state }: any) {
         try {
             const response = await WebAPI.ping();
-            commit(SET_ONLINE_STATUS, response.data.status === 'online');
+            commit(SET_ONLINE_STATUS, true);
             commit(SET_BACKEND_VERSION, response.data.version);
+            const status_msg = get(response.data, "system_status.message", "");
+            const status_link = get(response.data, "system_status.link_url", "");
+            const status_long_message = get(response.data, "system_status.long_message", "");
+            commit(SET_SYSTEM_STATUS, response.data.system_status);
+
         } catch (error) {
             commit(SET_ONLINE_STATUS, false);
             commit(SET_BACKEND_VERSION, 'unknown');
+            commit(SET_SYSTEM_STATUS, { message: "Unable to contact Laxy backend server." });
             throw error;
         }
     },

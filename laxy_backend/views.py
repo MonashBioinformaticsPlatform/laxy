@@ -121,6 +121,7 @@ from .models import (
     PipelineRun,
     EventLog,
     AccessToken,
+    SystemStatus,
     get_primary_compute_location_for_files,
     job_path_on_compute,
 )
@@ -149,6 +150,7 @@ from .serializers import (
     JobAccessTokenRequestSerializer,
     JobAccessTokenResponseSerializer,
     PingResponseSerializer,
+    SystemStatusSerializer,
 )
 from .util import (
     sanitize_filename,
@@ -207,9 +209,25 @@ class PingView(APIView):
         """
         app_version = getattr(settings, "VERSION", "unspecified")
         env = getattr(settings, "ENV", "unspecified")
+        status = None
+        try:
+            now = datetime.now()
+            status = (
+                SystemStatus.objects.filter(
+                    Q(active=True) & (Q(start_time__lte=now) & Q(end_time__gte=now))
+                    | (Q(start_time=None) & Q(end_time=None))
+                )
+                .order_by("-priority", "start_time", "-modified_time")
+                .first()
+            )
+        except SystemStatus.DoesNotExist:
+            pass
+        except Exception as ex:
+            logger.warning("PingView: %s" % ex)
+
         return JsonResponse(
             PingResponseSerializer(
-                {"version": app_version, "env": env, "status": "online"}
+                {"version": app_version, "env": env, "system_status": status,}
             ).data
         )
 

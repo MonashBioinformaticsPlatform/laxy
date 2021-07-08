@@ -34,6 +34,7 @@ from .models import (
     PipelineRun,
     Pipeline,
     EventLog,
+    SystemStatus,
     UserProfile,
     AccessToken,
     URIValidator,
@@ -765,6 +766,15 @@ class AccessTokenAdmin(Timestamped, VersionAdmin):
     )
 
 
+class SystemStatusAdmin(Timestamped, VersionAdmin):
+    class Meta:
+        verbose_name = "System Status"
+        verbose_name_plural = "System Status"
+
+    list_display = ("uuid", "message", "status", "modified_time", "priority", "active")
+    ordering = ("-active", "-priority", "start_time", "-modified_time")
+
+
 admin.site.register(MigrationRecorder.Migration, MigrationAdmin)
 
 admin.site.register(User, LaxyUserAdmin)  # for our custom User model
@@ -781,3 +791,4 @@ admin.site.register(PipelineRun, PipelineRunAdmin)
 admin.site.register(Pipeline, PipelineAdmin)
 admin.site.register(EventLog, EventLogAdmin)
 admin.site.register(AccessToken, AccessTokenAdmin)
+admin.site.register(SystemStatus, SystemStatusAdmin)
