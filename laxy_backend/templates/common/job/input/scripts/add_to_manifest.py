@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from typing import List, Callable, Generator
 import os
 import sys
 import stat
@@ -17,18 +18,19 @@ Run like:
 python3 add_to_manifest.py /path/to/job/manifest.csv '*.html' 'html,report' '{"foo": "bar"}'
 """
 
+
 def lstrip_dotslash(path):
     return re.sub("^%s" % "./", "", path)
 
-def find(base_path, f):
-    for path in base_path:
+
+def find(base_paths: List, f: Callable) -> Generator[str, None, None]:
+    for path in base_paths:
         for root, dirs, files in os.walk(path):
+            root = root.lstrip("./")
             for fi in files:
-                if f(os.path.join(root, fi)):
-                    yield os.path.join(root, fi)
-            for di in dirs:
-                if f(os.path.join(root, di)):
-                    yield os.path.join(root, fi)
+                fpath = os.path.join(root, fi)
+                if f(fpath):
+                    yield fpath
 
 
 def get_md5(file_path, blocksize=512):
@@ -42,7 +44,7 @@ def get_md5(file_path, blocksize=512):
     return md5.hexdigest()
 
 
-def md5sum(file_path: str, md5sum_executable: str="/usr/bin/md5sum"):
+def md5sum(file_path: str, md5sum_executable: str = "/usr/bin/md5sum"):
     """[summary]
     Uses the system md5sum binary to generate an MD5 checksum for a file.
     While using Python's internal hashlib.md5 implementation is more portable
@@ -68,18 +70,36 @@ def md5sum(file_path: str, md5sum_executable: str="/usr/bin/md5sum"):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("manifest_file", default="manifest.csv", help="The path to the manifest.csv")
-    parser.add_argument("glob_pattern", nargs='?', default="*", 
-        help='A (quoted) glob pattern for filtering filenames (eg "*.bam")')
-    parser.add_argument("tags", nargs='?', default='', help='A comma seperated list of tags (eg "html,report,multiqc")')
-    parser.add_argument("metadata", nargs='?', default='{}', 
-        help='A JSON blob of extra metadata (eg \'{"metadata":{"bla":"foo"}}\')')
-    parser.add_argument("--location-base", default=None, 
-        help='Register files as located with this URL prefix '
-             '(eg a laxy+sftp://someComputeID/someJobID/output/somefile.txt). The Laxy backend will usually infer the'
-             'location based on the job & known compute resource, however there are cases where you may need to'
-             'explicitly specify this (eg if files were moved to an archive location manually rather than via '
-             'a backend task)')
+    parser.add_argument(
+        "manifest_file", default="manifest.csv", help="The path to the manifest.csv"
+    )
+    parser.add_argument(
+        "glob_pattern",
+        nargs="?",
+        default="*",
+        help='A (quoted) glob pattern for filtering filenames (eg "*.bam")',
+    )
+    parser.add_argument(
+        "tags",
+        nargs="?",
+        default="",
+        help='A comma seperated list of tags (eg "html,report,multiqc")',
+    )
+    parser.add_argument(
+        "metadata",
+        nargs="?",
+        default="{}",
+        help='A JSON blob of extra metadata (eg \'{"metadata":{"bla":"foo"}}\')',
+    )
+    parser.add_argument(
+        "--location-base",
+        default=None,
+        help="Register files as located with this URL prefix "
+        "(eg a \nlaxy+sftp://someComputeID/someJobID/output/somefile.txt). The Laxy backend will usually infer the"
+        "location based on the job & known compute resource, however there are cases where you may need to"
+        "explicitly specify this (eg if files were moved to an archive location manually rather than via "
+        "a backend task)",
+    )
     args = parser.parse_args()
 
     manifest_file = args.manifest_file
@@ -92,8 +112,8 @@ if __name__ == "__main__":
     metadata = args.metadata  # {"some_file": "extra_data"}
     location_base = args.location_base
 
-    if metadata.strip() == '':
-        metadata = '{}' 
+    if metadata.strip() == "":
+        metadata = "{}"
     metadata = json.dumps(json.loads(metadata))
 
     existing_paths = []
@@ -101,7 +121,7 @@ if __name__ == "__main__":
         with open(manifest_file, "r") as fh:
             for l in fh:
                 s = l.split(",")
-                existing_paths.append(s[1].strip("\""))
+                existing_paths.append(s[1].strip('"'))
 
     write_header = not os.path.exists(manifest_file)
 
@@ -113,18 +133,20 @@ if __name__ == "__main__":
                 fh.write("checksum,filepath,type_tags,metadata\n")
 
         for hit in find([base_path], lambda fn: fnmatch(fn, glob_pattern)):
-            abspath = lstrip_dotslash(hit)
-            # if abspath in exclude_files:
+            relpath = lstrip_dotslash(hit)
+            # if relpath in exclude_files:
             #   continue
-            # if not (abspath.startswith("output") or abspath.startswith("input")):
+            # if not (relpath.startswith("output") or relpath.startswith("input")):
             #   continue
-            if abspath in existing_paths:
+            if relpath in existing_paths:
                 continue
-            if not os.path.exists(abspath):
+            if not os.path.exists(relpath):
                 continue
-            checksum = f"md5:{get_md5(abspath)}"
+            checksum = f"md5:{get_md5(relpath)}"
             if location_base:
-                fh.write(f"\"{checksum}\",\"{abspath}\",\"{location_base}/{abspath}\",\"{tags}\",{metadata}\n")
+                fh.write(
+                    f'"{checksum}","{relpath}","{location_base}/{relpath}","{tags}",{metadata}\n'
+                )
             else:
-                fh.write(f"\"{checksum}\",\"{abspath}\",\"{tags}\",{metadata}\n")
-            existing_paths.append(abspath)
+                fh.write(f'"{checksum}","{relpath}","{tags}",{metadata}\n')
+            existing_paths.append(relpath)

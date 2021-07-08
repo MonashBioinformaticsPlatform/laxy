@@ -172,19 +172,16 @@
             >
               <span slot="title">Send to Degust</span>
               <span slot="subtitle">
-                <template v-if="strandBias">
+                <template v-if="strandednessGuess">
                   This library appears to be
                   <strong>
                     <em>{{ strandednessGuess }}</em>
                   </strong>
-                  with an overall strand bias of
-                  {{ strandBias | numeral_format("0.00") }}.
-                </template>
-                <template v-else>
-                  This library appears to be
-                  <strong>
-                    <em>{{ strandednessGuess }}</em> </strong
-                  >.
+                  <template v-if="strandBias">
+                    with an overall strand bias of
+                    {{ strandBias | numeral_format("0.00") }}
+                  </template>
+                  .
                 </template>
                 See the "Count files" section below for other options.
               </span>
@@ -195,18 +192,24 @@
                 >
                   <template
                     v-if="
-                      countsFile &&
-                        countsFile.name.startsWith(strandPredictionPrefix) &&
-                        countsFile.name.includes('withNames')
+                      (countsFile &&
+                        (countsFile.name.startsWith(strandPredictionPrefix) &&
+                          countsFile.name.includes('withNames'))) ||
+                        (countsFile.path.includes('star_salmon') &&
+                          countsFile.name.includes('salmon'))
                     "
                   >
                     <md-button
-                      class="md-dense"
                       @click="openDegustLink(countsFile.id)"
                       target="_blank"
                     >
-                      {{ _countsFileInfo(countsFile.name).featureSet }}
-                      <md-tooltip>{{ countsFile.name }}</md-tooltip>
+                      <md-icon>send</md-icon>&nbsp;{{
+                        _countsFileInfo(countsFile.name).featureSet
+                      }}&nbsp;
+
+                      <md-tooltip
+                        >{{ countsFile.path }}/{{ countsFile.name }}</md-tooltip
+                      >
                     </md-button>
                   </template>
                 </span>
@@ -895,8 +898,8 @@ export default class JobPage extends Vue {
     return get(this.job, "metadata.results.strandedness.predicted", null);
   }
 
-  get strandednessGuess(): string {
-    let strandedness = "unknown";
+  get strandednessGuess(): string | null {
+    let strandedness = null;
     if (this.strandPredictionPrefix) {
       if (this.strandPredictionPrefix.startsWith("NonStranded"))
         strandedness = "non-stranded";

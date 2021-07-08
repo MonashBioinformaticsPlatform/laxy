@@ -24,7 +24,8 @@ class DownloadTaskTest(TestCase):
         self.admin_user.is_superuser = True
         self.admin_user.save()
 
-        base_url = "ftp://ftp.ebi.ac.uk"
+        # base_url = "ftp://ftp.ebi.ac.uk"
+        base_url = "ftp://ftp.sra.ebi.ac.uk"
 
         self.file_sra_ftp = File(
             name="SRR950078_1.fastq.gz",

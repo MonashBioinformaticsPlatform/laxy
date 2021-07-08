@@ -57,8 +57,8 @@ export SLURM_EXTRA_ARGS="{{ SLURM_EXTRA_ARGS }}"
 # shellcheck disable=SC1073
 {% endif %}
 
-export QUEUE_TYPE="{{ QUEUE_TYPE }}"
-# export QUEUE_TYPE="local"
+# export QUEUE_TYPE="{{ QUEUE_TYPE }}"
+export QUEUE_TYPE="local"
 
 if [[ ${IGNORE_SELF_SIGNED_CERTIFICATE} == "yes" ]]; then
     export CURL_INSECURE="--insecure"
@@ -87,18 +87,26 @@ set -o errexit
 
 function job_done() {
     local _exit_code=${1:-$?}
-    
     # Use the EXIT_CODE global if set
-    # [[ -n ${EXIT_CODE} ]] || _exit_code=${EXIT_CODE}
+    [[ -v EXIT_CODE ]] && _exit_code=${EXIT_CODE}
 
     cd "${JOB_PATH}"
     cleanup_nextflow_intermediates || true
     register_files || true
     finalize_job ${_exit_code}
 }
+
+function job_fail_or_cancel() {
+    cd "${JOB_PATH}"
+    cleanup_nextflow_intermediates || true
+    register_files || true
+    # send exit code of 1
+    finalize_job 1
+}
+
 # Send job fail/done HTTP request, cleanup and remove secrets upon an exit code raise
 # This won't catch every case (eg external kill -9), but is better than nothing.
-trap job_done EXIT
+trap job_fail_or_cancel EXIT
 
 if [[ ! -f "${AUTH_HEADER_FILE}" ]]; then
     echo "No auth token file (${AUTH_HEADER_FILE}) - exiting."
@@ -106,27 +114,27 @@ if [[ ! -f "${AUTH_HEADER_FILE}" ]]; then
 fi
 
 # For QUEUE_TYPE=='local'
-PREFIX_JOB_CMD="/usr/bin/env bash -l -c "
+# PREFIX_JOB_CMD="/usr/bin/env bash -l -c "
 MEM=8000 
 CPUS=1
 
 # We use sbatch --wait --wrap rather than srun, since it seems more reliable
 # and jobs appear pending on the queue immediately
-export SLURM_OPTIONS="--parsable \
-                        --cpus-per-task=${CPUS} \
-                        --mem=${MEM} \
-                        -t 3-0:00 \
-                        --ntasks-per-node=1 \
-                        --ntasks=1 \
-                        {% if SLURM_EXTRA_ARGS %}
-                        ${SLURM_EXTRA_ARGS} \
-                        {% endif %}
-                        --job-name=laxy:${JOB_ID}"
+# export SLURM_OPTIONS="--parsable \
+#                         --cpus-per-task=${CPUS} \
+#                         --mem=${MEM} \
+#                         -t 3-0:00 \
+#                         --ntasks-per-node=1 \
+#                         --ntasks=1 \
+#                         {% if SLURM_EXTRA_ARGS %}
+#                         ${SLURM_EXTRA_ARGS} \
+#                         {% endif %}
+#                         --job-name=laxy:${JOB_ID}"
 
 
-if [[ "${QUEUE_TYPE}" == "slurm" ]] || [[ "${QUEUE_TYPE}" == "slurm-hybrid" ]]; then
-    PREFIX_JOB_CMD="sbatch ${SLURM_OPTIONS} --wait --wrap "
-fi
+# if [[ "${QUEUE_TYPE}" == "slurm" ]] || [[ "${QUEUE_TYPE}" == "slurm-hybrid" ]]; then
+#     PREFIX_JOB_CMD="sbatch ${SLURM_OPTIONS} --wait --wrap "
+# fi
 
 if [[ "${QUEUE_TYPE}" == "local" ]]; then
     echo $$ >>"${JOB_PATH}/job.pids"
@@ -141,18 +149,19 @@ function register_files() {
     add_to_manifest "*.fastq.gz" "fastq"
     add_to_manifest "*.bam" "bam,alignment"
     add_to_manifest "*.bai" "bai"
-    add_to_manifest "output/*.tsv" "tsv,report"
     add_to_manifest "**/multiqc_report.html" "report,html,multiqc"
     add_to_manifest "**/*_fastqc.html" "report,html,fastqc"
     add_to_manifest "**/salmon.merged.gene_counts.tsv" "counts,degust"
 
     # Nextflow reports
     add_to_manifest "output/results/pipeline_info/*.html" "report,html,nextflow"
+    add_to_manifest "output/results/pipeline_info/software_versions.tsv" "report,nextflow"
+
+    add_to_manifest "output/*" ""
+    add_to_manifest "output/**/*" ""
 
     add_to_manifest "input/*" ""
-    add_to_manifest "output/*" ""
     add_to_manifest "input/**/*" ""
-    add_to_manifest "output/**/*" ""
 
     curl -X POST \
       ${CURL_INSECURE} \
@@ -304,6 +313,7 @@ function generate_samplesheet() {
 
 function cleanup_nextflow_intermediates() {
     if [[ ${DEBUG} != "yes" ]]; then
+      send_event "JOB_INFO" "Cleaning up." || true
       rm -rf "${JOB_PATH}/output/work"
       rm -rf "${JOB_PATH}/output/.nextflow"
     fi
@@ -366,6 +376,10 @@ function run_nextflow() {
 
     # export NFCORE_PIPELINE_PATH="nf-core/rnaseq"  # download, don't use pre-cached version
 
+    # Nextflow job names must be all lowercase, can't start with a number, can't contain dashes
+    # regex: ^[a-z](?:[a-z\d]|[-_](?=[a-z\d])){0,79}$
+    _nfjobname=$(echo laxy_"${JOB_ID}" | tr '[:upper:]' '[:lower:]')
+
     #set +o errexit
     #${PREFIX_JOB_CMD} "\
     nextflow run "${NFCORE_PIPELINE_PATH}" \
@@ -375,16 +389,32 @@ function run_nextflow() {
        --pseudo_aligner salmon \
        -profile singularity \
         ${NEXTFLOW_CONFIG_ARG} \
-       -resume
+       -name "${_nfjobname}" \
+       -resume \
         >${JOB_PATH}/output/nextflow.log \
         2>${JOB_PATH}/output/nextflow.err
     #">>"${JOB_PATH}/slurm.jids"
+
+    # TODO: This sets automatic strandedness guessing for Salmon, but doesn't 
+    #       pass any strandedness guess to featureCounts
     #   --salmon_quant_libtype A \
+
+    # TODO: log nextflow events to a job-specific url (include a secret in the, expire url after run completed)
+    #       It might make sense to build this as a pluggable Django app for Laxy. We'd translate some Nextflow
+    #       events into Laxy EventLogs - it's probably too noisy to send everything to EventLogs. Maybe *capture* 
+    #       all the Nextflow events (minimally timestamped JSON blobs linked to a job) even if we don't have 
+    #       UI to display them right now.
+    # https://www.nextflow.io/docs/latest/tracing.html#weblog-via-http
+    # -with-weblog "${NEXTFLOW_WEBLOG_URL}"
+
+    # TODO: if the user provides Nextflow Tower access token (https://tower.nf/tokens) as part of their
+    # user profile, then we validate it for shell safety serverside, pass it into the template as 
+    # NEXTFLOW_TOWER_TOKEN, set the TOWER_ACCESS_TOKEN env var and add the flag:
+    #export TOWER_ACCESS_TOKEN="${NEXTFLOW_TOWER_TOKEN}"
+    #-with-tower
 
     EXIT_CODE=$?
     #set -o errexit
-
-       #-with-tower
 
     cleanup_nextflow_intermediates || true
 }
