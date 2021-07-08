@@ -1708,6 +1708,13 @@ class JobView(JSONPatchMixin, JSONView):
         serializer = self.get_serializer(instance=job, data=request.data, partial=True)
         if serializer.is_valid():
 
+            # Don't allow cancelled jobs to be updated to any other
+            # status via the API
+            if original_status == Job.STATUS_CANCELLED:
+                _expiry = job.expiry or get_job_expiry_for_status(Job.STATUS_CANCELLED)
+                serializer.save(status=original_status, expiry_time=_expiry)
+                return Response(status=status.HTTP_204_NO_CONTENT)
+
             # Providing only an exit_code sets job status
             new_status = serializer.validated_data.get("status", None)
             exit_code = serializer.validated_data.get("exit_code", None)
