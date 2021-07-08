@@ -76,12 +76,14 @@ class DownloadTaskTest(TestCase):
     def assetFileExists(self, file):
         return self.assertTrue(os.path.exists(file))
 
+    @unittest.skip("Network operation: needs mock")
     def test_ftp_download_url(self):
         tmpfile = str(Path(tempfile.gettempdir(), self.file_ftp.name))
         fn = download_url(self.file_ftp.location, tmpfile)
         self.assertEqual(fn, tmpfile)
         self.assetFileExists(tmpfile)
 
+    @unittest.skip("Network operation: needs mock")
     def test_ftp_download_file(self):
         # Download by File UUID (normal Celery task mode)
         fn = download_file(self.file_ftp.id)
@@ -91,6 +93,7 @@ class DownloadTaskTest(TestCase):
         fn = download_file(self.file_ftp)
         self.assetFileExists(fn)
 
+    @unittest.skip("Network operation: needs mock")
     def test_ena_get_fastq_urls(self):
         urls = get_fastq_urls(["PRJNA214799"])
 
