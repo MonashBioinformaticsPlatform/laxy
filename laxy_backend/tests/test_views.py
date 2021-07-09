@@ -2,6 +2,7 @@
 import unittest
 import os
 import random
+from django.utils import timezone
 
 # from compare import expect, ensure, matcher
 import json
@@ -392,6 +393,9 @@ class JobViewTest(TestCase):
         self.admin_job = Job(owner=admin_user, params='{"bla":"foo"}')
         self.admin_job.save()
 
+        self.job_to_cancel = Job(owner=admin_user, params='{"bla2":"foo"}')
+        self.job_to_cancel.save()
+
         user, user_client = _create_user_and_login(
             "user1", "userpass1", is_superuser=False
         )
@@ -442,18 +446,33 @@ class JobViewTest(TestCase):
         self.assertEqual(j.status, Job.STATUS_COMPLETE)
 
     def test_patch_exit_code(self):
-        # set both status and exit_code
+        # set both status as cancelled
         response = self.admin_authenticated_client.patch(
-            reverse("laxy_backend:job", args=[self.admin_job.uuid()]),
-            data=json.dumps({"status": Job.STATUS_CANCELLED, "exit_code": 99}),
+            reverse("laxy_backend:job", args=[self.job_to_cancel.uuid()]),
+            data=json.dumps({"status": Job.STATUS_CANCELLED}),
             content_type="application/json",
         )
 
         # we need to re-get the job to see the changes made by the request
-        j = Job.objects.get(id=self.admin_job.id)
+        j = Job.objects.get(id=self.job_to_cancel.id)
         self.assertEqual(response.status_code, 204)
         self.assertEqual(j.status, Job.STATUS_CANCELLED)
-        self.assertEqual(j.exit_code, 99)
+        self.assertNotEqual(j.expiry_time, None)
+        self.assertGreater(j.expiry_time, timezone.now())
+
+        # try changing the status of a cancelled job (it shouldn't change)
+        response = self.admin_authenticated_client.patch(
+            reverse("laxy_backend:job", args=[self.job_to_cancel.uuid()]),
+            data=json.dumps({"status": Job.STATUS_FAILED, "exit_code": 1}),
+            content_type="application/json",
+        )
+
+        j = Job.objects.get(id=self.job_to_cancel.id)
+        self.assertEqual(response.status_code, 204)
+        # unchanged, even though we attempted to set it to FAILED
+        self.assertEqual(j.status, Job.STATUS_CANCELLED)
+        self.assertNotEqual(j.expiry_time, None)
+        self.assertGreater(j.expiry_time, timezone.now())
 
         # set only exit_code, status gets set automatically
         response = self.admin_authenticated_client.patch(
@@ -466,6 +485,8 @@ class JobViewTest(TestCase):
         self.assertEqual(response.status_code, 204)
         self.assertEqual(j.status, Job.STATUS_COMPLETE)
         self.assertEqual(j.exit_code, 0)
+        self.assertNotEqual(j.expiry_time, None)
+        self.assertGreater(j.expiry_time, timezone.now())
 
         # set only non-zero exit_code, status gets set to failed automatically
         response = self.admin_authenticated_client.patch(
@@ -478,6 +499,8 @@ class JobViewTest(TestCase):
         self.assertEqual(response.status_code, 204)
         self.assertEqual(j.status, Job.STATUS_FAILED)
         self.assertEqual(j.exit_code, 1)
+        self.assertNotEqual(j.expiry_time, None)
+        self.assertGreater(j.expiry_time, timezone.now())
 
     def test_verify_jwt_token(self):
         token = create_jwt_user_token("testuser")[0]
