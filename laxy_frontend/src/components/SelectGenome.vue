@@ -117,7 +117,9 @@
                     id="custom-genome-fasta"
                     :readonly="false"
                     @change="onFastaUrlChange"
-                    :placeholder="`URL to FASTA (eg ${ensemblReleaseUrl}/fasta/vicugna_pacos/dna/Vicugna_pacos.vicPac1.dna.toplevel.fa.gz)`"
+                    :placeholder="
+                      `URL to FASTA (eg ${ensemblReleaseUrl}/fasta/vicugna_pacos/dna/Vicugna_pacos.vicPac1.dna.toplevel.fa.gz)`
+                    "
                   ></md-input>
                   <md-button
                     class="md-icon-button"
@@ -153,7 +155,9 @@
                     id="custom-genome-annotation"
                     :readonly="false"
                     @change="onAnnotationUrlChange"
-                    :placeholder="`URL to GTF / GFF (eg ${ensemblReleaseUrl}/gtf/vicugna_pacos/Vicugna_pacos.vicPac1.97.gtf.gz)`"
+                    :placeholder="
+                      `URL to GTF / GFF (eg ${ensemblReleaseUrl}/gtf/vicugna_pacos/Vicugna_pacos.vicPac1.97.gtf.gz)`
+                    "
                   ></md-input>
                   <md-button
                     class="md-icon-button"
@@ -193,7 +197,7 @@ import {
   Model,
   Prop,
   Provide,
-  Watch,
+  Watch
 } from "vue-property-decorator";
 import { FileListItem } from "../file-tree-util";
 import { Sync } from "vuex-pathify";
@@ -210,7 +214,7 @@ import { isValidUrl } from "../util";
 
 @Component({
   components: { RemoteFilesSelect, BannerNotice },
-  filters: {},
+  filters: {}
 })
 export default class SelectGenome extends Vue {
   public ensemblReleaseUrl: string = "http://ftp.ensembl.org/pub/release-100";
@@ -247,14 +251,21 @@ export default class SelectGenome extends Vue {
   public fasta_url_valid = true;
   public annotation_url_valid = true;
 
-  ref_sequence_extensions = [".fasta.gz", ".fasta", ".fa", ".fa.gz"];
+  ref_sequence_extensions = [
+    ".fasta.gz",
+    ".fasta",
+    ".fa",
+    ".fa.gz",
+    ".fna",
+    ".fna.gz"
+  ];
   ref_annotation_extensions = [
     ".gtf.gz",
     ".gff.gz",
     ".gff3.gz",
     ".gtf",
     ".gff",
-    ".gff3",
+    ".gff3"
   ];
 
   get selected_genome_organism(): string {
