@@ -40,7 +40,9 @@ services:
 #      - "5432"
 
   rabbitmq:
-    image: rabbitmq:3-management-alpine
+    # version >3.8.14 requires consumer_timeout setting increase in rabbitmq config
+    # more info: https://github.com/apache/airflow/issues/15799
+    image: rabbitmq:3.8.14-management-alpine
     hostname: "rabbitmq"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
