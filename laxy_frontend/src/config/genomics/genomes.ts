@@ -120,7 +120,7 @@ const available_genomes: ReferenceGenome[] = [
 
     // {'id': 'Mycobacterium_tuberculosis_H37RV/Ensembl/H37Rv.EB1', 'organism': 'Mycobacterium tuberculosis H37RV'},
     // {'id': 'Mycobacterium_tuberculosis_H37RV/NCBI/2001-09-07', 'organism': 'Mycobacterium tuberculosis H37RV'},
-    // {'id': 'Oryza_sativa_japonica/Ensembl/IRGSP-1.0', 'organism': 'Oryza sativa japonica'},
+    { 'id': 'Oryza_sativa_japonica/Ensembl/IRGSP-1.0', 'organism': 'Oryza sativa japonica' },
     // {'id': 'Oryza_sativa_japonica/Ensembl/MSU6', 'organism': 'Oryza sativa japonica'},
     // {'id': 'Pan_troglodytes/Ensembl/CHIMP2.1', 'organism': 'Pan troglodytes'},
     // {'id': 'Pan_troglodytes/Ensembl/CHIMP2.1.4', 'organism': 'Pan troglodytes'},
@@ -172,7 +172,7 @@ const available_genomes: ReferenceGenome[] = [
     { 'id': 'Sus_scrofa/UCSC/susScr3', 'organism': 'Sus scrofa' },
 
     // {'id': 'Zea_mays/Ensembl/AGPv2', 'organism': 'Zea mays'},
-    // {'id': 'Zea_mays/Ensembl/AGPv3', 'organism': 'Zea mays'},
+    { 'id': 'Zea_mays/Ensembl/AGPv3', 'organism': 'Zea mays' },
 ];
 
 export default available_genomes;
