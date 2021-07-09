@@ -258,6 +258,8 @@ function set_genome_args() {
             export GENOME_ARGS=" ${GENOME_ARGS} --gtf ${ANNOTATION_FILE} "
         elif [[ ${_annot_fn} == *.gff ]] || [[ ${_annot_fn} == *.gff.gz ]]; then
             export GENOME_ARGS=" ${GENOME_ARGS} --gff ${ANNOTATION_FILE} "
+        elif [[ ${_annot_fn} == *.gff3 ]] || [[ ${_annot_fn} == *.gff3.gz ]]; then
+            export GENOME_ARGS=" ${GENOME_ARGS} --gff ${ANNOTATION_FILE} "
         else
             send_event "JOB_INFO" "This isn't going so well. Unable to detemine type of annotation file."
             send_job_finished 1
