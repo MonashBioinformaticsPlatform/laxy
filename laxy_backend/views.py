@@ -214,8 +214,8 @@ class PingView(APIView):
             now = datetime.now()
             status = (
                 SystemStatus.objects.filter(
-                    Q(active=True) & (Q(start_time__lte=now) & Q(end_time__gte=now))
-                    | (Q(start_time=None) & Q(end_time=None))
+                    (Q(active=True) & Q(start_time__lte=now) & Q(end_time__gte=now))
+                    | (Q(active=True) & Q(start_time=None) & Q(end_time=None))
                 )
                 .order_by("-priority", "start_time", "-modified_time")
                 .first()
@@ -1711,7 +1711,9 @@ class JobView(JSONPatchMixin, JSONView):
             # Don't allow cancelled jobs to be updated to any other
             # status via the API
             if original_status == Job.STATUS_CANCELLED:
-                _expiry = job.expiry_time or get_job_expiry_for_status(Job.STATUS_CANCELLED)
+                _expiry = job.expiry_time or get_job_expiry_for_status(
+                    Job.STATUS_CANCELLED
+                )
                 serializer.save(status=original_status, expiry_time=_expiry)
                 return Response(status=status.HTTP_204_NO_CONTENT)
 
