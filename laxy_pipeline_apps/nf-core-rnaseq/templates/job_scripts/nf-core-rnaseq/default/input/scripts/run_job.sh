@@ -49,6 +49,12 @@ export NXF_SINGULARITY_CACHEDIR="${SINGULARITY_CACHEDIR}"
 export NXF_OPTS='-Xms1g -Xmx7g'
 export NXF_ANSI_LOG='false'
 export NXF_VER=21.04.0
+# We use a custom .nextflow directory per run so anything cached in ~/.nextflow won't interfere
+# (there seems to be some locking issues when two nextflow instances are run simultaneously, or
+#  issues downloading the nf-amazon plugin when a version is already cached in ~/.nextflow/plugins ?
+#  Using a fresh .nextflow for each run works around this issue.)
+export NXF_HOME="${INPUT_SCRIPTS_PATH}/pipeline/.nextflow"
+mkdir -p "${INPUT_SCRIPTS_PATH}/pipeline"
 # export NXF_DEBUG=1  # 2 # 3
 
 # shellcheck disable=SC1054,SC1083,SC1009
@@ -358,9 +364,9 @@ function cache_pipeline() {
                         --outdir "${CACHED_PIPELINE_PATH}"
     fi
 
-    mkdir -p "${JOB_PATH}/input/pipeline"
-    cp -r "${CACHED_PIPELINE_PATH}" "${JOB_PATH}/input/pipeline/"
-    export NFCORE_PIPELINE_PATH=$(realpath "${JOB_PATH}/input/pipeline/nf-core-${NFCORE_PIPELINE_NAME}-${NFCORE_PIPELINE_RELEASE}/workflow")
+    mkdir -p "${INPUT_SCRIPTS_PATH}/pipeline"
+    cp -r "${CACHED_PIPELINE_PATH}" "${INPUT_SCRIPTS_PATH}/pipeline/"
+    export NFCORE_PIPELINE_PATH=$(realpath "${INPUT_SCRIPTS_PATH}/pipeline/nf-core-${NFCORE_PIPELINE_NAME}-${NFCORE_PIPELINE_RELEASE}/workflow")
 }
 
 function run_nextflow() {
