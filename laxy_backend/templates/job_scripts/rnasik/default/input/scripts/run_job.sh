@@ -607,6 +607,11 @@ function cleanup_tmp_files() {
     find "${JOB_PATH}/output/tmp/" -type f -delete
 }
 
+function cleanup_star_index() {
+    # The STAR index files generated are large and generally don't need to be kept
+    rm -rf "${JOB_PATH}"/output/sikRun/refFiles/*.starIdx
+}
+
 function get_strandedness_metadata() {
     local prediction="unknown"
     local bias="null"
@@ -1101,6 +1106,8 @@ fi
 send_job_metadata $(get_strandedness_metadata) || true
 
 cleanup_tmp_files || true
+
+cleanup_star_index || true
 
 update_permissions || true
 
