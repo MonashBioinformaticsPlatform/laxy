@@ -26,9 +26,9 @@ const available_genomes: ReferenceGenome[] = [
     { 'id': 'Aedes_aegypti/VectorBase/AaegL5.2', 'organism': 'Aedes aegypti', 'recommended': true },
     { 'id': 'Aedes_aegypti/NCBI/GCF_002204515.2_AaegL5.0', 'organism': 'Aedes aegypti' },
 
-    // TODO: Remove this. Temporary Acinetobacter genome until better mechanism for custom genomes is added
-    { 'id': 'Acinetobacter_baumannii/Custom/ATCC19606', 'organism': 'Acinetobacter baumannii' },
-    { 'id': 'Acinetobacter_baumannii/Custom/AB307-0294', 'organism': 'Acinetobacter baumannii' },
+    // Using externally provided genome files instead of this
+    // { 'id': 'Acinetobacter_baumannii/Custom/ATCC19606', 'organism': 'Acinetobacter baumannii' },
+    // { 'id': 'Acinetobacter_baumannii/Custom/AB307-0294', 'organism': 'Acinetobacter baumannii' },
 
     { 'id': 'Arabidopsis_thaliana/Ensembl/TAIR10', 'organism': 'Arabidopsis thaliana' },
     // {'id': 'Arabidopsis_thaliana/Ensembl/TAIR9', 'organism': 'Arabidopsis thaliana'},
