@@ -151,44 +151,37 @@ import {
   Model,
   Prop,
   Provide,
-  Watch,
+  Watch
 } from "vue-property-decorator";
 
 import { Get, Sync, Call } from "vuex-pathify";
 
-import {
-  SET_SAMPLES,
-  SET_PIPELINE_PARAMS,
-  SET_PIPELINE_DESCRIPTION,
-  SET_PIPELINE_PARAMS_VALID,
-  CLEAR_SAMPLE_CART,
-  SET_PIPELINE_GENOME,
-} from "../../../../store";
+import { SET_SAMPLES, CLEAR_SAMPLE_CART } from "../../../../store";
 
 import { Sample, SampleCartItems } from "../../../../model";
 import { WebAPI } from "../../../../web-api";
 
 import AVAILABLE_GENOMES from "../../../../config/genomics/genomes";
 
-import { DummySampleList as _dummySampleList } from "../../../../test-data";
-import { DummyPipelineConfig as _dummyPipelineConfig } from "../../../../test-data";
+//import { DummySampleList as _dummySampleList } from "../../../../test-data";
+//import { DummyPipelineConfig as _dummyPipelineConfig } from "../../../../test-data";
 import { Snackbar } from "../../../../snackbar";
 import BannerNotice from "../../../BannerNotice.vue";
-import RemoteFilesSelect from "../../../RemoteSelect/RemoteFilesSelect.vue";
-import { FileListItem } from "../../../../file-tree-util";
-import { filenameFromUrl } from "../../../../util";
+//import RemoteFilesSelect from "../../../RemoteSelect/RemoteFilesSelect.vue";
+//import { FileListItem } from "../../../../file-tree-util";
+//import { filenameFromUrl } from "../../../../util";
 import { ReferenceGenome, ILaxyFile, PairedEndFiles } from "../../../../types";
 
 @Component({
   components: {
-    BannerNotice,
-    RemoteFilesSelect,
+    BannerNotice
+    //RemoteFilesSelect
   },
   props: {},
   filters: {},
   beforeRouteLeave(to: any, from: any, next: any) {
     (this as any).beforeRouteLeave(to, from, next);
-  },
+  }
 })
 export default class PipelineParams extends Vue {
   public pipeline_name: string = "rnasik";
@@ -222,7 +215,7 @@ export default class PipelineParams extends Vue {
       this.$store.state.availablePipelines[this.pipeline_name],
       "metadata.default_version",
       last(
-        sortBy(this.pipeline_versions, (v) => {
+        sortBy(this.pipeline_versions, v => {
           return v;
         })
       )
@@ -231,7 +224,7 @@ export default class PipelineParams extends Vue {
 
   public pipeline_aligners = [
     { text: "STAR", value: "star" },
-    { text: "BWA-MEM", value: "bwa" },
+    { text: "BWA-MEM", value: "bwa" }
   ];
 
   public _samples: SampleCartItems;
@@ -286,67 +279,10 @@ export default class PipelineParams extends Vue {
       this.$store.set("pipelineParams@user_genome.annotation_url", "");
     }
 
-    const fastaUrl = this.$store.get("pipelineParams@user_genome.fasta_url");
-    const annotUrl = this.$store.get(
-      "pipelineParams@user_genome.annotation_url"
+    const fetch_files = this.$store.get(
+      "pipelineParams/generateFetchFilesList"
     );
-
-    let annotType = "annotation";
-    if (annotUrl.includes(".gff")) {
-      annotType = "gff";
-    } else if (annotUrl.includes(".gtf")) {
-      annotType = "gtf";
-    }
-
     let params = this.$store.copy("pipelineParams");
-
-    const fetch_files: ILaxyFile[] = [];
-
-    if (this.$store.state.use_custom_genome && fastaUrl && annotUrl) {
-      params.genome = null;
-
-      fetch_files.push(
-        ...[
-          {
-            name: filenameFromUrl(fastaUrl) || "", //"genome.fa.gz",
-            location: fastaUrl.trim(),
-            type_tags: ["reference_genome", "genome_sequence", "fasta"],
-          } as ILaxyFile,
-          {
-            name: filenameFromUrl(annotUrl) || "", //"genes.gff.gz",
-            location: annotUrl.trim(),
-            type_tags: ["reference_genome", "genome_annotation", annotType],
-          } as ILaxyFile,
-        ]
-      );
-    }
-
-    const samples = this.$store.state.samples;
-    for (let i of samples.items) {
-      for (let f of i.files) {
-        // ['R1', 'R2']
-        for (let pair of Object.keys(f)) {
-          const sampleFile: ILaxyFile = cloneDeep(f[pair]);
-
-          if (sampleFile == null) continue;
-          if (sampleFile.location == null) continue;
-
-          sampleFile.metadata = sampleFile.metadata || {};
-          sampleFile.type_tags = sampleFile.type_tags || [];
-          sampleFile.metadata["read_pair"] = pair;
-
-          let doppelganger = pair == "R1" ? "R2" : "R1";
-          if (f[doppelganger] != null) {
-            sampleFile.metadata["paired_file"] = f[doppelganger].name;
-          }
-
-          sampleFile.type_tags.push("ngs_reads");
-
-          fetch_files.push(sampleFile);
-        }
-      }
-    }
-
     params.fetch_files = fetch_files;
     this.$store.set("pipelineParams", params);
   }
@@ -357,23 +293,20 @@ export default class PipelineParams extends Vue {
     let data = {
       sample_cart: this.$store.state.samples.id,
       params: this.$store.getters.pipelineParams,
-      pipeline: "rnasik",
-      description: this.description,
+      pipeline: this.pipeline_name,
+      description: this.description
     };
+
+    data = cloneDeep(data);
+
+    if (this.$store.state.use_custom_genome) {
+      data.params.genome = null;
+    }
     return data;
   }
 
   get isValid_reference_genome() {
-    const reference_genome = this.$store.get("pipelineParams@genome");
-    const fastaUrl = this.$store.get("pipelineParams@user_genome.fasta_url");
-    const annotUrl = this.$store.get(
-      "pipelineParams@user_genome.annotation_url"
-    );
-
-    const isSet: boolean =
-      map(this.available_genomes, "id").includes(reference_genome) ||
-      (reference_genome == null && fastaUrl && annotUrl);
-    return isSet;
+    return this.$store.get("pipelineParams/isValidReferenceGenome");
   }
 
   get isValid_samples_added() {
@@ -411,7 +344,7 @@ export default class PipelineParams extends Vue {
     }
 
     // true for all paired or all single, not a mixture
-    return every(is_paired) || every(map(is_paired, (b) => !b));
+    return every(is_paired) || every(map(is_paired, b => !b));
   }
 
   get isValid_params() {

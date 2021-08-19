@@ -1,8 +1,12 @@
 import cloneDeep from 'lodash-es/cloneDeep';
+import map from "lodash-es/map";
+
 import { make } from 'vuex-pathify';
 
 import { ILaxyFile, LaxyFileSet, ISample } from '../../types';
 import { filenameFromUrl } from '../../util';
+
+import AVAILABLE_GENOMES from "../../config/genomics/genomes";
 
 const initial_state: any = {
     // a list of files the backend will fetch as input
@@ -12,6 +16,7 @@ const initial_state: any = {
     // params: {},
 
     // genome: AVAILABLE_GENOMES[0].id,
+    genome: null,
     // user_genome: {
     //     fasta_url: '',
     //     annotation_url: '',
@@ -22,6 +27,17 @@ const initial_state: any = {
 
 const getters: any = {
     ...make.getters(initial_state),
+
+    isValidReferenceGenome: (state: any, getters: any, rootState: any, rootGetters: any) => {
+        const isSet: boolean =
+            map(AVAILABLE_GENOMES, "id").includes(state.genome) ||
+            (state.genome == null &&
+                state.user_genome &&
+                state.user_genome.fasta_url &&
+                state.user_genome.annotation_url);
+        return isSet;
+    },
+
     // exampleGetter(state: any, getters: any, rootState: any, rootGetters: any) { },
     generateFetchFilesList: (state: any, getters: any, rootState: any, rootGetters: any) => {
         const fetch_files: ILaxyFile[] = [];
@@ -34,7 +50,7 @@ const getters: any = {
         }
 
         if (rootState.use_custom_genome && fastaUrl && annotUrl) {
-            let annotType = "annotation";
+            let annotType = "unknown_annotation_type";
             if (annotUrl.includes(".gff")) {
                 annotType = "gff";
             } else if (annotUrl.includes(".gtf")) {

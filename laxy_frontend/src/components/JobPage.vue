@@ -524,6 +524,7 @@ import "es6-promise";
 import filter from "lodash-es/filter";
 import find from "lodash-es/find";
 import get from "lodash-es/get";
+import head from "lodash-es/head";
 import { Memoize } from "lodash-decorators";
 
 const Clipboard = require("clipboard");
@@ -875,6 +876,26 @@ export default class JobPage extends Vue {
     return null;
   }
 
+  get externalGenomeDescription(): any | null {
+    const fetch_files = get(this.job, "params.params.fetch_files", null);
+    let fasta = head(
+      filter(fetch_files, {
+        type_tags: ["reference_genome", "genome_sequence"]
+      })
+    );
+    let annotation = head(
+      filter(fetch_files, {
+        type_tags: ["reference_genome", "genome_annotation"]
+      })
+    );
+    console.dir(fasta);
+    console.dir(annotation);
+    return {
+      genome_sequence: fasta,
+      genome_annotation: annotation
+    };
+  }
+
   _countsFileInfo(
     filename: string
   ): { strandedness: string; featureSet: string } {
@@ -934,6 +955,15 @@ export default class JobPage extends Vue {
 
       if (this.genomeDescription != null) {
         rows.push(["Reference genome", this.genomeDescription]);
+      } else if (this.externalGenomeDescription != null) {
+        rows.push([
+          "Reference genome sequence",
+          this.externalGenomeDescription["genome_sequence"]["location"]
+        ]);
+        rows.push([
+          "Reference genome annotation",
+          this.externalGenomeDescription["genome_annotation"]["location"]
+        ]);
       }
     }
     return rows;

@@ -10,15 +10,18 @@
           <md-icon
             v-if="job.status === 'failed'"
             class="push-right md-size-2x md-accent"
-          >error_outline</md-icon>
+            >error_outline</md-icon
+          >
           <md-icon
             v-if="job.status === 'cancelled'"
             class="push-right md-size-2x md-warn"
-          >cancel_presentation</md-icon>
+            >cancel_presentation</md-icon
+          >
           <md-icon
             v-if="job.status === 'complete'"
             class="push-right md-size-2x md-primary"
-          >check_circle_outline</md-icon>
+            >check_circle_outline</md-icon
+          >
           <spinner-cube-grid
             v-if="job.status === 'running'"
             :colors="themeColors()"
@@ -46,19 +49,21 @@
     </md-card-header>
 
     <md-card-content>
-      <md-table>
+      <md-table class="overflow-wrap-anywhere">
         <md-table-body>
           <md-table-row>
             <md-table-cell>Status</md-table-cell>
             <md-table-cell>
-              <span :style="{ color: getStatusColor(job.status) }">{{ job.status }}</span>
+              <span :style="{ color: getStatusColor(job.status) }">{{
+                job.status
+              }}</span>
             </md-table-cell>
           </md-table-row>
           <md-table-row>
             <md-table-cell>Created</md-table-cell>
             <md-table-cell>
               <md-tooltip md-direction="top">{{ job.created_time }}</md-tooltip>
-              {{ job.created_time| moment('from') }}
+              {{ job.created_time | moment("from") }}
             </md-table-cell>
           </md-table-row>
           <md-table-row v-if="job && job.expiry_time">
@@ -74,8 +79,10 @@
             </md-table-cell>
             <md-table-cell>
               <md-tooltip md-direction="top">{{ job.expiry_time }}</md-tooltip>
-              {{ job.expiry_time| moment('DD-MMM-YYYY') }} ({{ job.expiry_time| moment('from') }} from
-              now)
+              {{ job.expiry_time | moment("DD-MMM-YYYY") }} ({{
+                job.expiry_time | moment("from")
+              }}
+              from now)
             </md-table-cell>
           </md-table-row>
           <md-table-row v-for="row in extraTableRows" :key="row[0]">
@@ -88,8 +95,10 @@
           <md-table-row v-if="job.completed_time">
             <md-table-cell>Completed</md-table-cell>
             <md-table-cell>
-              <md-tooltip md-direction="top">{{ job.completed_time }}</md-tooltip>
-              {{ job.completed_time| moment('from') }}
+              <md-tooltip md-direction="top">{{
+                job.completed_time
+              }}</md-tooltip>
+              {{ job.completed_time | moment("from") }}
             </md-table-cell>
           </md-table-row>
           <md-table-row>
@@ -102,12 +111,18 @@
 
     <md-card-actions>
       <md-button
-        v-if="showRunAgainButton && ['failed', 'cancelled', 'complete'].includes(job.status)"
+        v-if="
+          showRunAgainButton &&
+            ['failed', 'cancelled', 'complete'].includes(job.status)
+        "
         @click="cloneJob(job.id)"
       >
         <md-icon>content_copy</md-icon>Run again
       </md-button>
-      <md-button v-if="showCancelButton && job.status === 'running'" @click="askCancelJob(job.id)">
+      <md-button
+        v-if="showCancelButton && job.status === 'running'"
+        @click="askCancelJob(job.id)"
+      >
         <md-icon>cancel</md-icon>Cancel
       </md-button>
     </md-card-actions>
@@ -129,7 +144,7 @@ import {
   Model,
   Prop,
   Provide,
-  Watch,
+  Watch
 } from "vue-property-decorator";
 
 import { ComputeJob } from "../model";
@@ -137,7 +152,7 @@ import ExpiryDialog from "./Dialogs/ExpiryDialog.vue";
 
 @Component({
   components: { ExpiryDialog },
-  filters: {},
+  filters: {}
 })
 export default class JobStatusCard extends Vue {
   @Prop({ type: Object })
@@ -199,5 +214,9 @@ export default class JobStatusCard extends Vue {
   to {
     transform: rotate(359deg);
   }
+}
+
+.overflow-wrap-anywhere {
+  overflow-wrap: anywhere;
 }
 </style>

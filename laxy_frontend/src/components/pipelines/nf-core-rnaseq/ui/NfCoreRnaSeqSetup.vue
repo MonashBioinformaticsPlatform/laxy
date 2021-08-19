@@ -70,6 +70,27 @@
           >Run the pipeline</md-button
         >
       </md-layout>
+
+      <banner-notice
+        v-if="!isValid_samples_added"
+        type="error"
+        :show-close-button="false"
+        >Please add some samples before submitting your job.</banner-notice
+      >
+      <banner-notice
+        v-if="!isValid_duplicate_samples"
+        type="error"
+        :show-close-button="false"
+      >
+        Input sample files contain duplicates (based on URL/location).
+        <br />Please remove duplicates before continuing.
+      </banner-notice>
+      <banner-notice
+        v-if="!isValid_reference_genome"
+        type="error"
+        :show-close-button="false"
+        >Selected reference genome is invalid.</banner-notice
+      >
     </md-layout>
 
     <md-snackbar
@@ -112,33 +133,21 @@ import {
 
 import { Get, Sync, Call } from "vuex-pathify";
 
-import {
-  Store,
-  SET_SAMPLES,
-  SET_PIPELINE_PARAMS,
-  SET_PIPELINE_DESCRIPTION,
-  SET_PIPELINE_PARAMS_VALID,
-  CLEAR_SAMPLE_CART
-} from "../../../../store";
+import { SET_SAMPLES, CLEAR_SAMPLE_CART } from "../../../../store";
 
 import storeModule from "../store/module";
 
 import { Sample, SampleCartItems } from "../../../../model";
 import { WebAPI } from "../../../../web-api";
 
-//import AVAILABLE_GENOMES from "../../../../config/genomics/genomes";
-
 import { Snackbar } from "../../../../snackbar";
-//import BannerNotice from "../../../BannerNotice.vue";
+import BannerNotice from "../../../BannerNotice.vue";
 import InputFilesForm from "../../rnasik/ui/InputFilesForm.vue";
-//import RemoteFilesSelect from "../../../RemoteSelect/RemoteFilesSelect.vue";
 import SelectGenome from "../../../SelectGenome.vue";
-//import { FileListItem } from "../../../../file-tree-util";
-//import { filenameFromUrl } from "../../../../util";
-import { ILaxyFile, PairedEndFiles } from "../../../../types";
 
 @Component({
   components: {
+    BannerNotice,
     InputFilesForm,
     SelectGenome
   },
@@ -215,12 +224,17 @@ export default class PipelineParams extends Vue {
   }
 
   /*
-   *  Populates the pipelineParams.fetch_files list with (FASTQ) files
-   *  from the sample cart that should be retrieved by the backend as
-   *  initial input files.
+   *  Populates the pipelineParams.fetch_files list with files
+   *  from the sample cart (and external genome reference files)
+   *  that should be retrieved by the backend as initial input files.
    */
 
   updateFetchFiles() {
+    if (!this.$store.state.use_custom_genome) {
+      this.$store.set("pipelineParams@user_genome.fasta_url", "");
+      this.$store.set("pipelineParams@user_genome.annotation_url", "");
+    }
+
     const fetch_files = this.$store.get(
       "pipelineParams/generateFetchFilesList"
     );
@@ -238,6 +252,12 @@ export default class PipelineParams extends Vue {
       pipeline: this.pipeline_name,
       description: this.description
     };
+
+    data = cloneDeep(data);
+
+    if (this.$store.state.use_custom_genome) {
+      data.params.genome = null;
+    }
     return data;
   }
 
@@ -245,9 +265,34 @@ export default class PipelineParams extends Vue {
     return this.$store.getters.sample_cart_count > 0;
   }
 
+  get isValid_duplicate_samples() {
+    const samples = this.$store.state.samples;
+    const seen: string[] = [];
+    for (let i of samples.items) {
+      for (let f of i.files) {
+        for (let pair of ["R1", "R2"]) {
+          if (f[pair] == null) continue;
+          if (f[pair].location == null) continue;
+          if (seen.includes(f[pair].location)) return false;
+          seen.push(f[pair].location);
+        }
+      }
+    }
+
+    return true;
+  }
+
+  get isValid_reference_genome() {
+    return this.$store.get("pipelineParams/isValidReferenceGenome");
+  }
+
   get isValid_params() {
     let is_valid = false;
-    if (this.isValid_samples_added) {
+    if (
+      this.isValid_reference_genome &&
+      this.isValid_samples_added &&
+      this.isValid_duplicate_samples
+    ) {
       is_valid = true;
     }
     this.$store.set("pipelineParams_valid", is_valid);

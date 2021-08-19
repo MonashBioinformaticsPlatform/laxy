@@ -148,7 +148,7 @@ import {
   Model,
   Prop,
   Provide,
-  Watch,
+  Watch
 } from "vue-property-decorator";
 
 import { State, Getter, Action, Mutation, namespace } from "vuex-class";
@@ -158,7 +158,7 @@ import {
   FETCH_JOBS,
   SET_PIPELINE_DESCRIPTION,
   SET_PIPELINE_PARAMS,
-  SET_SAMPLES,
+  SET_SAMPLES
 } from "../store";
 import { WebAPI } from "../web-api";
 
@@ -178,7 +178,7 @@ export default class JobList extends Vue {
   public pagination: { [k: string]: number } = {
     page_size: 10,
     page: 1,
-    count: 0,
+    count: 0
   };
 
   private _refreshPollerId: number | null = null;
@@ -224,7 +224,7 @@ export default class JobList extends Vue {
       complete: "grey",
       running: "green",
       failed: "red",
-      cancelled: "black",
+      cancelled: "black"
     };
 
     let color: any = status_colors[status];
@@ -298,42 +298,28 @@ export default class JobList extends Vue {
       const s_response = await WebAPI.getSampleCart(samplecart_id);
 
       const pipelinerun = p_response.data;
-      const samplecart = s_response.data as ILaxySampleCart;
+      const samplecart = s_response.data;
 
       let samples = new SampleCartItems();
       samples.id = samplecart.id;
       samples.items = samplecart.samples;
-
-      for (let ss of samplecart.samples) {
-        for (let ff of ss.files) {
-          for (let field of ["R1", "R2"]) {
-            const url = ff[field];
-            // Replace and simple URL strings in the R1/R2 field with an ILaxyFile shaped object
-            if (
-              url != undefined &&
-              typeof url === "string" &&
-              url.includes("://")
-            ) {
-              ff[field] = {
-                location: url,
-                name: url,
-                type: "file",
-              } as ILaxyFile;
-            }
-          }
-        }
-      }
-
       samples.name = samplecart.name;
       this.$store.commit(SET_SAMPLES, samples as SampleCartItems);
 
       this.$store.commit(SET_PIPELINE_PARAMS, pipelinerun.params);
       this.$store.commit(SET_PIPELINE_DESCRIPTION, pipelinerun.description);
 
+      if (
+        this.$store.get("pipelineParams@user_genome.fasta_url") ||
+        this.$store.get("pipelineParams@user_genome.annotation_url")
+      ) {
+        this.$store.set("use_custom_genome", true);
+      }
+
       // TODO: make a prop on RNASeqSetup to allow a jump to second or last step immediately
       this.$router.push({
         name: pipeline_name,
-        params: { allowSkipping: "true" },
+        params: { allowSkipping: "true" }
       });
     } catch (error) {
       console.log(error);
