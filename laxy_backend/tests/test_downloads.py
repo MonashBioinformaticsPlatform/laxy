@@ -103,6 +103,7 @@ class DownloadTaskTest(TestCase):
 
         self.assertListEqual([k for k in urls.keys()], self.ena_expected_urls)
 
+    # @unittest.skip("Network operation: needs mock")
     def test_ena_create_file_objects(self):
         urls = get_fastq_urls(["PRJNA214799"])
         file_objs = create_file_objects(urls, owner=self.admin_user)
@@ -120,6 +121,7 @@ class DownloadTaskTest(TestCase):
             )
             self.assertIsNotNone(f.size)
 
+    # @unittest.skip("Network operation: needs mock")
     def test_ena_create_fileset(self):
         accession = "PRJNA214799"
         fileset = create_fastq_fileset(accession, owner=self.admin_user.id, save=True)
