@@ -406,7 +406,7 @@ def copy_file_task(self, task_data=None, **kwargs):
 
 
 def add_file_replica_records(
-    files: Iterable[File],
+    files: Union[Iterable[File], QuerySet],
     compute_resource: Union[str, ComputeResource],
     set_as_default=False,
 ) -> int:

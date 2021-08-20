@@ -14,7 +14,7 @@ import random
 import time
 import json
 import base64
-from io import BytesIO, StringIO
+from io import BytesIO
 from copy import copy
 from contextlib import closing
 from django.conf import settings
@@ -59,9 +59,9 @@ from ..models import (
     job_path_on_compute,
     get_compute_resources_for_files,
 )
-from ..util import laxy_sftp_url, get_traceback_message
+from ..util import generate_uuid, laxy_sftp_url, get_traceback_message
 
-from .file import move_file_task
+from .file import add_file_replica_records, move_file_task
 from .verify import verify, verify_task, VerifMode
 
 logger = get_task_logger(__name__)
@@ -1146,7 +1146,7 @@ def move_job_files_to_archive_task(self, task_data=None, *kwargs):
 
             dst_prefix = f"laxy+sftp://{dst_compute_id}/"
             from_location = str(file.location)
-            to_location = str(file.location).replace(src_prefix, dst_prefix)
+            to_location = str(file.location).replace(src_prefix, dst_prefix, 1)
 
             # TODO: Consider using a Group call here (parallel) and return failed/succeeded
             #       IDs from the GroupResult, polling on `while group_result.waiting():`
@@ -1204,6 +1204,133 @@ def move_job_files_to_archive_task(self, task_data=None, *kwargs):
     results["immediate_failed"] = immediate_failed
     results["skipped"] = skipped
     task_data["result"] = results
+    return task_data
+
+
+@shared_task(
+    queue="low-priority",
+    bind=True,
+    track_started=True,
+    default_retry_delay=60 * 60,
+    max_retries=5,
+    # autoretry_for=(IOError, OSError,),
+    retry_backoff=600,  # 10 min, doubling each retry
+    retry_backoff_max=60 * 60 * 48,  # 48 hours
+)
+def bulk_move_job_rsync(self, task_data=None, optional=False, **kwargs):
+    """
+    Move all job files from the original compute resource to another 
+    (usually the archive host) using rsync. 
+    
+    Updates default file locations and deletes original copy at source
+    when completed successfully.
+
+    Note that this task requires that the source trusts the destination
+    via ~/.ssh/authorized_keys. rsync is run on the destination, pulling
+    from the source over SSH.
+    """
+    task_result = dict()
+    try:
+        if task_data is None:
+            raise InvalidTaskError("task_data is None")
+
+        from ..models import Job
+
+        _init_fabric_env()
+
+        environment = task_data.get("environment", {})
+
+        job_id = task_data.get("job_id")
+        job = Job.objects.get(id=job_id)
+        src_compute = task_data.get("src_compute_id", None)
+        if src_compute is not None:
+            src_compute = ComputeResource.objects.get(id=src_compute)
+        else:
+            src_compute = job.compute_resource
+
+        dst_compute = task_data.get("dst_compute_id", None)
+        if dst_compute is not None:
+            dst_compute = ComputeResource.objects.get(id=dst_compute)
+        else:
+            dst_compute = job.compute_resource.archive_host
+
+        src_job_path = job_path_on_compute(job, src_compute)
+        src_userstr = src_compute.extra.get("username", "")
+        if src_userstr != "":
+            src_userstr = f"{src_userstr}@"
+
+        src_str = f"{src_userstr}{src_compute.host}:/{src_job_path}"
+
+        # TODO: Ignoring host keys (-o Stricthostkeychecking=no) isn't ideal- we should ideally
+        #       add the host key to ComputeResource.extra.host_keys and use
+        #       -o "UserKnownHostsFile /tmp/.laxy/ssh/known_hosts-{src_compute.id}_{generate_uuid()}"
+        #       as a host key file, generated alongside the temporary private key file.
+        #       The `ssh-keyscan compute_resource.hostname` can find the host keys - we could also do this
+        #       automatically if compute_resource.host_keys isn't present, emulating the behaviour of
+        #       ~/.ssh/known_hosts but associated with the ComputeResource record.
+
+        make_dst_new_default = task_data.get("make_default", True)
+
+        host = dst_compute.host
+        gateway = dst_compute.gateway_server
+        private_key = dst_compute.private_key
+        remote_username = dst_compute.extra.get("username", None)
+        rsync_succeeded = False
+        with fabsettings(
+            gateway=gateway, host_string=host, user=remote_username, key=private_key
+        ):
+            with shell_env(**environment):
+                # src_compute must trust dst_compute
+                # (eg the key for dst_compute is in ~/.ssh/authorized_keys on src_compute)
+                # generate_uuid is random, so the path to the temporary private key should
+                # be unguessable
+                tmpkeyfn = f"/tmp/.laxy/ssh/id_rsa-{src_compute.id}_{generate_uuid()}"
+                cmd = (
+                    f"nice rsync -av -e "
+                    f'"ssh -i {tmpkeyfn} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" '
+                    f'"{src_str}" "{dst_compute.jobs_dir}/"; '
+                    f"rm -f {tmpkeyfn}"
+                )
+
+                _tmpdirpath = Path(tmpkeyfn).parent
+                result = run(f"mkdir -p {_tmpdirpath} && chmod 700 {_tmpdirpath}")
+                result = put(
+                    BytesIO(src_compute.private_key.encode("utf-8")),
+                    tmpkeyfn,
+                    mode=0o600,
+                )
+
+                result = run(cmd)
+                task_result["stdout"] = result.stdout.strip()
+                task_result["stderr"] = result.stderr.strip()
+                task_result["exit_code"] = result.return_code
+
+                rsync_succeeded = result.succeeded
+
+        src_prefix = f"laxy+sftp://{src_compute.id}/"
+        dst_prefix = f"laxy+sftp://{dst_compute.id}/"
+        if rsync_succeeded:
+            for file in job.get_files():
+                from_location = str(file.location)
+                to_location = str(file.location).replace(src_prefix, dst_prefix, 1)
+                if file.exists(loc=to_location):
+                    # Make destination the new default file location
+                    add_file_replica_records([file], dst_compute, set_as_default=True)
+                    # Get file record from database again to ensure our record is fresh and has both locations
+                    _updated_file_record = File.objects.get(id=file.id)
+                    # Delete the real file at the old location, remove old location record
+                    _updated_file_record.delete_at_location(
+                        from_location, allow_delete_default=False
+                    )
+
+    except BaseException as ex:
+        message = get_traceback_message(ex)
+        self.update_state(state=states.FAILURE, meta=message)
+        if not optional:
+            raise ex
+
+    task_data.update(result=task_result)
+
     return task_data
 
 

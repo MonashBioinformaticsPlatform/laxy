@@ -100,6 +100,7 @@ from .filters import IsOwnerFilter, IsPublicFilter
 
 from . import ena
 from .tasks.job import (
+    bulk_move_job_rsync,
     start_job,
     index_remote_files,
     _finalize_job_task_err_handler,
@@ -1750,6 +1751,7 @@ class JobView(JSONPatchMixin, JSONView):
                 # We don't update the status yet - an async task will do this after file indexing is complete
                 serializer.save(status=original_status, expiry_time=expiry)
 
+                ingestion_delay_time = 30  # seconds
                 if job.compute_resource and job.compute_resource.archive_host:
                     task_data["dst_compute_id"] = job.compute_resource.archive_host_id
                     result = celery.chain(
@@ -1758,9 +1760,13 @@ class JobView(JSONPatchMixin, JSONView):
                         # move_job_files_to_archive_task will run even
                         # if estimate_job_tarball_size fails (since optional=True)
                         estimate_job_tarball_size.s(optional=True),
-                        move_job_files_to_archive_task.s(),
+                        bulk_move_job_rsync.s(),
+                        # move_job_files_to_archive_task is an alternative that doesn't use rsync
+                        # but moves the job file by file. It's generally slower.
+                        # move_job_files_to_archive_task.s(),
                     ).apply_async(
-                        link_error=_finalize_job_task_err_handler.s(job_id=job.id)
+                        countdown=ingestion_delay_time,  # we give a short delay for the run_job.sh script to finish before ingestion begins
+                        link_error=_finalize_job_task_err_handler.s(job_id=job.id),
                     )
                 else:
                     result = celery.chain(
@@ -1768,7 +1774,8 @@ class JobView(JSONPatchMixin, JSONView):
                         set_job_status.s(),
                         estimate_job_tarball_size.s(optional=True),
                     ).apply_async(
-                        link_error=_finalize_job_task_err_handler.s(job_id=job.id)
+                        countdown=ingestion_delay_time,  # we give a short delay for the run_job.sh script to finish before ingestion begins
+                        link_error=_finalize_job_task_err_handler.s(job_id=job.id),
                     )
             else:
                 serializer.save(expiry_time=expiry)

@@ -256,6 +256,7 @@ class JobAdmin(Timestamped, VersionAdmin):
         "verify",
         "copy_to_archive",
         "move_job_files_to_archive",
+        "bulk_rsync_job",
     )
 
     color_mappings = {
@@ -418,6 +419,24 @@ class JobAdmin(Timestamped, VersionAdmin):
             )
 
     move_job_files_to_archive.short_description = "Move job files to archive host"
+
+    @takes_instance_or_queryset
+    def bulk_rsync_job(self, request, queryset):
+        failed = []
+        for job in queryset:
+            task_data = dict(job_id=job.id)
+            result = job_tasks.bulk_move_job_rsync.apply_async(args=(task_data,))
+            if result.failed():
+                failed.append(job.id)
+
+        if not failed:
+            self.message_user(request, "Moving jobs to archive (bulk rsync) !")
+        else:
+            self.message_user(
+                request, "Errors trying to initiate transfer of %s" % ",".join(failed)
+            )
+
+    bulk_rsync_job.short_description = "Bulk rsync job(s) to archive location"
 
 
 def do_nothing_validator(value):
