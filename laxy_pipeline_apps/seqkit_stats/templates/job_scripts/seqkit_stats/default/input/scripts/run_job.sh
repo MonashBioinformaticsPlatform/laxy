@@ -17,14 +17,20 @@ readonly JOB_INPUT_STAGED="{{ JOB_INPUT_STAGED }}"
 readonly PIPELINE_VERSION="{{ PIPELINE_VERSION }}"
 
 # Global variables used throughout the script
-readonly TMP="${PWD}/../tmp"
+readonly TMP="${JOB_PATH}/../../tmp"
 readonly JOB_PATH=${PWD}
+readonly CONDA_BASE="${JOB_PATH}/../miniconda3"
+readonly SITE_CONFIGS="${JOB_PATH}/../../config"
 readonly INPUT_READS_PATH="${JOB_PATH}/input/reads"
 readonly INPUT_SCRIPTS_PATH="${JOB_PATH}/input/scripts"
 readonly INPUT_CONFIG_PATH="${JOB_PATH}/input/config"
 readonly PIPELINE_CONFIG="${INPUT_CONFIG_PATH}/pipeline_config.json"
-readonly CONDA_BASE="${JOB_PATH}/../miniconda3"
-readonly DOWNLOAD_CACHE_PATH="${JOB_PATH}/../cache"
+readonly DOWNLOAD_CACHE_PATH="${JOB_PATH}/../../cache/downloads"
+
+readonly PIPELINES_CACHE_PATH="${JOB_PATH}/../../cache/pipelines"
+readonly SINGULARITY_CACHEDIR="${JOB_PATH}/../../cache/singularity"
+readonly SINGULARITY_TMPDIR="${TMP}"
+
 readonly AUTH_HEADER_FILE="${JOB_PATH}/.private_request_headers"
 readonly IGNORE_SELF_SIGNED_CERTIFICATE="{{ IGNORE_SELF_SIGNED_CERTIFICATE }}"
 readonly LAXYDL_BRANCH=master
