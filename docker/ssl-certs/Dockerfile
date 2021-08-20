@@ -1,9 +1,10 @@
-FROM python:3.8
+FROM python@sha256:a489206b7ab876ad948f577c498ed79af77b8f0f1f6f92a43af94304c529f793
+# FROM python:3.8
 
 RUN apt update && \
     apt install --yes cron anacron && \
     apt purge --yes exim4 exim4-base exim4-config exim4-daemon-light && \
-    apt autoremove && \
+    apt autoremove --yes && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 # This is required for anacron to run. Also remove cron jobs we don't really need
