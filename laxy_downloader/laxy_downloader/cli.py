@@ -8,6 +8,7 @@ import tarfile
 from typing import List
 import xmlrpc
 import psutil
+import platform
 
 import trio
 
@@ -448,7 +449,10 @@ def main():
             sys.exit(1)
 
         if args.use_aria:
-            rpc_secret_path = os.path.join(args.cache_path, ".aria2_rpc_secret")
+            hostname = platform.node()
+            rpc_secret_path = os.path.join(
+                args.cache_path, f".aria2_rpc_secret-{hostname}"
+            )
             rpc_secret = get_secret_key(rpc_secret_path)
 
             logger.debug(f"RPC secret is at: {rpc_secret_path}")
