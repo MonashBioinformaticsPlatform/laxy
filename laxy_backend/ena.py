@@ -301,6 +301,18 @@ def get_fastq_urls(accessions: List[str], fields: List[str] = None) -> Dict[str,
     return urls_dict
 
 
+def retrieve_run_report(accession, fields="fastq_ftp,fastq_md5"):
+    """
+    Temporary replacement for enasearch.retrieve_run_report which broke due to
+    an API change at ENA (waiting for this PR: https://github.com/bebatut/enasearch/pull/49)
+    """
+    base_url = "https://www.ebi.ac.uk/ena/portal/api"
+    resp = requests.get(
+        f"{base_url}/filereport?accession={accession}&result=read_run&fields={fields}&format=tsv"
+    )
+    return resp.text
+
+
 def get_run_table(accessions: List[str], fields: List[str] = None) -> Dict[str, Dict]:
     """
     Given an ENA (or SRA) Run (SRR*), Experiment (SRX*), Project (PRJ*)
@@ -346,9 +358,11 @@ def get_run_table(accessions: List[str], fields: List[str] = None) -> Dict[str, 
     runs_dict = dict()
     # raises HTTPError on status_code 500 (eg ENA is temporarily down)
     for accession in accessions:
-        table = enasearch.retrieve_run_report(
-            accession=accession, fields=",".join(fields)
-        )
+        # table = enasearch.retrieve_run_report(
+        #    accession=accession, fields=",".join(fields)
+        # )
+        table = retrieve_run_report(accession=accession, fields=",".join(fields))
+
         # table = flatten_fastq_table(table)
         runs = parse_fastq_table(table, key_by="run_accession", url_scheme="ftp")
         runs_dict.update(runs)
