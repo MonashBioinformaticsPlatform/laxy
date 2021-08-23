@@ -1319,9 +1319,15 @@ def bulk_move_job_rsync(self, task_data=None, optional=False, **kwargs):
                     # Get file record from database again to ensure our record is fresh and has both locations
                     _updated_file_record = File.objects.get(id=file.id)
                     # Delete the real file at the old location, remove old location record
-                    _updated_file_record.delete_at_location(
-                        from_location, allow_delete_default=False
-                    )
+                    if (
+                        from_location != to_location
+                        and _updated_file_record.locations.filter(
+                            url=from_location
+                        ).exists()
+                    ):
+                        _updated_file_record.delete_at_location(
+                            from_location, allow_delete_default=False
+                        )
 
     except BaseException as ex:
         message = get_traceback_message(ex)

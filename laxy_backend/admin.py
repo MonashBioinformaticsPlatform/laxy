@@ -436,7 +436,7 @@ class JobAdmin(Timestamped, VersionAdmin):
                 request, "Errors trying to initiate transfer of %s" % ",".join(failed)
             )
 
-    bulk_rsync_job.short_description = "Bulk rsync job(s) to archive location"
+    bulk_rsync_job.short_description = "Bulk move (rsync) job(s) to archive location"
 
 
 def do_nothing_validator(value):
