@@ -1311,8 +1311,18 @@ def bulk_move_job_rsync(self, task_data=None, optional=False, **kwargs):
         dst_prefix = f"laxy+sftp://{dst_compute.id}/"
         if rsync_succeeded:
             for file in job.get_files():
+
                 from_location = str(file.location)
                 to_location = str(file.location).replace(src_prefix, dst_prefix, 1)
+
+                # If file location hasn't been set, we assume the to/from
+                # locations are the same as the rsync destination. File existance
+                # check next will verify that it's there.
+                # TODO: Verify md5sum in this case, if set
+                if file.location == "" or file.location is None:
+                    to_location = f"{dst_prefix}{file.path}/{file.name}"
+                    from_location = to_location
+
                 if file.exists(loc=to_location):
                     # Make destination the new default file location
                     add_file_replica_records([file], dst_compute, set_as_default=True)
