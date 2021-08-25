@@ -1286,7 +1286,7 @@ def bulk_move_job_rsync(self, task_data=None, optional=False, **kwargs):
                 # be unguessable
                 tmpkeyfn = f"/tmp/.laxy/ssh/id_rsa-{src_compute.id}_{generate_uuid()}"
                 cmd = (
-                    f"nice rsync -av -e "
+                    f"nice rsync -avL -e "
                     f'"ssh -i {tmpkeyfn} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" '
                     f'"{src_str}" "{dst_compute.jobs_dir}/"; '
                     f"rm -f {tmpkeyfn}"
