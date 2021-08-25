@@ -647,10 +647,7 @@ function register_files() {
     add_to_manifest "**/*_fastqc.html" "fastqc,html,report"
     add_to_manifest "**/*StrandedCounts-withNames-proteinCoding.txt" "counts,degust,degust-protein-coding"
     add_to_manifest "**/*StrandedCounts.txt" "counts"
-    # Don't tag empty counts files, when withNames fails
-    for _ff in $(find . -name "*StrandedCounts-withNames.txt" -size +0); do
-        add_to_manifest "${_ff}" "counts,degust,degust-all-biotypes"
-    done
+    add_to_manifest "**/*StrandedCounts-withNames.txt" "counts,degust,degust-all-biotypes"
     add_to_manifest "output/sikRun/countFiles/strandInfo*.txt" "strand-info"
     # TODO: These two recursive commands to add the remaining files don't seem to be working ?
     add_to_manifest "input/*" ""
