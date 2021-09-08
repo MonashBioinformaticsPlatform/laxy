@@ -239,13 +239,13 @@ class FileBulkRegisterSerializer(FileSerializer):
     def to_internal_value(self, data):
         row = data
         if isinstance(row.get("type_tags", ""), str):
-            row["type_tags"] = row["type_tags"].split(",")
+            row["type_tags"] = row["type_tags"].replace(" ", "").split(",")
         if "filepath" in row:
             row["name"] = Path(row["filepath"]).name
             row["path"] = str(Path(row["filepath"]).parent)
             del row["filepath"]
 
-        # Trim any whitespace in values
+        # Trim any whitespace from ends of values
         for field in self.Meta.fields:
             if field in row and isinstance(row[field], str):
                 row[field] = row[field].strip()
