@@ -290,10 +290,14 @@ def _run_download_cli(args, rpc_secret=None):
             daemon = aria.get_daemon(secret=rpc_secret)
 
             async def aria_dl_and_poll():
+                _type_tag_txt = ""
+                if len(args.type_tags) >= 1:
+                    _type_tag_txt = f" ({args.type_tags[0]})"
+
                 await async_notify_event(
                     api_url,
                     "INPUT_DATA_DOWNLOAD_STARTED",
-                    message="Input data download started.",
+                    message=f"Input data download started{_type_tag_txt}.",
                     auth_headers=api_auth_headers,
                     verify_ssl_certificate=verify_ssl_certificate,
                 )
@@ -324,7 +328,7 @@ def _run_download_cli(args, rpc_secret=None):
                 await async_notify_event(
                     api_url,
                     "INPUT_DATA_DOWNLOAD_FINISHED",
-                    message="Input data download finished.",
+                    message=f"Input data download finished{_type_tag_txt}.",
                     auth_headers=api_auth_headers,
                     verify_ssl_certificate=verify_ssl_certificate,
                 )
