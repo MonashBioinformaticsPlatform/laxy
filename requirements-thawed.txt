@@ -45,6 +45,7 @@ django==2.2.20
 django-reversion
 django-cors-headers
 django-extensions
+ipython
 django-storages
 django-object-actions
 django-cache-memoize
