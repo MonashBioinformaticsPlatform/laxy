@@ -45,7 +45,7 @@ import backoff
 
 from fabric.api import settings as fabsettings
 from fabric.api import env as fabric_env
-from fabric.api import put, run, shell_env, local, cd, show
+from fabric.api import put, run, shell_env, local, cd, show, hide
 
 # logging.config.fileConfig('logging_config.ini')
 # logger = logging.getLogger(__name__)
@@ -423,6 +423,7 @@ def set_job_status(self, task_data=None, **kwargs):
 
 @shared_task(
     name="index_remote_files",
+    queue="low-priority",
     bind=True,
     track_started=True,
     default_retry_delay=60,
@@ -447,7 +448,9 @@ def index_remote_files(self, task_data=None, **kwargs) -> Sequence[Tuple[str, in
         # -L ensures symlinks are followed and output as filenames too
         # try:
         cmd = f"find -L '{path}'" + " -mindepth 1 -type f -printf '%P\t%s\n'"
-        with fabsettings(warn_only=True):
+
+        # we use 'hide' to prevent stdout going to log, too noisy
+        with hide("output", "warnings"), fabsettings(warn_only=True):
             lslines = run(cmd)
 
         if not lslines.succeeded:
@@ -465,46 +468,42 @@ def index_remote_files(self, task_data=None, **kwargs) -> Sequence[Tuple[str, in
     #     return None
 
     def _create_update_file_objects(
-        remote_path, fileset=None, prefix_path="", location_base=""
+        filelisting: List[Tuple], fileset=None, prefix_path="", location_base=""
     ) -> Sequence[File]:
         """
-        Returns a list of (unsaved) File objects from a recursive 'find'
-        of a remote directory. If a file of the same path exists in the FileSet,
+        Returns a list of (unsaved) File objects give a list of relative paths
+        and file sizes. If a file of the same path exists in the FileSet,
         update the file object location (if unset) rather than create a new one.
 
         :param fileset:
         :type fileset:
         :param prefix_path:
         :type prefix_path:
-        :param remote_path: Path on the remote server.
-        :type remote_path: str
+        :param filelisting: A list of tuples, (relative file path, byte size).
+        :type filelisting: List[str]
         :param location_base: Prefix of location URL (eg sftp://127.0.0.1/XxX/)
         :type location_base: str
         :return: A list of File objects
         :rtype: Sequence[File]
         """
 
-        with cd(remote_path):
-            filelisting = _remote_list_files(".")
+        file_objs = []
+        for filepath, filesize in filelisting:
+            location = f"{location_base}/{filepath}"
+            fname = Path(filepath).name
+            fpath = Path(prefix_path, filepath).parent
 
-            file_objs = []
-            for filepath, filesize in filelisting:
-                location = f"{location_base}/{filepath}"
-                fname = Path(filepath).name
-                fpath = Path(prefix_path, filepath).parent
+            f, created = fileset.get_files().get_or_create(
+                path=fpath, name=fname, defaults=dict(owner=job.owner),
+            )
+            if not f.location:
+                f.location = location
+            if not f.owner:
+                f.owner = job.owner
 
-                if fileset:
-                    f = fileset.get_file_by_path(Path(fpath, fname))
+            f.size = filesize
 
-                if not f:
-                    f = File(location=location, owner=job.owner, name=fname, path=fpath)
-                elif not f.location:
-                    f.location = location
-                    f.owner = job.owner
-
-                f.size = filesize
-
-                file_objs.append(f)
+            file_objs.append(f)
 
         return file_objs
 
@@ -548,54 +547,57 @@ def index_remote_files(self, task_data=None, **kwargs) -> Sequence[Tuple[str, in
     message = "No message."
 
     try:
-        with fabsettings(
-            gateway=gateway, host_string=host, user=remote_username, key=private_key,
-        ):
+        task_data["result"]["n_files_indexed"] = 0
 
-            task_data["result"]["n_files_indexed"] = 0
+        for fileset_relpath, fileset in [
+            ("input", job.input_files),
+            ("output", job.output_files),
+        ]:
 
-            for fileset_relpath, fileset in [
-                ("input", job.input_files),
-                ("output", job.output_files),
-            ]:
+            job_abs_path = job_path_on_compute(job, compute_resource)
+            fileset_abspath = str(Path(job_abs_path, fileset_relpath))
 
-                job_abs_path = job_path_on_compute(job, compute_resource)
-                fileset_abspath = str(Path(job_abs_path, fileset_relpath))
+            with fabsettings(
+                gateway=gateway, host_string=host, user=remote_username, key=private_key
+            ):
+                with cd(fileset_abspath):
+                    filelisting = _remote_list_files(".")
 
-                file_objs = _create_update_file_objects(
-                    fileset_abspath,
-                    fileset=fileset,
-                    prefix_path=fileset_relpath,
-                    location_base=f"laxy+sftp://{compute_resource.id}/{job.id}/{fileset_relpath}",
-                )
+            file_objs = _create_update_file_objects(
+                filelisting,
+                fileset=fileset,
+                prefix_path=fileset_relpath,
+                location_base=f"laxy+sftp://{compute_resource.id}/{job.id}/{fileset_relpath}",
+            )
 
-                with transaction.atomic():
-                    fileset.path = fileset_relpath
-                    fileset.owner = job.owner
+            # TOOD: Profile this - is it slow ?
+            with transaction.atomic():
+                fileset.path = fileset_relpath
+                fileset.owner = job.owner
 
-                    if clobber:
-                        fileset.remove(list(fileset.get_files()), delete=True)
+                if clobber:
+                    fileset.remove(list(fileset.get_files()), delete=True)
 
-                    if remove_missing:
-                        new_file_pathlist = set([f.full_path for f in file_objs])
-                        for old_fobj in fileset.get_files():
-                            # We ignore non-laxy+sftp files so we don't unintentionlly
-                            # remove files that reside in non-SFTP storage backends, eg
-                            # object store etc
-                            # (eg, a pipeline might stream files directly from object store,
-                            #  or registers output files output into object store)
-                            if (
-                                old_fobj.location
-                                and urlparse(old_fobj.location).scheme.lower()
-                                != "laxy+sftp"
-                            ):
-                                continue
-                            if old_fobj.full_path not in new_file_pathlist:
-                                fileset.remove(old_fobj, delete=True)
+                if remove_missing:
+                    new_file_pathlist = set([f.full_path for f in file_objs])
+                    for old_fobj in fileset.get_files():
+                        # We ignore non-laxy+sftp files so we don't unintentionlly
+                        # remove files that reside in non-SFTP storage backends, eg
+                        # object store etc
+                        # (eg, a pipeline might stream files directly from object store,
+                        #  or registers output files output into object store)
+                        if (
+                            old_fobj.location
+                            and urlparse(old_fobj.location).scheme.lower()
+                            != "laxy+sftp"
+                        ):
+                            continue
+                        if old_fobj.full_path not in new_file_pathlist:
+                            fileset.remove(old_fobj, delete=True)
 
-                    fileset.add(file_objs)
+                fileset.add(file_objs)
 
-                    fileset.save()
+                fileset.save()
 
                 task_data["result"]["n_files_indexed"] += len(file_objs)
 
