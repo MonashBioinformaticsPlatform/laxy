@@ -938,6 +938,10 @@ class FileLocation(UUIDModel):
             "file",
         )
 
+        # indexes = [
+        #     models.Index(fields=["file", "default"]),
+        # ]
+
     # The URL to the file. Could be file://, https://, s3://, sftp://
     url = ExtendedURIField(max_length=2048, blank=False, null=False)
     file = ForeignKey(
@@ -1013,9 +1017,9 @@ def ensure_one_default_filelocation(
             firstloc.set_as_default()
 
 
-def get_compute_resource_for_location(
+def get_compute_resource_str_for_location(
     location: Union[str, FileLocation]
-) -> Union[ComputeResource, None]:
+) -> Union[str, None]:
 
     location = str(location)
 
@@ -1026,7 +1030,14 @@ def get_compute_resource_for_location(
     if "." in url.netloc:
         return None
     # use netloc not hostname, since hostname forces lowercase
-    compute_id = url.netloc
+    return url.netloc
+
+
+def get_compute_resource_for_location(
+    location: Union[str, FileLocation]
+) -> Union[ComputeResource, None]:
+
+    compute_id = get_compute_resource_str_for_location(location)
     try:
         compute = ComputeResource.objects.get(id=compute_id)
     except ComputeResource.DoesNotExist as e:
@@ -1270,10 +1281,14 @@ class File(Timestamped, UUIDModel):
 
             try:
                 path_on_compute = self._abs_path_on_compute(location=location)
-                _delete_with_retries(compute.sftp_storage, path_on_compute)
+                # if fileloc.file.exists(fileloc):
+                if compute.sftp_storage.exists(path_on_compute):
+                    _delete_with_retries(compute.sftp_storage, path_on_compute)
 
-                if delete_empty_directory:
-                    containing_dir = os.path.normpath(str(Path(path_on_compute).parent))
+                containing_dir = os.path.normpath(str(Path(path_on_compute).parent))
+                if delete_empty_directory and compute.sftp_storage.exists(
+                    containing_dir
+                ):
                     _dirs, _files = compute.sftp_storage.listdir(containing_dir)
                     if (
                         len(_files) == 0
@@ -1666,7 +1681,15 @@ def get_compute_resources_for_files(
     :return: A set of ComputeResource instances, including None.
     :rtype: Set[Union[ComputeResource, None]]
     """
-    return set([get_compute_resource_for_location(f.location) for f in files])
+    if isinstance(files, QuerySet):
+        # files = files.prefetch_related("locations")  # .only("locations")
+        locations = files.filter(locations__default=True).values_list("locations__url")
+        compute_ids = set(
+            [get_compute_resource_str_for_location(l[0]) for l in locations]
+        )
+        return set(ComputeResource.objects.filter(pk__in=compute_ids))
+    else:
+        return set([get_compute_resource_for_location(f.location) for f in files])
 
 
 def get_primary_compute_location_for_files(
@@ -1732,6 +1755,7 @@ class FileSet(Timestamped, UUIDModel):
         # we ensure all Files in the list are unique
         files = unique(files)
 
+        # TODO: Is this transaction slow ? Profile things.
         with transaction.atomic():
             # unsaved Files must be saved before calling self.files.add
             [f.save() for f in files if not f.pk]
@@ -1802,6 +1826,8 @@ class FileSet(Timestamped, UUIDModel):
         :return: The File object in this FileSet (as a Django QuerySet).
         :rtype: django.models.query.QuerySet(File)
         """
+        # TODO: Remove ordering here to optimize, order only where required ?
+        # TODO: select_related or prefetch_related here ?
         return self.files.order_by("path", "name")
 
     def get_files_by_path(self, file_path: Union[str, Path]) -> QuerySet:
