@@ -405,6 +405,12 @@ function run_nextflow() {
         2>${JOB_PATH}/output/nextflow.err
     #">>"${JOB_PATH}/slurm.jids"
 
+    # TODO: Should we have the --trim_nextseq option here by default ?
+    #       (assuming it's mostly benign with non-nextseq/novaseq data ?)
+    #       Fancy (but potentially more fragile) way would be to look at 
+    #       FASTQ headers, infer machine type from instrument ID and apply 
+    #       when required.
+
     # TODO: This sets automatic strandedness guessing for Salmon, but doesn't 
     #       pass any strandedness guess to featureCounts
     #   --salmon_quant_libtype A \
