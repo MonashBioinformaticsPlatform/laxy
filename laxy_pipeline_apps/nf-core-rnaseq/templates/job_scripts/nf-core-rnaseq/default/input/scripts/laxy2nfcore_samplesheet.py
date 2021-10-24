@@ -229,6 +229,6 @@ else:
             if r2_fn:
                 r2_fn = Path(input_reads_path, r2_fn)
 
-    outlines.append(f"{name},{r1_fn},{r2_fn},{strandedness}")
+            outlines.append(f"{name},{r1_fn},{r2_fn},{strandedness}")
 
 print("\n".join(outlines))
