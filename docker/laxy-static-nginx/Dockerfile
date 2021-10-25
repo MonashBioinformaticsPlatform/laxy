@@ -3,7 +3,8 @@
 # It also grabs the Django admin static files from a pre-build laxy:latest image.
 #
 
-FROM node:12 AS frontend_build
+# FROM node:14 AS frontend_build
+FROM node@sha256:e0dd89382d4f7da3b2be5d5fb74c65bfa1836deecae3c5f88919f44b469025f9 AS frontend_build
 ARG LAXY_STATIC_ROOT=/usr/share/nginx/html/backend_static
 ARG GIT_COMMIT=unspecified
 ARG LAXY_FRONTEND_URL=http://localhost:8002
