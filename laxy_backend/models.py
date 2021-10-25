@@ -1108,8 +1108,8 @@ class File(Timestamped, UUIDModel):
             models.Index(fields=["fileset", "path", "name"]),
         ]
 
-        # TODO: Enforce unique path/name within a FileSet ?
-        # unique_together = ('fileset', 'path', 'name')
+        # A fileset must only have one file record with a given path+name
+        unique_together = ("fileset", "path", "name")
 
     class ExtraMeta:
         patchable_fields = ["metadata"]
@@ -1302,7 +1302,6 @@ class File(Timestamped, UUIDModel):
                 logger.info(f"File is missing at {fileloc.url} - marking as deleted.")
 
             except BaseException as ex:
-
                 raise Exception(
                     f"Storage backend issue - failed to delete file: "
                     f"{self.id} at {fileloc.url} (FileLocation {fileloc.id}) :: {ex}"
