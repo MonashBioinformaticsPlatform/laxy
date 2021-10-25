@@ -21,6 +21,8 @@ from paramiko import SSHClient, ssh_exception, RSAKey, AutoAddPolicy
 from django.conf import settings
 from django.db import models, transaction
 from django.db.models.signals import pre_save, post_save, post_delete
+from django.db.models.constraints import UniqueConstraint
+from django.db.models import Q
 from django.dispatch import receiver
 from django.core.handlers.wsgi import WSGIRequest
 from django.core.files.storage import get_storage_class, Storage
@@ -1109,7 +1111,14 @@ class File(Timestamped, UUIDModel):
         ]
 
         # A fileset must only have one file record with a given path+name
-        unique_together = ("fileset", "path", "name")
+        # Files outside a fileset don't need unique path+name
+        constraints = [
+            UniqueConstraint(
+                fields=["fileset", "path", "name"],
+                condition=Q(fileset__isnull=False),
+                name="unique_file",
+            ),
+        ]
 
     class ExtraMeta:
         patchable_fields = ["metadata"]
