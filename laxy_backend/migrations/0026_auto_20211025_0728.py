@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("laxy_backend", "0023_auto_20210708_0545"),
+        ("laxy_backend", "0024_auto_20211025_0357"),
     ]
 
     operations = [
