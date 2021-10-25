@@ -493,11 +493,14 @@ def index_remote_files(self, task_data=None, **kwargs) -> Sequence[Tuple[str, in
             fname = Path(filepath).name
             fpath = Path(prefix_path, filepath).parent
 
-            f, created = fileset.get_files().get_or_create(
-                path=fpath, name=fname, defaults=dict(owner=job.owner),
-            )
-            if not f.location:
+            if fileset:
+                f = fileset.get_file_by_path(Path(fpath, fname))
+
+            if not f:
+                f = File(location=location, owner=job.owner, name=fname, path=fpath)
+            elif not f.location:
                 f.location = location
+
             if not f.owner:
                 f.owner = job.owner
 
@@ -613,7 +616,7 @@ def index_remote_files(self, task_data=None, **kwargs) -> Sequence[Tuple[str, in
 
 
 @shared_task(bind=True)
-def _finalize_job_task_err_handler(uuid, job_id=None):
+def _finalize_job_task_err_handler(uuid, job_id=None, **kwargs):
     logger.info(
         f"_finalize_job_task_err_handler: failed task: {uuid}, job_id: {job_id}"
     )
