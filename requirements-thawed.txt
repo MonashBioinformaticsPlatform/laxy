@@ -99,6 +99,7 @@ celery
 flower
 django-celery-results
 django-celery-beat
+setproctitle
 
 # Postgres packages
 # sudo apt-get install postgresql postgresql-server-dev-all

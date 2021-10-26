@@ -18,6 +18,12 @@ docker-compose -f docker-compose.yml -f docker-compose.local-dev.yml build
 docker-compose --compatibility -f docker-compose.yml -f docker-compose.local-dev.yml up -d
 
 # Wait for services to come online
+# In particular, the frontend can take a few minutes to build upon startup - you can monitor the logs using:
+#
+# docker-compose logs -f dev-frontend-server
+# 
+# docker-compose logs -f django
+
 # Frontend is at: http://localhost:8002
 # Django admin is at: http://localhost:8001/admin
 # Default username/password is: admin/adminpass
