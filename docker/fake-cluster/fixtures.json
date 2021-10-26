@@ -80,5 +80,26 @@
         "": ""
       }
     }
+  },
+  {
+    "model": "laxy_backend.pipeline",
+    "pk": "6Z3FApq8JGcPApMbT3IQH5",
+    "fields": {
+      "created_time": "2021-06-09T11:04:17.973Z",
+      "modified_time": "2021-06-30T01:21:05.910Z",
+      "owner": [
+        "admin"
+      ],
+      "name": "nf-core-rnaseq",
+      "public": true,
+      "metadata": {
+        "versions": [
+          "3.1",
+          "3.2"
+        ],
+        "default_version": "3.2",
+        "short_description": "nf-core/rnaseq"
+      }
+    }
   }
 ]
