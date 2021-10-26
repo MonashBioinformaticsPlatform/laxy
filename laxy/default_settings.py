@@ -325,6 +325,7 @@ if DEBUG:
 # to save clogging up the queue with things that will probably never finish
 _days = 60 * 60 * 24
 CELERY_TASK_SOFT_TIME_LIMIT = 7 * _days
+CELERY_TASK_TRACK_STARTED = True
 
 # Don't prefetch tasks, work on one at a time, only acknowledge task is done when it finishes
 # (successfully or with exception). Tasks must be idempotent in this mode, since if a worker
@@ -334,6 +335,9 @@ CELERY_TASK_SOFT_TIME_LIMIT = 7 * _days
 # https://docs.celeryproject.org/en/latest/userguide/configuration.html#worker-prefetch-multiplier
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 CELERY_TASK_ACKS_LATE = True  # no prefetching at all ! tasks must be idempotent
+# ensures are requeued if the worker dies. tasks must be idempotent
+CELERY_TASK_REJECT_ON_WORKER_LOST = True
+
 
 _prefetch_one = True
 if _prefetch_one:
@@ -342,6 +346,7 @@ if _prefetch_one:
     # and waiting on the worker.
     CELERY_WORKER_PREFETCH_MULTIPLIER = 1
     CELERY_TASK_ACKS_LATE = False  # default
+    CELERY_TASK_REJECT_ON_WORKER_LOST = False  # default
 
 
 # CELERY_TASK_DEFAULT_QUEUE = 'celery'

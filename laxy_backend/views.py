@@ -1757,8 +1757,7 @@ class JobView(JSONPatchMixin, JSONView):
                     result = celery.chain(
                         index_remote_files.s(task_data=task_data),
                         set_job_status.s(),
-                        # move_job_files_to_archive_task will run even
-                        # if estimate_job_tarball_size fails (since optional=True)
+                        # later tasks will run even if estimate_job_tarball_size fails (since optional=True)
                         estimate_job_tarball_size.s(optional=True),
                         bulk_move_job_rsync.s(),
                         # move_job_files_to_archive_task is an alternative that doesn't use rsync

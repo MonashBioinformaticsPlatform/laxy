@@ -425,6 +425,8 @@ def set_job_status(self, task_data=None, **kwargs):
     name="index_remote_files",
     queue="low-priority",
     bind=True,
+    acks_late=True,
+    reject_on_worker_lost=True,
     track_started=True,
     default_retry_delay=60,
     max_retries=3,
@@ -763,7 +765,11 @@ def kill_remote_job(self, task_data=None, **kwargs):
 
 
 @shared_task(
-    queue="low-priority", bind=True, track_started=True,
+    queue="low-priority",
+    bind=True,
+    track_started=True,
+    acks_late=True,
+    reject_on_worker_lost=True,
 )
 def estimate_job_tarball_size(self, task_data=None, optional=False, **kwargs):
     task_result = dict()
@@ -928,7 +934,9 @@ def file_should_be_deleted(ff: File, max_size=200):
     )
 
 
-@shared_task(queue="low-priority", bind=True, track_started=True)
+@shared_task(
+    queue="low-priority", bind=True, track_started=True,
+)
 def expire_old_job(self, task_data=None, **kwargs):
     from ..models import Job, File
 
@@ -1069,6 +1077,8 @@ def expire_old_jobs(self, task_data=None, *kwargs):
 @shared_task(
     bind=True,
     track_started=True,
+    acks_late=True,
+    reject_on_worker_lost=True,
     default_retry_delay=60 * 60,
     max_retries=5,
     # autoretry_for=(IOError, OSError,),
@@ -1216,6 +1226,8 @@ def move_job_files_to_archive_task(self, task_data=None, *kwargs):
     queue="low-priority",
     bind=True,
     track_started=True,
+    acks_late=True,
+    reject_on_worker_lost=True,
     default_retry_delay=60 * 60,
     max_retries=5,
     # autoretry_for=(IOError, OSError,),
