@@ -179,8 +179,14 @@ def get_filelist_from_filesystem(path, strandedness="guess") -> Sequence[str]:
                 name = get_name_for_readfile(f)
                 f_path = Path(root, f)
                 pair_name = get_expected_pair_filename(f)
-                pair_path = Path(root, pair_name)
-                if pair_path.exists() and not is_R1(pair_name):
+                pair_path = None
+                if pair_name is not None:
+                    pair_path = Path(root, pair_name)
+                if (
+                    pair_path is not None
+                    and pair_path.exists()
+                    and not is_R1(pair_name)
+                ):
                     sheetlines.append(
                         f"{name},{str(f_path)},{str(pair_path)},{strandedness}"
                     )
