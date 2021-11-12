@@ -26,7 +26,7 @@ extensions = [
     ".fa",
 ]
 
-archive_extensions = [".tar.gz", ".tar"]
+archive_extensions = [".tar.gz", ".tar", ".zip"]
 
 
 def is_valid_reads_extension(fn) -> bool:
@@ -172,19 +172,22 @@ def get_filelist_from_filesystem(path, strandedness="guess") -> Sequence[str]:
     samplesheet lines of pairs.
     """
     sheetlines = []
+    seen_pairs = []
     for root, _d, fs in os.walk(path, followlinks=True):
         for f in fs:
-            if is_valid_reads_extension(f) and is_R1(f):
+            if is_valid_reads_extension(f) and f not in seen_pairs:
                 name = get_name_for_readfile(f)
-                r1_path = Path(root, f)
-                r2_fn = get_expected_pair_filename(f)
-                r2_path = Path(root, r2_fn)
-                if r2_path.exists():
+                f_path = Path(root, f)
+                pair_name = get_expected_pair_filename(f)
+                pair_path = Path(root, pair_name)
+                if pair_path.exists() and not is_R1(pair_name):
                     sheetlines.append(
-                        f"{name},{str(r1_path)},{str(r2_path)},{strandedness}"
+                        f"{name},{str(f_path)},{str(pair_path)},{strandedness}"
                     )
+                    seen_pairs.extend([f_path, pair_path])
                 else:
-                    sheetlines.append(f"{name},{str(r1_path)},,{strandedness}")
+                    sheetlines.append(f"{name},{str(f_path)},,{strandedness}")
+                    seen_pairs.extend([f_path])
 
     return sheetlines
 
@@ -209,7 +212,10 @@ for sample in jblob["sample_cart"].get("samples", []):
         break
     for f in sample["files"]:
         r1_fn = f.get("R1", {}).get("sanitized_filename", "")
-        if any([r1_fn.endswith(ext) for ext in archive_extensions]):
+        tags = f.get("R1", {}).get("tags", [])
+        if "archive" in tags or any(
+            [r1_fn.endswith(ext) for ext in archive_extensions]
+        ):
             is_archive = True
             break
 
