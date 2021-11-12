@@ -8,7 +8,10 @@
 
     <md-layout md-column>
       <md-layout v-if="showAboutBox">
-        <md-whiteframe md-elevation="5" style="padding: 16px; min-height: 100%; width: 100%;">
+        <md-whiteframe
+          md-elevation="5"
+          style="padding: 16px; min-height: 100%; width: 100%;"
+        >
           <slot name="about">
             <RemoteFileSelectAboutBox></RemoteFileSelectAboutBox>
           </slot>
@@ -21,9 +24,10 @@
               URL
               <span>
                 <md-icon style="font-size: 16px;">info</md-icon>
-                <md-tooltip
-                  md-direction="right"
-                >A page with links to your files, or a direct link to a TAR file.</md-tooltip>
+                <md-tooltip md-direction="right"
+                  >A page with links to your files, or a direct link to a .tar
+                  or .zip file.</md-tooltip
+                >
               </span>
             </label>
             <md-input v-model="url" :placeholder="placeholder"></md-input>
@@ -74,11 +78,18 @@
         @click="addToCart"
         :disabled="submitting || selectedFiles.length === 0"
         class="md-raised"
-      >{{ addButtonLabel }}</md-button>
+        >{{ addButtonLabel }}</md-button
+      >
     </md-layout>
-    <md-snackbar md-position="bottom center" ref="snackbar" :md-duration="snackbar_duration">
+    <md-snackbar
+      md-position="bottom center"
+      ref="snackbar"
+      :md-duration="snackbar_duration"
+    >
       <span>{{ snackbar_message }}</span>
-      <md-button class="md-accent" @click="$refs.snackbar.close()">Dismiss</md-button>
+      <md-button class="md-accent" @click="$refs.snackbar.close()"
+        >Dismiss</md-button
+      >
     </md-snackbar>
   </div>
 </template>
@@ -100,7 +111,7 @@ import {
   Model,
   Prop,
   Provide,
-  Watch,
+  Watch
 } from "vue-property-decorator";
 
 import VueMarkdown from "vue-markdown";
@@ -122,7 +133,7 @@ import {
   is_archive_url,
   objListToTree,
   simplifyFastqName,
-  TreeNode,
+  TreeNode
 } from "../../file-tree-util";
 import { Snackbar } from "../../snackbar";
 
@@ -138,15 +149,15 @@ interface DbAccession {
     RemoteFileSelectAboutBox,
     VueMarkdown,
     FileList,
-    NestedFileList,
+    NestedFileList
   },
   props: {},
-  filters: {},
+  filters: {}
 })
 export default class RemoteFileSelect extends Vue {
   @Prop({
     default: "https://example.com/my-files/page-of-links/",
-    type: String,
+    type: String
   })
   public placeholder: string;
 
@@ -300,7 +311,7 @@ export default class RemoteFileSelect extends Vue {
         location: parentDir,
         name: "..",
         type: "directory",
-        tags: [],
+        tags: []
       } as FileListItem);
     }
     for (let f of data["listing"]) {

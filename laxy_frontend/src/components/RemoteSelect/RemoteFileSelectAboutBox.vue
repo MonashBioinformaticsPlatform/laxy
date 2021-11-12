@@ -4,7 +4,7 @@
     **Importing via a URL**
     ```
     ```
-    Provide a URL to a page where your data can be downloaded. This could be a web page containing links to your files, or a URL to a `.tar` format file.
+    Provide a URL to a page where your data can be downloaded. This could be a web page containing links to your files, or a URL to a `.tar` or `.zip` format file.
     Valid schemes are `http://`, `https://` or `ftp://`.
     ```
     ```
