@@ -155,6 +155,7 @@ def add_commandline_args(parser: argparse.ArgumentParser) -> argparse.ArgumentPa
         "generated are sanitized. If sanitized_filename fields are provided in "
         "pipeline_config.json, they are always used irrespective of this flag.",
         action="store_false",
+        dest="sanitize_filenames",
     )
 
     url_to_cachekey_parser = subparsers.add_parser(
