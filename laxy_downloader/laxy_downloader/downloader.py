@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-from _typeshed import NoneType
 import cgi
 import json
 import ssl
@@ -722,9 +721,7 @@ def unzip(cached, target_dir, extract_files: Union[List[str], None] = None):
 
 
 def recursively_sanitize_filenames(
-    rootpath: Union[str, Path],
-    fix_root=True,
-    sanitizer: Union[NoneType, Callable] = None,
+    rootpath: Union[str, Path], fix_root=True, sanitizer: Union[None, Callable] = None,
 ) -> List[Tuple[str, str]]:
     """[summary]
     Recursively renames files and directories to remove spaces.
