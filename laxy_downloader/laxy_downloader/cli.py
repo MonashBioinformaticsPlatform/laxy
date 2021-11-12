@@ -147,14 +147,14 @@ def add_commandline_args(parser: argparse.ArgumentParser) -> argparse.ArgumentPa
         action="store_true",
     )
     dl_parser.add_argument(
-        "--sanitize-filenames",
-        help="Sanitize output filenames (eg remove spaces and cruft). "
-        "Otherwise a best effort is made to use the 'real' filename "
-        "based on the Content-Disposition headers or URL. If sanitized_filename "
-        "fields are provided in pipeline_config.json, they are always used "
-        "irrespective of this flag. If a tar or zip file is transparently expanded, "
-        "all files and directories generated are sanitized.",
-        action="store_true",
+        "--dont-sanitize-filenames",
+        help="Don't sanitize output filenames. Otherwise laxydl will try to remove "
+        "spaces and cruft by default. Without this flag, a best effort is made to "
+        "use the 'real' filename based on the Content-Disposition headers or URL. "
+        "If a tar or zip file is transparently expanded, all files and directories "
+        "generated are sanitized. If sanitized_filename fields are provided in "
+        "pipeline_config.json, they are always used irrespective of this flag.",
+        action="store_false",
     )
 
     url_to_cachekey_parser = subparsers.add_parser(
