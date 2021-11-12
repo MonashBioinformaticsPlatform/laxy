@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import subprocess
 from typing import Sequence, Union
 
 import sys
@@ -198,6 +199,29 @@ def get_filelist_from_filesystem(path, strandedness="guess") -> Sequence[str]:
     return sheetlines
 
 
+def gzip_uncompressed(path):
+    """[summary]
+    nf-core/rnaseq only takes gzipped read. Recursively walk path and
+    if we find any uncompressed fastqs, compress them before proceeding.
+
+    Args:
+        path ([type]): Path to recursively search for uncompressed fastqs.
+
+    Returns:
+        List[Tuple[str, str]]: List of tuples of original fastq paths and
+                               new gzipped fastq paths.
+    """
+    gzipped_files = []
+    for root, _d, fs in os.walk(path, followlinks=True):
+        for f in fs:
+            if f.endswith(".fastq") or f.endswith(".fq"):
+                f_path = str(Path(root, f))
+                subprocess.run(["gzip", f_path])
+                gzipped_files.append((f_path, f"{f_path}.gz"))
+
+    return gzipped_files
+
+
 infn = sys.argv[1]
 input_reads_path = sys.argv[2]
 strandedness = sys.argv[3]
@@ -226,6 +250,7 @@ for sample in jblob["sample_cart"].get("samples", []):
             break
 
 if is_archive:
+    gzip_uncompressed(input_reads_path)
     sheetlines = get_filelist_from_filesystem(
         input_reads_path, strandedness=strandedness
     )
