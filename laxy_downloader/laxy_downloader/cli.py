@@ -27,6 +27,7 @@ from .downloader import (
     is_zipfile,
     untar,
     unzip,
+    recursively_sanitize_filenames,
     find_filename_and_size_from_url,
     url_to_cache_key,
     get_url_cached_path,
@@ -151,7 +152,8 @@ def add_commandline_args(parser: argparse.ArgumentParser) -> argparse.ArgumentPa
         "Otherwise a best effort is made to use the 'real' filename "
         "based on the Content-Disposition headers or URL. If sanitized_filename "
         "fields are provided in pipeline_config.json, they are always used "
-        "irrespective of this flag.",
+        "irrespective of this flag. If a tar or zip file is transparently expanded, "
+        "all files and directories generated are sanitized.",
         action="store_true",
     )
 
@@ -384,9 +386,13 @@ def _run_download_cli(args, rpc_secret=None):
                 elif is_tarfile(cached) and args.unpack:
                     logger.info(f"Untarring {cached} ({url})")
                     untar(cached, args.destination_path)
+                    if sanitize_names:
+                        recursively_sanitize_filenames(args.destination_path)
                 elif is_zipfile(cached) and args.unpack:
                     logger.info(f"Unzipping {cached} ({url})")
                     unzip(cached, args.destination_path)
+                    if sanitize_names:
+                        recursively_sanitize_filenames(args.destination_path)
                 elif args.copy_from_cache:
                     logger.info(
                         f"Copying {cached} -> "

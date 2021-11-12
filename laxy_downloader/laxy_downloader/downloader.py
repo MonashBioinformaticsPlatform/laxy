@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from _typeshed import NoneType
 import cgi
 import json
 import ssl
@@ -7,7 +8,7 @@ from contextlib import closing
 from urllib.parse import urlparse, urlsplit, urlunsplit, unquote
 from pathlib import Path
 import shutil
-from typing import Dict, Iterable, List, Sequence, Union, Mapping, Set
+from typing import Dict, Iterable, List, Sequence, Tuple, Union, Mapping, Set, Callable
 import logging
 import sys
 import os
@@ -718,6 +719,43 @@ def unzip(cached, target_dir, extract_files: Union[List[str], None] = None):
         raise ValueError(f"{cached} is not a zip file")
 
     return result
+
+
+def recursively_sanitize_filenames(
+    rootpath: Union[str, Path],
+    fix_root=True,
+    sanitizer: Union[NoneType, Callable] = None,
+) -> List[Tuple[str, str]]:
+    """[summary]
+    Recursively renames files and directories to remove spaces.
+
+    Args:
+        rootpath (Union[str, Path]): Path to recursively fix.
+        fix_root (bool): Also fix the rootpath name (defaults to True).
+        sanitizer (Callable): (Optional) A function that takes a string and returns a sanitized version.
+                              Defaults to :func:`sanitize_filename`.
+
+    Returns:
+        List[Tuple[str, str]]: A list of tuples containing the old and new path names.
+    """
+    if sanitizer is None:
+        sanitizer = sanitize_filename
+
+    changes = []
+    for root, dirs, files in reversed(list(os.walk(rootpath))):
+        entries = files + dirs
+        for e in entries:
+            oldpath = Path(root, e)
+            newpath = Path(root, sanitizer(e))
+            os.rename(oldpath, newpath)
+            changes.append((str(oldpath), str(newpath)))
+
+    if fix_root:
+        newpath = Path(rootpath).parent / sanitizer(Path(rootpath).name)
+        os.rename(rootpath, newpath)
+        changes.append((str(rootpath), str(newpath)))
+
+    return changes
 
 
 def is_tar_url_with_fragment(url: str, extensions: Union[List[str], None] = None):
