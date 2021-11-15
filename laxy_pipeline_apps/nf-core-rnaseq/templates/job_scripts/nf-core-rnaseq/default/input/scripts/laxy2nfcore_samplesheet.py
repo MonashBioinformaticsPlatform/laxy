@@ -173,28 +173,37 @@ def get_filelist_from_filesystem(path, strandedness="guess") -> Sequence[str]:
     samplesheet lines of pairs.
     """
     sheetlines = []
-    seen_pairs = []
+    seen_pairs = set()
     for root, _d, fs in os.walk(path, followlinks=True):
         for f in fs:
-            if is_valid_reads_extension(f) and f not in seen_pairs:
+            if is_valid_reads_extension(f):
                 name = get_name_for_readfile(f)
                 f_path = Path(root, f)
                 pair_name = get_expected_pair_filename(f)
+
                 pair_path = None
                 if pair_name is not None:
                     pair_path = Path(root, pair_name)
-                if (
-                    pair_path is not None
-                    and pair_path.exists()
-                    and not is_R1(pair_name)
-                ):
-                    sheetlines.append(
-                        f"{name},{str(f_path)},{str(pair_path)},{strandedness}"
-                    )
-                    seen_pairs.extend([f_path, pair_path])
+
+                if f_path in seen_pairs or pair_path in seen_pairs:
+                    continue
+
+                seen_pairs.add(f_path)
+                if pair_path:
+                    seen_pairs.add(pair_path)
+
+                if pair_path is not None and pair_path.exists():
+                    if is_R1(str(f_path)):
+                        sheetlines.append(
+                            f"{name},{str(f_path)},{str(pair_path)},{strandedness}"
+                        )
+                    else:
+                        sheetlines.append(
+                            f"{name},{str(pair_path)},{str(f_path)},{strandedness}"
+                        )
+
                 else:
                     sheetlines.append(f"{name},{str(f_path)},,{strandedness}")
-                    seen_pairs.extend([f_path])
 
     return sheetlines
 
