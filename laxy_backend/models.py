@@ -807,6 +807,17 @@ class Job(Expires, Timestamped, UUIDModel):
         output/sample2/alignments/sample2.bai	md5:e57ea180602b69ab03605dad86166fa7	bai,jbrowse	{}
         ```
 
+        ..or a version with a location column ..
+
+        ```tsv
+        location    filepath	checksum	type_tags	metadata
+        laxy+sftp://BlA4F00/Vl4F1U/input/some_dir/table.txt input/some_dir/table.txt	md5:7d9960c77b363e2c2f41b77733cf57d4	text,csv,google-sheets	{}
+        laxy+sftp://BlA4F00/Vl4F1U/input/some_dir/sample1_R2.fastq.gz   input/some_dir/sample1_R2.fastq.gz	md5:d0cfb796d371b0182cd39d589b1c1ce3	fastq	{}
+        laxy+sftp://BlA4F00/Vl4F1U/input/some_dir/sample2_R2.fastq.gz   input/some_dir/sample2_R2.fastq.gz	md5:a97e04b6d1a0be20fcd77ba164b1206f	fastq	{}
+        laxy+sftp://BlA4F00/Vl4F1U/output/sample2/alignments/sample2.bam    output/sample2/alignments/sample2.bam	md5:7c9f22c433ae679f0d82b12b9a71f5d3	bam,alignment,bam.sorted,jbrowse	{}
+        laxy+sftp://BlA4F00/Vl4F1U/output/sample2/alignments/sample2.bai    output/sample2/alignments/sample2.bai	md5:e57ea180602b69ab03605dad86166fa7	bai,jbrowse	{}
+        ```
+
         :param tsv_table:
         :type tsv_table:
         :param save:
