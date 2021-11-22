@@ -17,6 +17,7 @@ from django.contrib.humanize.templatetags import humanize
 from django.template.defaultfilters import truncatechars
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
+from django.utils import timezone
 from reversion.admin import VersionAdmin
 
 from django_object_actions import DjangoObjectActions, takes_instance_or_queryset
@@ -340,7 +341,7 @@ class JobAdmin(Timestamped, VersionAdmin):
         failed = []
         for obj in queryset:
             task_data = dict(job_id=obj.id, ttl=0)
-            obj.expiry_time = datetime.now() - timedelta(seconds=5)
+            obj.expiry_time = timezone.now() - timedelta(seconds=5)
             obj.save()
             result = job_tasks.expire_old_job.apply_async(args=(task_data,))
             if result.failed():

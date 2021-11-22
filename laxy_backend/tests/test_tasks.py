@@ -3,6 +3,7 @@ import tempfile
 from pathlib import Path
 
 from datetime import datetime
+from django.utils import timezone
 
 import unittest
 from django.test import TestCase
@@ -78,7 +79,7 @@ class TasksTest(TestCase):
             exit_code=None,
             params={},
             compute_resource=self.compute,
-            completed_time=datetime.now(),
+            completed_time=timezone.now(),
         )
         self.job_one.save()
 
@@ -248,7 +249,7 @@ class TasksTest(TestCase):
             exit_code=0,
             params={},
             compute_resource=orig_compute,
-            completed_time=datetime.now(),
+            completed_time=timezone.now(),
         )
         job.save()
 

@@ -1,6 +1,7 @@
 # from __future__ import absolute_import
 from collections import OrderedDict
 from datetime import datetime
+from django.utils import timezone
 
 import unittest
 import os
@@ -423,7 +424,7 @@ class JobModelTest(TestCase):
             exit_code=0,
             params={},
             compute_resource=self.compute,
-            completed_time=datetime.now(),
+            completed_time=timezone.now(),
         )
 
     def tearDown(self):

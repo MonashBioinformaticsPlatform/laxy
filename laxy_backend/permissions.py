@@ -1,4 +1,4 @@
-from datetime import datetime
+from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from rest_framework import permissions
@@ -33,7 +33,7 @@ def token_is_valid(token: str, obj_id: str):
             # content_type__in=self.valid_content_types,
             object_id=obj_id,
         )
-        .filter(Q(expiry_time__gt=datetime.now()) | Q(expiry_time=None))
+        .filter(Q(expiry_time__gt=timezone.now()) | Q(expiry_time=None))
         .exists()
     )
 

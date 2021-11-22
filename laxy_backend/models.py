@@ -19,6 +19,7 @@ import paramiko
 from paramiko import SSHClient, ssh_exception, RSAKey, AutoAddPolicy
 
 from django.conf import settings
+from django.utils import timezone
 from django.db import models, transaction
 from django.db.models.signals import pre_save, post_save, post_delete
 from django.db.models.constraints import UniqueConstraint
@@ -153,7 +154,7 @@ class Timestamped(Model):
 
 def _job_expiry_datetime():
     job_ttl = getattr(settings, "JOB_EXPIRY_TTL_DEFAULT", 30 * 24 * 60 * 60)
-    return datetime.now() + timedelta(seconds=job_ttl)
+    return timezone.now() + timedelta(seconds=job_ttl)
 
 
 class Expires(Model):
@@ -900,7 +901,7 @@ def update_job_completed_time(sender, instance, raw, using, update_fields, **kwa
         pass
     else:
         if instance.done and not obj.done and not obj.completed_time:
-            instance.completed_time = datetime.now()
+            instance.completed_time = timezone.now()
 
 
 @receiver(pre_save, sender=Job)
@@ -1271,7 +1272,7 @@ class File(Timestamped, UUIDModel):
             """
             fileloc.delete()
             if self.locations.count() == 0:
-                self.deleted_time = datetime.now()
+                self.deleted_time = timezone.now()
                 self.save()
             # Ensure there is always a default.
             else:
@@ -1789,10 +1790,10 @@ class FileSet(Timestamped, UUIDModel):
             # each file, including pre_save/post_save hooks.
             self.files.add(*files, bulk=False)
 
-            self.modified_time = datetime.now()
+            self.modified_time = timezone.now()
 
             for job in self.jobs():
-                job.modified_time = datetime.now()
+                job.modified_time = timezone.now()
                 job.save()
 
             if save:
@@ -1829,10 +1830,10 @@ class FileSet(Timestamped, UUIDModel):
             if delete:
                 [f.delete() for f in files]
 
-            self.modified_time = datetime.now()
+            self.modified_time = timezone.now()
 
             for job in self.jobs():
-                job.modified_time = datetime.now()
+                job.modified_time = timezone.now()
                 job.save()
 
             if save:
@@ -2179,7 +2180,7 @@ class AccessToken(Timestamped, UUIDModel):
     obj = GenericForeignKey("content_type", "object_id")
 
     def is_valid(self, target_obj: Union[UUIDModel, str] = None):
-        if self.expiry_time is not None and (datetime.now() < self.expiry_time):
+        if self.expiry_time is not None and (timezone.now() < self.expiry_time):
             return False
 
         if isinstance(target_obj, str):

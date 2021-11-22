@@ -3,6 +3,7 @@ import shlex
 import traceback
 from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
+from django.utils import timezone
 from typing import Dict, Mapping, Sequence, Union, Iterable, List, Tuple
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -391,7 +392,7 @@ def get_job_expiry_for_status(status: str) -> datetime:
     else:
         ttl = getattr(settings, "JOB_EXPIRY_TTL_DEFAULT", 30 * 24 * _hours)
 
-    expiry_time = datetime.now() + timedelta(seconds=ttl)
+    expiry_time = timezone.now() + timedelta(seconds=ttl)
     return expiry_time
 
 
@@ -975,7 +976,7 @@ def expire_old_job(self, task_data=None, **kwargs):
     # Use modified_time instead ?
     old_files = (
         job.get_files()
-        .filter(created_time__lt=datetime.now() - timedelta(seconds=ttl))
+        .filter(created_time__lt=timezone.now() - timedelta(seconds=ttl))
         .all()
     )
     message = "No message."
@@ -1007,7 +1008,7 @@ def expire_old_job(self, task_data=None, **kwargs):
                     logger.info(
                         f"File {f.id} doesn't exist on backend storage and no locations remain - marking as expired"
                     )
-                    f.deleted_time = datetime.now()
+                    f.deleted_time = timezone.now()
                     f.save()
                 else:
                     logger.info(
@@ -1064,7 +1065,7 @@ def expire_old_job(self, task_data=None, **kwargs):
 @shared_task(bind=True, track_started=True)
 def expire_old_jobs(self, task_data=None, *kwargs):
     expiring_jobs = (
-        Job.objects.filter(expired=False, expiry_time__lte=datetime.now())
+        Job.objects.filter(expired=False, expiry_time__lte=timezone.now())
         .exclude(expiry_time__isnull=True)
         .exclude(status=Job.STATUS_RUNNING)
         .order_by("-expiry_time")

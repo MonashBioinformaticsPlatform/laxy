@@ -9,6 +9,7 @@ import backoff
 import coreapi
 import coreschema
 from django.utils.decorators import method_decorator
+from django.utils import timezone
 from django.views.decorators.cache import cache_page
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
@@ -212,7 +213,7 @@ class PingView(APIView):
         env = getattr(settings, "ENV", "unspecified")
         status = None
         try:
-            now = datetime.now()
+            now = timezone.now()
             status = (
                 SystemStatus.objects.filter(
                     (Q(active=True) & Q(start_time__lte=now) & Q(end_time__gte=now))
@@ -1256,14 +1257,14 @@ class SampleCartCreateUpdate(JSONView):
         """
 
         if not obj.name:
-            obj.name = "Sample set created on %s" % datetime.isoformat(datetime.now())
+            obj.name = "Sample set created on %s" % datetime.isoformat(timezone.now())
 
         content_type = get_content_type(request)
         encoding = "utf-8"
 
         if content_type == "multipart/form-data":
             if not obj.name:
-                obj.name = "CSV uploaded on %s" % datetime.isoformat(datetime.now())
+                obj.name = "CSV uploaded on %s" % datetime.isoformat(timezone.now())
             fh = request.data.get("file", None)
             csv_table = fh.read().decode(encoding)
             obj.from_csv(csv_table)
@@ -1274,7 +1275,7 @@ class SampleCartCreateUpdate(JSONView):
 
         elif content_type == "text/csv":
             if not obj.name:
-                obj.name = "CSV uploaded on %s" % datetime.isoformat(datetime.now())
+                obj.name = "CSV uploaded on %s" % datetime.isoformat(timezone.now())
             csv_table = request.data
             obj.from_csv(csv_table)
 
@@ -2390,7 +2391,7 @@ class AccessTokenListView(generics.ListAPIView):
         active = self.request.query_params.get("active", None)
         # qs = qs.filter(created_by=self.request.user)  # handled by permission_classes
         if active:
-            qs = qs.filter(Q(expiry_time__gt=datetime.now()) | Q(expiry_time=None))
+            qs = qs.filter(Q(expiry_time__gt=timezone.now()) | Q(expiry_time=None))
 
         return qs.order_by("-expiry_time")
 
