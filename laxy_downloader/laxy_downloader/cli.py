@@ -87,7 +87,7 @@ def add_commandline_args(parser: argparse.ArgumentParser) -> argparse.ArgumentPa
         help="When using --pipeline-config, only download files tagged with all these type_tags "
         "('--type-tag=tag_one,tag_two' means must have both tag_one _and_ tag_two). ",
         type=_split_comma_sep_args,
-        default=None,
+        default=[],
     )
     dl_parser.add_argument(
         "--unpack",
