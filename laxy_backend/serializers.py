@@ -237,22 +237,21 @@ class FileBulkRegisterSerializer(FileSerializer):
         fields = ("name", "path", "location", "checksum", "type_tags", "metadata")
 
     def to_internal_value(self, data):
-        row = data
-        if isinstance(row.get("type_tags", ""), str):
-            row["type_tags"] = row["type_tags"].replace(" ", "").split(",")
-        if "filepath" in row:
-            row["name"] = Path(row["filepath"]).name
-            row["path"] = str(Path(row["filepath"]).parent)
-            del row["filepath"]
+        if isinstance(data.get("type_tags", ""), str):
+            data["type_tags"] = data["type_tags"].replace(" ", "").split(",")
+        if "filepath" in data:
+            data["name"] = Path(data["filepath"]).name
+            data["path"] = str(Path(data["filepath"]).parent)
+            del data["filepath"]
 
         # Trim any whitespace from ends of values
         for field in self.Meta.fields:
-            if field in row and isinstance(row[field], str):
-                row[field] = row[field].strip()
-            if field in row and isinstance(row[field], list):
-                row[field] = [item.strip() for item in row[field]]
+            if field in data and isinstance(data[field], str):
+                data[field] = data[field].strip()
+            if field in data and isinstance(data[field], list):
+                data[field] = [item.strip() for item in data[field]]
 
-        return row
+        return data
 
     # Only add type_tags, don't replace list
     # def update(self, instance: File, validated_data):
