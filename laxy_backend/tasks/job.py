@@ -431,8 +431,8 @@ def set_job_status(self, task_data=None, **kwargs):
     default_retry_delay=60,
     max_retries=3,
 )
-def index_remote_files(self, task_data=None, **kwargs) -> Sequence[Tuple[str, int]]:
-    def _remote_list_files(path="."):
+def index_remote_files(self, task_data=None, **kwargs) -> dict:
+    def _remote_list_files(path=".") -> Sequence[Tuple[str, int]]:
         """
         Recursively list files relative to the specified path,
         returning a list of tuples [(relpath, size)].
