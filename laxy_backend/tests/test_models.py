@@ -11,6 +11,7 @@ import random
 import json
 import tempfile
 from pathlib import Path
+from django.template.defaultfilters import default
 
 import jwt
 
@@ -23,7 +24,7 @@ from rest_framework.test import APIClient
 from laxy_backend import models
 from ..util import ordereddicts_to_dicts, laxy_sftp_url
 from ..util import reverse_querystring
-from ..models import Job, File, FileSet, SampleCart, ComputeResource
+from ..models import FileLocation, Job, File, FileSet, SampleCart, ComputeResource
 from ..jwt_helpers import (
     get_jwt_user_header_dict,
     make_jwt_header_dict,
@@ -132,6 +133,56 @@ class FileModelTest(TestCase):
         a_file.locations.filter(url=url).first().set_as_default(save=True)
         self.assertTrue(a_file.locations.filter(url=url).first().default)
         self.assertFalse(a_file.locations.filter(url=new_url).first().default)
+
+    def test_add_delete_file_location(self):
+        first_url = "laxy+sftp://1st_compute_id/some_job_id/filepath/file.txt"
+        file_obj = File(location=first_url, owner_id=self.user.id)
+        file_obj.save()
+
+        second_url = "laxy+sftp://2nd_compute_id/some_job_id/filepath/file.txt"
+        file_obj.add_location(second_url)
+
+        # original url still the default
+        self.assertEqual(first_url, file_obj.location)
+        # both urls are in the locations list
+        self.assertSetEqual(
+            {first_url, second_url}, {loc.url for loc in file_obj.locations.all()}
+        )
+
+        third_url = "laxy+sftp://3rd_compute_id/some_job_id/filepath/file.txt"
+        file_obj.add_location(third_url, set_as_default=True)
+        # new url becomes the default
+        self.assertEqual(third_url, file_obj.location)
+
+        file_obj.remove_location(second_url)
+        # check url has been removed from locations list
+        self.assertSetEqual(
+            {first_url, third_url}, {loc.url for loc in file_obj.locations.all()}
+        )
+        # check the default location hasn't changed
+        self.assertEqual(third_url, file_obj.location)
+
+        file_obj.remove_location(third_url)
+        # check we couldn't remove the default location without protect_default=True
+        self.assertIn(third_url, file_obj.locations.values_list("url", flat=True))
+
+        file_obj.remove_location(third_url, protect_default=False)
+        # check one of the urls is now the one and only default
+        self.assertTrue(file_obj.locations.filter(default=True).count() == 1)
+        # check the remaining url has automatically been set as default
+        self.assertEqual(file_obj.location, first_url)
+
+        fourth_url = "laxy+sftp://4th_compute_id/some_job_id/filepath/file.txt"
+        file_obj.add_location(FileLocation(url=fourth_url, file=file_obj,))
+        # check we can add a location via FileLocation instance
+        self.assertIn(fourth_url, file_obj.locations.values_list("url", flat=True))
+
+        different_file_obj = File(location=first_url, owner_id=self.user.id)
+        different_file_obj.save()
+        different_file_loc = FileLocation(url=fourth_url, file=different_file_obj,)
+        # check that we cannot add a FileLocation pointing to a different File
+        with self.assertRaises(ValueError) as _cxt:
+            file_obj.add_location(different_file_loc)
 
     def test_file_explicit_name_overrides_inferred_name_from_location(self):
         url = "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR950/SRR950078/SRR950078_2.fastq.gz"

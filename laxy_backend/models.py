@@ -14,6 +14,7 @@ from uuid import uuid4
 from io import StringIO, BytesIO, BufferedRandom
 
 import backoff
+from django.db.utils import IntegrityError
 import rows
 import paramiko
 from paramiko import SSHClient, ssh_exception, RSAKey, AutoAddPolicy
@@ -1221,6 +1222,63 @@ class File(Timestamped, UUIDModel):
                 self.name = str(Path(urlparse(url).path).name)
             if not self.path:
                 self.path = str(Path(urlparse(url).path).parent)
+
+    def add_location(self, loc: Union[str, FileLocation], set_as_default=False):
+        """[summary]
+        Add a location for this File (by string or existing FileLocation record).
+
+        Args:
+            loc (Union[str, FileLocation]): The location to add to this File.
+            set_as_default (bool, optional): Make the new location the default. Defaults to False.
+        """
+
+        if isinstance(loc, FileLocation) and loc.file != self:
+            raise ValueError(
+                f"Cannot add a FileLocation instance that does not point to this File ({self.id})"
+            )
+
+        if isinstance(loc, str):
+            loc = FileLocation(url=loc, file=self)
+
+        try:
+            if set_as_default:
+                # we clear _dirty_location to ensure any existing unsaved location
+                # on the file object doesn't clobber the default we are setting here
+                self._dirty_location = None
+                loc.set_as_default(save=True)
+            else:
+                loc.save()
+        except (ValidationError, IntegrityError) as ex:
+            if self.locations.filter(url=loc.url).exists():
+                logger.warning(
+                    f"Not creating duplicate location {loc.url} (File: {self.id})"
+                )
+            else:
+                raise ex
+
+    def remove_location(self, loc: Union[str, FileLocation], protect_default=True):
+        """[summary]
+        Remove a location for this File (by string or existing FileLocation record).
+
+        Args:
+            loc (Union[str, FileLocation]): The location to remove from this File.
+            protect_default (bool, optional): If True, don't allow removing the default location. Defaults to True.
+        """
+        if isinstance(loc, str):
+            loc = self.locations.filter(url=loc).first()
+
+        if loc.default and protect_default:
+            logger.warning(
+                "Not removing default file location {loc.id} since protect_default=True"
+            )
+            return
+
+        with transaction.atomic():
+            loc.delete()
+            if self.locations.filter(default=True).count() == 0:
+                some_loc = self.locations.first()
+                if some_loc:
+                    some_loc.set_as_default(save=True)
 
     def delete_at_location(
         self,

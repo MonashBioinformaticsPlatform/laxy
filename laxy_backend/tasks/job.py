@@ -471,12 +471,17 @@ def index_remote_files(self, task_data=None, **kwargs) -> dict:
     #     return None
 
     def _create_update_file_objects(
-        filelisting: List[Tuple], fileset=None, prefix_path="", location_base=""
+        filelisting: List[Tuple],
+        fileset=None,
+        prefix_path="",
+        location_base="",
+        set_as_default=True,
     ) -> Sequence[File]:
         """
-        Returns a list of (unsaved) File objects give a list of relative paths
-        and file sizes. If a file of the same path exists in the FileSet,
-        update the file object location (if unset) rather than create a new one.
+        Returns a list of (unsaved) File objects given a list of relative paths
+        and file sizes. If a FileSet is provided and contains file of the same 
+        path+name then add/update the File's location, otherwise create a
+        new File object.
 
         :param fileset:
         :type fileset:
@@ -486,6 +491,8 @@ def index_remote_files(self, task_data=None, **kwargs) -> dict:
         :type filelisting: List[str]
         :param location_base: Prefix of location URL (eg sftp://127.0.0.1/XxX/)
         :type location_base: str
+        :param set_as_default: Set the new location as the default for any existing File
+        :type set_as_default: bool
         :return: A list of File objects
         :rtype: Sequence[File]
         """
@@ -496,13 +503,14 @@ def index_remote_files(self, task_data=None, **kwargs) -> dict:
             fname = Path(filepath).name
             fpath = Path(prefix_path, filepath).parent
 
+            f = None
             if fileset:
                 f = fileset.get_file_by_path(Path(fpath, fname))
 
             if not f:
                 f = File(location=location, owner=job.owner, name=fname, path=fpath)
-            elif not f.location:
-                f.location = location
+            else:
+                f.add_location(location, set_as_default=set_as_default)
 
             if not f.owner:
                 f.owner = job.owner
@@ -521,8 +529,10 @@ def index_remote_files(self, task_data=None, **kwargs) -> dict:
 
     job_id = task_data.get("job_id")
     job = Job.objects.get(id=job_id)
+    compute_resource_id = task_data.get("compute_resource_id", None)
     clobber = task_data.get("clobber", False)
     remove_missing = task_data.get("remove_missing", True)
+    set_as_default = task_data.get("set_as_default", True)
     environment = task_data.get("environment", {})
 
     # TODO: We could in fact loop over all compute resources where files are
@@ -532,11 +542,16 @@ def index_remote_files(self, task_data=None, **kwargs) -> dict:
     #
     # stored_at = get_compute_resources_for_files(job.get_files())
 
-    compute_resource = get_primary_compute_location_for_files(job.get_files())
-    if compute_resource is None:
-        compute_resource = job.compute_resource
+    compute_resource = None
+    if compute_resource_id:
+        compute_resource = ComputeResource.objects.get(id=compute_resource_id)
+    else:
+        compute_resource = get_primary_compute_location_for_files(job.get_files())
+        if compute_resource is None:
+            compute_resource = job.compute_resource
 
     if compute_resource is not None:
+        compute_resource_id = compute_resource.id
         host = compute_resource.host
         gateway = compute_resource.gateway_server
     else:
@@ -549,7 +564,6 @@ def index_remote_files(self, task_data=None, **kwargs) -> dict:
     private_key = compute_resource.private_key
     remote_username = compute_resource.extra.get("username", None)
 
-    compute_id = compute_resource.id
     message = "No message."
 
     try:
@@ -574,6 +588,7 @@ def index_remote_files(self, task_data=None, **kwargs) -> dict:
                 fileset=fileset,
                 prefix_path=fileset_relpath,
                 location_base=f"laxy+sftp://{compute_resource.id}/{job.id}/{fileset_relpath}",
+                set_as_default=set_as_default,
             )
 
             # TOOD: Profile this - is it slow ?
