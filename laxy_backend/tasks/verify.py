@@ -229,9 +229,9 @@ def verify_task(self, task_data=None, **kwargs):
             location = FileLocation.objects.get(id=filelocation_id)
 
         file = File.objects.get(id=file_id)
-        started_at = datetime.now()
+        started_at = timezone.now()
         verified = verify(file, location, verify_on=verify_on)
-        finished_at = datetime.now()
+        finished_at = timezone.now()
         walltime = (finished_at - started_at).total_seconds()
         url = location
         url = str(location)
