@@ -51,7 +51,6 @@ from fs.errors import DirectoryExpected
 from io import BufferedReader, BytesIO, StringIO
 from pathlib import Path
 import paramiko
-from requests import HTTPError
 from robobrowser import RoboBrowser
 from rest_framework import generics
 from rest_framework import status
@@ -503,7 +502,7 @@ class ENASpeciesLookupView(APIView):
             return Response(ena_result, status=status.HTTP_200_OK)
         except IndexError as ex:
             return Response({}, status=status.HTTP_404_NOT_FOUND)
-        except HTTPError as ex:
+        except requests.exceptions.HTTPError as ex:
             raise ex
 
 
@@ -2935,7 +2934,7 @@ class RemoteBrowseView(JSONView):
             if scheme in ["http", "https"]:
                 resp = requests.head(url)
                 resp.raise_for_status()
-        except BaseException as exx:
+        except requests.exceptions.HTTPError as ex:
             return JsonResponse(
                 {
                     "remote_server_response": {
@@ -2949,6 +2948,54 @@ class RemoteBrowseView(JSONView):
                 # status=status.HTTP_400_BAD_REQUEST,
                 status=resp.status_code,
                 reason=resp.reason,
+            )
+        except requests.exceptions.ConnectionError as ex:
+            return JsonResponse(
+                {
+                    "remote_server_response": {
+                        "url": url,
+                        "status": None,
+                        "reason": "ConnectionError",
+                    }
+                },
+                status=None,
+                reason="ConnectionError",
+            )
+        except requests.exceptions.Timeout as ex:
+            return JsonResponse(
+                {
+                    "remote_server_response": {
+                        "url": url,
+                        "status": status.HTTP_504_GATEWAY_TIMEOUT,
+                        "reason": "Timeout",
+                    }
+                },
+                status=status.HTTP_504_GATEWAY_TIMEOUT,
+                reason="Timeout",
+            )
+        except requests.exceptions.TooManyRedirects:
+            return JsonResponse(
+                {
+                    "remote_server_response": {
+                        "url": url,
+                        "status": None,
+                        "reason": "TooManyRedirects",
+                    }
+                },
+                status=None,
+                reason="TooManyRedirects",
+            )
+        except BaseException as ex:
+            return JsonResponse(
+                {
+                    "remote_server_response": {
+                        "url": url,
+                        "status": None,
+                        "reason": "Request to remote server failed.",
+                    }
+                },
+                status=None,
+                reason="Request to remote server failed.",
             )
 
         fn = Path(urlparse(url).path).name
