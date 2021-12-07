@@ -95,7 +95,7 @@ git+https://github.com/pansapiens/json-merge-patch.git#egg=json_merge_patch
 jsonpatch
 
 # Celery task queue
-celery
+celery<=4.4.7
 flower
 django-celery-results
 django-celery-beat
