@@ -20,7 +20,8 @@ services:
   dev-frontend-server:
     image: laxy:latest
     restart: "no"
-    command: echo "Service disabled unless explicitly overridden (eg in docker-compose.local-dev.yml)"
+    command: echo "Service disabled unless explicitly overridden (eg in
+      docker-compose.local-dev.yml)"
 
   db:
     image: postgres:10-alpine
@@ -31,13 +32,13 @@ services:
       - PGDATA=/var/lib/postgresql/data/pgdata
     volumes:
       - dbdata:/var/lib/postgresql/data/pgdata
-#      - type: volume
-#        source: dbdata
-#        target: /var/lib/postgresql/data/pgdata
-#        volume:
-#          nocopy: true
-#    expose:
-#      - "5432"
+  #      - type: volume
+  #        source: dbdata
+  #        target: /var/lib/postgresql/data/pgdata
+  #        volume:
+  #          nocopy: true
+  #    expose:
+  #      - "5432"
 
   rabbitmq:
     # version >3.8.14 requires consumer_timeout setting increase in rabbitmq config
@@ -46,9 +47,9 @@ services:
     hostname: "rabbitmq"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
-#   expose:
-#     - "5672"
-#     - "15672"
+  #   expose:
+  #     - "5672"
+  #     - "15672"
 
   queue-high:
     image: laxy:latest
@@ -59,8 +60,18 @@ services:
       # - LAXY_BROKER_URL=redis://redis:6379/0
       - LAXY_WEB_SCRAPER_BACKEND=splash
       - LAXY_WEB_SCRAPER_SPLASH_HOST=http://splash:8050
-    command: ["celery", "-A", "laxy", "worker", "-E", "-l", "info", "-Ofair", 
-              "--broker=${LAXY_BROKER_URL}"]
+    command:
+      [
+        "celery",
+        "-A",
+        "laxy",
+        "worker",
+        "-E",
+        "-l",
+        "info",
+        "-Ofair",
+        "--broker=${LAXY_BROKER_URL}"
+      ]
     stop_grace_period: 5m
     stop_signal: SIGTERM
     depends_on:
@@ -76,9 +87,20 @@ services:
       # - LAXY_BROKER_URL=redis://redis:6379/0
       - LAXY_WEB_SCRAPER_BACKEND=splash
       - LAXY_WEB_SCRAPER_SPLASH_HOST=http://splash:8050
-    command: ["celery", "-A", "laxy", "worker", "-E", "-l", "info", "-Ofair", 
-              "--broker=${LAXY_BROKER_URL}", 
-              "-Q", "low-priority"]
+    command:
+      [
+        "celery",
+        "-A",
+        "laxy",
+        "worker",
+        "-E",
+        "-l",
+        "info",
+        "-Ofair",
+        "--broker=${LAXY_BROKER_URL}",
+        "-Q",
+        "low-priority"
+      ]
     stop_grace_period: 5m
     stop_signal: SIGTERM
     depends_on:
@@ -94,9 +116,16 @@ services:
       # - LAXY_BROKER_URL=redis://redis:6379/0
       - LAXY_WEB_SCRAPER_BACKEND=splash
       - LAXY_WEB_SCRAPER_SPLASH_HOST=http://splash:8050
-    command: ["celery", "-A", "laxy", "--broker=${LAXY_BROKER_URL}", 
-              "-s", "/app/celerybeat-schedule", 
-              "beat"]
+    command:
+      [
+        "celery",
+        "-A",
+        "laxy",
+        "--broker=${LAXY_BROKER_URL}",
+        "-s",
+        "/app/celerybeat-schedule",
+        "beat"
+      ]
     depends_on:
       - db
       - rabbitmq
@@ -105,24 +134,25 @@ services:
 
   flower:
     # Alternative using public flower image
-    # image: mher/flower:latest
-    #    entrypoint:
-    #      - celery
-    #      - -A
-    #      - laxy
-    #      - flower
-    #      - --port=5556
-    #      - --broker=${LAXY_BROKER_URL}"
+    #image: mher/flower:latest
     image: laxy:latest
     environment:
       - LAXY_DEBUG=no
       - LAXY_BROKER_URL=amqp://guest@rabbitmq
-#     - LAXY_BROKER_URL=redis://redis:6379/0
-#     - FLOWER_BASIC_AUTH=user:pass
+    #     - LAXY_BROKER_URL=redis://redis:6379/0
+    #     - FLOWER_BASIC_AUTH=user:pass
     ports:
       - "5556:5556"
     working_dir: /app
-    command: bash -c "sleep 30 && celery -A laxy flower --port=5556 --broker=${LAXY_BROKER_URL}"
+    command: sh -c "sleep 30 && celery -A laxy flower --port=5556
+      --broker=${LAXY_BROKER_URL}"
+    # entrypoint:
+    #   - celery
+    #   - -A
+    #   - laxy
+    #   - flower
+    #   - --port=5556
+    #   - --broker="${LAXY_BROKER_URL}"
     depends_on:
       - db
       - rabbitmq
@@ -161,9 +191,8 @@ services:
       - portainer_data:/data
       - /var/run/docker.sock:/var/run/docker.sock
 
-
 volumes:
-  dbdata:
-  rabbitmq_data:
-  celerybeat-schedule:
-  portainer_data:
+  dbdata: null
+  rabbitmq_data: null
+  celerybeat-schedule: null
+  portainer_data: null
