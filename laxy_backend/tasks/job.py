@@ -816,12 +816,26 @@ def estimate_job_tarball_size(self, task_data=None, optional=False, **kwargs):
         # We run as 'nice' since this is considered low priority.
         quick_mode = task_data.get("tarball_size_use_heuristic")
         compression_scaling = 1
-        cmd = f'nice tar -chzf - --directory "{job_path}" . | nice wc --bytes'
+        cmd = (
+            f'nice tar -chzf - --restrict --directory "{job_path}" . | nice wc --bytes'
+        )
         if quick_mode:
             # This compression ratio seems reasonable for RNAsik runs. Will likely be different
             # for different data types.
             compression_scaling = 0.66
             cmd = f'nice du -bc --max-depth=0 "{job_path}" | tail -n 1 | cut -f 1'
+
+        def tar_threw_error(stdout_txt):
+            tar_error_messages = [
+                "File changed as we read it",
+                "File removed before we read it",
+            ]
+            return any(
+                [
+                    err.lower() in stdout_txt.strip().lower()
+                    for err in tar_error_messages
+                ]
+            )
 
         with fabsettings(
             gateway=gateway, host_string=host, user=remote_username, key=private_key
@@ -832,18 +846,14 @@ def estimate_job_tarball_size(self, task_data=None, optional=False, **kwargs):
                     tries = 0
                     while (
                         result.succeeded
-                        and "file changed as we read it"
-                        in result.stdout.strip().lower()
+                        and tar_threw_error(result.stdout)
                         and tries <= 3
                     ):
                         result = run(cmd)
                         tries += 1
 
                     if result.succeeded:
-                        if (
-                            "file changed as we read it"
-                            in result.stdout.strip().lower()
-                        ):
+                        if tar_threw_error(result.stdout):
                             raise Exception(
                                 f"Files continue to change while calculating tarball size for "
                                 f"Job: {job.id}"
