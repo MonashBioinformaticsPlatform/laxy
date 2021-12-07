@@ -1,4 +1,5 @@
 import os
+import sys
 import tempfile
 from pathlib import Path
 
@@ -213,8 +214,19 @@ class TasksTest(TestCase):
         finalize_errorlog_count = EventLog.objects.filter(
             event="JOB_FINALIZE_ERROR"
         ).count()
-        # then before it's actually complete, call the 'link_error' handler task with it's UUID
-        _finalize_job_task_err_handler(index_task_result.id, job_id=self.job_one.id)
+
+        # Generate and capture an exception and traceback to use for the test
+        dummy_ex = None
+        try:
+            raise Exception("The task failed and raised an exception")
+        except Exception as ex:
+            dummy_ex = ex
+            dummy_tb = sys.exc_info()[2]
+
+        # then before the task is actually complete, call the 'link_error' handler task with it's UUID
+        _finalize_job_task_err_handler(
+            {"job_id": self.job_one.id}, dummy_ex, dummy_tb, job_id=self.job_one.id
+        )
         # a JOB_FINALIZE_ERROR event should be generated
         self.assetEqual(
             finalize_errorlog_count + 1,

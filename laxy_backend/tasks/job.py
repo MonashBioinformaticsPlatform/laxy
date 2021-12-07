@@ -634,34 +634,28 @@ def index_remote_files(self, task_data=None, **kwargs) -> dict:
 
 
 @shared_task(bind=True)
-def _finalize_job_task_err_handler(uuid, job_id=None, **kwargs):
+def _finalize_job_task_err_handler(request, exc, traceback, job_id=None):
     logger.info(
-        f"_finalize_job_task_err_handler: failed task: {uuid}, job_id: {job_id}"
+        f"_finalize_job_task_err_handler: failed task: {request.id}, job_id: {job_id}"
     )
-    result = AsyncResult(uuid)
-
     job = Job.objects.get(id=job_id)
     if not job.done:
         job.status = Job.STATUS_FAILED
         job.save()
 
+        if job.compute_resource and job.compute_resource.disposable:
+            job.compute_resource.dispose()
+
         eventlog = job.log_event(
             "JOB_FINALIZE_ERROR",
             "",
-            extra={
-                "task_id": uuid,
-                # 'exception': exc,
-                "traceback": result.traceback,
-            },
+            extra={"task_id": request.id, "exception": exc, "traceback": traceback},
         )
         message = (
             f"Failed to index files or finalize job status (EventLog ID: {eventlog.id})"
         )
         eventlog.message = message
         eventlog.save()
-
-        if job.compute_resource and job.compute_resource.disposable:
-            job.compute_resource.dispose()
 
 
 @shared_task(bind=True, track_started=True)
@@ -1319,7 +1313,7 @@ def bulk_move_job_rsync(self, task_data=None, optional=False, **kwargs):
                 # be unguessable
                 tmpkeyfn = f"/tmp/.laxy/ssh/id_rsa-{src_compute.id}_{generate_uuid()}"
                 cmd = (
-                    f"nice rsync -avL -e "
+                    f"nice rsync -avsL -e "
                     f'"ssh -i {tmpkeyfn} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" '
                     f'"{src_str}" "{dst_compute.jobs_dir}/"; '
                     f"rm -f {tmpkeyfn}"
