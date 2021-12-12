@@ -56,7 +56,10 @@ setup(
         "attrdict==2.0.1",
         "trio==0.8.0",
         "psutil==5.7.0",
-        "pyhash==0.9.3",
+        ## Temporary: Use pyhash github master until setuptools issue is fixed in a release
+        ## https://github.com/flier/pyfasthash/issues/49
+        # "pyhash==0.9.4",
+        "pyhash @ git+https://github.com/flier/pyfasthash.git@20a53f9bb7bf15f98e3e549f523b49e1e0f62e15#egg=pyhash",
         "python-magic==0.4.15",
         "text-unidecode==1.3",
         "typing-extensions==3.10.0.0",
