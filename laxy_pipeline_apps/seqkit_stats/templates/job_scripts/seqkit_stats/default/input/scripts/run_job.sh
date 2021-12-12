@@ -50,6 +50,8 @@ export SLURM_EXTRA_ARGS="{{ SLURM_EXTRA_ARGS }}"
 readonly QUEUE_TYPE="{{ QUEUE_TYPE }}"
 # readonly QUEUE_TYPE="local"
 
+
+
 if [[ ${IGNORE_SELF_SIGNED_CERTIFICATE} == "yes" ]]; then
     readonly CURL_INSECURE="--insecure"
     readonly LAXYDL_INSECURE="--ignore-self-signed-ssl-certificate"
@@ -80,6 +82,9 @@ function job_done() {
 
     cd "${JOB_PATH}"
     register_files || true
+
+    # remove trap now
+    trap - EXIT
     finalize_job ${_exit_code}
 }
 # Send job fail/done HTTP request, cleanup and remove secrets upon an exit code raise
@@ -130,10 +135,10 @@ fi
 function register_files() {
     send_event "JOB_INFO" "Registering interesting output files."
 
-    add_to_manifest "*.fq" "fastq"
-    add_to_manifest "*.fastq" "fastq"
-    add_to_manifest "*.fq.gz" "fastq"
-    add_to_manifest "*.fastq.gz" "fastq"
+    add_to_manifest "input/reads/*.fq" "fastq"
+    add_to_manifest "input/reads/*.fastq" "fastq"
+    add_to_manifest "input/reads/*.fq.gz" "fastq"
+    add_to_manifest "input/reads/*.fastq.gz" "fastq"
     add_to_manifest "output/*.tsv" "tsv,report"
 
     curl -X POST \
