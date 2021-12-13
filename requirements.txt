@@ -73,7 +73,7 @@ Jinja2>=2.10.1
 jmespath==0.9.3
 jsonpatch==1.23
 jsonpointer==2.0
-lxml==4.6.3
+lxml==4.6.5
 Markdown==3.0.1
 MarkupSafe==1.0
 mccabe==0.6.1
