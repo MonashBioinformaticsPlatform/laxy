@@ -420,25 +420,25 @@ def get_urls_from_pipeline_config_deprecated_sample_cart(
     Parse deprecated fields sample_cart and sample_set from pipeline_config.json.
 
     {"sample_cart": {
-        "id": "1Dgwk9O1TxYooCl3i7dSXo", 
-        "name": "Sample set created on 2020-08-04T11:00:44.896515", 
-        "owner": "3zJrsOmUOqpTxNNou8LkNq", 
+        "id": "1Dgwk9O1TxYooCl3i7dSXo",
+        "name": "Sample set created on 2020-08-04T11:00:44.896515",
+        "owner": "3zJrsOmUOqpTxNNou8LkNq",
         "samples": [
-            {"name": "sampleA", 
-            "files": 
+            {"name": "sampleA",
+            "files":
             [
                 {
                 "R1": {
-                    "name": "sampleA_R1.fastq.gz", 
-                    "checksum": "md5:b0cb55825c9cec7ad32e4ec82b2524f7", 
-                    "location": "ftp://ftp.example.com/sampleA_R1.fastq.gz", 
-                    "type_tags": ["ena"], 
+                    "name": "sampleA_R1.fastq.gz",
+                    "checksum": "md5:b0cb55825c9cec7ad32e4ec82b2524f7",
+                    "location": "ftp://ftp.example.com/sampleA_R1.fastq.gz",
+                    "type_tags": ["ena"],
                     "sanitized_filename": "sampleA_R1.fastq.gz"},
                 "R2": {
-                    "name": "sampleA_R2.fastq.gz", 
-                    "checksum": "md5:a0cb77825c9cec7ad32e4ec82b25df24f7", 
-                    "location": "ftp://ftp.example.com/sampleA_R2.fastq.gz", 
-                    "type_tags": ["ena"], 
+                    "name": "sampleA_R2.fastq.gz",
+                    "checksum": "md5:a0cb77825c9cec7ad32e4ec82b25df24f7",
+                    "location": "ftp://ftp.example.com/sampleA_R2.fastq.gz",
+                    "type_tags": ["ena"],
                     "sanitized_filename": "sampleA_R2.fastq.gz"}
                 }
             ]
@@ -555,8 +555,8 @@ def sanitize_filename(
     Adapted from: https://gist.github.com/wassname/1393c4a57cfcbf03641dbc31886123b8
 
     Replaces or removes characters that aren't filename safe on most platforms (or often
-    cause issues in shell commmands when left unescaped), spaces to underscores, 
-    truncates the filename length and replaces a subset of Unicode characters with 
+    cause issues in shell commmands when left unescaped), spaces to underscores,
+    truncates the filename length and replaces a subset of Unicode characters with
     US-ASCII transliterations (eg à -> a, 蛇 -> She).
     """
     if valid_filename_chars is None:
@@ -656,7 +656,11 @@ def random_prefix_filename_if_exists(filepath: Union[str, Path]) -> str:
 
 
 def create_symlink_to_cache(
-    url: str, target_dir, cache_path, filename=None, sanitize_name=True,
+    url: str,
+    target_dir,
+    cache_path,
+    filename=None,
+    sanitize_name=True,
 ):
     # Attempt to determine the filename based on the URL
     if filename is None:
@@ -669,7 +673,11 @@ def create_symlink_to_cache(
 
 
 def create_copy_from_cache(
-    url: str, target_dir, cache_path, filename=None, sanitize_name=True,
+    url: str,
+    target_dir,
+    cache_path,
+    filename=None,
+    sanitize_name=True,
 ):
     # Attempt to determine the filename based on the URL
     if filename is None:
@@ -720,7 +728,9 @@ def unzip(cached, target_dir, extract_files: Union[List[str], None] = None):
 
 
 def recursively_sanitize_filenames(
-    rootpath: Union[str, Path], fix_root=True, sanitizer: Union[None, Callable] = None,
+    rootpath: Union[str, Path],
+    fix_root=True,
+    sanitizer: Union[None, Callable] = None,
 ) -> List[Tuple[str, str]]:
     """[summary]
     Recursively renames files and directories to remove spaces.
