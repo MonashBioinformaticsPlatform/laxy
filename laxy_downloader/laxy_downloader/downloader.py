@@ -753,14 +753,14 @@ def recursively_sanitize_filenames(
         for e in entries:
             oldpath = Path(root, e)
             newpath = Path(root, sanitizer(e))
-            if newpath != oldpath:
+            if newpath.rstrip("/") != oldpath.rstrip("/"):
                 logger.info(f"Renaming {e} to {sanitizer(e)}")
                 os.rename(oldpath, newpath)
                 changes.append((str(oldpath), str(newpath)))
 
     if fix_root:
         newpath = Path(rootpath).parent / sanitizer(Path(rootpath).name)
-        if newpath != rootpath:
+        if newpath.rstrip("/") != rootpath.rstrip("/"):
             logger.info(f"Renaming destination path directory {rootpath} to {newpath}")
             os.rename(rootpath, newpath)
             changes.append((str(rootpath), str(newpath)))
