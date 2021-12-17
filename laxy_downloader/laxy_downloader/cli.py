@@ -245,14 +245,14 @@ def _run_download_cli(args, rpc_secret=None):
         )
         config_urls = set(url_filenames.keys())
 
-    if config_urls is not None and args.urls:
+    if config_urls and args.urls:
         logging.error(
             "Can't mix --pipeline-config with URLs specified as command line args."
         )
         sys.exit(1)
 
     urls = set(args.urls)
-    if config_urls is not None:
+    if config_urls:
         urls = config_urls
 
     api_url = args.event_notification_url
