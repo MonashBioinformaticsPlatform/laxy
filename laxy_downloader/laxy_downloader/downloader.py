@@ -29,7 +29,8 @@ from collections import OrderedDict
 import unicodedata
 from text_unidecode import unidecode
 
-import pyhash
+from . import pymmh3 as mmh3
+
 import requests
 import backoff
 from toolz.dicttoolz import merge as merge_dicts
@@ -65,9 +66,7 @@ def url_to_cache_key(url):
     strings.
     """
     return (
-        urlsafe_b64encode(
-            pyhash.murmur3_x64_128()(url).to_bytes(16, byteorder="big", signed=False)
-        )
+        urlsafe_b64encode(mmh3.hash128(url).to_bytes(16, byteorder="big", signed=False))
         .decode("ascii")
         .rstrip("=")
     )
