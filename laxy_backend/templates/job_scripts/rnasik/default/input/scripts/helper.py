@@ -18,14 +18,17 @@ import re
 from urllib.parse import unquote
 import unicodedata
 
-# Since this requires a dependency we don't use it at all
-# try:
-#     from text_unidecode import unidecode
-# except ImportError:
-#     # Monkey patch this to do nothing if we don't have the dependency,
-#     # since it's nice but not essential.
-#     def unidecode(s):
-#         return s
+try:
+    from text_unidecode import unidecode
+except ImportError:
+    sys.stderr.write(
+        "WARNING: text_unidecode not installed, skipping unicode to ascii conversion\n"
+    )
+
+    # Since this dependency may not be there, we monkey patch it to do
+    # nothing when missing
+    def unidecode(s):
+        return s
 
 
 def flatten_deep(items):
@@ -54,15 +57,15 @@ def sanitize_filename(
     valid_filename_chars: str = None,
     replace: dict = None,
     max_length: int = 255,
-    # unicode_to_ascii=False,
+    unicode_to_ascii=True,
     unquote_urlencoding=True,
 ) -> str:
     """
     Adapted from: https://gist.github.com/wassname/1393c4a57cfcbf03641dbc31886123b8
 
     Replaces or removes characters that aren't filename safe on most platforms (or often
-    cause issues in shell commmands when left unescaped), spaces to underscores, 
-    truncates the filename length and replaces a subset of Unicode characters with 
+    cause issues in shell commmands when left unescaped), spaces to underscores,
+    truncates the filename length and replaces a subset of Unicode characters with
     US-ASCII transliterations (eg à -> a, 蛇 -> She).
     """
     if valid_filename_chars is None:
@@ -71,17 +74,17 @@ def sanitize_filename(
         valid_filename_chars = "-_. %s%s" % (string.ascii_letters, string.digits)
 
     if replace is None:
-        replace = {" ": "_"}
+        replace = {r"^\s+": "_"}
 
     if unquote_urlencoding:
         filename = unquote(filename)
 
-    # if unicode_to_ascii:
-    #     filename = unidecode(filename)
+    if unicode_to_ascii:
+        filename = unidecode(filename)
 
     # replace spaces or other characters in the replacement dict
     for old, new in replace.items():
-        filename = filename.replace(old, new)
+        filename = re.sub(old, new, filename)
 
     # keep only valid ascii chars
     cleaned_filename = (
@@ -117,7 +120,7 @@ def truncate_fastq_to_pair_suffix(fn: str) -> str:
 def simplify_fastq_name(filename: str) -> str:
     """
     Given a FASTQ filename XXXBLAFOO_R1.fastq.gz, return something like
-    the 'sample name' XXXBLAFOO. Should work with typical naming used by 
+    the 'sample name' XXXBLAFOO. Should work with typical naming used by
     Illumina instrument and SRA/ENA FASTQ files.
     """
     fn = truncate_fastq_to_pair_suffix(filename)
@@ -160,7 +163,7 @@ def generate_samplesheet(
     sanitizedNameB_L001  sampleB
 
     _R1 / _R2 suffixes aren't included (these are detected seperately via -pairIds), and files
-    mapped with identical names in new_prefix are considered technical replicates, such as samples 
+    mapped with identical names in new_prefix are considered technical replicates, such as samples
     split across lanes, than can be merged (in a paired file aware way).
     """
 
@@ -260,7 +263,7 @@ if __name__ == "__main__":
         Returns the extension in use for FASTQ files, for the RNAsik -extn flag, or
         None if no FASTQs were detected.
 
-        Raises an exception if there are more than one extension in use, so we can 
+        Raises an exception if there are more than one extension in use, so we can
         fail fast.
         """
         extensions = [

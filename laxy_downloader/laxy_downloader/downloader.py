@@ -26,6 +26,7 @@ from base64 import urlsafe_b64encode
 import functools
 from collections import OrderedDict
 
+import re
 import unicodedata
 from text_unidecode import unidecode
 
@@ -548,7 +549,7 @@ def sanitize_filename(
     valid_filename_chars: str = None,
     replace: dict = None,
     max_length: int = 255,
-    unicode_to_ascii=False,
+    unicode_to_ascii=True,
     unquote_urlencoding=True,
 ) -> str:
     """
@@ -565,7 +566,7 @@ def sanitize_filename(
         valid_filename_chars = "-_. %s%s" % (string.ascii_letters, string.digits)
 
     if replace is None:
-        replace = {" ": "_"}
+        replace = {r"^\s+": "_"}
 
     if unquote_urlencoding:
         filename = unquote(filename)
@@ -575,7 +576,7 @@ def sanitize_filename(
 
     # replace spaces or other characters in the replacement dict
     for old, new in replace.items():
-        filename = filename.replace(old, new)
+        filename = re.sub(old, new, filename)
 
     # keep only valid ascii chars
     cleaned_filename = (

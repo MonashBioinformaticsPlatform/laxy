@@ -337,15 +337,15 @@ def sanitize_filename(
     valid_filename_chars: str = None,
     replace: dict = None,
     max_length: int = 255,
-    unicode_to_ascii=False,
+    unicode_to_ascii=True,
     unquote_urlencoding=True,
 ) -> str:
     """
     Adapted from: https://gist.github.com/wassname/1393c4a57cfcbf03641dbc31886123b8
 
     Replaces or removes characters that aren't filename safe on most platforms (or often
-    cause issues in shell commmands when left unescaped), spaces to underscores, 
-    truncates the filename length and replaces a subset of Unicode characters with 
+    cause issues in shell commmands when left unescaped), spaces to underscores,
+    truncates the filename length and replaces a subset of Unicode characters with
     US-ASCII transliterations (eg à -> a, 蛇 -> She).
     """
     if valid_filename_chars is None:
@@ -354,7 +354,7 @@ def sanitize_filename(
         valid_filename_chars = "-_. %s%s" % (string.ascii_letters, string.digits)
 
     if replace is None:
-        replace = {" ": "_"}
+        replace = {r"^\s+": "_"}
 
     if unquote_urlencoding:
         filename = unquote(filename)
@@ -364,7 +364,7 @@ def sanitize_filename(
 
     # replace spaces or other characters in the replacement dict
     for old, new in replace.items():
-        filename = filename.replace(old, new)
+        filename = re.sub(old, new, filename)
 
     # keep only valid ascii chars
     cleaned_filename = (
@@ -400,7 +400,7 @@ def truncate_fastq_to_pair_suffix(fn: str) -> str:
 def simplify_fastq_name(filename: str) -> str:
     """
     Given a FASTQ filename XXXBLAFOO_R1.fastq.gz, return something like
-    the 'sample name' XXXBLAFOO. Should work with typical naming used by 
+    the 'sample name' XXXBLAFOO. Should work with typical naming used by
     Illumina instrument and SRA/ENA FASTQ files.
     """
     fn = truncate_fastq_to_pair_suffix(filename)
@@ -426,4 +426,4 @@ def generate_cluster_stack_name(job):
     :return: A cluster ID to use as the stack name.
     :rtype: str
     """
-    return 'cluster-%s----%s' % (job.compute_resource.id, job.id)
+    return "cluster-%s----%s" % (job.compute_resource.id, job.id)
