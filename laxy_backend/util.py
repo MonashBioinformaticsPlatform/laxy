@@ -354,7 +354,7 @@ def sanitize_filename(
         valid_filename_chars = "-_. %s%s" % (string.ascii_letters, string.digits)
 
     if replace is None:
-        replace = {r"^\s+": "_"}
+        replace = {r"\s+": "_"}
 
     if unquote_urlencoding:
         filename = unquote(filename)
