@@ -97,12 +97,15 @@ function job_done() {
     [[ -v EXIT_CODE ]] && _exit_code=${EXIT_CODE}
 
     cd "${JOB_PATH}"
+    capture_environment_variables || true
     cleanup_nextflow_intermediates || true
     register_files || true
     finalize_job ${_exit_code}
 }
 
 function job_fail_or_cancel() {
+    trap - EXIT
+
     cd "${JOB_PATH}"
     cleanup_nextflow_intermediates || true
     register_files || true
@@ -129,7 +132,7 @@ CPUS=1
 # export SLURM_OPTIONS="--parsable \
 #                         --cpus-per-task=${CPUS} \
 #                         --mem=${MEM} \
-#                         -t 3-0:00 \
+#                         -t 7-0:00 \
 #                         --ntasks-per-node=1 \
 #                         --ntasks=1 \
 #                         {% if SLURM_EXTRA_ARGS %}
@@ -163,11 +166,12 @@ function register_files() {
     add_to_manifest "output/results/pipeline_info/*.html" "report,html,nextflow"
     add_to_manifest "output/results/pipeline_info/software_versions.tsv" "report,nextflow"
 
-    add_to_manifest "output/*" ""
-    add_to_manifest "output/**/*" ""
-
-    add_to_manifest "input/*" ""
-    add_to_manifest "input/**/*" ""
+    # Performance is currently poor (late-2021) when registering many files in a single request
+    # so we avoid doing this and allow the server-side indexing to pick up the rest
+    #add_to_manifest "output/*" ""
+    #add_to_manifest "output/**/*" ""
+    #add_to_manifest "input/*" ""
+    #add_to_manifest "input/**/*" ""
 
     curl -X POST \
       ${CURL_INSECURE} \
@@ -484,10 +488,7 @@ send_event "JOB_INFO" "Starting pipeline."
 
 run_nextflow
 
-capture_environment_variables || true
-
 cd "${JOB_PATH}"
-register_files || true
 
 # Call job finalization with explicit exit code from the main pipeline command
 job_done $EXIT_CODE
