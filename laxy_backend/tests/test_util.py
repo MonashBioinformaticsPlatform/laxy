@@ -27,7 +27,7 @@ class UtilFunctionsTest(TestCase):
                 valid_filename_chars=including_brackets,
                 unicode_to_ascii=True,
             ),
-            "my_sample_She_Ying__(AB_C)_1.txt.gz",
+            "my_sample_She_Ying_(AB_C)_1.txt.gz",
         )
 
     def test_fastq_filename_mods(self):
