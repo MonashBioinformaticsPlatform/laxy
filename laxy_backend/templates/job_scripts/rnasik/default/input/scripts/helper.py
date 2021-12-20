@@ -31,6 +31,36 @@ except ImportError:
         return s
 
 
+extensions = [
+    ".fastq.gz",  # Typical Illumina extension
+    ".fq.gz",  # BGI currently uses .fq.gz. See, MGI isn't just a copy of Illumina tech !
+    ".fastq",  # IonTorrent tarballs contain uncompressed fastqs
+    ".fq",  # Someone will do this one day
+    ".fasta.gz",  # Very occasionally, we get FASTA format reads
+    ".fa.gz",  # ... and this
+    ".fasta",
+    ".fa",
+]
+
+samplename_suffixes = [
+    r"_001\.fastq\.gz$",  # Default Illumina
+    r"\.fastq\.gz$",  # ENA/SRA
+    r"\.fasta\.gz$",  # occasionally we get FASTA format reads
+    r"\.fq\.gz$",  # BGI does this, it seems
+    r"\.fastq$",  # Occasionally we need to take uncompressed fastqs
+    r"\.fasta$",  # why not
+]
+
+samplename_suffix_regex = r"_(R)?[1-2]$|_L[0-9][0-9][0-9]_(R)?[1-2]$"
+
+pair_suffixes = [
+    ("_R1_001", "_R2_001"),  # Illumina instrument default
+    ("_r1_001", "_r2_001"),  # Synapse bulk downloader renames to lowercase ?
+    ("_R1", "_R2"),
+    ("_1", "_2"),  # ENA/SRA
+]
+
+
 def flatten_deep(items):
     """
     Yield items from any nested iterable, including dictionaries.
@@ -101,17 +131,9 @@ def truncate_fastq_to_pair_suffix(fn: str) -> str:
     """
     Turn a XXXBLAFOO_R1.fastq.gz filename into XXXBLAFOO_R1.
     """
-    extensions = [
-        r"_001\.fastq\.gz$",  # Default Illumina
-        r"\.fastq\.gz$",  # ENA/SRA
-        r"\.fasta\.gz$",  # occasionally we get FASTA format reads
-        r"\.fq\.gz$",  # BGI does this, it seems
-        r"\.fastq$",  # Occasionally we need to take uncompressed fastqs
-        r"\.fasta$",  # why not
-    ]
 
     # Try removing all of these extensions
-    for ext in extensions:
+    for ext in samplename_suffixes:
         fn = re.sub(ext, "", fn, 1)
 
     return fn
@@ -125,7 +147,7 @@ def simplify_fastq_name(filename: str) -> str:
     """
     fn = truncate_fastq_to_pair_suffix(filename)
     # eg remove suffix _L002_R1 or L003_2 or _2, or just _R2
-    fn = re.sub(r"_(R)?[1-2]$|_L[0-9][0-9][0-9]_(R)?[1-2]$", "", fn, 1)
+    fn = re.sub(samplename_suffix_regex, "", fn, 1)
     return fn
 
 
@@ -266,16 +288,6 @@ if __name__ == "__main__":
         Raises an exception if there are more than one extension in use, so we can
         fail fast.
         """
-        extensions = [
-            ".fastq.gz",  # Typical Illumina extension
-            ".fq.gz",  # BGI currently uses .fq.gz. See, MGI isn't just a copy of Illumina tech !
-            ".fastq",  # IonTorrent tarballs contain uncompressed fastqs
-            ".fq",  # Someone will do this one day
-            ".fasta.gz",  # Very occasionally, we get FASTA format reads
-            ".fa.gz",  # ... and this
-            ".fasta",
-            ".fa",
-        ]
         extns = set()
         for f in files:
             for ext in extensions:
@@ -297,11 +309,6 @@ if __name__ == "__main__":
 
         If more than one scheme is detected, raise an exception.
         """
-        pair_suffixes = [
-            ("_R1_001", "_R2_001"),
-            ("_R1", "_R2"),
-            ("_1", "_2"),
-        ]
 
         ps = set()
         for f in files:
