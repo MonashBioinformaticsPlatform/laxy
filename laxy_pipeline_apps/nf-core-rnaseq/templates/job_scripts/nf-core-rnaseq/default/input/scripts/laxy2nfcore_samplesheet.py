@@ -38,7 +38,27 @@ extensions = [
     ".fa",
 ]
 
+samplename_suffixes = [
+    r"_001\.fastq\.gz$",  # Default Illumina
+    r"\.fastq\.gz$",  # ENA/SRA
+    r"\.fasta\.gz$",  # occasionally we get FASTA format reads
+    r"\.fq\.gz$",  # BGI does this, it seems
+    r"\.fastq$",  # Occasionally we need to take uncompressed fastqs
+    r"\.fasta$",  # why not
+]
+
+samplename_suffix_regex = r"_(R)?[1-2]$|_L[0-9][0-9][0-9]_(R)?[1-2]$"
+
 archive_extensions = [".tar.gz", ".tar", ".zip"]
+
+pair_suffixes = [
+    ("_R1_001", "_R2_001"),  # Illumina instrument default
+    ("_r1_001", "_r2_001"),  # Synapse bulk downloader renames to lowercase ?
+    ("_R1", "_R2"),
+    ("_1", "_2"),  # ENA/SRA
+]
+
+r1_suffixes = [r1 for r1, r2 in pair_suffixes]
 
 
 def is_valid_reads_extension(fn) -> bool:
@@ -108,17 +128,8 @@ def truncate_fastq_to_pair_suffix(fn: str) -> str:
     """
     Turn a XXXBLAFOO_R1.fastq.gz filename into XXXBLAFOO_R1.
     """
-    extensions = [
-        r"_001\.fastq\.gz$",  # Default Illumina
-        r"\.fastq\.gz$",  # ENA/SRA
-        r"\.fasta\.gz$",  # occasionally we get FASTA format reads
-        r"\.fq\.gz$",  # BGI does this, it seems
-        r"\.fastq$",  # Occasionally we need to take uncompressed fastqs
-        r"\.fasta$",  # why not
-    ]
-
     # Try removing all of these extensions
-    for ext in extensions:
+    for ext in samplename_suffixes:
         fn = re.sub(ext, "", fn, 1)
 
     return fn
@@ -135,7 +146,7 @@ def simplify_fastq_name(filename: str) -> str:
     """
     fn = truncate_fastq_to_pair_suffix(filename)
     # eg remove suffix _L002_R1 or L003_2 or _2, or just _R2
-    fn = re.sub(r"_(R)?[1-2]$|_L[0-9][0-9][0-9]_(R)?[1-2]$", "", fn, 1)
+    fn = re.sub(samplename_suffix_regex, "", fn, 1)
     return fn
 
 
@@ -144,11 +155,6 @@ def get_expected_pair_filename(fn) -> Union[None, str]:
     Detect the pair suffix + extension for a read file, and generate it's matching R1/R2 pair filename
     Return the filename for expected paired file.
     """
-    pair_suffixes = [
-        ("_R1_001", "_R2_001"),
-        ("_R1", "_R2"),
-        ("_1", "_2"),
-    ]
 
     for suf in pair_suffixes:
         extn = read_extension(fn)
@@ -167,11 +173,6 @@ def get_name_for_readfile(fn) -> str:
 
 
 def is_R1(fn) -> bool:
-    r1_suffixes = [
-        "_R1_001",
-        "_R1",
-        "_1",
-    ]
     extn = read_extension(fn)
     if extn is None:
         return False
