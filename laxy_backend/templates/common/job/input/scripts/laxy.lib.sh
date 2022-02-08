@@ -108,7 +108,7 @@ function finalize_job() {
     if [[ ${_exit_code} -ne 0 ]]; then
       send_event "JOB_PIPELINE_FAILED" "Pipeline failed." '{"exit_code":'${_exit_code}'}'
     else
-     send_event "JOB_PIPELINE_COMPLETED" "Pipeline completed." '{"exit_code":'${_exit_code}'}'
+      send_event "JOB_PIPELINE_COMPLETED" "Pipeline completed." '{"exit_code":'${_exit_code}'}'
     fi
 
     send_job_finished ${_exit_code}
@@ -210,11 +210,12 @@ function init_conda_env() {
         send_event "JOB_INFO" "Installing dependencies (conda environment ${env_name})"
 
         # First we update conda itself
-        conda update --yes -n base conda || return 1
+        ${CONDA_BASE}/bin/conda update --yes -n base conda || return 1
 
         # Install mamba, for faster environment installs
         if [[ "${CONDA_INSTALL_BINARY}" == "mamba" ]]; then
-            conda install --yes -n base -c conda-forge mamba || CONDA_INSTALL_BINARY="conda"
+            CONDA_INSTALL_BINARY=${CONDA_BASE}/bin/mamba
+            ${CONDA_BASE}/bin/conda install --yes -n base -c conda-forge mamba || CONDA_INSTALL_BINARY="conda"
         fi
 
         # Put git and curl in the base env, since we generally need them
