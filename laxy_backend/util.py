@@ -207,7 +207,7 @@ def multikeysort(
     return sorted(items, key=cmp_to_key(comparer), reverse=reverse)
 
 
-def laxy_sftp_url(job, path: str = None) -> str:
+def laxy_sftp_url(job, compute_resource=None, path: str = None) -> str:
     """
     Generate internal laxy+sftp:// URL strings based on a job and file path.
 
@@ -218,11 +218,13 @@ def laxy_sftp_url(job, path: str = None) -> str:
     :return: The internal laxy+sftp:// URL
     :rtype: str
     """
-    if job.compute_resource is None:
+    if compute_resource is None and job.compute_resource is None:
         raise ValueError(
             "Job has no compute_resource defined. "
             "Cannot generate laxy+sftp:// URL since it requires a compute_resource ID."
         )
+    if compute_resource is None:
+        compute_resource = job.compute_resource
 
     url = f"laxy+sftp://{job.compute_resource.id}/{job.id}"
 
