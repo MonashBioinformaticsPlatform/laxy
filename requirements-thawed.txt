@@ -41,7 +41,7 @@ cryptography>=2.5
 # paramiko>=2.7.1
 
 # Base Django packages
-django==2.2.20
+django==2.2.27
 django-reversion
 django-cors-headers
 django-extensions
