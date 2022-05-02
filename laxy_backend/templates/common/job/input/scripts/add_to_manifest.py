@@ -95,10 +95,11 @@ if __name__ == "__main__":
         "--location-base",
         default=None,
         help="Register files as located with this URL prefix "
-        "(eg a \nlaxy+sftp://someComputeID/someJobID/output/somefile.txt). The Laxy backend will usually infer the"
-        "location based on the job & known compute resource, however there are cases where you may need to"
-        "explicitly specify this (eg if files were moved to an archive location manually rather than via "
-        "a backend task)",
+        "(eg a \n\t--location-base=laxy+sftp://someComputeID/someJobID\nwill add a location column with values like "
+        "'laxy+sftp://someComputeID/someJobID/output/somefile.txt'). The Laxy backend will usually infer the"
+        "location based on the compute resource associated with the job this manifest is uploaded for, however "
+        "there are cases where you may need to explicitly specify this (eg if files were moved to an archive "
+        "location manually rather than via a Laxy backend task)",
     )
     args = parser.parse_args()
 
