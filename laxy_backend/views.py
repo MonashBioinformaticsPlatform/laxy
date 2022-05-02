@@ -228,7 +228,11 @@ class PingView(APIView):
 
         return JsonResponse(
             PingResponseSerializer(
-                {"version": app_version, "env": env, "system_status": status,}
+                {
+                    "version": app_version,
+                    "env": env,
+                    "system_status": status,
+                }
             ).data
         )
 
@@ -1858,11 +1862,11 @@ def add_sanitized_names_to_samplecart_json(cart_json):
                 f[paircode]["sanitized_filename"] = fn
                 sane_prefixes.append(simplify_fastq_name(fn))
 
-        # If the sample has a name set add a sanitized version
+        # If the sample has a non-empty `name` add a sanitized version
         if s["name"] is not None and s["name"].strip():
             s["sanitized_name"] = sanitize_filename(s["name"])
         else:
-            # when no sample name is set, derive a sanitized one from the associated filenames
+            # when no sample `name` is set, derive a sanitized one from the associated filenames
             s["sanitized_name"] = longest_common_prefix(sane_prefixes)
 
     return updated_json

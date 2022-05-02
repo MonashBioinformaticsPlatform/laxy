@@ -18,7 +18,7 @@ from typing import Mapping, Sequence
 import unicodedata
 from text_unidecode import unidecode
 
-from urllib.parse import urlparse, unquote
+from urllib.parse import urlparse, unquote, parse_qs
 from cache_memoize import cache_memoize
 
 import django
@@ -118,19 +118,26 @@ def find_filename_and_size_from_url(url, sanitize_name=True, **kwargs):
     if scheme in ["http", "https"]:
         try:
             head = requests.head(url, **kwargs)
+
             filename_header = cgi.parse_header(
-                head.headers.get("Content-Disposition", "")
+                head.headers.get("content-disposition", "")
             )[-1]
-            file_size = head.headers.get("Content-Length", None)
+            filename = filename_header.get("filename", None)
+
+            file_size = head.headers.get("content-length", None)
             if file_size is not None:
                 file_size = int(file_size)
-            if "filename" in filename_header:
-                filename = filename_header.get("filename")
         except:
             pass
 
     if filename is None or (scheme == "file" or scheme == "ftp" or scheme == "sftp"):
         filename = os.path.basename(urlparse(url).path)
+
+    # Special case: get query string for filename when CloudStor content-disposition fails
+    # eg from url: https://cloudstor.aarnet.edu.au/plus/s/s3cre3t/download?path=%2F&files=SRR1234567_1.fastq.gz"
+    if filename == "download" and urlparse(url).netloc == "cloudstor.aarnet.edu.au":
+        qs = parse_qs(urlparse(url).query)
+        filename = qs.get("files", [None])[0]
 
     # TODO: Should we disallow this, given that it actually reads the local filesystem and may be
     #  unsafe or an information leak if used with arbitrary user supplied URLs ?
