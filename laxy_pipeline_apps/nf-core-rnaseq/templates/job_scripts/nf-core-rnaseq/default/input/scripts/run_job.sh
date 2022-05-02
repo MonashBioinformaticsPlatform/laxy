@@ -181,7 +181,7 @@ function register_files() {
      -o /dev/null \
      -w "%{http_code}" \
      --connect-timeout 10 \
-     --max-time 10 \
+     --max-time 600 \
      --retry 8 \
      --retry-max-time 600 \
      --data-binary @"${JOB_PATH}/manifest.csv" \
