@@ -156,46 +156,6 @@ function register_files() {
      "${JOB_FILE_REGISTRATION_URL}"
 }
 
-function download_input_data() {
-    if [[ "${JOB_INPUT_STAGED}" == "no" ]]; then
-
-        # send_event "INPUT_DATA_DOWNLOAD_STARTED" "Input data download started."
-
-        # one URL per line
-        readonly urls=$(get_input_data_urls)
-
-        mkdir -p "${DOWNLOAD_CACHE_PATH}"
-
-        LAXYDL_EXTRA_ARGS=""
-        if [[ "${LAXYDL_USE_ARIA2C}" != "yes" ]]; then
-            LAXYDL_EXTRA_ARGS=" ${LAXYDL_EXTRA_ARGS} --no-aria2c "
-        fi
-
-        # Download (FASTQ) reads
-        laxydl download \
-            ${LAXYDL_INSECURE} \
-            -vvv \
-            ${LAXYDL_EXTRA_ARGS} \
-            --cache-path "${DOWNLOAD_CACHE_PATH}" \
-            --no-progress \
-            --unpack \
-            --parallel-downloads "${LAXYDL_PARALLEL_DOWNLOADS}" \
-            --event-notification-url "${JOB_EVENT_URL}" \
-            --event-notification-auth-file "${AUTH_HEADER_FILE}" \
-            --pipeline-config "${PIPELINE_CONFIG}" \
-            --create-missing-directories \
-            --skip-existing \
-            --destination-path "${INPUT_READS_PATH}"
-
-        DL_EXIT_CODE=$?
-        if [[ $DL_EXIT_CODE != 0 ]]; then
-            send_job_finished $DL_EXIT_CODE
-        fi
-        return $DL_EXIT_CODE
-
-        # send_event "INPUT_DATA_DOWNLOAD_FINISHED" "Input data download completed."
-    fi
-}
 # Extract the pipeline parameter seqkit_stats.flags.all from the pipeline_config.json
 # Set the --all flag appropriately.
 _flags_all=$(jq --raw-output '.params.seqkit_stats.flags.all' "${PIPELINE_CONFIG}" || echo "false")
@@ -227,7 +187,7 @@ update_laxydl || send_error 'update_laxydl' '' $?
 #### Stage input data ###
 ####
 
-download_input_data || fail_job 'download_input_data' '' $?
+download_input_data "${INPUT_READS_PATH}" "" || fail_job 'download_input_data' 'Failed to download input data' $?
 
 capture_environment_variables || true
 

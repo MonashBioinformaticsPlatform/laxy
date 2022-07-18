@@ -188,65 +188,6 @@ function register_files() {
      "${JOB_FILE_REGISTRATION_URL}"
 }
 
-function download_input_data() {
-    if [[ "${JOB_INPUT_STAGED}" == "no" ]]; then
-
-        # send_event "INPUT_DATA_DOWNLOAD_STARTED" "Input data download started."
-
-        # one URL per line
-        readonly urls=$(get_input_data_urls)
-
-        mkdir -p "${DOWNLOAD_CACHE_PATH}"
-
-        LAXYDL_EXTRA_ARGS=""
-        if [[ "${LAXYDL_USE_ARIA2C}" != "yes" ]]; then
-            LAXYDL_EXTRA_ARGS=" ${LAXYDL_EXTRA_ARGS} --no-aria2c "
-        fi
-
-        # Download reference genome files. 
-        laxydl download \
-            ${LAXYDL_INSECURE} \
-            -vvv \
-            ${LAXYDL_EXTRA_ARGS} \
-            --cache-path "${DOWNLOAD_CACHE_PATH}" \
-            --no-progress \
-            --unpack \
-            --parallel-downloads "${LAXYDL_PARALLEL_DOWNLOADS}" \
-            --event-notification-url "${JOB_EVENT_URL}" \
-            --event-notification-auth-file "${AUTH_HEADER_FILE}" \
-            --pipeline-config "${PIPELINE_CONFIG}" \
-            --type-tags reference_genome \
-            --create-missing-directories \
-            --skip-existing \
-            --destination-path "${INPUT_REFERENCE_PATH}"
-
-        # Download (FASTQ) reads
-        laxydl download \
-            ${LAXYDL_INSECURE} \
-            -vvv \
-            ${LAXYDL_EXTRA_ARGS} \
-            --cache-path "${DOWNLOAD_CACHE_PATH}" \
-            --no-progress \
-            --unpack \
-            --parallel-downloads "${LAXYDL_PARALLEL_DOWNLOADS}" \
-            --event-notification-url "${JOB_EVENT_URL}" \
-            --event-notification-auth-file "${AUTH_HEADER_FILE}" \
-            --pipeline-config "${PIPELINE_CONFIG}" \
-            --type-tags ngs_reads \
-            --create-missing-directories \
-            --skip-existing \
-            --destination-path "${INPUT_READS_PATH}"
-
-        DL_EXIT_CODE=$?
-        if [[ $DL_EXIT_CODE != 0 ]]; then
-            send_job_finished $DL_EXIT_CODE
-        fi
-        return $DL_EXIT_CODE
-
-        # send_event "INPUT_DATA_DOWNLOAD_FINISHED" "Input data download completed."
-    fi
-}
-
 function set_genome_args() {
     # See if we can find a custom reference in the fetch_files list
     local _fasta_fn=$(jq --raw-output '.params.fetch_files[] | select(.type_tags[] == "genome_sequence") | .name' "${PIPELINE_CONFIG}" || echo '')
@@ -472,7 +413,9 @@ update_laxydl || send_error 'update_laxydl' '' $?
 #### Stage input data ###
 ####
 
-download_input_data || fail_job 'download_input_data' '' $?
+download_input_data "${INPUT_REFERENCE_PATH}" "reference_genome" || fail_job 'download_input_data' 'Failed to download reference genome' $?
+
+download_input_data "${INPUT_READS_PATH}" "ngs_reads" || fail_job 'download_input_data' 'Failed to download input data' $?
 
 generate_samplesheet
 

@@ -78,7 +78,7 @@ function send_job_finished() {
          --max-time 10 \
          --retry 8 \
          --retry-max-time 600 \
-         -d '{"exit_code":'${_exit_code}'}' \
+         -d '{"exit_code":'"${_exit_code}"'}' \
          "${JOB_COMPLETE_CALLBACK_URL}"
 }
 
@@ -88,15 +88,15 @@ function send_error() {
     local _exit_code=${3:-$?}
     send_event "JOB_ERROR" \
                "Error - ${_reason} (${_step})" \
-               '{"exit_code":'${_exit_code}',"step":"'${_step}'","reason":"'${_reason}'"}'
+               '{"exit_code":'"${_exit_code}"',"step":"'"${_step}"'","reason":"'"${_reason}"'"}'
 }
 
 function fail_job() {
     local _step="$1"
     local _reason="$2"
     local _exit_code=${3:-$?}
-    send_error "${_step}" "${_reason}" ${_exit_code}
-    send_job_finished ${_exit_code}
+    send_error "${_step}" "${_reason}" "${_exit_code}"
+    send_job_finished "${_exit_code}"
     remove_secrets
     update_permissions || true
     exit ${_exit_code}
@@ -106,12 +106,12 @@ function finalize_job() {
     local _exit_code=${1:-$?}
     
     if [[ ${_exit_code} -ne 0 ]]; then
-      send_event "JOB_PIPELINE_FAILED" "Pipeline failed." '{"exit_code":'${_exit_code}'}'
+      send_event "JOB_PIPELINE_FAILED" "Pipeline failed." '{"exit_code":'"${_exit_code}"'}'
     else
-      send_event "JOB_PIPELINE_COMPLETED" "Pipeline completed." '{"exit_code":'${_exit_code}'}'
+      send_event "JOB_PIPELINE_COMPLETED" "Pipeline completed." '{"exit_code":'"${_exit_code}"'}'
     fi
 
-    send_job_finished ${_exit_code}
+    send_job_finished "${_exit_code}"
     remove_secrets
     update_permissions || true
     exit ${_exit_code}
@@ -171,6 +171,49 @@ function download_somehow() {
         echo -e"GET ${url_path} HTTP/1.0\nHost: ${host}\n\n" | openssl s_client -quiet -connect "${host}:${port}" >"${filename}"
     else
         return 1
+    fi
+}
+
+function download_input_data() {
+    if [[ "${JOB_INPUT_STAGED}" == "no" ]]; then
+        local DESTINATION_PATH="$1"
+        local TAG="$2"
+
+        local TYPE_TAGS_ARG=""
+        if [[ ! -z "${TAG}" ]]; then
+            TYPE_TAGS_ARG="--type-tags ${TAG}"
+        fi
+
+        mkdir -p "${DOWNLOAD_CACHE_PATH}"
+
+        LAXYDL_EXTRA_ARGS=""
+        if [[ "${LAXYDL_USE_ARIA2C}" != "yes" ]]; then
+            LAXYDL_EXTRA_ARGS=" ${LAXYDL_EXTRA_ARGS} --no-aria2c "
+        fi
+
+        laxydl download \
+            ${LAXYDL_INSECURE} \
+            -vvv \
+            ${LAXYDL_EXTRA_ARGS} \
+            --cache-path "${DOWNLOAD_CACHE_PATH}" \
+            --no-progress \
+            --unpack \
+            --parallel-downloads "${LAXYDL_PARALLEL_DOWNLOADS}" \
+            --event-notification-url "${JOB_EVENT_URL}" \
+            --event-notification-auth-file "${AUTH_HEADER_FILE}" \
+            --pipeline-config "${PIPELINE_CONFIG}" \
+            ${TYPE_TAGS_ARG} \
+            --create-missing-directories \
+            --skip-existing \
+            --destination-path "${DESTINATION_PATH}"
+
+        DL_EXIT_CODE=$?
+        # (Commented, since we should catch the error code outside this function
+        #  and decide to fail or something else)
+        # if [[ $DL_EXIT_CODE != 0 ]]; then
+        #     send_job_finished $DL_EXIT_CODE
+        # fi
+        return ${DL_EXIT_CODE}
     fi
 }
 
