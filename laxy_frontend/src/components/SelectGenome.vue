@@ -217,7 +217,7 @@ import { isValidUrl } from "../util";
   filters: {}
 })
 export default class SelectGenome extends Vue {
-  public ensemblReleaseUrl: string = "http://ftp.ensembl.org/pub/release-100";
+  public ensemblReleaseUrl: string = "http://ftp.ensembl.org/pub/release-107";
 
   @Sync("pipelineParams@user_genome.fasta_url")
   public custom_genome_fasta_url: string;
