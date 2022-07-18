@@ -224,7 +224,7 @@ function send_job_finished() {
          --max-time 10 \
          --retry 8 \
          --retry-max-time 600 \
-         -d '{"exit_code":'${_exit_code}'}' \
+         -d '{"exit_code":'"${_exit_code}"'}' \
          "${JOB_COMPLETE_CALLBACK_URL}"
 }
 
@@ -234,15 +234,15 @@ function send_error() {
     local _exit_code=${3:-$?}
     send_event "JOB_ERROR" \
                "Error - ${_reason} (${_step})" \
-               '{"exit_code":'${_exit_code}',"step":"'${_step}'","reason":"'${_reason}'"}'
+               '{"exit_code":'"${_exit_code}"',"step":"'"${_step}"'","reason":"'"${_reason}"'"}'
 }
 
 function fail_job() {
     local _step="$1"
     local _reason="$2"
     local _exit_code=${3:-$?}
-    send_error "${_step}" "${_reason}" ${_exit_code}
-    send_job_finished ${_exit_code}
+    send_error "${_step}" "${_reason}" "${_exit_code}"
+    send_job_finished "${_exit_code}"
     remove_secrets
     update_permissions || true
     exit ${_exit_code}
@@ -897,11 +897,13 @@ EOM
 
 function download_input_data() {
     if [[ "${JOB_INPUT_STAGED}" == "no" ]]; then
+        local DESTINATION_PATH="$1"
+        local TAG="$2"
 
-        # send_event "INPUT_DATA_DOWNLOAD_STARTED" "Input data download started."
-
-        # one URL per line
-        readonly urls=$(get_input_data_urls)
+        local TYPE_TAGS_ARG=""
+        if [[ ! -z "${TAG}" ]]; then
+            TYPE_TAGS_ARG="--type-tags ${TAG}"
+        fi
 
         mkdir -p "${DOWNLOAD_CACHE_PATH}"
 
@@ -910,7 +912,6 @@ function download_input_data() {
             LAXYDL_EXTRA_ARGS=" ${LAXYDL_EXTRA_ARGS} --no-aria2c "
         fi
 
-        # Download reference genome files. 
         laxydl download \
             ${LAXYDL_INSECURE} \
             -vvv \
@@ -922,39 +923,18 @@ function download_input_data() {
             --event-notification-url "${JOB_EVENT_URL}" \
             --event-notification-auth-file "${AUTH_HEADER_FILE}" \
             --pipeline-config "${PIPELINE_CONFIG}" \
-            --type-tags reference_genome \
+            ${TYPE_TAGS_ARG} \
             --create-missing-directories \
             --skip-existing \
-            --destination-path "${INPUT_REFERENCE_PATH}"
-
-        # RNAsik automatically creates an uncompressed copy of the reference in sikRun/refFiles,
-        # so we don't need to do this (nor do we need laxydl --copy-from-cache to allow it)
-        # find "${INPUT_REFERENCE_PATH}" -maxdepth 1 -name '*.gz' -exec gunzip {} \;
-
-        # Download (FASTQ) reads
-        laxydl download \
-            ${LAXYDL_INSECURE} \
-            -vvv \
-            ${LAXYDL_EXTRA_ARGS} \
-            --cache-path "${DOWNLOAD_CACHE_PATH}" \
-            --no-progress \
-            --unpack \
-            --parallel-downloads "${LAXYDL_PARALLEL_DOWNLOADS}" \
-            --event-notification-url "${JOB_EVENT_URL}" \
-            --event-notification-auth-file "${AUTH_HEADER_FILE}" \
-            --pipeline-config "${PIPELINE_CONFIG}" \
-            --type-tags ngs_reads \
-            --create-missing-directories \
-            --skip-existing \
-            --destination-path "${INPUT_READS_PATH}"
+            --destination-path "${DESTINATION_PATH}"
 
         DL_EXIT_CODE=$?
-        if [[ $DL_EXIT_CODE != 0 ]]; then
-            send_job_finished $DL_EXIT_CODE
-        fi
-        return $DL_EXIT_CODE
-
-        # send_event "INPUT_DATA_DOWNLOAD_FINISHED" "Input data download completed."
+        # (Commented, since we should catch the error code outside this function
+        #  and decide to fail or something else)
+        # if [[ $DL_EXIT_CODE != 0 ]]; then
+        #     send_job_finished $DL_EXIT_CODE
+        # fi
+        return ${DL_EXIT_CODE}
     fi
 }
 
@@ -1010,7 +990,9 @@ add_sik_config || send_error 'add_sik_config' '' $?
 #### Stage input data ###
 ####
 
-download_input_data || fail_job 'download_input_data' '' $?
+download_input_data "${INPUT_REFERENCE_PATH}" "reference_genome" || fail_job 'download_input_data' 'Failed to download reference genome' $?
+
+download_input_data "${INPUT_READS_PATH}" "ngs_reads" || fail_job 'download_input_data' 'Failed to download input data' $?
 
 capture_environment_variables || true
 

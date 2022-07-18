@@ -188,7 +188,9 @@ def get_job_template_files(pipeline_name, pipeline_version):
 
     # job_template_dirs = ["job_scripts"]  # search paths for job templates from settings
     job_template_dirs = getattr(
-        settings, "JOB_TEMPLATE_PATHS", [str(Path(settings.BASE_DIR, "job_scripts"))],
+        settings,
+        "JOB_TEMPLATE_PATHS",
+        [str(Path(settings.BASE_DIR, "job_scripts"))],
     )
 
     job_template_base = None
@@ -220,7 +222,8 @@ def get_job_template_files(pipeline_name, pipeline_version):
         relative_to=f"{job_template_base}/{pipeline_version}",
     )
     job_default_files = rglobdict(
-        f"{job_template_base}/default/**/*", relative_to=f"{job_template_base}/default",
+        f"{job_template_base}/default/**/*",
+        relative_to=f"{job_template_base}/default",
     )
     common_files = rglobdict(
         f"{common_template_path}/**/*", relative_to=common_template_path
@@ -327,29 +330,33 @@ def start_job(self, task_data=None, **kwargs):
             )
             with cd(working_dir):
                 with shell_env(**environment):
-                    # NOTE: We can't sbatch the run_job.sh script due to
-                    #       the local aria2c RPC daemon launched by laxydl
-                    #       In the future, we may have a DataTransferHost where
-                    #       the data staging steps run, then we could launch
-                    #       run_job.sh via sbatch.
-                    # if job.compute_resource.queue_type == 'slurm':
-                    #     result = run(f"sbatch --parsable "
-                    #                  f'--job-name="laxy:{job_id}" '
-                    #                  f"--output output/run_job.out "
-                    #                  f"{job_script_path} "
-                    #                  f" >>slurm.jids")
-                    #     remote_id = run(str("head -1 slurm.jids"))
-
-                    # The job script is always run locally on the compute
-                    # node (not sbatched), but will itself send jobs
-                    # to the queue.
-                    result = run(
-                        f"nohup bash -l -c '"
-                        f"{job_script_path} & "
-                        f"echo $! >>job.pids"
-                        f"' >output/run_job.out"
-                    )
-                    remote_id = run(str("head -1 job.pids"))
+                    cpus = 1
+                    mem = "4G"
+                    time = "7-00:00:00"
+                    logger.info(f"queue_type = {job.compute_resource.queue_type}")
+                    if job.compute_resource.queue_type == "slurm":
+                        result = run(
+                            f"sbatch --parsable "
+                            f'--job-name="laxy:{job_id}" '
+                            f"--output output/run_job.out "
+                            f"--cpus-per-task={cpus} "
+                            f"--mem={mem} "
+                            f"--time={time} "
+                            f"{job_script_path} "
+                            f" >>slurm.jids"
+                        )
+                        remote_id = run(str("head -1 slurm.jids"))
+                    else:
+                        # The job script is always run locally on the compute
+                        # node (not sbatched), but will itself send jobs
+                        # to the queue.
+                        result = run(
+                            f"nohup bash -l -c '"
+                            f"{job_script_path} & "
+                            f"echo $! >>job.pids"
+                            f"' >output/run_job.out"
+                        )
+                        remote_id = run(str("head -1 job.pids"))
 
         succeeded = result.succeeded
     except BaseException as e:
@@ -479,7 +486,7 @@ def index_remote_files(self, task_data=None, **kwargs) -> dict:
     ) -> Sequence[File]:
         """
         Returns a list of (unsaved) File objects given a list of relative paths
-        and file sizes. If a FileSet is provided and contains file of the same 
+        and file sizes. If a FileSet is provided and contains file of the same
         path+name then add/update the File's location, otherwise create a
         new File object.
 
@@ -634,9 +641,9 @@ def index_remote_files(self, task_data=None, **kwargs) -> dict:
 
 
 @shared_task(bind=True)
-def _finalize_job_task_err_handler(request, exc, traceback, job_id=None):
+def _finalize_job_task_err_handler(self, exc, traceback=None, job_id=None):
     logger.info(
-        f"_finalize_job_task_err_handler: failed task: {request.id}, job_id: {job_id}"
+        f"_finalize_job_task_err_handler: failed task: {self.id}, job_id: {job_id}"
     )
     job = Job.objects.get(id=job_id)
     if not job.done:
@@ -649,7 +656,7 @@ def _finalize_job_task_err_handler(request, exc, traceback, job_id=None):
         eventlog = job.log_event(
             "JOB_FINALIZE_ERROR",
             "",
-            extra={"task_id": request.id, "exception": exc, "traceback": traceback},
+            extra={"task_id": self.id, "exception": exc, "traceback": traceback},
         )
         message = (
             f"Failed to index files or finalize job status (EventLog ID: {eventlog.id})"
@@ -955,7 +962,9 @@ def file_should_be_deleted(ff: File, max_size=200):
 
 
 @shared_task(
-    queue="low-priority", bind=True, track_started=True,
+    queue="low-priority",
+    bind=True,
+    track_started=True,
 )
 def expire_old_job(self, task_data=None, **kwargs):
     from ..models import Job, File
@@ -1055,7 +1064,13 @@ def expire_old_job(self, task_data=None, **kwargs):
 
         try:
             if count > 0:
-                r = estimate_job_tarball_size.apply_async(args=(dict(job_id=job.id,),))
+                r = estimate_job_tarball_size.apply_async(
+                    args=(
+                        dict(
+                            job_id=job.id,
+                        ),
+                    )
+                )
                 if r.failed():
                     raise r.result
         except BaseException as ex:
@@ -1113,7 +1128,7 @@ def move_job_files_to_archive_task(self, task_data=None, *kwargs):
         job: Job, src_compute: ComputeResource, dst_compute: ComputeResource
     ):
         """
-        Temporary function that moves files not in input/ and output/ directories, that 
+        Temporary function that moves files not in input/ and output/ directories, that
         may not be tracked by Laxy File objects in the database.
         """
         job_src_path = job_path_on_compute(job, src_compute)
@@ -1256,9 +1271,9 @@ def move_job_files_to_archive_task(self, task_data=None, *kwargs):
 )
 def bulk_move_job_rsync(self, task_data=None, optional=False, **kwargs):
     """
-    Move all job files from the original compute resource to another 
-    (usually the archive host) using rsync. 
-    
+    Move all job files from the original compute resource to another
+    (usually the archive host) using rsync.
+
     Updates default file locations and deletes original copy at source
     when completed successfully.
 

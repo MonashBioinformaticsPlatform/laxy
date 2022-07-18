@@ -1915,7 +1915,12 @@ class JobCreate(JSONView):
             try:
                 pipelinerun_obj = PipelineRun.objects.get(id=pipeline_run_id)
                 pipelinerun = PipelineRunSerializer(pipelinerun_obj).data
-                samplecart_id = pipelinerun.get("sample_cart", {}).get("id", None)
+
+                samplecart = pipelinerun.get("sample_cart", {})
+                if samplecart is None:
+                    samplecart = {}
+                samplecart_id = samplecart.get("id", None)
+
                 pipelinerun["pipelinerun_id"] = str(pipelinerun["id"])
                 del pipelinerun["id"]
                 request.data["params"] = json.dumps(pipelinerun)
@@ -2567,7 +2572,6 @@ class JobClone(JSONView):
         """
         job = self.get_object()
 
-        samplecart_id = job.params.get("sample_cart", {}).get("id", None)
         # TODO: This should actually be a migration that modifies Job.params to conform to the new
         #       shape. We should probably start versioning our JSON blobs, or including a link to
         #       a JSON Schema (eg generated via marshmallow-jsonschema and linked to in the JSON blob
@@ -2575,18 +2579,27 @@ class JobClone(JSONView):
         #       Advantage of this is we can then automatically generate TypeScript types in the
         #       frontend too using: https://www.npmjs.com/package/json-schema-to-typescript
         #
-        if samplecart_id is None:
-            samplecart_id = job.params.get("sample_set", {}).get("id", None)
-            logger.warning(
-                f"Use of `sample_set` in Job.params is deprecated, please use `sample_cart` (when cloning Job {job_id})"
-            )
+        _support_deprecated_sample_set = True
+        if _support_deprecated_sample_set:
+            samplecart = job.params.get("sample_cart", {})
+            if samplecart is None:
+                samplecart = {}
+            samplecart_id = samplecart.get("id", None)
+            if samplecart_id is None:
+                samplecart_id = job.params.get("sample_set", {}).get("id", None)
+                logger.warning(
+                    f"Use of `sample_set` in Job.params is deprecated, please use `sample_cart` (when cloning Job {job_id})"
+                )
 
         if samplecart_id is None:
             return HttpResponse(
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 reason=f"Cannot find samplecart associated with job {job.id}",
             )
-        pipelinerun = PipelineRun.objects.filter(sample_cart=samplecart_id).first()
+
+        #pipelinerun = PipelineRun.objects.filter(sample_cart=samplecart_id).first()
+        pipelinerun_id = job.params.get("pipelinerun_id", None)
+        pipelinerun = PipelineRun.objects.get(id=pipelinerun_id)
         samplecart = pipelinerun.sample_cart
 
         samplecart.pk = None

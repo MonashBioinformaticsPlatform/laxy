@@ -592,7 +592,7 @@ class PipelineRunSerializer(BaseModelSerializer):
     )
     # job = serializers.PrimaryKeyRelatedField()
 
-    sample_cart = SampleCartSerializer()
+    sample_cart = SampleCartSerializer(required=False, allow_null=True)
     # sample_metadata = SchemalessJsonResponseSerializer(required=False)  # becomes OpenAPI 'object' type
     params = SchemalessJsonResponseSerializer(
         required=False
@@ -611,7 +611,9 @@ class PipelineRunSerializer(BaseModelSerializer):
 
 # TODO: Should we convert File UUIDs from the associated SampleCart into URLs here ?
 class PipelineRunCreateSerializer(PipelineRunSerializer):
-    sample_cart = serializers.PrimaryKeyRelatedField(queryset=SampleCart.objects.all())
+    sample_cart = serializers.PrimaryKeyRelatedField(
+        queryset=SampleCart.objects.all(), required=False, allow_null=True
+    )
     # input_fileset = serializers.PrimaryKeyRelatedField(queryset=FileSet.objects.all())
 
     class Meta(PipelineRunSerializer.Meta):
