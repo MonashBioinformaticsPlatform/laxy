@@ -240,7 +240,7 @@ services:
     deploy:
       restart_policy:
         delay: 5s
-        max_attempts: 3
+        #max_attempts: 3
         window: 120s
     volumes:
       - ./laxy_frontend/dist:/usr/share/nginx/html
