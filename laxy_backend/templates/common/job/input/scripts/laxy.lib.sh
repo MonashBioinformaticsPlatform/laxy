@@ -6,6 +6,8 @@
 
 function remove_secrets() {
     if [[ ${DEBUG} != "yes" ]]; then
+      # Brief wait to let any outstanding requests finish
+      sleep 10
       rm -f "${AUTH_HEADER_FILE}"
     fi
 }
@@ -327,6 +329,6 @@ function add_to_manifest() {
     # "md5:c0a248f159f700a340361e07421e3e62","output/sikRun/bamFiles/SRR5963435_ss_sorted_mdups.bam","bam,alignment",{"metadata":"datadata"}
     #" md5:eb8c7a1382f1ef0cf984749a42e136bc","output/sikRun/bamFiles/SRR5963441_ss_sorted_mdups.bam","bam,alignment",{"metadata":"datadata"}
 
-    local manifest_path=${JOB_PATH}/manifest.csv
-    python3 ${INPUT_SCRIPTS_PATH}/add_to_manifest.py ${manifest_path} "$1" "$2" "${3:-}"
+    local manifest_path="${JOB_PATH}/manifest.csv"
+    python3 "${INPUT_SCRIPTS_PATH}/add_to_manifest.py" "${manifest_path}" "$1" "$2" "${3:-}"
 }
