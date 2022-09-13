@@ -60,7 +60,7 @@ ephem==3.7.6.0
 Fabric3==1.14.post1  # deprecated, mainline fabric now supports Python 3
 # fabric==2.5.0  # significant api changes
 flake8==3.5.0
-flower==0.9.7
+flower==1.2.0
 fs==2.2.1
 gevent==1.4.0
 greenlet==0.4.15
