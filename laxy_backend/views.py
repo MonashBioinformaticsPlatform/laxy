@@ -1263,7 +1263,8 @@ class SampleCartCreateUpdate(JSONView):
             obj.name = "Sample set created on %s" % datetime.isoformat(timezone.now())
 
         content_type = get_content_type(request)
-        encoding = "utf-8"
+        # We use utf-8-sig to strip any initial byte order mark BOM (\ufeff) character
+        encoding = "utf-8-sig"
 
         if content_type == "multipart/form-data":
             if not obj.name:
@@ -2597,7 +2598,7 @@ class JobClone(JSONView):
                 reason=f"Cannot find samplecart associated with job {job.id}",
             )
 
-        #pipelinerun = PipelineRun.objects.filter(sample_cart=samplecart_id).first()
+        # pipelinerun = PipelineRun.objects.filter(sample_cart=samplecart_id).first()
         pipelinerun_id = job.params.get("pipelinerun_id", None)
         pipelinerun = PipelineRun.objects.get(id=pipelinerun_id)
         samplecart = pipelinerun.sample_cart
