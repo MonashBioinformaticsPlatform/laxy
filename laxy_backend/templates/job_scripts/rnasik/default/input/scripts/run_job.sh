@@ -706,8 +706,8 @@ set +o errexit
 # EXTN=".fastq.gz"
 # detect_pairs || fail_job 'detect_pairs' '' $?
 
-# set_genome_index_arg
-GENOME_INDEX_ARG=""
+# GENOME_INDEX_ARG=""
+set_genome_index_arg
 
 send_event "JOB_INFO" "Starting RNAsik."
 
