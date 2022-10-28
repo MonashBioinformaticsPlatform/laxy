@@ -1259,9 +1259,6 @@ class SampleCartCreateUpdate(JSONView):
         :rtype:
         """
 
-        if not obj.name:
-            obj.name = "Sample set created on %s" % datetime.isoformat(timezone.now())
-
         content_type = get_content_type(request)
         # We use utf-8-sig to strip any initial byte order mark BOM (\ufeff) character
         encoding = "utf-8-sig"
@@ -1280,6 +1277,7 @@ class SampleCartCreateUpdate(JSONView):
         elif content_type == "text/csv":
             if not obj.name:
                 obj.name = "CSV uploaded on %s" % datetime.isoformat(timezone.now())
+            # CSVTextParser ensures request.data is already parsed as a list of lists
             csv_table = request.data
             obj.from_csv(csv_table)
 
@@ -1288,6 +1286,10 @@ class SampleCartCreateUpdate(JSONView):
             )
 
         elif content_type == "application/json":
+            if not obj.name:
+                obj.name = "Sample set created on %s" % datetime.isoformat(
+                    timezone.now()
+                )
             serializer = self.get_serializer(instance=obj, data=request.data)
             if serializer.is_valid():
                 obj = serializer.save(owner=request.user)
@@ -1390,7 +1392,11 @@ class SampleCartCreate(SampleCartCreateUpdate):
         -->
         """
 
-        samplecart_name = request.data.get("name", None)
+        # request.data isn't guaranteed to be a JSON-derived dict
+        samplecart_name = None
+        if hasattr(request.data, "get"):
+            samplecart_name = request.data.get("name", None)
+
         obj = SampleCart(name=samplecart_name, owner=request.user)
         return self.create_update(request, obj)
 
@@ -1427,7 +1433,10 @@ class SampleCartView(GetMixin, DeleteMixin, SampleCartCreateUpdate):
                 status=status.HTTP_400_BAD_REQUEST, reason="id cannot be updated"
             )
 
-        sample_name = request.data.get("name", None)
+        # request.data isn't guaranteed to be a JSON-derived dict
+        sample_name = None
+        if hasattr(request.data, "get"):
+            sample_name = request.data.get("name", None)
         if sample_name is not None:
             obj.name = sample_name
 

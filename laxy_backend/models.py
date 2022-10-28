@@ -1,7 +1,8 @@
 import os
 import socket
 import typing
-from typing import List, Union, AnyStr, Iterable
+from typing import List, Sequence, Tuple, Union, AnyStr, Iterable
+import collections
 from collections import OrderedDict
 from datetime import datetime, timedelta
 import math
@@ -350,7 +351,11 @@ class Pipeline(Timestamped, UUIDModel):
         permissions = (("run_pipeline", "Can run this pipeline"),)
 
     owner = ForeignKey(
-        User, blank=True, null=True, on_delete=models.CASCADE, related_name="pipelines",
+        User,
+        blank=True,
+        null=True,
+        on_delete=models.CASCADE,
+        related_name="pipelines",
     )
     name = CharField(max_length=256)
     public = BooleanField(default=False)
@@ -368,7 +373,7 @@ class Pipeline(Timestamped, UUIDModel):
 
 class SystemStatus(Timestamped, UUIDModel):
     """
-    A system status message to be displayed to the user, like a MOTD banner 
+    A system status message to be displayed to the user, like a MOTD banner
     (eg under conditions where there may be a compute backend outage).
     """
 
@@ -1293,16 +1298,16 @@ class File(Timestamped, UUIDModel):
         - this ensures we don't accidentally delete the primary location unless
         we are explicit about it.
 
-        By default, if the containing directory is empty after file deletion, 
-        it will also be removed (disable this behaviour using 
+        By default, if the containing directory is empty after file deletion,
+        it will also be removed (disable this behaviour using
         `delete_empty_directory=False`).
 
         :param location: The URL location or FileLocation to delete.
         :type location: Union[str, FileLocation]
-        :param allow_delete_default: Allow deletion of the data at the default 
+        :param allow_delete_default: Allow deletion of the data at the default
                                      FileLocation.
         :type allow_delete_default: bool
-        :param delete_empty_directory: Also removes the containing directory of 
+        :param delete_empty_directory: Also removes the containing directory of
                                        the file if it's empty after deleting the file.
         :type delete_empty_directory: bool
         :return:
@@ -1596,7 +1601,7 @@ class File(Timestamped, UUIDModel):
     ) -> Union[None, SFTPStorageFile, typing.IO[AnyStr]]:
         """
         Return a file-like object for the given location.
-        
+
         (django.core.files.storage.File interface)
         """
         # return self.file_at_location(self.location)
@@ -2031,7 +2036,13 @@ class SampleCart(Timestamped, UUIDModel):
     # ..etc.. as technical replicates
 
     def from_csv(
-        self, csv_string, header=False, dialect="excel", comment_char="#", save=True
+        self,
+        csv_string: Union[str, Sequence],
+        header=False,
+        dialect="excel",
+        encoding="utf-8-sig",
+        comment_char="#",
+        save=True,
     ):
         """
         Accepts a raw string, or a pre-parsed list-of-lists (eg from Python's csv.reader)
@@ -2058,10 +2069,15 @@ class SampleCart(Timestamped, UUIDModel):
         samples = OrderedDict()
         prev_sample_name = None
 
+        if isinstance(csv_string, bytes):
+            csv_string = csv_string.decode(encoding)
+            
         if isinstance(csv_string, str):
             lines = list(csv.reader(csv_string.splitlines(), dialect=dialect))
-        elif isinstance(csv_string, List):
+        elif isinstance(csv_string, collections.abc.Sequence):
             lines = csv_string
+        else:
+            raise TypeError("csv_string must be a string or Sequence (eg list, tuple)")
 
         if header:  # skip header
             lines = lines[1:]

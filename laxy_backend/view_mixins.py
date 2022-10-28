@@ -132,9 +132,18 @@ class CSVTextParser(BaseParser):
         media_type_params = dict(
             [param.strip().split("=") for param in media_type.split(";")[1:]]
         )
-        charset = media_type_params.get("charset", "utf-8")
+        charset = media_type_params.get("charset", "utf-8-sig")
+        # Override utf-8 encoding to always handle byte order mark transparently
+        if charset == "utf-8":
+            charset == "utf-8-sig"
         dialect = media_type_params.get("dialect", "excel")
         txt = stream.read().decode(charset)
+
+        # cheating
+        # def remove_prefix(s, prefix):
+        #    return s[len(prefix):] if s.startswith(prefix) else s
+        # txt = remove_prefix(txt, "\ufeff")
+
         csv_table = list(csv.reader(txt.splitlines(), dialect=dialect))
         return csv_table
 

@@ -1,7 +1,10 @@
 # from __future__ import absolute_import
+from collections import OrderedDict
+from io import BytesIO, StringIO
 import unittest
 import os
 import random
+import codecs
 from django.utils import timezone
 
 # from compare import expect, ensure, matcher
@@ -30,6 +33,8 @@ from ..jwt_helpers import (
 # from ..models import User
 from django.contrib.auth import get_user_model
 from laxy_backend.views import add_sanitized_names_to_samplecart_json
+
+tests_path = os.path.dirname(os.path.abspath(__file__))
 
 User = get_user_model()
 
@@ -103,7 +108,9 @@ class FileViewTest(TestCase):
         }
 
         response = self.user_client.post(
-            reverse("laxy_backend:create_file"), data=job_json, format="json",
+            reverse("laxy_backend:create_file"),
+            data=job_json,
+            format="json",
         )
 
         self.assertEqual(response.status_code, 200)
@@ -707,3 +714,156 @@ class JobViewTest(TestCase):
             "Im_an_ugly_2_L002_1_sample-NAME__r1",
         )
 
+
+class SampleCartViewTest(TestCase):
+    def setUp(self):
+        # admin_user, authenticated_client = _create_user_and_login()
+        # self.admin_user = admin_user
+        # self.admin_authenticated_client = authenticated_client
+
+        self.username, self.password = ("user1", "userpass1")
+        user, user_json_client = _create_user_and_login(
+            self.username, self.password, is_superuser=False
+        )
+        self.user = user
+        self.user_json_client = user_json_client
+
+        self.csv_text = """SampleA,ftp://ftp.example.com/pub/bla_lane1_R1.fastq.gz,ftp://ftp.example.com/pub/bla_lane1_R2.fastq.gz
+SampleA, ftp://ftp.example.com/pub/bla_lane2_R1.fastq.gz, ftp://ftp.example.com/pub/bla_lane2_R2.fastq.gz
+SampleB,ftp://ftp.example.com/pub/bla2_R1_001.fastq.gz,ftp://ftp.example.com/pub/bla2_R2_001.fastq.gz
+       ,ftp://ftp.example.com/pub/bla2_R1_002.fastq.gz,ftp://ftp.example.com/pub/bla2_R2_002.fastq.gz
+SampleC,ftp://ftp.example.com/pub/foo2_lane4_1.fastq.gz,ftp://ftp.example.com/pub/foo2_lane4_2.fastq.gz
+SampleC,ftp://ftp.example.com/pub/foo2_lane5_1.fastq.gz,ftp://ftp.example.com/pub/foo2_lane5_2.fastq.gz
+
+"""
+        # Text beginning with a byte order mark (BOM) `\ufeff`, sometimes seen in the wild for
+        # specific Unicode encodings or UTF-8 from Windows Notepad.
+        # Equivalent to prepending `\ufeff` (codecs.BOM_UTF8) is this:
+        self.csv_text_with_bom_utf8 = self.csv_text.encode("utf-8-sig")
+
+        self.sample_list = [
+            {
+                "name": "SampleA",
+                "files": [
+                    OrderedDict(
+                        R1={
+                            "location": "ftp://ftp.example.com/pub/bla_lane1_R1.fastq.gz",
+                            "name": "bla_lane1_R1.fastq.gz",
+                        },
+                        R2={
+                            "location": "ftp://ftp.example.com/pub/bla_lane1_R2.fastq.gz",
+                            "name": "bla_lane1_R2.fastq.gz",
+                        },
+                    ),
+                    OrderedDict(
+                        R1={
+                            "location": "ftp://ftp.example.com/pub/bla_lane2_R1.fastq.gz",
+                            "name": "bla_lane2_R1.fastq.gz",
+                        },
+                        R2={
+                            "location": "ftp://ftp.example.com/pub/bla_lane2_R2.fastq.gz",
+                            "name": "bla_lane2_R2.fastq.gz",
+                        },
+                    ),
+                ],
+            },
+            {
+                "name": "SampleB",
+                "files": [
+                    OrderedDict(
+                        R1={
+                            "location": "ftp://ftp.example.com/pub/bla2_R1_001.fastq.gz",
+                            "name": "bla2_R1_001.fastq.gz",
+                        },
+                        R2={
+                            "location": "ftp://ftp.example.com/pub/bla2_R2_001.fastq.gz",
+                            "name": "bla2_R2_001.fastq.gz",
+                        },
+                    ),
+                    OrderedDict(
+                        R1={
+                            "location": "ftp://ftp.example.com/pub/bla2_R1_002.fastq.gz",
+                            "name": "bla2_R1_002.fastq.gz",
+                        },
+                        R2={
+                            "location": "ftp://ftp.example.com/pub/bla2_R2_002.fastq.gz",
+                            "name": "bla2_R2_002.fastq.gz",
+                        },
+                    ),
+                ],
+            },
+            {
+                "name": "SampleC",
+                "files": [
+                    OrderedDict(
+                        R1={
+                            "location": "ftp://ftp.example.com/pub/foo2_lane4_1.fastq.gz",
+                            "name": "foo2_lane4_1.fastq.gz",
+                        },
+                        R2={
+                            "location": "ftp://ftp.example.com/pub/foo2_lane4_2.fastq.gz",
+                            "name": "foo2_lane4_2.fastq.gz",
+                        },
+                    ),
+                    OrderedDict(
+                        R1={
+                            "location": "ftp://ftp.example.com/pub/foo2_lane5_1.fastq.gz",
+                            "name": "foo2_lane5_1.fastq.gz",
+                        },
+                        R2={
+                            "location": "ftp://ftp.example.com/pub/foo2_lane5_2.fastq.gz",
+                            "name": "foo2_lane5_2.fastq.gz",
+                        },
+                    ),
+                ],
+            },
+        ]
+
+    def tearDown(self):
+        pass
+
+    def test_create_with_csv(self):
+        client = APIClient(HTTP_CONTENT_TYPE="multipart/form-data")
+        # client = APIClient(HTTP_CONTENT_TYPE="text/csv")
+        client.login(username=self.username, password=self.password)
+        # response = client.post(reverse("laxy_backend:create_samplecart"),
+        #                         data=self.csv_text, content_type="text/csv; charset=utf-8")
+        response = client.post(
+            reverse("laxy_backend:create_samplecart"),
+            data={"name": "somefile.csv", "file": StringIO(self.csv_text)},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        cart_id = response.data.get("id")
+        self.assertEqual(response.data.get("samples"), self.sample_list)
+
+    def test_create_with_csv_bom_utf8(self):
+        client = APIClient(HTTP_CONTENT_TYPE="multipart/form-data")
+
+        client.login(username=self.username, password=self.password)
+
+        response = client.post(
+            reverse("laxy_backend:create_samplecart"),
+            data={"name": "somefile.csv", "file": BytesIO(self.csv_text_with_bom_utf8)},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        cart_id = response.data.get("id")
+        self.assertEqual(response.data.get("samples"), self.sample_list)
+
+    def test_create_with_csv_bom_utf8__contenttype_text_csv(self):
+        client = APIClient(HTTP_CONTENT_TYPE="text/csv")
+        client.login(username=self.username, password=self.password)
+        response = client.post(
+            reverse("laxy_backend:create_samplecart"),
+            data=self.csv_text_with_bom_utf8,
+            # We CANNOT use charset=utf-8 here since the csv_text_with_bom_utf8
+            # bytes will be decoded (by APIClient ?) as utf-8 before they hit
+            # the view function, resulting in a '\ufeff' prefix in text
+            # content_type="text/csv; charset=utf-8",
+            content_type="text/csv",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        cart_id = response.data.get("id")
+        self.assertEqual(response.data.get("samples"), self.sample_list)

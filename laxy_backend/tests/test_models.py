@@ -6,6 +6,7 @@ from django.utils import timezone
 import unittest
 import os
 import random
+import codecs
 
 # from compare import expect, ensure, matcher
 import json
@@ -97,7 +98,10 @@ class FileModelTest(TestCase):
 
     def test_file_location(self):
         url = "ftp://ftp.sra.ebi.ac.uk.example.com/vol1/fastq/SRR950/SRR950078/SRR950078_1.fastq.gz"
-        a_file = File(location=url, owner_id=self.user.id,)
+        a_file = File(
+            location=url,
+            owner_id=self.user.id,
+        )
 
         self.assertEqual(a_file.location, url)
         # We shouldn't have any concrete FileLocation records in the db until the File is saved
@@ -173,13 +177,21 @@ class FileModelTest(TestCase):
         self.assertEqual(file_obj.location, first_url)
 
         fourth_url = "laxy+sftp://4th_compute_id/some_job_id/filepath/file.txt"
-        file_obj.add_location(FileLocation(url=fourth_url, file=file_obj,))
+        file_obj.add_location(
+            FileLocation(
+                url=fourth_url,
+                file=file_obj,
+            )
+        )
         # check we can add a location via FileLocation instance
         self.assertIn(fourth_url, file_obj.locations.values_list("url", flat=True))
 
         different_file_obj = File(location=first_url, owner_id=self.user.id)
         different_file_obj.save()
-        different_file_loc = FileLocation(url=fourth_url, file=different_file_obj,)
+        different_file_loc = FileLocation(
+            url=fourth_url,
+            file=different_file_obj,
+        )
         # check that we cannot add a FileLocation pointing to a different File
         with self.assertRaises(ValueError) as _cxt:
             file_obj.add_location(different_file_loc)
@@ -346,6 +358,10 @@ SampleC,ftp://ftp.example.com/pub/foo2_lane4_1.fastq.gz,ftp://ftp.example.com/pu
 SampleC,ftp://ftp.example.com/pub/foo2_lane5_1.fastq.gz,ftp://ftp.example.com/pub/foo2_lane5_2.fastq.gz
 
 """
+        # Text beginning with a byte order mark (BOM) `\ufeff`, sometimes seen in the wild for
+        # specific Unicode encodings or UTF-8 from Windows Notepad.
+        # Equivalent to prepending `\ufeff` (codecs.BOM_UTF8) is this:
+        self.csv_text_with_bom_utf8 = self.csv_text.encode("utf-8-sig")
 
         self.sample_list = [
             {
@@ -439,6 +455,12 @@ SampleC,ftp://ftp.example.com/pub/foo2_lane5_1.fastq.gz,ftp://ftp.example.com/pu
     def test_from_csv(self):
         samplecart = SampleCart()
         samplecart.from_csv(self.csv_text, save=False)
+
+        self.assertListEqual(samplecart.samples, self.sample_list)
+
+    def test_from_csv_bom_utf8(self):
+        samplecart = SampleCart()
+        samplecart.from_csv(self.csv_text_with_bom_utf8, save=False)
 
         self.assertListEqual(samplecart.samples, self.sample_list)
 

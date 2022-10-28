@@ -80,16 +80,19 @@ services:
     # command: pytest -ra
     # command: pytest -vvv --pdb
     # command: pytest -vvv --pdb laxy_backend/tests/test_tasks.py
+    # command: pytest -vvv --showlocals --tb=auto laxy_backend/tests/test_views.py
+    # command: pytest -vvv --pdb laxy_backend/tests/test_views.py
+    # command: pytest -vvv laxy_backend/tests/test_models.py
     # command: pytest -vvv laxy_backend/tests/test_util.py
     # Not working for me
     # command: python -m ptvsd --host 0.0.0.0 --port 21001 --wait -m pytest -vvv
 
-  ##
-  # Disabled services not required for simple local dev, overridden from base docker-compose.yml
-  ##
+    ##
+    # Disabled services not required for simple local dev, overridden from base docker-compose.yml
+    ##
 
-  # For simple local development, we run in Django debug mode (LAXY_DEBUG=yes) with CELERY_ALWAYS_EAGER=True
-  # so that celery tasks run non-async in the Django process. We don't need the celery daemon in this case.
+    # For simple local development, we run in Django debug mode (LAXY_DEBUG=yes) with CELERY_ALWAYS_EAGER=True
+    # so that celery tasks run non-async in the Django process. We don't need the celery daemon in this case.
   queue-high:
     image: alpine
     entrypoint:
@@ -138,6 +141,7 @@ services:
 
 volumes:
   test-dbdata:
+
 
 networks:
   test-net:
