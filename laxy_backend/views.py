@@ -54,6 +54,7 @@ import paramiko
 from robobrowser import RoboBrowser
 from rest_framework import generics
 from rest_framework import status
+from rest_framework.settings import api_settings
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import (
     api_view,
@@ -70,6 +71,7 @@ from rest_framework.renderers import JSONRenderer, BaseRenderer, TemplateHTMLRen
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_csv.renderers import PaginatedCSVRenderer
 from guardian.shortcuts import get_objects_for_user
 
 from typing import Dict, List, Union
@@ -141,6 +143,7 @@ from .serializers import (
     PipelineRunCreateSerializer,
     SchemalessJsonResponseSerializer,
     JobListSerializerResponse,
+    JobListSerializerResponse_CSV,
     PipelineSerializer,
     EventLogSerializer,
     JobEventLogSerializer,
@@ -2166,31 +2169,46 @@ class JobPagination(PageNumberPagination):
     max_page_size = 100
 
 
-# TODO: When we have proper permissions, use viewsets.GenericViewSet or
-# viewsets.ModelViewSet or ListAPIView instead with the appropriate permission_classes
-# http://www.django-rest-framework.org/api-guide/viewsets/#modelviewset
 class JobListView(generics.ListAPIView):
     """
-    Retrieve a list of jobs for the current user.
+    Retrieve a list of jobs. Can return:
+    - JSON format (`Accept: application/json` request header,
+                    or call with a `.json` extension like `api/v1/jobs.json`)
+    - CSV format (`Accept: text/csv` request header,
+                    or call with a `.csv` extension like `api/v1/jobs.csv`)
     """
 
+    renderer_classes = tuple(
+        getattr(api_settings, "DEFAULT_RENDERER_CLASSES", tuple())
+    ) + (PaginatedCSVRenderer,)
     serializer_class = JobListSerializerResponse
-    # permission_classes = [IsAuthenticated]
+    permission_classes = (IsOwner | IsSuperuser | HasReadonlyObjectAccessToken,)
     pagination_class = JobPagination
 
-    def get_queryset(self):
-        return (
-            Job.objects.filter(owner=self.request.user)
-            # .order_by('status')
-            .order_by("-created_time")
-        )
+    def get_serializer_class(self):
+        if self.request.accepted_renderer.format == "csv":
+            return JobListSerializerResponse_CSV
 
-    # def list(self, request):
-    #     # queryset = Job.objects.filter(owner=request.user).order_by('-created_time')
-    #     queryset = self.get_queryset()
-    #     serializer = JobSerializerResponse(queryset, many=True)
-    #     self.transform_output(serializer.data)
-    #     return Response(serializer.data)
+        return self.serializer_class
+
+    def paginate_queryset(self, queryset):
+        # We don't do pagination for CSV unless we have a
+        # ?page=1&page_size=10 style query string.
+        if self.request.accepted_renderer.format == "csv" and not any(
+            q in ["page", "page_size"] for q in self.request.query_params.dict().keys()
+        ):
+            return None
+        return super().paginate_queryset(queryset)
+
+    def get_queryset(self):
+        user = self.request.user
+
+        # TODO: Add UI switch to show all jobs, only available in UI to admins
+        #       (Or allow a user email filter via text box)
+        if user.is_superuser:  # and self.request.query_params.get('all', False):
+            return Job.objects.order_by("-created_time")
+
+        return Job.objects.filter(owner=user).order_by("-created_time")
 
 
 class PipelineView(JSONView, GetMixin):

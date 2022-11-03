@@ -152,12 +152,6 @@ api_urls = [
     re_path(r"auth/login/", include(rest_social_auth_urls)),
     re_path(r"job/$", JobCreate.as_view(), name="create_job"),
     re_path(
-        r"jobs/$",
-        # JobListView.as_view({'get': 'list'}),
-        JobListView.as_view(),
-        name="list_jobs",
-    ),
-    re_path(
         r"job/(?P<uuid>[a-zA-Z0-9\-_]+)/files/$",
         JobFileBulkRegistration.as_view(),  # POST (csv, tsv)
         name="job_file_bulk",
@@ -252,6 +246,19 @@ api_urls = [
     ),
 ]
 
+# eg, allow api/v1/jobs.csv or api/v1/jobs.json
+api_urls_format_suffix_enabled = [
+    re_path(
+        r"jobs/$",
+        # JobListView.as_view({'get': 'list'}),
+        JobListView.as_view(),
+        name="list_jobs",
+    ),
+]
+api_urls_format_suffix_enabled = format_suffix_patterns(
+    api_urls_format_suffix_enabled, allowed=["json", "csv"]
+)
+
 admin_urls = [
     re_path(
         r"tasks/register-job-files/(?P<job_id>[a-zA-Z0-9\-_]+)/$",
@@ -262,7 +269,6 @@ admin_urls = [
 
 urlpatterns = [
     # re_path(r'^api/(?P<version>(v1|v2))/', include(api_urls)),
-    re_path(r"^api/v1/", include(api_urls)),
+    re_path(r"^api/v1/", include(api_urls + api_urls_format_suffix_enabled)),
     re_path(r"^api/v1/admin/", include(admin_urls)),
 ]
-

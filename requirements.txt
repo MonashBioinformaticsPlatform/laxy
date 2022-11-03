@@ -46,6 +46,7 @@ django-object-actions==1.0.0
 django-rest-framework-social-oauth2==1.1.0
 django-rest-swagger==2.1.2
 django-reversion==3.0.2
+djangorestframework-csv==2.1.1
 
 # Using this commit of django-storages until >1.9.1 release, due to issue #835, and memory usage
 git+https://github.com/pansapiens/django-storages.git@sftp-streaming#egg=django-storages

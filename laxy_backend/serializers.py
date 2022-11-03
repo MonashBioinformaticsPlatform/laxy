@@ -301,7 +301,7 @@ class FileSerializerOptionalLocation(FileSerializer):
     """
     Allows the `location` field to be omitted - intended to be
     used when we want to be able to refer to a list of new files
-    where location would be required, or a list of existing files 
+    where location would be required, or a list of existing files
     using `id` only.
     """
 
@@ -482,6 +482,49 @@ class JobListSerializerResponse(JobSerializerResponse):
     class Meta:
         model = models.Job
         exclude = ("input_files", "output_files")
+        depth = 0
+        error_status_codes = status_codes()
+
+
+class JobListSerializerResponse_CSV(BaseModelSerializer):
+    owner = serializers.PrimaryKeyRelatedField(
+        read_only=True, default=serializers.CurrentUserDefault()
+    )
+    owner_email = serializers.CharField(source="owner.email")
+
+    compute_resource_name = serializers.CharField(
+        source="compute_resource.name",
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        # max_length=24,
+    )
+
+    compute_resource = serializers.CharField(
+        source="compute_resource.id",
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        max_length=24,
+    )
+
+    status = serializers.CharField()
+
+    class Meta:
+        model = models.Job
+        fields = (
+            "id",
+            "created_time",
+            "completed_time",
+            "expiry_time",
+            "owner_email",
+            "owner",
+            "status",
+            "exit_code",
+            "expired",
+            "compute_resource",
+            "compute_resource_name",
+        )
         depth = 0
         error_status_codes = status_codes()
 
@@ -799,4 +842,3 @@ class JobAccessTokenResponseSerializer(JobAccessTokenRequestSerializer):
             "object_id",
             "content_type",
         )
-
