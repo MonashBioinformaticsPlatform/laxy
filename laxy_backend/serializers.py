@@ -488,9 +488,15 @@ class JobListSerializerResponse(JobSerializerResponse):
 
 class JobListSerializerResponse_CSV(BaseModelSerializer):
     owner = serializers.PrimaryKeyRelatedField(
-        read_only=True, default=serializers.CurrentUserDefault()
+        read_only=True,
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        default=serializers.CurrentUserDefault(),
     )
-    owner_email = serializers.CharField(source="owner.email")
+    owner_email = serializers.CharField(
+        source="owner.email", allow_blank=True, allow_null=True
+    )
 
     compute_resource_name = serializers.CharField(
         source="compute_resource.name",
@@ -508,7 +514,7 @@ class JobListSerializerResponse_CSV(BaseModelSerializer):
         max_length=24,
     )
 
-    status = serializers.CharField()
+    status = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
     class Meta:
         model = models.Job
