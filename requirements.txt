@@ -53,7 +53,7 @@ git+https://github.com/pansapiens/django-storages.git@sftp-streaming#egg=django-
 # django-storages==1.9.1
 
 django-timezone-field==3.0
-djangorestframework==3.9.4
+djangorestframework==3.11.2
 djangorestframework-jwt==1.11.0
 docutils==0.16
 enasearch==0.2.0
