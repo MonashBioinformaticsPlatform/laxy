@@ -490,7 +490,6 @@ class JobListSerializerResponse_CSV(BaseModelSerializer):
     owner = serializers.PrimaryKeyRelatedField(
         read_only=True,
         required=False,
-        allow_blank=True,
         allow_null=True,
         default=serializers.CurrentUserDefault(),
     )
@@ -503,7 +502,6 @@ class JobListSerializerResponse_CSV(BaseModelSerializer):
         required=False,
         allow_blank=True,
         allow_null=True,
-        # max_length=24,
     )
 
     compute_resource = serializers.CharField(
@@ -511,10 +509,45 @@ class JobListSerializerResponse_CSV(BaseModelSerializer):
         required=False,
         allow_blank=True,
         allow_null=True,
-        max_length=24,
     )
 
     status = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+    # These might be genomics pipeline specific and need to change in the future
+    pipeline_name = serializers.CharField(
+        source="params.pipeline",
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+    )
+
+    pipeline_version = serializers.CharField(
+        source="params.params.pipeline_version",
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+    )
+
+    genome = serializers.CharField(
+        source="params.params.genome",
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+    )
+
+    user_genome_fasta_url = serializers.CharField(
+        source="params.params.user_genome.fasta_url",
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+    )
+
+    user_genome_annotation_url = serializers.CharField(
+        source="params.params.user_genome.annotation_url",
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+    )
 
     class Meta:
         model = models.Job
@@ -525,6 +558,11 @@ class JobListSerializerResponse_CSV(BaseModelSerializer):
             "expiry_time",
             "owner_email",
             "owner",
+            "pipeline_name",
+            "pipeline_version",
+            "genome",
+            "user_genome_fasta_url",
+            "user_genome_annotation_url",
             "status",
             "exit_code",
             "expired",
