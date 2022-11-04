@@ -8,6 +8,7 @@ import { FETCH_USER_PROFILE, Store } from './store';
 import FrontPage from './components/FrontPage.vue';
 import AboutPage from './components/AboutPage.vue';
 import LoginPage from './components/LoginPage.vue';
+import UserProfile from './components/UserProfile.vue';
 import RNASeqSetup from './components/pipelines/rnasik/ui/RNASeqSetup.vue';
 import SeqkitStatsSetup from './components/pipelines/seqkit_stats/ui/SeqkitStatsSetup.vue';
 import NfCoreRnaSeqSetup from './components/pipelines/nf-core-rnaseq/ui/NfCoreRnaSeqSetup.vue';
@@ -92,6 +93,12 @@ export const router = new VueRouter({
             path: '/logout',
             name: 'logout',
             component: LoginPage,
+            props: true,
+        },
+        {
+            path: '/profile',
+            name: 'profile',
+            component: UserProfile,
             props: true,
         },
         {

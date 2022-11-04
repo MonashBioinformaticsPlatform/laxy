@@ -82,6 +82,15 @@
             min-height: 100%;
         }
 
+        .pad-8 {
+            padding: 8px;
+        }
+
+        .pad-8-sides {
+            padding-left: 8px;
+            padding-right: 8px;
+        }
+
         .pad-16 {
             padding: 16px;
         }
@@ -268,10 +277,8 @@
                                     <md-subheader>{{ user_profile.full_name }}</md-subheader>
                                     <md-menu-item @selected="routeTo('jobs')">My Jobs
                                     </md-menu-item>
-                                    <!-- TODO: https://github.com/MonashBioinformaticsPlatform/laxy/issues/13
-                                <md-menu-item @selected="routeTo('profile')">Profile
-                                </md-menu-item>
-                                -->
+                                    <md-menu-item @selected="routeTo('profile')">User Profile
+                                    </md-menu-item>
                                     <md-menu-item @selected="logout">Logout
                                     </md-menu-item>
                                 </div>

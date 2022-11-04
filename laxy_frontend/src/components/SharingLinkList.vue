@@ -20,48 +20,32 @@
           </span>
         </md-table-cell>
         <md-table-cell>
-          <span
-            :class="{ 'expired-link': linkIsExpired(link) }"
-          >{{ formatExpiryString(link.expiry_time) }}</span>
+          <span :class="{ 'expired-link': linkIsExpired(link) }">{{ formatExpiryString(link.expiry_time) }}</span>
           <md-menu v-if="allowExpiryEdit" md-size="4" class="push-left">
             <md-button class="md-icon-button" md-menu-trigger>
               <md-icon>arrow_drop_down</md-icon>
             </md-button>
 
             <md-menu-content>
-              <span
-                class="md-subheading"
-                style="font-weight: bold; padding-left: 16px"
-              >Change expiry to</span>
+              <span class="md-subheading" style="font-weight: bold; padding-left: 16px">Change expiry to</span>
               <!--  -->
-              <md-menu-item
-                v-for="expires_in in access_token_lifetime_options"
-                :key="expires_in"
-                @click="updateSharingLink(jobId, expires_in)"
-              >
-                <span
-                  v-if="typeof expires_in == 'number'"
-                >{{ expires_in | duration('seconds').humanize() }} from now</span>
+              <md-menu-item v-for="expires_in in access_token_lifetime_options" :key="expires_in"
+                @click="updateSharingLink(jobId, expires_in)">
+                <span v-if="typeof expires_in == 'number'">{{ expires_in | duration('seconds').humanize() }} from
+                  now</span>
                 <span v-else>{{ expires_in }} expires</span>
               </md-menu-item>
             </md-menu-content>
           </md-menu>
         </md-table-cell>
         <md-table-cell md-numeric>
-          <md-button
-            v-if="!linkIsExpired(link)"
-            class="md-icon-button push-right"
-            @click="setClipboardFlash(formatSharingLink(link), 'Copied link to clipboard !')"
-          >
+          <md-button v-if="!linkIsExpired(link)" class="md-icon-button push-right"
+            @click="setClipboardFlash(formatSharingLink(link), 'Copied link to clipboard !')">
             <md-icon>file_copy</md-icon>
             <md-tooltip md-direction="top">Copy to clipboard</md-tooltip>
           </md-button>
-          <md-button
-            v-if="showDeleteButton"
-            class="md-icon-button"
-            :class="{'push-right': linkIsExpired(link)}"
-            @click="deleteSharingLink(link.id)"
-          >
+          <md-button v-if="showDeleteButton" class="md-icon-button" :class="{ 'push-right': linkIsExpired(link) }"
+            @click="deleteSharingLink(link.id)">
             <md-icon>delete</md-icon>
             <md-tooltip md-direction="top">Delete</md-tooltip>
           </md-button>
@@ -73,7 +57,7 @@
 
 <script lang="ts">
 import Vue, { ComponentOptions } from "vue";
-import Component from "vue-class-component";
+import Component, { mixins } from "vue-class-component";
 import {
   Emit,
   Inject,
@@ -85,16 +69,16 @@ import {
 
 import { Memoize } from "lodash-decorators";
 
-const Clipboard = require("clipboard");
-
 import * as moment from "moment";
 
 import { WebAPI } from "../web-api";
 
+import { CopyToClipboard } from '../clipboard-mixin';
+
 @Component({
   filters: {},
 })
-export default class SharingLinkList extends Vue {
+export default class SharingLinkList extends mixins(CopyToClipboard) {
   @Prop({ type: String })
   public jobId: string;
 
@@ -155,30 +139,6 @@ export default class SharingLinkList extends Vue {
     return formatted;
   }
 
-  async setClipboard(text: string) {
-    return new Promise(function (resolve, reject) {
-      const tmp_button = document.createElement("button");
-      const clipboard = new Clipboard(tmp_button, {
-        text: function () {
-          return text;
-        },
-        action: function () {
-          return "copy";
-        },
-        container: document.body,
-      });
-      clipboard.on("success", function (e: Promise<string>) {
-        clipboard.destroy();
-        resolve(e);
-      });
-      clipboard.on("error", function (e: Promise<string>) {
-        clipboard.destroy();
-        reject(e);
-      });
-      tmp_button.click();
-    });
-  }
-
   async updateSharingLink(job_id: string, expires_in: number | string) {
     this.$emit("change-link", { job_id: job_id, expires_in: expires_in });
   }
@@ -187,22 +147,5 @@ export default class SharingLinkList extends Vue {
     this.$emit("delete-link", link_id);
   }
 
-  async setClipboardFlash(
-    text: string,
-    message: string,
-    failMessage: string = "Failed to copy to clipboard :/"
-  ) {
-    try {
-      const displayTime = message.length * 20 + 500;
-      await this.setClipboard(text);
-      this.$emit("flash-message", { message: message, duration: displayTime });
-    } catch (error) {
-      const displayTime = failMessage.length * 20 + 1000;
-      this.$emit("flash-message", {
-        message: failMessage,
-        duration: displayTime,
-      });
-    }
-  }
 }
 </script>

@@ -1,10 +1,5 @@
 <template>
-  <md-sidenav
-    class="md-left"
-    ref="sidenav"
-    @open="open('Left')"
-    @close="close('Left')"
-  >
+  <md-sidenav class="md-left" ref="sidenav" @open="open('Left')" @close="close('Left')">
     <md-toolbar class="md-large">
       <h3 class="md-title">~</h3>
     </md-toolbar>
@@ -45,18 +40,13 @@
           </span>
           <span>
             <md-icon v-if="!pipeline.public">lock</md-icon>
-            <md-tooltip md-direction="right"
-              >Private pipeline (not publicly available)</md-tooltip
-            >
+            <md-tooltip md-direction="right">Private pipeline (not publicly available)</md-tooltip>
           </span>
         </router-link>
       </md-list-item>
     </md-list>
     <div>
-      <span
-        style="position: absolute; bottom: 0; padding: 16px"
-        class="md-caption"
-      >
+      <span style="position: absolute; bottom: 0; padding: 16px" class="md-caption">
         <slot name="footer"></slot>
       </span>
     </div>
