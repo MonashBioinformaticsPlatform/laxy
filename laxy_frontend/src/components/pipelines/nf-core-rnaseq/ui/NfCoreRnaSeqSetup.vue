@@ -1,10 +1,7 @@
 <template>
   <div>
-    <md-dialog-alert
-      :md-content-html="error_alert_message"
-      :md-content="error_alert_message"
-      ref="error_dialog"
-    ></md-dialog-alert>
+    <md-dialog-alert :md-content-html="error_alert_message" :md-content="error_alert_message"
+      ref="error_dialog"></md-dialog-alert>
     <md-layout md-column>
       <form novalidate>
         <md-whiteframe class="pad-32">
@@ -18,18 +15,11 @@
           <h3>Pipeline parameters</h3>
           <md-input-container>
             <label>Description</label>
-            <md-input
-              v-model="description"
-              placeholder="Description of pipeline run ..."
-            ></md-input>
+            <md-input v-model="description" placeholder="Description of pipeline run ..."></md-input>
           </md-input-container>
           <md-input-container>
             <label for="strandedness">Strandedness</label>
-            <md-select
-              name="strandedness"
-              id="strandedness"
-              v-model="strandedness"
-            >
+            <md-select name="strandedness" id="strandedness" v-model="strandedness">
               <md-option value="unstranded">unstranded</md-option>
               <md-option value="reverse">reverse</md-option>
               <md-option value="forward">forward</md-option>
@@ -39,7 +29,7 @@
       </form>
 
       <md-whiteframe class="pad-16" md-elevation="2">
-        <select-genome></select-genome>
+        <select-genome :genomes="available_genomes"></select-genome>
       </md-whiteframe>
 
       <md-whiteframe class="pad-16" md-elevation="2">
@@ -48,60 +38,30 @@
 
       <md-whiteframe class="pad-32" md-elevation="8">
         <h3>Sample summary</h3>
-        <sample-cart
-          v-if="samples.items.length > 0"
-          :samples="samples"
-          :fields="['name', 'metadata.condition', 'R1', 'R2']"
-          :show-toolbar="false"
-          :show-add-menu="false"
-          :show-buttons="false"
-          :editable-set-name="false"
-          :selectable="false"
-          @selected="onSelect"
-        ></sample-cart>
+        <sample-cart v-if="samples.items.length > 0" :samples="samples"
+          :fields="['name', 'metadata.condition', 'R1', 'R2']" :show-toolbar="false" :show-add-menu="false"
+          :show-buttons="false" :editable-set-name="false" :selectable="false" @selected="onSelect"></sample-cart>
         <div v-if="samples.items.length === 0">No samples in cart.</div>
       </md-whiteframe>
       <md-layout v-if="showButtons">
         <!-- <md-button class="md-primary md-raised" @click="save">Save</md-button> -->
-        <md-button
-          :disabled="!isValid_params || submitting"
-          class="md-primary md-raised"
-          @click="run"
-          >Run the pipeline</md-button
-        >
+        <md-button :disabled="!isValid_params || submitting" class="md-primary md-raised" @click="run">Run the
+          pipeline</md-button>
       </md-layout>
 
-      <banner-notice
-        v-if="!isValid_samples_added"
-        type="error"
-        :show-close-button="false"
-        >Please add some samples before submitting your job.</banner-notice
-      >
-      <banner-notice
-        v-if="!isValid_duplicate_samples"
-        type="error"
-        :show-close-button="false"
-      >
+      <banner-notice v-if="!isValid_samples_added" type="error" :show-close-button="false">Please add some samples
+        before submitting your job.</banner-notice>
+      <banner-notice v-if="!isValid_duplicate_samples" type="error" :show-close-button="false">
         Input sample files contain duplicates (based on URL/location).
         <br />Please remove duplicates before continuing.
       </banner-notice>
-      <banner-notice
-        v-if="!isValid_reference_genome"
-        type="error"
-        :show-close-button="false"
-        >Selected reference genome is invalid.</banner-notice
-      >
+      <banner-notice v-if="!isValid_reference_genome" type="error" :show-close-button="false">Selected reference genome
+        is invalid.</banner-notice>
     </md-layout>
 
-    <md-snackbar
-      md-position="bottom center"
-      ref="snackbar"
-      :md-duration="snackbar_duration"
-    >
+    <md-snackbar md-position="bottom center" ref="snackbar" :md-duration="snackbar_duration">
       <span>{{ snackbar_message }}</span>
-      <md-button class="md-accent" @click="$refs.snackbar.close()"
-        >Dismiss</md-button
-      >
+      <md-button class="md-accent" @click="$refs.snackbar.close()">Dismiss</md-button>
     </md-snackbar>
   </div>
 </template>
@@ -144,6 +104,8 @@ import { Snackbar } from "../../../../snackbar";
 import BannerNotice from "../../../BannerNotice.vue";
 import InputFilesForm from "../../rnasik/ui/InputFilesForm.vue";
 import SelectGenome from "../../../SelectGenome.vue";
+import { ReferenceGenome } from "../../../../types";
+import AVAILABLE_GENOMES from "../config/genomes";
 
 @Component({
   components: {
@@ -159,6 +121,7 @@ import SelectGenome from "../../../SelectGenome.vue";
 })
 export default class PipelineParams extends Vue {
   public pipeline_name: string = "nf-core-rnaseq";
+  public available_genomes: Array<ReferenceGenome> = AVAILABLE_GENOMES;
 
   @Prop({ default: true, type: Boolean })
   public showButtons: boolean;
