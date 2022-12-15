@@ -2,12 +2,40 @@
   <md-layout md-column md-gutter>
     <md-layout style="margin: 24px" md-vertical-align="stretch" md-column>
       <md-whiteframe md-elevation="2" class="pad-32">
-        <h1>User profile</h1>
-        <md-whiteframe class="pad-16">
-          <p><strong>Name:</strong> {{ full_name }}</p>
-          <p><strong>Username:</strong> {{ username }}</p>
-          <p><strong>Laxy user ID:</strong> {{ user_id }}</p>
-        </md-whiteframe>
+
+        <md-card>
+          <md-card-header>
+            <md-card-header-text class="pad-16">
+              <div class="md-title">User Profile</div>
+              <div class="md-subhead">{{ full_name }}</div>
+            </md-card-header-text>
+
+            <md-card-media class="pad-16">
+              <img :src="profile_pic_url" alt="People">
+            </md-card-media>
+          </md-card-header>
+
+          <md-card-content>
+            <md-table>
+              <md-table-row>
+                <md-table-cell><strong>Name</strong></md-table-cell>
+                <md-table-cell>{{ full_name }}</md-table-cell>
+              </md-table-row>
+              <md-table-row>
+                <md-table-cell><strong>Username</strong></md-table-cell>
+                <md-table-cell>{{ username }}</md-table-cell>
+              </md-table-row>
+              <md-table-row>
+                <md-table-cell><strong>Email address</strong></md-table-cell>
+                <md-table-cell>{{ email }}</md-table-cell>
+              </md-table-row>
+              <md-table-row>
+                <md-table-cell><strong>Laxy user ID</strong></md-table-cell>
+                <md-table-cell>{{ user_id }}</md-table-cell>
+              </md-table-row>
+            </md-table>
+          </md-card-content>
+        </md-card>
 
         <p>
           <md-whiteframe class="pad-16">
@@ -99,6 +127,14 @@ export default class UserProfile extends mixins(CopyToClipboard) {
 
   public get user_id(): string {
     return get(this.$store.state.user_profile, "id", null);
+  }
+
+  public get email(): string {
+    return get(this.$store.state.user_profile, "email", null);
+  }
+
+  public get profile_pic_url(): string {
+    return get(this.$store.state.user_profile, "profile_pic", null);
   }
 
   public get openAPIUrl(): string {
