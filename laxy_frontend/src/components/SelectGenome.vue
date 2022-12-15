@@ -1,36 +1,22 @@
 <template>
   <md-layout md-gutter>
     <div v-show="show_fileselect_slideout">
-      <md-sidenav
-        id="fileSelectSlideout"
-        ref="fileSelectSlideout"
-        class="md-right slideout-right wideSideNav"
-        @open="openSlideout('fileSelectSlideout')"
-        @close="closeSlideout('fileSelectSlideout')"
-      >
+      <md-sidenav id="fileSelectSlideout" ref="fileSelectSlideout" class="md-right slideout-right wideSideNav"
+        @open="openSlideout('fileSelectSlideout')" @close="closeSlideout('fileSelectSlideout')">
         <md-toolbar>
           <div class="md-toolbar-container">
             <h3 class="md-title">Select remote files</h3>
             <div class="push-right">
-              <md-button
-                @click="toggleSlideout('fileSelectSlideout')"
-                class="md-icon-button md-mini md-dense md-clean"
-              >
+              <md-button @click="toggleSlideout('fileSelectSlideout')" class="md-icon-button md-mini md-dense md-clean">
                 <md-icon>close</md-icon>
               </md-button>
             </div>
           </div>
         </md-toolbar>
-        <remote-files-select
-          :show-about-box="false"
-          :show-buttons="true"
-          :single-select="true"
-          :auto-select-pair="false"
-          add-button-label="Select"
-          :start-url="custom_genome_fileselect_url"
+        <remote-files-select :show-about-box="false" :show-buttons="true" :single-select="true"
+          :auto-select-pair="false" add-button-label="Select" :start-url="custom_genome_fileselect_url"
           @files-added="addCustomGenomeFiles"
-          :placeholder="`${ensemblReleaseUrl}/fasta/vicugna_pacos/dna/`"
-        ></remote-files-select>
+          :placeholder="`${ensemblReleaseUrl}/fasta/vicugna_pacos/dna/`"></remote-files-select>
       </md-sidenav>
     </div>
     <md-layout md-flex="100" md-column>
@@ -39,92 +25,53 @@
         <div v-if="!use_custom_genome">
           <md-input-container>
             <label for="genome_organism">Species</label>
-            <md-select
-              name="genome_organism"
-              id="genome_organism"
-              :required="true"
-              v-model="selected_genome_organism"
-              @change="onOrganismChange"
-            >
-              <md-option
-                v-for="organism in genome_organism_list"
-                :key="organism"
-                :value="organism"
-                >{{ organism }}</md-option
-              >
+            <md-select name="genome_organism" id="genome_organism" :required="true" v-model="selected_genome_organism"
+              @change="onOrganismChange">
+              <md-option v-for="organism in genome_organism_list" :key="organism" :value="organism">{{ organism
+              }}</md-option>
             </md-select>
           </md-input-container>
           <md-input-container>
             <label for="genome">Reference genome</label>
-            <md-select
-              name="genome"
-              id="genome"
-              :required="true"
-              v-model="reference_genome"
-            >
-              <md-option
-                v-for="genome in genomes_for_organism(selected_genome_organism)"
-                :key="genome.id"
-                :value="genome.id"
-                >{{ get_genome_description(genome) }}</md-option
-              >
+            <md-select name="genome" id="genome" :required="true" v-model="reference_genome">
+              <md-option v-for="genome in genomes_for_organism(selected_genome_organism)" :key="genome.id"
+                :value="genome.id">{{ get_genome_description(genome) }}</md-option>
             </md-select>
           </md-input-container>
         </div>
       </transition>
-      <md-switch
-        v-model="use_custom_genome"
-        id="custom-genome-toggle"
-        name="custom-genome-toggle"
-        class="md-primary"
-        >Use an externally provided reference genome</md-switch
-      >
+      <md-switch v-model="use_custom_genome" id="custom-genome-toggle" name="custom-genome-toggle"
+        class="md-primary">Use an externally provided reference genome</md-switch>
       <transition name="fade">
         <div v-if="use_custom_genome">
           <md-layout md-column>
-            <banner-notice
-              :show-close-button="false"
-              class="shadow"
-              type="warning"
-              >User-supplied reference genomes are currently experimental. In
+            <banner-notice :show-close-button="false" class="shadow" type="warning">User-supplied reference genomes are
+              currently experimental. In
               particular, draft genomes with many small contigs are likely to
-              fail when building a STAR index.</banner-notice
-            >
+              fail when building a STAR index.</banner-notice>
             <md-whiteframe md-elevation="8">
               <md-layout md-column class="pad-32">
                 <md-input-container>
                   <md-icon v-if="!fasta_url_valid" class="md-warn">
                     warning
-                    <md-tooltip
-                      >Invalid URL, or missing expected file extension
-                      !</md-tooltip
-                    >
+                    <md-tooltip>Invalid URL, or missing expected file extension
+                      !</md-tooltip>
                   </md-icon>
                   <label for="custom-genome-fasta">
                     Reference genome sequence (.fasta, .fasta.gz)
                     <span>
                       <md-icon style="font-size: 16px">info</md-icon>
-                      <md-tooltip md-direction="right"
-                        >A URL to a gzipped FASTA format reference genome, eg
+                      <md-tooltip md-direction="right">A URL to a gzipped FASTA format reference genome, eg
                         {{
-                          ensemblReleaseUrl
-                        }}/fasta/vicugna_pacos/dna/Vicugna_pacos.vicPac1.dna.toplevel.fa.gz</md-tooltip
-                      >
+                            ensemblReleaseUrl
+                        }}/fasta/vicugna_pacos/dna/Vicugna_pacos.vicPac1.dna.toplevel.fa.gz</md-tooltip>
                     </span>
                   </label>
-                  <md-input
-                    v-model="custom_genome_fasta_url"
-                    id="custom-genome-fasta"
-                    :readonly="false"
-                    @change="onFastaUrlChange"
-                    :placeholder="
+                  <md-input v-model="custom_genome_fasta_url" id="custom-genome-fasta" :readonly="false"
+                    @change="onFastaUrlChange" :placeholder="
                       `URL to FASTA (eg ${ensemblReleaseUrl}/fasta/vicugna_pacos/dna/Vicugna_pacos.vicPac1.dna.toplevel.fa.gz)`
-                    "
-                  ></md-input>
-                  <md-button
-                    class="md-icon-button"
-                    @click="toggleFileSelect(`${ensemblReleaseUrl}/fasta/`)"
-                  >
+                    "></md-input>
+                  <md-button class="md-icon-button" @click="toggleFileSelect(`${ensemblReleaseUrl}/fasta/`)">
                     <md-icon type="submit">attach_file</md-icon>
                   </md-button>
                 </md-input-container>
@@ -132,37 +79,25 @@
                 <md-input-container>
                   <md-icon v-if="!annotation_url_valid" class="md-warn">
                     warning
-                    <md-tooltip
-                      >Invalid URL, or missing expected file extension
-                      !</md-tooltip
-                    >
+                    <md-tooltip>Invalid URL, or missing expected file extension
+                      !</md-tooltip>
                   </md-icon>
                   <label for="custom-genome-annotation">
                     Reference genome annotation (.gtf, .gff, gtf.gz, .gff3.gz)
                     <span>
                       <md-icon style="font-size: 16px">info</md-icon>
-                      <md-tooltip md-direction="right"
-                        >A URL to a gzipped GTF or GFF format genome annotation,
+                      <md-tooltip md-direction="right">A URL to a gzipped GTF or GFF format genome annotation,
                         eg
                         {{
-                          ensemblReleaseUrl
-                        }}/gtf/vicugna_pacos/Vicugna_pacos.vicPac1.97.gtf.gz</md-tooltip
-                      >
+                            ensemblReleaseUrl
+                        }}/gtf/vicugna_pacos/Vicugna_pacos.vicPac1.97.gtf.gz</md-tooltip>
                     </span>
                   </label>
-                  <md-input
-                    v-model="custom_genome_annotation_url"
-                    id="custom-genome-annotation"
-                    :readonly="false"
-                    @change="onAnnotationUrlChange"
-                    :placeholder="
+                  <md-input v-model="custom_genome_annotation_url" id="custom-genome-annotation" :readonly="false"
+                    @change="onAnnotationUrlChange" :placeholder="
                       `URL to GTF / GFF (eg ${ensemblReleaseUrl}/gtf/vicugna_pacos/Vicugna_pacos.vicPac1.97.gtf.gz)`
-                    "
-                  ></md-input>
-                  <md-button
-                    class="md-icon-button"
-                    @click="toggleFileSelect(`${ensemblReleaseUrl}/gtf/`)"
-                  >
+                    "></md-input>
+                  <md-button class="md-icon-button" @click="toggleFileSelect(`${ensemblReleaseUrl}/gtf/`)">
                     <md-icon type="submit">attach_file</md-icon>
                   </md-button>
                 </md-input-container>
@@ -230,7 +165,8 @@ export default class SelectGenome extends Vue {
 
   public custom_genome_fileselect_url: string = "";
 
-  public available_genomes: Array<ReferenceGenome> = AVAILABLE_GENOMES;
+  @Prop({ default: () => AVAILABLE_GENOMES, type: Array })
+  public genomes: Array<ReferenceGenome>;
 
   @Sync("use_custom_genome")
   public use_custom_genome: boolean;
@@ -279,13 +215,13 @@ export default class SelectGenome extends Vue {
   set selected_genome_organism(organism: string) {
     const id =
       this.get_first_genome_id_for_organism(organism) ||
-      AVAILABLE_GENOMES[0].id;
+      this.genomes[0].id;
     this.$store.set("pipelineParams@genome", id);
   }
 
   get genome_organism_list(): string[] {
     let organisms = new Set<string>();
-    for (let g of this.available_genomes) {
+    for (let g of this.genomes) {
       organisms.add(g.organism);
     }
     return Array.from(organisms.values());
@@ -293,23 +229,23 @@ export default class SelectGenome extends Vue {
 
   @Memoize
   genomes_for_organism(organism: string): ReferenceGenome[] {
-    const genomes: ReferenceGenome[] = [];
-    for (let g of this.available_genomes) {
+    const organism_genomes: ReferenceGenome[] = [];
+    for (let g of this.genomes) {
       if (g.organism === organism) {
-        genomes.push(g);
+        organism_genomes.push(g);
       }
     }
-    return genomes;
+    return organism_genomes;
   }
 
   @Memoize
   get_organism_from_genome_id(genome_id: string): string | undefined {
-    return get(find(AVAILABLE_GENOMES, { id: genome_id }), "organism");
+    return get(find(this.genomes, { id: genome_id }), "organism");
   }
 
   @Memoize
   get_first_genome_id_for_organism(organism: string): string | undefined {
-    return get(find(AVAILABLE_GENOMES, { organism: organism }), "id");
+    return get(find(this.genomes, { organism: organism }), "id");
   }
 
   @Memoize
