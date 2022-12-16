@@ -58,9 +58,9 @@
       "public": true,
       "metadata": {
         "versions": [
-          "1.5.4"
+          "1.5.4.1"
         ],
-        "default_version": "1.5.4",
+        "default_version": "1.5.4.1",
         "short_description": "an RNA-Seq analysis"
       }
     }

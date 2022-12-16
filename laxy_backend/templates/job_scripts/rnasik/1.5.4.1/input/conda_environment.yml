@@ -1,0 +1,68 @@
+# When the the first line above is valid JSON, it is used to retrieve a pre-generated conda environment
+# rather than installing this conda_environment.yml. For large environments this is faster, and generally
+# aids reproducibility.
+---
+# This environment contains the minimal packages required without listing automatically installed
+# dependencies or specific versions.
+# It can be used as a template for building an environment with a specific version of a pipeline,
+# which is then exported as `conda env export >conda_environment.yml`
+#
+# (We maintain this simplified environment file since while keeping the output of `conda env export`
+#  is great for reproducible environments it makes it difficult to identify just the required
+#  core packages when all their implicit dependencies are also listed)
+#
+# Packages here should generally be unversioned, unless a specific version is known to be required.
+#
+
+name: rnasik-1.5.4.1
+channels:
+  - conda-forge
+  - bioconda
+  - pansapiens
+  - serine
+  - serine/label/dev
+  - anaconda
+  - defaults
+  - r
+  # conda-forge occasionally re-labels packages from 'main' to 'broken',
+  # so we need this to make the environment reproducible
+  - conda-forge/label/broken
+dependencies:
+  # General run_job.sh dependencies. Many of these will already exist on a typical
+  # Linux system but we pull them in explicitly to ensure they are available, even on
+  # barebones systems (eg slimmed down Docker containers)
+  - python=3.6.*
+  - pip
+  - conda-pack
+  - aria2
+  # older openssl and icu required to support aria2 on some systems
+  - openssl=1.0.2p
+  - "icu=58.*"
+  - curl
+  - wget
+  - awscli
+  - jq
+  - parallel
+  # Pipeline specific
+  - rnasik=1.5.4.1
+  - samtools=1.9
+  - star=2.7.2b
+  - bwa=0.7.17
+  - bigdatascript=v2.0rc10  # pansapiens/bigdatascript
+  - openjdk=11.0.8
+  - python=3.6.7
+  - hisat2=2.2.1
+  - bedtools=2.25.0
+  - picard=2.18.9
+  - subread=1.6.2
+  - qualimap=2.2.2d
+  - htslib=1.9
+  - fastqc=0.11.7
+  - multiqc=1.10.1
+  - mash
+  # Appears to be missing from dependencies
+  - pandas<1
+  - pip:
+      # General run_job.sh dependency, for the laxydl downloader tool
+      - git+https://github.com/MonashBioinformaticsPlatform/laxy@master#egg=laxy_downloader&subdirectory=laxy_downloader
+      - semver
