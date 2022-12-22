@@ -2080,9 +2080,10 @@ class JobCreate(JSONView):
             )
 
             if (
+                (reference_genome_id or (reference_genome_fasta_url and reference_genome_fasta_url)) and
                 reference_genome_id not in REFERENCE_GENOME_MAPPINGS
                 and not reference_genome_fasta_url
-                and not reference_genome_annotation_url
+                and not reference_genome_fasta_url
                 # TODO: Check URLS are valid with http/https/ftp scheme
             ):
                 job.status = Job.STATUS_FAILED
