@@ -2,7 +2,7 @@ import 'es6-promise';
 import axios, { AxiosResponse, AxiosRequestConfig } from 'axios';
 
 import * as Cookies from 'js-cookie';
-import { getDomain } from 'tldjs';
+// import { getDomain } from 'tldjs';
 
 import { browserLocale } from './util';
 import * as moment from 'moment';
@@ -75,14 +75,13 @@ export class WebAPI {
         if (expiry == null) {
             expiry = new Date(3000, 1, 1);
         }
-        // TODO: use tldjs for this
-        const domain = getDomain(WebAPI.apiSettings.url);
-        // const domain = new URL(WebAPI.apiSettings.url).hostname;
+        //const domain = getDomain(WebAPI.apiSettings.url) || '.laxy.io';
+        const domain = new URL(WebAPI.apiSettings.url).hostname || '.laxy.io';
         Cookies.set(`access_token__${obj_id}`, token,
             {
                 expires: expiry,
-                // domain: domain,
-                domain: '.laxy.io',
+                domain: domain,
+                //domain: '.laxy.io',
                 secure: true
             });
     }
@@ -269,16 +268,22 @@ export class WebAPI {
         return url;
     }
 
-    public static downloadFileByIdUrl(file_id: string,
+    public static downloadFileByIdUrl(
+        file_id: string,
         filename: string | null = null,
-        access_token?: string): string {
+        access_token?: string
+    ): string {
+
+        let url: URL = new URL(`${this.baseUrl}/api/v1/file/${file_id}/?download`);
+        if (filename) {
+            url = new URL(`${this.baseUrl}/api/v1/file/${file_id}/content/${filename}`);
+        }
         if (access_token) {
             WebAPI.setQueryParamAccessToken(access_token);
+            url.searchParams.append('access_token', access_token);
         }
-        if (filename) {
-            return `${this.baseUrl}/api/v1/file/${file_id}/content/${filename}?download`;
-        }
-        return `${this.baseUrl}/api/v1/file/${file_id}/?download`;
+
+        return url.toString();
     }
 
     public static viewJobFileByPathUrl(job_id: string,
@@ -307,6 +312,22 @@ export class WebAPI {
             url = `${url}?access_token=${access_token}`;
         }
         return url;
+    }
+
+    public static async getBlobByUrl(url: string): Promise<AxiosResponse> {
+        try {
+            return await this.fetcher.get(url, { responseType: 'blob' }) as AxiosResponse;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    public static async getFileBlobById(file_id: string, access_token?: string): Promise<AxiosResponse> {
+        let url = `${this.baseUrl}/api/v1/file/${file_id}/`;
+        if (access_token) {
+            url = `${url}?access_token=${access_token}`;
+        }
+        return WebAPI.getBlobByUrl(url);
     }
 
     public static async getSampleCart(fileset_id: string): Promise<AxiosResponse> {

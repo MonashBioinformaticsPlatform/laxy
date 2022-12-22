@@ -1,54 +1,34 @@
 <template>
   <div>
-    <md-dialog-alert
-      :md-content-html="error_alert_message"
-      :md-content="error_alert_message"
-      ref="error_dialog"
-    ></md-dialog-alert>
+    <md-dialog-alert :md-content-html="error_alert_message" :md-content="error_alert_message"
+      ref="error_dialog"></md-dialog-alert>
 
-    <md-dialog
-      md-open-from="#add_menu_button"
-      md-close-to="#add_menu_button"
-      ref="cancel_job_dialog"
-    >
+    <md-dialog md-open-from="#add_menu_button" md-close-to="#add_menu_button" ref="cancel_job_dialog">
       <md-dialog-title>Cancel job</md-dialog-title>
 
       <md-dialog-content>Are you sure ?</md-dialog-content>
 
       <md-dialog-actions>
-        <md-button class="md-primary" @click="cancelJobConfirmed"
-          >Yes, cancel it.</md-button
-        >
-        <md-button class="md-primary" @click="closeDialog('cancel_job_dialog')"
-          >Close</md-button
-        >
+        <md-button class="md-primary" @click="cancelJobConfirmed">Yes, cancel it.</md-button>
+        <md-button class="md-primary" @click="closeDialog('cancel_job_dialog')">Close</md-button>
       </md-dialog-actions>
     </md-dialog>
 
     <ExpiryDialog ref="expiryInfoDialog" :job="job"></ExpiryDialog>
-    <DownloadHelpDialog
-      ref="downloadHelpDialog"
-      :tarballUrl="tarballUrl"
-    ></DownloadHelpDialog>
+    <DownloadHelpDialog ref="downloadHelpDialog" :tarballUrl="tarballUrl"></DownloadHelpDialog>
 
-    <banner-notice
-      v-if="job && jobExpiresSoon && showTopBanner"
-      @click="openDialog('expiryInfoDialog')"
-      :type="
-        jobExpiresSoon && !job.expired
-          ? 'warning'
-          : job.expired
+    <banner-notice v-if="job && jobExpiresSoon && showTopBanner" @click="openDialog('expiryInfoDialog')" :type="
+      jobExpiresSoon && !job.expired
+        ? 'warning'
+        : job.expired
           ? 'error'
           : 'clear'
-      "
-    >
+    ">
       <span v-if="!job.expired">
         Job expires {{ jobExpiresSoon ? "in less than 7 days" : "" }} on
         &nbsp;{{ job.expiry_time }}
       </span>
-      <span v-if="job.expired"
-        >Job has expired - large files are no longer available</span
-      >
+      <span v-if="job.expired">Job has expired - large files are no longer available</span>
     </banner-notice>
 
     <!-- <PopupBlockerBanner :do-test-on-create="false"></PopupBlockerBanner> -->
@@ -58,15 +38,10 @@
         <md-list>
           <nav class="vertical-sidebar-nav">
             <md-list-item v-for="tab in tabs" :key="tab.name">
-              <router-link
-                v-if="tab.showWithoutAuth || isAuthenticated"
-                :to="{
-                  path: `/job/${jobId}${tab.path}`,
-                  query: persistQueryParams
-                }"
-                replace
-                :exact="tab.exact"
-              >
+              <router-link v-if="tab.showWithoutAuth || isAuthenticated" :to="{
+                path: `/job/${jobId}${tab.path}`,
+                query: persistQueryParams
+              }" replace :exact="tab.exact">
                 <md-icon>{{ tab.icon }}</md-icon>
                 <span>{{ tab.text }}</span>
               </router-link>
@@ -78,41 +53,19 @@
         <md-toolbar class="md-transparent" style="width: 100%">
           <nav style="width: 100%">
             <template v-for="tab in tabs">
-              <router-link
-                :key="tab.name"
-                v-if="tab.showWithoutAuth || isAuthenticated"
-                tag="md-button"
-                active-class="md-primary"
-                :to="{
+              <router-link :key="tab.name" v-if="tab.showWithoutAuth || isAuthenticated" tag="md-button"
+                active-class="md-primary" :to="{
                   path: `/job/${jobId}${tab.path}`,
                   query: persistQueryParams
-                }"
-                replace
-                :exact="tab.exact"
-                >{{ tab.text }}</router-link
-              >
+                }" replace :exact="tab.exact">{{ tab.text }}</router-link>
             </template>
           </nav>
         </md-toolbar>
       </md-layout>
       <md-layout v-if="job" md-gutter="16">
-        <md-layout
-          id="top-panel-banner"
-          v-show="showTab === 'summary' || showTab == null"
-          v-if="job && jobIsDone && badInputFile"
-          md-flex="100"
-          md-gutter="16"
-          md-column
-          style="padding-right: 24px;"
-        >
-          <generic-pip
-            class="fill-width"
-            cardClass
-            stripeColor="warn"
-            icon="broken_image"
-            buttonIcon
-            buttonText
-          >
+        <md-layout id="top-panel-banner" v-show="showTab === 'summary' || showTab == null"
+          v-if="job && jobIsDone && badInputFile" md-flex="100" md-gutter="16" md-column style="padding-right: 24px;">
+          <generic-pip class="fill-width" cardClass stripeColor="warn" icon="broken_image" buttonIcon buttonText>
             <template>
               <span slot="title">Bad input file(s)</span>
               <span slot="subtitle">
@@ -127,49 +80,27 @@
           </generic-pip>
         </md-layout>
 
-        <md-layout
-          v-show="showTab === 'summary' || showTab == null"
-          id="top-panel"
-          md-flex="100"
-          :md-row="true"
-          md-gutter="16"
-        >
+        <md-layout v-show="showTab === 'summary' || showTab == null" id="top-panel" md-flex="100" :md-row="true"
+          md-gutter="16">
           <!-- smaller iconish boxes in here. eg simple status -->
           <!-- -->
           <md-layout md-flex="25" md-flex-medium="100">
-            <job-status-pip
-              class="fill-width"
-              :job="job"
-              v-on:cancel="onAskCancelJob"
-            ></job-status-pip>
+            <job-status-pip class="fill-width" :job="job" v-on:cancel="onAskCancelJob"></job-status-pip>
           </md-layout>
           <!-- -->
           <md-layout v-if="hasMultiQCReport" md-flex="25" md-flex-medium="100">
-            <generic-pip
-              @click="openLinkInTab(fileUrlByTag('multiqc'))"
-              :style="`background-color: ${cssColorVars['--primary-light']}`"
-              class="fill-width"
-              stripeColor="primary"
-              icon="list"
-              buttonIcon
-              buttonText
-            >
+            <generic-pip @click="openLinkInTab(fileUrlByTag('multiqc'))"
+              :style="`background-color: ${cssColorVars['--primary-light']}`" class="fill-width" stripeColor="primary"
+              icon="list" buttonIcon buttonText>
               <span slot="title">MultiQC report</span>
               <span slot="subtitle">Open in new tab</span>
             </generic-pip>
           </md-layout>
 
           <md-layout v-if="hasDegustCounts" md-flex="25" md-flex-medium="100">
-            <generic-pip
-              @click.stop.native
-              :hover="false"
-              :style="`background-color: ${cssColorVars['--primary-light']}`"
-              class="fill-width"
-              stripeColor="primary"
-              icon="dashboard"
-              buttonIcon
-              buttonText
-            >
+            <generic-pip @click.stop.native :hover="false"
+              :style="`background-color: ${cssColorVars['--primary-light']}`" class="fill-width" stripeColor="primary"
+              icon="dashboard" buttonIcon buttonText>
               <span slot="title">Send to Degust</span>
               <span slot="subtitle">
                 <template v-if="strandednessGuess">
@@ -186,30 +117,20 @@
                 See the "Count files" section below for other options.
               </span>
               <template slot="content" style="list-style-type: none;">
-                <span
-                  v-for="countsFile in filterByTag(outputFiles, ['degust'])"
-                  :key="countsFile.id"
-                >
-                  <template
-                    v-if="
-                      (countsFile &&
-                        (countsFile.name.startsWith(strandPredictionPrefix) &&
-                          countsFile.name.includes('withNames'))) ||
-                        (countsFile.path.includes('star_salmon') &&
-                          countsFile.name.includes('salmon'))
-                    "
-                  >
-                    <md-button
-                      @click="openDegustLink(countsFile.id)"
-                      target="_blank"
-                    >
+                <span v-for="countsFile in filterByTag(outputFiles, ['degust'])" :key="countsFile.id">
+                  <template v-if="
+                    (countsFile &&
+                      (countsFile.name.startsWith(strandPredictionPrefix) &&
+                        countsFile.name.includes('withNames'))) ||
+                    (countsFile.path.includes('star_salmon') &&
+                      countsFile.name.includes('salmon'))
+                  ">
+                    <md-button @click="openDegustLink(countsFile.id)" target="_blank">
                       <md-icon>send</md-icon>&nbsp;{{
-                        _countsFileInfo(countsFile.name).featureSet
+                          _countsFileInfo(countsFile.name).featureSet
                       }}&nbsp;
 
-                      <md-tooltip
-                        >{{ countsFile.path }}/{{ countsFile.name }}</md-tooltip
-                      >
+                      <md-tooltip>{{ countsFile.path }}/{{ countsFile.name }}</md-tooltip>
                     </md-button>
                   </template>
                 </span>
@@ -218,65 +139,42 @@
           </md-layout>
 
           <md-layout v-if="bannerSharingLink" md-flex="25" md-flex-medium="100">
-            <generic-pip
-              class="fill-width"
-              @click="
-                $router.push({
-                  path: `/job/${jobId}/sharing`,
-                  query: persistQueryParams
-                })
-              "
-              stripeColor="warn"
-              icon="share"
-              buttonIcon
-              buttonText
-            >
+            <generic-pip class="fill-width" @click="
+              $router.push({
+                path: `/job/${jobId}/sharing`,
+                query: persistQueryParams
+              })
+            " stripeColor="warn" icon="share" buttonIcon buttonText>
               <span slot="title">Shared via secret link</span>
               <span slot="subtitle">
                 This job is accessible by anyone with the secret link
                 <strong>{{
-                  _formatExpiryString(bannerSharingLink.expiry_time, true)
-                }}</strong
-                >.
+                    _formatExpiryString(bannerSharingLink.expiry_time, true)
+                }}</strong>.
               </span>
             </generic-pip>
           </md-layout>
 
-          <md-layout
-            v-if="job && job.expiry_time && jobIsDone"
-            md-flex="25"
-            md-flex-medium="100"
-          >
-            <generic-pip
-              class="fill-width"
-              @click="openDialog('expiryInfoDialog')"
-              :cardClass="
-                jobExpiresSoon ? (job.expired ? 'accent' : 'warn') : ''
-              "
-              :stripeColor="jobExpiresSoon ? '' : 'warn'"
-              :icon="jobExpiresSoon ? 'warning' : ''"
-              buttonIcon
-              buttonText
-            >
+          <md-layout v-if="job && job.expiry_time && jobIsDone" md-flex="25" md-flex-medium="100">
+            <generic-pip class="fill-width" @click="openDialog('expiryInfoDialog')" :cardClass="
+              jobExpiresSoon ? (job.expired ? 'accent' : 'warn') : ''
+            " :stripeColor="jobExpiresSoon ? '' : 'warn'" :icon="jobExpiresSoon ? 'warning' : ''" buttonIcon
+              buttonText>
               <template v-if="!job.expired">
-                <span slot="title"
-                  >Job expiry
-                  {{ jobExpiresSoon ? "in less than 7 days" : "" }}</span
-                >
+                <span slot="title">Job expiry
+                  {{ jobExpiresSoon ? "in less than 7 days" : "" }}</span>
                 <span slot="subtitle">
                   Large files associated with this job will be deleted on
                   <br />
                   <strong>{{
-                    job.expiry_time | moment("DD-MMM-YYYY (HH:mm UTCZ)")
+                      job.expiry_time | moment("DD-MMM-YYYY (HH:mm UTCZ)")
                   }}</strong>
                 </span>
               </template>
               <template v-else>
                 <span slot="title">Job has expired.</span>
-                <span slot="subtitle"
-                  >Large files associated with this job are no longer
-                  available</span
-                >
+                <span slot="subtitle">Large files associated with this job are no longer
+                  available</span>
               </template>
             </generic-pip>
           </md-layout>
@@ -302,62 +200,33 @@
         </md-layout>
         <md-layout id="main-panel" md-flex="100" md-gutter="16">
           <transition name="fade">
-            <md-layout
-              md-flex="40"
-              md-flex-medium="100"
-              v-show="showTab === 'summary' || showTab == null"
-              :md-column-medium="true"
-              :md-row-large="true"
-            >
-              <job-status-card
-                v-if="job && job.params"
-                :job="job"
-                :show-cancel-button="false"
-                :show-run-again-button="isJobOwner"
-                :extra-table-rows="jobParamRows"
-                v-on:cancel-job-clicked="onAskCancelJob"
-                v-on:clone-job-clicked="cloneJob"
-              ></job-status-card>
+            <md-layout md-flex="40" md-flex-medium="100" v-show="showTab === 'summary' || showTab == null"
+              :md-column-medium="true" :md-row-large="true">
+              <job-status-card v-if="job && job.params" :job="job" :show-cancel-button="false"
+                :show-run-again-button="isJobOwner" :extra-table-rows="jobParamRows"
+                v-on:cancel-job-clicked="onAskCancelJob" v-on:clone-job-clicked="cloneJob"></job-status-card>
             </md-layout>
           </transition>
           <transition name="fade">
-            <md-layout
-              md-flex-medium="100"
-              v-show="showTab === 'summary' || showTab == null"
-              md-column
-            >
-              <file-list
-                v-if="job && jobIsDone"
-                class="shadow"
-                ref="report-files"
-                title="Reports"
-                :fileset-id="job.output_fileset_id"
-                :tag-filters="['report', 'html']"
-                :hide-search="true"
-                :job-id="jobId"
-                @refresh-error="showErrorDialog"
-              ></file-list>
-              <file-list
-                v-if="job && jobIsDone"
-                ref="count-files"
-                title="Count files"
-                :fileset-id="job.output_fileset_id"
-                :tag-filters="['degust', 'counts', 'strand-info']"
-                :hide-search="true"
-                :job-id="jobId"
-                @action-error="showErrorDialog"
-                @refresh-error="showErrorDialog"
-              ></file-list>
-              <file-list
-                v-if="job && jobIsDone"
-                ref="alignment-files"
-                title="Alignment files"
-                :fileset-id="job.output_fileset_id"
-                :tag-filters="['bam', 'bai']"
-                :hide-search="false"
-                :job-id="jobId"
-                @refresh-error="showErrorDialog"
-              ></file-list>
+            <md-layout id="right-column" md-flex-medium="100" v-show="showTab === 'summary' || showTab == null"
+              md-column>
+              <file-list v-if="job && jobIsDone && hasFilesWithTags(['report', 'html'])" class="shadow"
+                ref="report-files" title="Reports" :fileset-id="job.output_fileset_id" :tag-filters="['report', 'html']"
+                :hide-search="true" :job-id="jobId" @refresh-error="showErrorDialog"></file-list>
+              <file-list v-if="job && jobIsDone && hasFilesWithTags(['degust', 'counts', 'strand-info'])"
+                ref="count-files" title="Count files" :fileset-id="job.output_fileset_id"
+                :tag-filters="['degust', 'counts', 'strand-info']" :hide-search="true" :job-id="jobId"
+                @action-error="showErrorDialog" @refresh-error="showErrorDialog"></file-list>
+              <file-list v-if="job && jobIsDone && hasFilesWithTags(['bam', 'bai'])" ref="alignment-files"
+                title="Alignment files" :fileset-id="job.output_fileset_id" :tag-filters="['bam', 'bai']"
+                :hide-search="false" :job-id="jobId" @refresh-error="showErrorDialog"></file-list>
+
+              <!-- TODO: This Openfold/Alphafold specifc box should be split out into a specific 
+                         JobPage summary tab component used just for these pipelines -->
+              <laxy-ngl-viewer :job-id="job.id"
+                :file-id="filesByRegex(outputFiles, [new RegExp('.*_relaxed\.pdb$')])[0].id"
+                v-if="job && jobIsDone && (filesByRegex(outputFiles, [new RegExp('.*_relaxed\.pdb$')]).length > 0)">
+              </laxy-ngl-viewer>
 
               <!--
                             <nested-file-list v-if="jobIsRunning"
@@ -371,29 +240,16 @@
                                               :hide-search="false"
                                               @refresh-error="showErrorDialog"></nested-file-list>
               -->
-              <event-log
-                v-if="jobIsRunning"
-                ref="eventlogSummary"
-                :job-id="jobId"
-                @refresh-error="showErrorDialog"
-              ></event-log>
+              <event-log v-if="jobIsRunning" ref="eventlogSummary" :job-id="jobId"
+                @refresh-error="showErrorDialog"></event-log>
             </md-layout>
           </transition>
           <transition name="fade">
             <md-layout v-show="showTab === 'input'" md-column-medium>
               <md-layout id="input-files-panel">
-                <nested-file-list
-                  v-if="job && inputFilesetTree.children.length"
-                  id="input-files-card"
-                  class="fill-width"
-                  ref="input"
-                  title="Input files"
-                  root-path-name="input"
-                  :fileTree="inputFilesetTree"
-                  :job-id="jobId"
-                  :hide-search="false"
-                  @refresh-error="showErrorDialog"
-                ></nested-file-list>
+                <nested-file-list v-if="job && inputFilesetTree.children.length" id="input-files-card"
+                  class="fill-width" ref="input" title="Input files" root-path-name="input" :fileTree="inputFilesetTree"
+                  :job-id="jobId" :hide-search="false" @refresh-error="showErrorDialog"></nested-file-list>
                 <md-layout v-else md-align="center">No files (yet).</md-layout>
               </md-layout>
             </md-layout>
@@ -405,40 +261,23 @@
                   <div>
                     <h3 style="display: inline; float: left; margin-top:-8px;">
                       Download all job files
-                      <span v-if="job && job.params && job.params.tarball_size"
-                        >(~
-                        {{ job.params.tarball_size | humanize_bytes }})</span
-                      >
+                      <span v-if="job && job.params && job.params.tarball_size">(~
+                        {{ job.params.tarball_size | humanize_bytes }})</span>
                     </h3>
-                    <md-button
-                      id="helpButton"
-                      @click="openDialog('downloadHelpDialog')"
-                      class="push-right md-icon-button md-raised md-dense"
-                      style="display: inline;"
-                    >
+                    <md-button id="helpButton" @click="openDialog('downloadHelpDialog')"
+                      class="push-right md-icon-button md-raised md-dense" style="display: inline;">
                       <md-icon style="color: #bdbdbd;">help</md-icon>
                     </md-button>
                   </div>
-                  <DownloadJobFilesTable
-                    :url="tarballUrl"
-                    :filename="jobId + '.tar.gz'"
-                    @flash-message="flashSnackBarEvent"
-                  ></DownloadJobFilesTable>
+                  <DownloadJobFilesTable :url="tarballUrl" :filename="jobId + '.tar.gz'"
+                    @flash-message="flashSnackBarEvent"></DownloadJobFilesTable>
                 </md-whiteframe>
               </md-layout>
               <md-layout id="output-files-panel" md-flex="100">
-                <nested-file-list
-                  v-if="job && outputFilesetTree.children.length"
-                  id="output-files-card"
-                  class="fill-width"
-                  ref="output"
-                  title="Output files"
-                  root-path-name="output"
-                  :fileTree="outputFilesetTree"
-                  :job-id="jobId"
-                  :hide-search="false"
-                  @refresh-error="showErrorDialog"
-                ></nested-file-list>
+                <nested-file-list v-if="job && outputFilesetTree.children.length" id="output-files-card"
+                  class="fill-width" ref="output" title="Output files" root-path-name="output"
+                  :fileTree="outputFilesetTree" :job-id="jobId" :hide-search="false"
+                  @refresh-error="showErrorDialog"></nested-file-list>
                 <md-layout v-else md-align="center">No files (yet).</md-layout>
               </md-layout>
             </md-layout>
@@ -446,58 +285,35 @@
           <transition name="fade">
             <md-layout v-show="showTab === 'eventlog'" md-column-medium>
               <md-layout id="eventlog-panel">
-                <event-log
-                  ref="eventlog"
-                  :job-id="jobId"
-                  @refresh-error="showErrorDialog"
-                ></event-log>
+                <event-log ref="eventlog" :job-id="jobId" @refresh-error="showErrorDialog"></event-log>
               </md-layout>
             </md-layout>
           </transition>
           <transition name="fade">
             <md-layout v-show="showTab === 'sharing'" md-column-medium>
               <md-layout v-if="isAuthenticated" id="sharing-panel" md-column>
-                <md-whiteframe
-                  v-if="sharingLinks && sharingLinks.length > 0"
-                  class="pad-32"
-                >
+                <md-whiteframe v-if="sharingLinks && sharingLinks.length > 0" class="pad-32">
                   <h3>Sharing {{ sharingLinks.length | pluralize("Link") }}</h3>
-                  <sharing-link-list
-                    @flash-message="flashSnackBarEvent"
-                    @change-link="onChangeLinkEvent"
-                    @delete-link="onDeleteSharingLinkEvent"
-                    :show-delete-button="isJobOwner"
-                    :allow-expiry-edit="isJobOwner"
-                    :job-id="jobId"
-                    :sharing-links="sharingLinks"
-                  ></sharing-link-list>
+                  <sharing-link-list @flash-message="flashSnackBarEvent" @change-link="onChangeLinkEvent"
+                    @delete-link="onDeleteSharingLinkEvent" :show-delete-button="isJobOwner"
+                    :allow-expiry-edit="isJobOwner" :job-id="jobId" :sharing-links="sharingLinks"></sharing-link-list>
                 </md-whiteframe>
                 <md-whiteframe class="pad-32" v-else>
                   <h3>Create secret public link</h3>
                   <md-input-container>
                     <label for="access_token_lifetime">Expires in</label>
-                    <md-select
-                      name="access_token_lifetime"
-                      id="access_token_lifetime"
-                      v-model="sharing.lifetime"
-                    >
-                      <md-option
-                        v-for="expires_in in access_token_lifetime_options"
-                        :key="expires_in"
-                        :value="expires_in"
-                      >
+                    <md-select name="access_token_lifetime" id="access_token_lifetime" v-model="sharing.lifetime">
+                      <md-option v-for="expires_in in access_token_lifetime_options" :key="expires_in"
+                        :value="expires_in">
                         <span v-if="typeof expires_in == 'number'">{{
-                          expires_in | duration("seconds").humanize()
+                            expires_in | duration("seconds").humanize()
                         }}</span>
                         <span v-else>{{ expires_in }}</span>
                       </md-option>
                     </md-select>
                   </md-input-container>
-                  <md-button
-                    class="md-raised md-primary"
-                    @click="updateSharingLink(jobId, sharing.lifetime)"
-                    >Create</md-button
-                  >
+                  <md-button class="md-raised md-primary"
+                    @click="updateSharingLink(jobId, sharing.lifetime)">Create</md-button>
                 </md-whiteframe>
               </md-layout>
             </md-layout>
@@ -505,15 +321,9 @@
         </md-layout>
       </md-layout>
     </md-layout>
-    <md-snackbar
-      md-position="bottom center"
-      ref="snackbar"
-      :md-duration="snackbar_duration"
-    >
+    <md-snackbar md-position="bottom center" ref="snackbar" :md-duration="snackbar_duration">
       <span>{{ snackbar_message }}</span>
-      <md-button class="md-accent" @click="$refs.snackbar.close()"
-        >Dismiss</md-button
-      >
+      <md-button class="md-accent" @click="$refs.snackbar.close()">Dismiss</md-button>
     </md-snackbar>
   </div>
 </template>
@@ -589,6 +399,8 @@ import PopupBlockerBanner from "./PopupBlockerBanner.vue";
 import BannerNotice from "./BannerNotice.vue";
 import { LaxySharingLink } from "../types";
 
+import LaxyNglViewer from "./pipelines/openfold/ui/LaxyNglViewer.vue";
+
 @Component({
   components: {
     BannerNotice,
@@ -600,7 +412,8 @@ import { LaxySharingLink } from "../types";
     JobStatusPip,
     NestedFileList,
     ExpiryDialog,
-    DownloadJobFilesTable
+    DownloadJobFilesTable,
+    LaxyNglViewer
   },
   props: {
     jobId: { type: String, default: "" },
@@ -845,6 +658,24 @@ export default class JobPage extends Vue {
 
   hasFileTagged(tag: string): boolean {
     return this.filesByTag(tag).length > 0;
+  }
+
+  // Returns true if there are any files with 
+  // at least one of the `tags`
+  hasFilesWithTags(tags: Array<string>): boolean {
+    for (let tag of tags) {
+      if (this.filesByTag(tag).length > 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  filesByRegex(files: Array<LaxyFile> | null, patterns: Array<RegExp>): Array<LaxyFile> {
+    if (files == null) {
+      return [];
+    }
+    return filterByRegex(files, patterns);
   }
 
   get hasMultiQCReport(): boolean {
@@ -1219,6 +1050,11 @@ export default class JobPage extends Vue {
 </script>
 
 <style scoped>
+/* Fix alignment of boxes in right column */
+#right-column {
+  padding-top: 16px;
+}
+
 .shared-banner {
   background-color: var(--accent-light);
   width: 100%;
@@ -1242,6 +1078,7 @@ export default class JobPage extends Vue {
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(359deg);
   }
