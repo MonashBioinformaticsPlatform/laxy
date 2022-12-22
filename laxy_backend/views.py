@@ -752,7 +752,7 @@ class FileView(
     serializer_class = FileSerializer
     parser_classes = (JSONParser, JSONPatchRFC7386Parser, JSONPatchRFC6902Parser)
 
-    permission_classes = (IsOwner | IsSuperuser | HasReadonlyObjectAccessToken,)
+    permission_classes = (IsOwner | IsSuperuser | HasReadonlyObjectAccessToken | FileHasAccessTokenForJob,)
 
     # permission_classes = (DjangoObjectPermissions,)
 
@@ -763,14 +763,18 @@ class FileView(
         Returns info about a file or downloads the content.
         File is specified by it's UUID.
 
-        If the `Content-Type: application/json` header is used, the
-        JSON record for the file is returned.
+        If the `Content-Type: application/json` header is used in the
+        request, the JSON record for the file is returned.
 
         Other `Content-Type`s return the content of the file.
 
-        See the [file/{uuid}/content/ docs](#operation/v1_file_content_read) for
-        details about file content downloads (this endpoint behaves the same with
-        regard to downloads, except that the filename is omitted from the URL)
+        The filename isn't included in the URL, but is returned as
+        part of the JSON data or via a `Content-Disposition` header
+        in the response.
+
+        See the [file/{uuid}/content/{filename} docs](#operation/v1_file_content_read) for
+        details about file content downloads where the filename is included in the URL 
+        (useful in cases where a tool assumes the URL path contains the filename)
 
         Examples:
 
