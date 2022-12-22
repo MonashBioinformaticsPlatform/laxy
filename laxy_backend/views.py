@@ -2623,27 +2623,27 @@ class JobClone(JSONView):
                     f"Use of `sample_set` in Job.params is deprecated, please use `sample_cart` (when cloning Job {job_id})"
                 )
 
-        if samplecart_id is None:
-            return HttpResponse(
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                reason=f"Cannot find samplecart associated with job {job.id}",
-            )
+        #if samplecart_id is None:
+        #    return HttpResponse(
+        #        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        #        reason=f"Cannot find samplecart associated with job {job.id}",
+        #    )
 
         # pipelinerun = PipelineRun.objects.filter(sample_cart=samplecart_id).first()
         pipelinerun_id = job.params.get("pipelinerun_id", None)
         pipelinerun = PipelineRun.objects.get(id=pipelinerun_id)
         samplecart = pipelinerun.sample_cart
 
-        samplecart.pk = None
-        samplecart.id = None
-        # SampleCart is being cloned in order to be used for a new Job, so unset this
-        samplecart.job = None
-        samplecart.save()
-        new_samplecart = samplecart
+        if samplecart is not None:
+            samplecart.pk = None
+            samplecart.id = None
+            # SampleCart is being cloned in order to be used for a new Job, so unset this
+            samplecart.job = None
+            samplecart.save()
+            pipelinerun.sample_cart = samplecart
 
         pipelinerun.pk = None
         pipelinerun.id = None
-        pipelinerun.sample_cart = new_samplecart
         pipelinerun.save()
         new_pipelinerun = pipelinerun
         pipeline_name = job.params.get("pipeline", None)
@@ -2652,7 +2652,7 @@ class JobClone(JSONView):
             {
                 "pipelinerun_id": new_pipelinerun.id,
                 "pipeline": pipeline_name,
-                "samplecart_id": new_samplecart.id,
+                "samplecart_id": getattr(samplecart, 'id', None),
             }
         )
 
