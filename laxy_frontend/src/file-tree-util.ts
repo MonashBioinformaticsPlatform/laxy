@@ -23,7 +23,7 @@ export interface TreeNode<T> {
 
 export interface FileListItem {
     name: string;
-    type: 'file' | 'directory';
+    type?: 'file' | 'directory';
     tags: string[];
     location: string;
 }

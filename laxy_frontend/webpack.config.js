@@ -78,7 +78,7 @@ module.exports = {
                     'vue-style-loader',
                     {
                         loader: 'css-loader',
-                        options: {modules: true}
+                        options: { modules: true }
                     },
                     'sass-loader'
                 ]
@@ -130,9 +130,9 @@ module.exports.plugins = (module.exports.plugins || []).concat([
             // NODE_ENV: JSON.stringify(process.env.NODE_ENV) || JSON.stringify('production'),
             LAXY_ENV: JSON.stringify(process.env.LAXY_ENV) || JSON.stringify(process.env.NODE_ENV) || JSON.stringify('prod'),
             LAXY_FRONTEND_API_URL: get_env('LAXY_FRONTEND_API_URL', 'http://localhost:8001'),
-            LAXY_FRONTEND_URL: get_env('LAXY_FRONTEND_URL','http://localhost:8002'),
-            LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID: get_env('LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID',''),
-            LAXY_VERSION: get_env('GIT_COMMIT','unspecified'),
+            LAXY_FRONTEND_URL: get_env('LAXY_FRONTEND_URL', 'http://localhost:8002'),
+            LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID: get_env('LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID', ''),
+            LAXY_VERSION: get_env('GIT_COMMIT', 'unspecified'),
         }
     }),
 ]);

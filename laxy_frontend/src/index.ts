@@ -84,6 +84,17 @@ import JobStatusCard from './components/JobStatusCard.vue';
 import FileList from './components/FileList.vue';
 import EventLog from './components/EventLog.vue';
 
+/* 
+ In Vue 2.6.11+ with vue-material 1.x, we get spurious errors 
+ relating to the .native modifier ( https://github.com/vuejs/vue/issues/10939 )
+ We suppress these since they aren't useful and clutter the console.
+*/
+Vue.config.warnHandler = (msg, instance, trace) =>
+    ![
+        'The .native modifier for v-on is only valid on components but it was used on',
+    ].some((warning) => msg.includes(warning)) &&
+    console.warn('[Vue warn]: '.concat(msg).concat(trace))
+
 Vue.component('main-sidenav', MainSidenav);
 Vue.component('sample-table', SampleTable);
 Vue.component('sample-cart', SampleCart);
@@ -153,7 +164,10 @@ const App = new Vue({
         await WebAPI.requestCsrfToken();
 
         WebAPI.fetcher.interceptors.request.use((config: AxiosRequestConfig) => {
-            config.headers[config.xsrfHeaderName || 'X-CSRFToken'] = WebAPI._getStoredCsrfToken();
+            const token = WebAPI._getStoredCsrfToken();
+            if (token && config.headers) {
+                config.headers[config.xsrfHeaderName || 'X-CSRFToken'] = token;
+            }
             return config;
         }, (error) => {
             return Promise.reject(error);
@@ -178,7 +192,7 @@ const App = new Vue({
         });
 
         this.$store.dispatch(PING_BACKEND);
-        this.pingPollerId = setInterval(() => {
+        this.pingPollerId = window.setInterval(() => {
             this.$store.dispatch(PING_BACKEND);
         }, 30000);  // ms
     },

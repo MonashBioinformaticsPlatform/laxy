@@ -14,6 +14,7 @@
     "allowSyntheticDefaultImports": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
+    "useUnknownInCatchVariables": false,
     "lib": [
       "dom",
       "es7"

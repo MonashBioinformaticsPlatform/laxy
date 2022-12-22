@@ -19,7 +19,7 @@ const concat = (xs: any) =>
         const unit = 'string' !== typeof xs[0] ? (
             []
         ) : '';
-        return unit.concat.apply(unit, xs);
+        return (unit as any).concat.apply(unit, xs);
     })() : [];
 
 // cons :: a -> [a] -> [a]

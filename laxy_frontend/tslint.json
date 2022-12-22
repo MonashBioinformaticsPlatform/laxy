@@ -21,11 +21,15 @@
     "interface-name": [
       false
     ],
-    "variable-name": [true,
+    "variable-name": [
+      true,
       "allow-leading-underscore",
       "allow-pascal-case",
-      "allow-snake-case"],
-    "max-classes-per-file": [false],
+      "allow-snake-case"
+    ],
+    "max-classes-per-file": [
+      false
+    ],
     "prefer-for-of": true,
     "forin": true,
     "object-literal-shorthand": false,
@@ -37,25 +41,59 @@
     "arrow-parens": false,
     // Pending fix for shorthand property names.
     "object-literal-sort-keys": false,
-    "object-literal-key-quotes": [true, "consistent"],
+    "object-literal-key-quotes": [
+      true,
+      "consistent"
+    ],
     "strict-boolean-expressions": true,
     "ban-comma-operator": true,
-    "curly": [true, "ignore-same-line"],
+    "curly": [
+      true,
+      "ignore-same-line"
+    ],
     "no-for-in-array": true,
     "no-bitwise": true,
     "switch-default": true,
-    "triple-equals": [true, "allow-null-check", "allow-undefined-check"],
+    "triple-equals": [
+      true,
+      "allow-null-check",
+      "allow-undefined-check"
+    ],
     "prefer-const": true,
-    "semicolon": [true, "always"],
-    "prefer-template": [true, "allow-single-concat"],
-    "member-ordering": [false],
-    "ban-types": [true,
-            // ["Function", "Avoid using the `Function` type. Prefer a specific function type, like `() => void`."],
-            ["Object", "Avoid using the `Object` type. Did you mean `object`?"],
-            ["Boolean", "Avoid using the `Boolean` type. Did you mean `boolean`?"],
-            ["Number", "Avoid using the `Number` type. Did you mean `number`?"],
-            ["String", "Avoid using the `String` type. Did you mean `string`?"],
-            ["Symbol", "Avoid using the `Symbol` type. Did you mean `symbol`?"]
+    "semicolon": [
+      true,
+      "always"
+    ],
+    "prefer-template": [
+      true,
+      "allow-single-concat"
+    ],
+    "member-ordering": [
+      false
+    ],
+    "ban-types": [
+      true,
+      // ["Function", "Avoid using the `Function` type. Prefer a specific function type, like `() => void`."],
+      [
+        "Object",
+        "Avoid using the `Object` type. Did you mean `object`?"
+      ],
+      [
+        "Boolean",
+        "Avoid using the `Boolean` type. Did you mean `boolean`?"
+      ],
+      [
+        "Number",
+        "Avoid using the `Number` type. Did you mean `number`?"
+      ],
+      [
+        "String",
+        "Avoid using the `String` type. Did you mean `string`?"
+      ],
+      [
+        "Symbol",
+        "Avoid using the `Symbol` type. Did you mean `symbol`?"
+      ]
     ]
   },
   "rulesDirectory": []

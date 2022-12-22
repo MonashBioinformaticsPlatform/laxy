@@ -202,7 +202,7 @@ export default class JobList extends Vue {
   }
 
   mounted() {
-    this._refreshPollerId = setInterval(() => {
+    this._refreshPollerId = window.setInterval(() => {
       this.refresh(null);
     }, 10000); // ms
   }
@@ -349,6 +349,7 @@ export default class JobList extends Vue {
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(359deg);
   }

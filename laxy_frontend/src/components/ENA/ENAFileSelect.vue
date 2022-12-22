@@ -270,7 +270,7 @@ export default class ENAFileSelect extends Vue {
         if (ena.fastq_ftp) {
           let pair: PairedEndFiles = { R1: "" };
           for (let i in ena.fastq_ftp) {
-            const f = ena.fastq_ftp[i];
+            const f: any = ena.fastq_ftp[i];
             const Rn: string = Object.keys(f)[0]; // first and only key (R1 or R2)
             const location: string = f[Rn]; // FTP url
             if (ena.fastq_md5) {

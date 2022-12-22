@@ -888,8 +888,8 @@ export default class JobPage extends Vue {
         type_tags: ["reference_genome", "genome_annotation"]
       })
     );
-    console.dir(fasta);
-    console.dir(annotation);
+    //console.dir(fasta);
+    //console.dir(annotation);
     return {
       genome_sequence: fasta,
       genome_annotation: annotation
@@ -947,8 +947,7 @@ export default class JobPage extends Vue {
       if (pipeline_version != null) {
         rows.push([
           "Pipeline",
-          `${this.job.params.pipeline} ${
-            this.job.params.params.pipeline_version
+          `${this.job.params.pipeline} ${this.job.params.params.pipeline_version
           }`
         ]);
       }
@@ -958,11 +957,11 @@ export default class JobPage extends Vue {
       } else if (this.externalGenomeDescription != null) {
         rows.push([
           "Reference genome sequence",
-          this.externalGenomeDescription["genome_sequence"]["location"]
+          this.externalGenomeDescription?.genome_sequence?.location
         ]);
         rows.push([
           "Reference genome annotation",
-          this.externalGenomeDescription["genome_annotation"]["location"]
+          this.externalGenomeDescription?.genome_annotation?.location
         ]);
       }
     }
@@ -1093,18 +1092,18 @@ export default class JobPage extends Vue {
       const pipeline_name = response.data.pipeline;
       const samplecart_id = response.data.samplecart_id;
 
+      if (samplecart_id != null) {
+        const s_response = await WebAPI.getSampleCart(samplecart_id);
+        const samplecart = s_response.data;
+        let samples = new SampleCartItems();
+        samples.id = samplecart.id;
+        samples.items = samplecart.samples;
+        samples.name = samplecart.name;
+        this.$store.commit(SET_SAMPLES, samples as SampleCartItems);
+      }
+
       const p_response = await WebAPI.getPipelineRun(pipelinerun_id);
-      const s_response = await WebAPI.getSampleCart(samplecart_id);
-
       const pipelinerun = p_response.data;
-      const samplecart = s_response.data;
-
-      let samples = new SampleCartItems();
-      samples.id = samplecart.id;
-      samples.items = samplecart.samples;
-      samples.name = samplecart.name;
-      this.$store.commit(SET_SAMPLES, samples as SampleCartItems);
-
       this.$store.commit(SET_PIPELINE_PARAMS, pipelinerun.params);
       this.$store.commit(SET_PIPELINE_DESCRIPTION, pipelinerun.description);
 
