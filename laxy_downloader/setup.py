@@ -58,7 +58,7 @@ setup(
         "psutil==5.8.0",
         "python-magic==0.4.15",
         "text-unidecode==1.3",
-        "typing-extensions==3.10.0.0",
+        "typing-extensions==4.1.1",
         "pyaria2 @ git+https://github.com/pansapiens/pyaria2.git#egg=pyaria2-0.2.1.2",
     ],
     # pip deprecated dependency_links :/
