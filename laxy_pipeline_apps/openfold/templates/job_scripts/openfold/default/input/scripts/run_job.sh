@@ -100,52 +100,6 @@ fi
 
 # For QUEUE_TYPE=='local'
 PREFIX_JOB_CMD="/usr/bin/env bash -l -c "
-MEM=64G 
-CPUS=8
-
-# We use sbatch --wait --wrap rather than srun, since it seems more reliable
-# and jobs appear pending on the queue immediately
-readonly SLURM_OPTIONS="--parsable \
-                        --cpus-per-task=${CPUS} \
-                        --mem=${MEM} \
-                        --partition=m3g,m3h,gpu --gres=gpu:1 \
-                        --time 7-00:00 \
-                        --ntasks-per-node=1 \
-                        --ntasks=1 \
-                        {% if SLURM_EXTRA_ARGS %}
-                        ${SLURM_EXTRA_ARGS} \
-                        {% endif %}
-                        --job-name=laxy:${JOB_ID}"
-
-####
-# Some notes specific to the MASSIVE M3 cluster
-##
-
-# Any gpu partition - fine for small proteins where 16G GPU memory is enough                        
-# --partition=m3g,m3h,gpu --gres=gpu:1 \
-
-# For 48Gb GPU memory A40s on M3.
-# --partition=gpu --gres=gpu:A40:1 \
-
-# Fails with: sbatch: error: Batch job submission failed: Requested node configuration is not available
-# Might need --gres=gpu:1 ?
-# --partition=m3g --gres=gpu:1 --constraint=V100-32G \
-
-# Fails with: RuntimeError: Found no NVIDIA driver on your system. 
-#             Please check that you have an NVIDIA GPU and installed a driver
-# Seems the V100-16G nodes don't have the right CUDA version ? Might need --gres=gpu:1
-# --partition=m3g \
-
-#
-####
-
-if [[ "${QUEUE_TYPE}" == "slurm" ]]; then
-    PREFIX_JOB_CMD="sbatch ${SLURM_OPTIONS} --wait --wrap "
-fi
-
-if [[ "${QUEUE_TYPE}" == "local" ]]; then
-    echo $$ >>"${JOB_PATH}/job.pids"
-fi
 
 function register_files() {
     send_event "JOB_INFO" "Registering interesting output files."
@@ -274,6 +228,68 @@ jq --raw-output '.params.openfold.input.fasta' "$(realpath ${PIPELINE_CONFIG})" 
 
 if [[ $(stat -c %s ${INPUT_PATH}/fasta/sequences.fasta) == 0 ]]; then
    send_event "JOB_ERROR" "Empty FASTA sequence ?!?" '{"exit_code":'1'}'
+fi
+
+PEPTIDE_LENGTH_ESTIMATE=$(wc -c "${INPUT_PATH}/fasta/sequences.fasta" | cut -f 1 -d ' ')
+
+# Fine for smaller proteins (M3/MASSIVE specific)
+# TODO: Make configurable for other HPC sites
+MEM=64G
+GPU_PARTITION_OPTS="--partition=m3g,m3h,gpu --gres=gpu:1"
+CPUS=8
+
+if [[ ${PEPTIDE_LENGTH_ESTIMATE} -gt 1000 ]]; then
+    # For larger multimer (~3000+ residues ?) (M3/MASSIVE specific)
+    # TODO: Make configurable for other HPC sites
+    MEM=128G
+    GPU_PARTITION_OPTS="--partition=gpu --gres=gpu:A40:1"
+fi
+
+####
+# Some notes specific to the MASSIVE M3 cluster
+# These may help in chossing GPU resources required at other HPC sites.
+##
+
+# Any gpu partition - fine for small proteins where 16G GPU memory is enough
+# Here you typically get 16Gb GPU memory - could be P100s, V100s, T4                        
+# GPU_PARTITION_OPTS="--partition=m3g,m3h,gpu --gres=gpu:1"
+
+# For 48Gb GPU memory A40s on M3.
+# 'relax' for larger (~3000 residue) multimers needs >64Gb (CPU) RAM
+# GPU_PARTITION_OPTS="--partition=gpu --gres=gpu:A40:1"
+
+# V100 with 32G GPU memory (requires --gres=gpu:1)
+# Not enough for ~3000 residues
+# GPU_PARTITION_OPTS="--partition=m3g --gres=gpu:1 --constraint=V100-32G"
+
+# Fails with: RuntimeError: Found no NVIDIA driver on your system. 
+#             Please check that you have an NVIDIA GPU and installed a driver
+# Seems the V100-16G nodes don't have the right CUDA version ? 
+# Might need --gres=gpu:1 ?
+# GPU_PARTITION_OPTS="--partition=m3g"
+
+# We use sbatch --wait --wrap rather than srun, since it seems more reliable
+# and jobs appear pending on the queue immediately
+readonly SLURM_OPTIONS="--parsable \
+                        --cpus-per-task=${CPUS} \
+                        --mem=${MEM} \
+                        ${GPU_PARTITION_OPTS} \
+                        --time 7-00:00 \
+                        --ntasks-per-node=1 \
+                        --ntasks=1 \
+                        {% if SLURM_EXTRA_ARGS %}
+                        ${SLURM_EXTRA_ARGS} \
+                        {% endif %}
+                        --job-name=laxy:${JOB_ID}"
+#
+####
+
+if [[ "${QUEUE_TYPE}" == "slurm" ]]; then
+    PREFIX_JOB_CMD="sbatch ${SLURM_OPTIONS} --wait --wrap "
+fi
+
+if [[ "${QUEUE_TYPE}" == "local" ]]; then
+    echo $$ >>"${JOB_PATH}/job.pids"
 fi
 
 send_event "JOB_INFO" "Sanity checking FASTA sequences."
