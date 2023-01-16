@@ -1,10 +1,7 @@
 <template>
   <div>
-    <md-dialog-alert
-      :md-content-html="error_alert_message"
-      :md-content="error_alert_message"
-      ref="error_dialog"
-    ></md-dialog-alert>
+    <md-dialog-alert :md-content-html="error_alert_message" :md-content="error_alert_message"
+      ref="error_dialog"></md-dialog-alert>
 
     <md-layout md-column>
       <slot name="about">
@@ -21,9 +18,7 @@
               Accession(s)
               <span>
                 <md-icon style="font-size: 16px;">info</md-icon>
-                <md-tooltip
-                  md-direction="right"
-                >Multpile accessions should be comma or space separated</md-tooltip>
+                <md-tooltip md-direction="right">Multpile accessions should be comma or space separated</md-tooltip>
               </span>
             </label>
             <md-input v-model="accession_input" placeholder="PRJNA276493, SRR950078"></md-input>
@@ -44,31 +39,19 @@
           <md-table @select="onSelect">
             <md-table-header>
               <md-table-row>
-                <md-table-head
-                  v-for="field in show_sample_fields"
-                  :key="field"
-                >{{ field | deunderscore }}</md-table-head>
+                <md-table-head v-for="field in show_sample_fields" :key="field">{{ field | deunderscore
+                }}</md-table-head>
               </md-table-row>
             </md-table-header>
             <md-table-body>
-              <md-table-row
-                v-for="sample in samples"
-                :key="sample.fastq_md5.join('-')"
-                :md-item="sample"
-                @mouseover="rowHover($event)"
-                md-auto-select
-                md-selection
-              >
+              <md-table-row v-for="sample in samples" :key="sample.fastq_md5.join('-')" :md-item="sample"
+                @mouseover="rowHover($event)" md-auto-select md-selection>
                 <md-table-cell v-for="field in show_sample_fields" :key="field">
                   <span v-if="field.includes('_accession')">
-                    <a
-                      :href="'https://www.ebi.ac.uk/ena/data/view/'+sample[field]"
-                      target="_blank"
-                    >{{ sample[field] }}</a>
+                    <a :href="'https://www.ebi.ac.uk/ena/data/view/' + sample[field]" target="_blank">{{ sample[field]
+                    }}</a>
                   </span>
-                  <span
-                    v-else-if="field === 'read_count'"
-                  >{{ sample[field] | numeral_format('0 a') }}</span>
+                  <span v-else-if="field === 'read_count'">{{ sample[field] | numeral_format('0 a') }}</span>
                   <span v-else>{{ sample[field] }}</span>
                 </md-table-cell>
                 <!-- FASTQ links
@@ -80,22 +63,14 @@
             </md-table-body>
           </md-table>
         </md-layout>
-        <md-layout
-          v-if="hasResults"
-          md-column
-          md-flex-large="20"
-          md-flex-medium="100"
-          md-flex-small="100"
-          style="width: 100%"
-        >
+        <md-layout v-if="hasResults" md-column md-flex-large="20" md-flex-medium="100" md-flex-small="100"
+          style="width: 100%">
           <md-whiteframe md-elevation="5" style="padding: 16px; min-height: 100%;">
             <div>
               <md-table>
                 <md-table-row v-for="(value, key) in hoveredSampleDetails" :key="key">
-                  <md-table-cell
-                    v-if="extra_info_fields.includes(key) && value !== ''"
-                    style="width: 40%; padding: -16px; height: 32px;"
-                  >
+                  <md-table-cell v-if="extra_info_fields.includes(key) && value !== ''"
+                    style="width: 40%; padding: -16px; height: 32px;">
                     <strong>{{ key }}:</strong>
                   </md-table-cell>
                   <md-table-cell v-if="extra_info_fields.includes(key) && value !== ''">{{ value }}</md-table-cell>
@@ -107,11 +82,8 @@
       </md-layout>
     </md-layout>
     <md-layout v-if="showButtons" md-gutter>
-      <md-button
-        @click="addToCart"
-        :disabled="submitting || samples.length === 0"
-        class="md-raised"
-      >Add to cart</md-button>
+      <md-button @click="addToCart" :disabled="submitting || samples.length === 0" class="md-raised">Add to
+        cart</md-button>
     </md-layout>
     <md-snackbar md-position="bottom center" ref="snackbar" :md-duration="snackbar_duration">
       <span>{{ snackbar_message }}</span>
@@ -236,7 +208,7 @@ export default class ENAFileSelect extends Vue {
     return !(this.samples == null || this.samples.length === 0);
   }
 
-  created() {}
+  created() { }
 
   onSelect(rows: any) {
     this.selectedSamples = rows as Array<ENASample>;
@@ -378,4 +350,5 @@ export default class ENAFileSelect extends Vue {
 </script>
 
 <style lang="css" scoped>
+
 </style>

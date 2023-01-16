@@ -8,7 +8,7 @@ LAXY_JOB_TEMPLATES = "templates/"
 
 # This identifies the app as a pluggable Laxy pipeline definition.
 # It needs to match the Pipeline.pipeline_name in the database,
-# and also the templates/{pipeline_name} path
+# and also the templates/job_scripts/{pipeline_name} path
 LAXY_PIPELINE_NAME = "seqkit_stats"
 
 

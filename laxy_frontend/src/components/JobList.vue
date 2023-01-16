@@ -1,27 +1,16 @@
 <template>
   <div>
-    <md-dialog-alert
-      :md-content-html="error_alert_message"
-      :md-content="error_alert_message"
-      ref="error_dialog"
-    ></md-dialog-alert>
+    <md-dialog-alert :md-content-html="error_alert_message" :md-content="error_alert_message"
+      ref="error_dialog"></md-dialog-alert>
 
-    <md-dialog
-      md-open-from="#add_menu_button"
-      md-close-to="#add_menu_button"
-      ref="cancel_job_dialog"
-    >
+    <md-dialog md-open-from="#add_menu_button" md-close-to="#add_menu_button" ref="cancel_job_dialog">
       <md-dialog-title>Cancel job</md-dialog-title>
 
       <md-dialog-content>Are you sure ?</md-dialog-content>
 
       <md-dialog-actions>
-        <md-button class="md-primary" @click="cancelJobConfirmed(jobToCancel)"
-          >Yes, cancel it.</md-button
-        >
-        <md-button class="md-primary" @click="closeDialog('cancel_job_dialog')"
-          >Close</md-button
-        >
+        <md-button class="md-primary" @click="cancelJobConfirmed(jobToCancel)">Yes, cancel it.</md-button>
+        <md-button class="md-primary" @click="closeDialog('cancel_job_dialog')">Close</md-button>
       </md-dialog-actions>
     </md-dialog>
 
@@ -43,70 +32,46 @@
                     <md-table-head>Pipeline</md-table-head>
                     <md-table-head>Created</md-table-head>
                     <md-table-head>Status</md-table-head>
-                    <md-table-head style="text-align: center"
-                      >Action</md-table-head
-                    >
+                    <md-table-head style="text-align: center">Action</md-table-head>
                   </md-table-row>
                 </md-table-header>
                 <md-table-body>
                   <md-table-row v-for="job in jobs" :key="job.id">
-                    <md-table-cell
-                      v-if="job.params.description"
-                      @click.native="routeTo('job', { jobId: job.id })"
-                    >
-                      <md-tooltip md-direction="top"
-                        >Job ID: {{ job.id }}</md-tooltip
-                      >
+                    <md-table-cell v-if="job.params.description" @click.native="routeTo('job', { jobId: job.id })">
+                      <md-tooltip md-direction="top">Job ID: {{ job.id }}</md-tooltip>
                       {{ job.params.description }}
                     </md-table-cell>
                     <md-table-cell v-else>{{ job.id }}</md-table-cell>
 
-                    <md-table-cell
-                      @click.native="routeTo('job', { jobId: job.id })"
-                    >
+                    <md-table-cell @click.native="routeTo('job', { jobId: job.id })">
                       {{ job.params.pipeline }}
-                      <template v-if="job && get(job, 'params.params.genome')"
-                        >({{ job.params.params.genome }})</template
-                      >
+                      <template v-if="job && get(job, 'params.params.genome')">({{ job.params.params.genome
+                      }})</template>
                     </md-table-cell>
-                    <md-table-cell
-                      @click.native="routeTo('job', { jobId: job.id })"
-                    >
+                    <md-table-cell @click.native="routeTo('job', { jobId: job.id })">
                       <md-tooltip md-direction="top">{{
-                        job.created_time
+                          job.created_time
                       }}</md-tooltip>
                       {{ job.created_time | moment("from") }}
                     </md-table-cell>
-                    <md-table-cell
-                      @click.native="routeTo('job', { jobId: job.id })"
-                    >
+                    <md-table-cell @click.native="routeTo('job', { jobId: job.id })">
                       <span :style="{ color: getStatusColor(job.status) }">{{
-                        job.status
+                          job.status
                       }}</span>
                       <br />
                     </md-table-cell>
                     <md-table-cell md-numeric>
                       <md-toolbar class="md-dense md-transparent">
-                        <md-button
-                          v-if="job.owner == userId"
-                          class="md-icon-button"
-                          @click="cloneJob(job.id)"
-                        >
+                        <md-button v-if="job.owner == userId" class="md-icon-button" @click="cloneJob(job.id)">
                           <md-tooltip md-direction="top">Run again</md-tooltip>
                           <md-icon>content_copy</md-icon>
                         </md-button>
-                        <md-button
-                          class="md-icon-button"
-                          @click="routeTo('job', { jobId: job.id })"
-                        >
+                        <md-button class="md-icon-button" @click="routeTo('job', { jobId: job.id })">
                           <md-tooltip md-direction="top">View job</md-tooltip>
                           <md-icon>remove_red_eye</md-icon>
                         </md-button>
-                        <md-button
-                          v-if="job.owner == userId && job.status === 'running'"
-                          class="md-icon-button"
-                          @click="askCancelJob(job.id)"
-                        >
+                        <md-button v-if="job.owner == userId && job.status === 'running'" class="md-icon-button"
+                          @click="askCancelJob(job.id)">
                           <md-tooltip md-direction="top">Cancel</md-tooltip>
                           <md-icon>cancel</md-icon>
                         </md-button>
@@ -115,16 +80,9 @@
                   </md-table-row>
                 </md-table-body>
               </md-table>
-              <md-table-pagination
-                ref="pagination"
-                :md-size="pagination.page_size"
-                :md-total="pagination.count"
-                :md-page="1"
-                md-label="Jobs"
-                md-separator="of"
-                :md-page-options="false"
-                @pagination="onPagination"
-              ></md-table-pagination>
+              <md-table-pagination ref="pagination" :md-size="pagination.page_size" :md-total="pagination.count"
+                :md-page="1" md-label="Jobs" md-separator="of" :md-page-options="false"
+                @pagination="onPagination"></md-table-pagination>
             </md-table-card>
           </md-layout>
           <md-layout v-else>.. no jobs ..</md-layout>
