@@ -752,7 +752,9 @@ class FileView(
     serializer_class = FileSerializer
     parser_classes = (JSONParser, JSONPatchRFC7386Parser, JSONPatchRFC6902Parser)
 
-    permission_classes = (IsOwner | IsSuperuser | HasReadonlyObjectAccessToken | FileHasAccessTokenForJob,)
+    permission_classes = (
+        IsOwner | IsSuperuser | HasReadonlyObjectAccessToken | FileHasAccessTokenForJob,
+    )
 
     # permission_classes = (DjangoObjectPermissions,)
 
@@ -2080,8 +2082,11 @@ class JobCreate(JSONView):
             )
 
             if (
-                (reference_genome_id or (reference_genome_fasta_url and reference_genome_fasta_url)) and
-                reference_genome_id not in REFERENCE_GENOME_MAPPINGS
+                (
+                    reference_genome_id
+                    or (reference_genome_fasta_url and reference_genome_fasta_url)
+                )
+                and reference_genome_id not in REFERENCE_GENOME_MAPPINGS
                 and not reference_genome_fasta_url
                 and not reference_genome_fasta_url
                 # TODO: Check URLS are valid with http/https/ftp scheme
@@ -2624,7 +2629,7 @@ class JobClone(JSONView):
                     f"Use of `sample_set` in Job.params is deprecated, please use `sample_cart` (when cloning Job {job_id})"
                 )
 
-        #if samplecart_id is None:
+        # if samplecart_id is None:
         #    return HttpResponse(
         #        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         #        reason=f"Cannot find samplecart associated with job {job.id}",
@@ -2653,7 +2658,7 @@ class JobClone(JSONView):
             {
                 "pipelinerun_id": new_pipelinerun.id,
                 "pipeline": pipeline_name,
-                "samplecart_id": getattr(samplecart, 'id', None),
+                "samplecart_id": getattr(samplecart, "id", None),
             }
         )
 
