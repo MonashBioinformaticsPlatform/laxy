@@ -849,6 +849,18 @@ def estimate_job_tarball_size(self, task_data=None, optional=False, **kwargs):
                 ]
             )
 
+        if not stored_at.available:
+            with transaction.atomic():
+                job = Job.objects.get(id=job_id)
+                job.params["tarball_size"] = 0
+                job.save(update_fields=["params", "modified_time"])
+                task_result["tarball_size"] = tarball_size
+                task_result["stdout"] = None
+                task_result["stderr"] = None
+                task_data.update(result=task_result)
+
+                return task_data
+
         with fabsettings(
             gateway=gateway, host_string=host, user=remote_username, key=private_key
         ):
