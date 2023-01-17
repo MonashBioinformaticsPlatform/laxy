@@ -1333,14 +1333,15 @@ class File(Timestamped, UUIDModel):
             Marks the database record as deleted without attempting to remove file
             content on storage.
             """
-            fileloc.delete()
-            if self.locations.count() == 0:
-                self.deleted_time = timezone.now()
-                self.save()
-            # Ensure there is always a default.
-            else:
-                if self.locations.filter(default=True).count() == 0:
-                    self.locations.first().set_as_default()
+            with transaction.atomic():
+                fileloc.delete()
+                if self.locations.count() == 0:
+                    self.deleted_time = timezone.now()
+                    self.save()
+                # Ensure there is always a default.
+                else:
+                    if self.locations.filter(default=True).count() == 0:
+                        self.locations.first().set_as_default()
 
         @backoff.on_exception(
             backoff.expo, (socket.gaierror,), max_tries=3, jitter=backoff.full_jitter
