@@ -641,10 +641,11 @@ def index_remote_files(self, task_data=None, **kwargs) -> dict:
 
 
 @shared_task(bind=True)
-def _finalize_job_task_err_handler(self, exc, traceback=None, job_id=None):
+def _finalize_job_task_err_handler(self, task_id, job_id=None):
     logger.info(
-        f"_finalize_job_task_err_handler: failed task: {self.id}, job_id: {job_id}"
+        f"_finalize_job_task_err_handler: failed task: {task_id}, job_id: {job_id}"
     )
+    task_result = AsyncResult(task_id)
     job = Job.objects.get(id=job_id)
     if not job.done:
         job.status = Job.STATUS_FAILED
@@ -656,10 +657,14 @@ def _finalize_job_task_err_handler(self, exc, traceback=None, job_id=None):
         eventlog = job.log_event(
             "JOB_FINALIZE_ERROR",
             "",
-            extra={"task_id": self.id, "exception": exc, "traceback": traceback},
+            extra={
+                "task_id": task_id,
+                "exception": task_result.result,
+                "traceback": task_result.traceback,
+            },
         )
         message = (
-            f"Failed to index files or finalize job status (EventLog ID: {eventlog.id})"
+            f"Failed to index files or finalize job status (Celery Task ID: {task_id})"
         )
         eventlog.message = message
         eventlog.save()
