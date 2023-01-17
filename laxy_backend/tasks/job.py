@@ -793,7 +793,9 @@ def kill_remote_job(self, task_data=None, **kwargs):
     acks_late=True,
     reject_on_worker_lost=True,
 )
-def estimate_job_tarball_size(self, task_data=None, optional=False, **kwargs):
+def estimate_job_tarball_size(
+    self, task_data=None, optional=False, use_heuristic=False, **kwargs
+):
     task_result = dict()
     try:
         if task_data is None:
@@ -813,6 +815,7 @@ def estimate_job_tarball_size(self, task_data=None, optional=False, **kwargs):
         ]
         if not compute_locs:
             raise Exception("Job files have no ComputeResource location(s) ?")
+
         stored_at = compute_locs.pop()
         host = stored_at.host
         gateway = stored_at.gateway_server
@@ -826,7 +829,7 @@ def estimate_job_tarball_size(self, task_data=None, optional=False, **kwargs):
         # we can get a rough idea using du instead and a scaling factor
         # to account for compression.
         # We run as 'nice' since this is considered low priority.
-        quick_mode = task_data.get("tarball_size_use_heuristic")
+        quick_mode = use_heuristic or task_data.get("tarball_size_use_heuristic", False)
         compression_scaling = 1
         cmd = (
             f'nice tar -chzf - --restrict --directory "{job_path}" . | nice wc --bytes'
