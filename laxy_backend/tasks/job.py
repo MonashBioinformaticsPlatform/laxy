@@ -1163,20 +1163,23 @@ def move_job_files_to_archive_task(self, task_data=None, *kwargs):
             dst_fp = str(Path(dst_path) / Path(src_fp).name)
             dst_sftp = dst_compute.sftp_storage
             src_sftp = src_compute.sftp_storage
-            with src_sftp.open(src_fp, "r") as fh:
-                if dst_sftp.exists(dst_fp):
-                    bakfile = f".{dst_fp}"
-                    dst_sftp.sftp.posix_rename(dst_fp, bakfile)
-                dst_sftp.save(dst_fp, fh)
-                # chmod to match dst with src
-                src_mode: int = src_sftp.sftp.stat(src_fp).st_mode
-                dst_sftp.sftp.chmod(dst_fp, src_mode)
+            if src_sftp.exists(src_fp):
+                with src_sftp.open(src_fp, "r") as fh:
+                    if dst_sftp.exists(dst_fp):
+                        bakfile = str(
+                            Path(dst_fp).parent / Path("." + Path(dst_fp).name)
+                        )
+                        dst_sftp.sftp.posix_rename(dst_fp, bakfile)
+                    dst_sftp.save(dst_fp, fh)
+                    # chmod to match dst with src
+                    src_mode: int = src_sftp.sftp.stat(src_fp).st_mode
+                    dst_sftp.sftp.chmod(dst_fp, src_mode)
 
             if bakfile is not None:
                 dst_sftp.delete(bakfile)
                 bakfile = None
 
-            if dst_sftp.exists(dst_fp):
+            if dst_sftp.exists(dst_fp) and src_sftp.exists(src_fp):
                 src_sftp.delete(src_fp)
 
         return fpaths
