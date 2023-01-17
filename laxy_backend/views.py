@@ -775,7 +775,7 @@ class FileView(
         in the response.
 
         See the [file/{uuid}/content/{filename} docs](#operation/v1_file_content_read) for
-        details about file content downloads where the filename is included in the URL 
+        details about file content downloads where the filename is included in the URL
         (useful in cases where a tool assumes the URL path contains the filename)
 
         Examples:
@@ -1754,7 +1754,9 @@ class JobView(JSONPatchMixin, JSONView):
             expiry = get_job_expiry_for_status(new_status)
 
             task_data = dict(
-                job_id=uuid, status=new_status, tarball_size_use_heuristic=True
+                job_id=uuid,
+                status=new_status,
+                # tarball_size_use_heuristic=True,
             )
 
             status_changed_to = None
@@ -1780,12 +1782,17 @@ class JobView(JSONPatchMixin, JSONView):
                     result = celery.chain(
                         index_remote_files.s(task_data=task_data),
                         set_job_status.s(),
-                        # later tasks will run even if estimate_job_tarball_size fails (since optional=True)
-                        estimate_job_tarball_size.s(optional=True),
+                        # We only determine a rough tarball estimate initially (use_heuristic=True)
+                        # Since optional=True, later tasks will run even if estimate_job_tarball_size fails
+                        estimate_job_tarball_size.s(optional=True, use_heuristic=True),
                         bulk_move_job_rsync.s(),
-                        # move_job_files_to_archive_task is an alternative that doesn't use rsync
-                        # but moves the job file by file. It's generally slower.
-                        # move_job_files_to_archive_task.s(),
+                        # move_job_files_to_archive_task is an alternative to bulk_move_job_rsync
+                        # that doesn't use rsync but moves the job file by file. It's generally slower.
+                        # Since moving files is intended to be idempotent, we can run this here to
+                        # catch anything that failed to rsync, somehow.
+                        move_job_files_to_archive_task.s(),
+                        # After moving the files, estimate an accurate tarball size
+                        estimate_job_tarball_size.s(optional=True, use_heuristic=False),
                     ).apply_async(
                         countdown=ingestion_delay_time,  # we give a short delay for the run_job.sh script to finish before ingestion begins
                         link_error=_finalize_job_task_err_handler.s(job_id=job.id),
@@ -1794,7 +1801,7 @@ class JobView(JSONPatchMixin, JSONView):
                     result = celery.chain(
                         index_remote_files.s(task_data=task_data),
                         set_job_status.s(),
-                        estimate_job_tarball_size.s(optional=True),
+                        estimate_job_tarball_size.s(optional=True, use_heuristic=False),
                     ).apply_async(
                         countdown=ingestion_delay_time,  # we give a short delay for the run_job.sh script to finish before ingestion begins
                         link_error=_finalize_job_task_err_handler.s(job_id=job.id),
