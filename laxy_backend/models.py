@@ -1684,8 +1684,13 @@ class File(Timestamped, UUIDModel):
                 self.save(update_fields=["metadata"])
         except NotImplementedError as ex:
             pass
-        except (FileNotFoundError, ssh_exception.SSHException):
+        except (
+            FileNotFoundError,
+            ssh_exception.SSHException,
+            ComputeResourceDecommissioned,
+        ):
             # Can occur when SFTP backend server is inaccessible
+            # Decommissioned locations are no longer available to query, so we ignore those too
             pass
 
         return size
@@ -2072,7 +2077,7 @@ class SampleCart(Timestamped, UUIDModel):
 
         if isinstance(csv_string, bytes):
             csv_string = csv_string.decode(encoding)
-            
+
         if isinstance(csv_string, str):
             lines = list(csv.reader(csv_string.splitlines(), dialect=dialect))
         elif isinstance(csv_string, collections.abc.Sequence):
