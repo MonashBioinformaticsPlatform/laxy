@@ -947,6 +947,8 @@ def file_should_be_deleted(ff: File, max_size=200):
         "input/*.fq.gz" "input/**/*.fastq.gz",
         "input/**/*.fastq",
         "input/**/*.fq.gz",
+        "input/reads/*",
+        "input/reads/**/*",
     ]
 
     if extension in always_delete_extensions:
