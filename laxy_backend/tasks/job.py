@@ -857,7 +857,7 @@ def estimate_job_tarball_size(
                 job = Job.objects.get(id=job_id)
                 job.params["tarball_size"] = 0
                 job.save(update_fields=["params", "modified_time"])
-                task_result["tarball_size"] = tarball_size
+                task_result["tarball_size"] = 0
                 task_result["stdout"] = None
                 task_result["stderr"] = None
                 task_data.update(result=task_result)
