@@ -60,6 +60,7 @@ export function filterByTag(files: LaxyFile[], tags: string[] | null): LaxyFile[
     }
     const tag_filtered: LaxyFile[] = [];
     for (const file of files) {
+        if (file.type_tags == null) { continue };
         for (const tag of tags) {
             if (file.type_tags.includes(tag) &&
                 !tag_filtered.includes(file)) {

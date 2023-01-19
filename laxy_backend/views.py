@@ -176,7 +176,7 @@ from .view_mixins import (
     PostMixin,
     CSVTextParser,
     PutMixin,
-    RowsCSVTextParser,
+    CSVTextParserPandas,
     etag_headers,
     JSONPatchMixin,
 )
@@ -1121,7 +1121,7 @@ class JobFileBulkRegistration(JSONView):
     serializer_class = JobSerializerResponse
     parser_classes = (
         JSONParser,
-        RowsCSVTextParser,
+        CSVTextParserPandas,
     )
 
     permission_classes = (IsOwner | IsSuperuser,)

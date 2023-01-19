@@ -25,7 +25,7 @@
           : 'clear'
     ">
       <span v-if="!job.expired">
-        Job expires {{ jobExpiresSoon ? "in less than 7 days" : "" }} on
+        Job expires {{ jobExpiresSoon? "in less than 7 days": "" }} on
         &nbsp;{{ job.expiry_time }}
       </span>
       <span v-if="job.expired">Job has expired - large files are no longer available</span>
@@ -127,7 +127,7 @@
                   ">
                     <md-button @click="openDegustLink(countsFile.id)" target="_blank">
                       <md-icon>send</md-icon>&nbsp;{{
-                          _countsFileInfo(countsFile.name).featureSet
+                        _countsFileInfo(countsFile.name).featureSet
                       }}&nbsp;
 
                       <md-tooltip>{{ countsFile.path }}/{{ countsFile.name }}</md-tooltip>
@@ -149,7 +149,7 @@
               <span slot="subtitle">
                 This job is accessible by anyone with the secret link
                 <strong>{{
-                    _formatExpiryString(bannerSharingLink.expiry_time, true)
+                  _formatExpiryString(bannerSharingLink.expiry_time, true)
                 }}</strong>.
               </span>
             </generic-pip>
@@ -162,12 +162,12 @@
               buttonText>
               <template v-if="!job.expired">
                 <span slot="title">Job expiry
-                  {{ jobExpiresSoon ? "in less than 7 days" : "" }}</span>
+                  {{ jobExpiresSoon? "in less than 7 days": "" }}</span>
                 <span slot="subtitle">
                   Large files associated with this job will be deleted on
                   <br />
                   <strong>{{
-                      job.expiry_time | moment("DD-MMM-YYYY (HH:mm UTCZ)")
+                    job.expiry_time | moment("DD-MMM-YYYY (HH:mm UTCZ)")
                   }}</strong>
                 </span>
               </template>
@@ -306,7 +306,7 @@
                       <md-option v-for="expires_in in access_token_lifetime_options" :key="expires_in"
                         :value="expires_in">
                         <span v-if="typeof expires_in == 'number'">{{
-                            expires_in | duration("seconds").humanize()
+                          expires_in | duration("seconds").humanize()
                         }}</span>
                         <span v-else>{{ expires_in }}</span>
                       </md-option>
@@ -817,6 +817,7 @@ export default class JobPage extends Vue {
 
   filesByTag(tag: string): LaxyFile[] {
     return filter(this.files, f => {
+      if (f.type_tags == null) return false;
       return f.type_tags.includes(tag);
     });
   }

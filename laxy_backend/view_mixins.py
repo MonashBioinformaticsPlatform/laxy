@@ -10,7 +10,7 @@ import functools
 
 import csv
 import json
-import rows
+import pandas as pd
 
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -148,9 +148,9 @@ class CSVTextParser(BaseParser):
         return csv_table
 
 
-class RowsCSVTextParser(BaseParser):
+class CSVTextParserPandas(BaseParser):
     """
-    A CSV parser for DRF APIViews, using the `rows` Python library for parsing.
+    A CSV/TSV parser for DRF APIViews, using the `pandas` library for parsing.
 
     Based on the RFC 4180 text/csv MIME type.
 
@@ -170,12 +170,13 @@ class RowsCSVTextParser(BaseParser):
         dialect = media_type_params.get("dialect", "excel")
         txt = stream.read()
         try:
-            table = rows.import_from_csv(
-                BytesIO(txt), encoding=charset, dialect=dialect, skip_header=False
+            table = json.loads(
+                pd.read_table(BytesIO(txt), encoding=charset, dialect=dialect).to_json(
+                    orient="records"
+                )
             )
         except Exception as ex:
             raise ex
-        table = json.loads(rows.export_to_json(table))
         return table
 
 

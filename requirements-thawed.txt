@@ -17,7 +17,6 @@ toolz
 xxhash
 lxml
 pandas
-rows
 enasearch
 attrdict
 robobrowser

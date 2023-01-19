@@ -16,7 +16,7 @@ from io import StringIO, BytesIO, BufferedRandom
 
 import backoff
 from django.db.utils import IntegrityError
-import rows
+import pandas as pd
 import paramiko
 from paramiko import SSHClient, ssh_exception, RSAKey, AutoAddPolicy
 
@@ -804,6 +804,7 @@ class Job(Expires, Timestamped, UUIDModel):
     @transaction.atomic()
     def add_files_from_tsv(self, tsv_table: Union[List[dict], str, bytes], save=True):
         """
+        Works with TSV and CSV, due to use of pd.read_table(sep=None)
 
         ```tsv
         filepath	checksum	type_tags	metadata
@@ -835,8 +836,11 @@ class Job(Expires, Timestamped, UUIDModel):
         from laxy_backend.serializers import FileBulkRegisterSerializer
 
         if isinstance(tsv_table, str) or isinstance(tsv_table, bytes):
-            table = rows.import_from_csv(BytesIO(tsv_table), skip_header=False)
-            table = json.loads(rows.export_to_json(table))
+            table = json.loads(
+                pd.read_table(BytesIO(tsv_table), sep=None, engine="python").to_json(
+                    orient="records"
+                )
+            )
         elif isinstance(tsv_table, list):
             table = tsv_table
         else:
@@ -848,6 +852,12 @@ class Job(Expires, Timestamped, UUIDModel):
         self._init_filesets()
 
         for row in table:
+            # When a pd.DataFrame is converted to JSON (.to_json()), values than
+            # contain JSON strings are not converted to nested JSON objects.
+            # So we do this manually for the metadata field.
+            if row.get("metadata", None):
+                row["metadata"] = json.loads(row["metadata"])
+
             f = FileBulkRegisterSerializer(data=row)
             if f.is_valid(raise_exception=True):
 
