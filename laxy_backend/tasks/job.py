@@ -659,7 +659,7 @@ def _finalize_job_task_err_handler(self, task_id, job_id=None):
             "",
             extra={
                 "task_id": task_id,
-                "exception": task_result.result,
+                "exception": str(task_result.result),
                 "traceback": task_result.traceback,
             },
         )
