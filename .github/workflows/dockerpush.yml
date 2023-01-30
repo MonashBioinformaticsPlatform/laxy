@@ -104,6 +104,8 @@ jobs:
 
           echo "Pushing ${IMAGE_ID}:${{ env.IMAGE_TAG }}"
           docker push "${IMAGE_ID}:${{ env.IMAGE_TAG }}"
+          echo "Pushing ${IMAGE_ID}:${{ env.GIT_SHORT_COMMIT }}"
+          docker push "${IMAGE_ID}:${{ env.GIT_SHORT_COMMIT }}"
 
       - name: Push laxy-static-nginx image
         run: |
@@ -118,3 +120,5 @@ jobs:
 
           echo "Pushing ${IMAGE_ID}:${{ env.IMAGE_TAG }}"
           docker push "${IMAGE_ID}:${{ env.IMAGE_TAG }}"
+          echo "Pushing ${IMAGE_ID}:${{ env.GIT_SHORT_COMMIT }}"
+          docker push "${IMAGE_ID}:${{ env.GIT_SHORT_COMMIT }}"
