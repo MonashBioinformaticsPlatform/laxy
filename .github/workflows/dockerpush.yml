@@ -1,6 +1,9 @@
 name: Docker test
 
 on:
+  # Allow builds to be triggered from the web UI
+  workflow_dispatch:
+  
   push:
     # Publish `master` as Docker `latest` image, `develop` as `dev` image
     branches:
