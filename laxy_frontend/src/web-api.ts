@@ -75,13 +75,15 @@ export class WebAPI {
         if (expiry == null) {
             expiry = new Date(3000, 1, 1);
         }
-        //const domain = getDomain(WebAPI.apiSettings.url) || '.laxy.io';
-        const domain = new URL(WebAPI.apiSettings.url).hostname || '.laxy.io';
+        // TODO: get the domain from settings - tldjs or vanilla js
+        // const domain = getDomain(WebAPI.apiSettings.url);
+        // const domain = new URL(WebAPI.apiSettings.url).hostname;
         Cookies.set(`access_token__${obj_id}`, token,
             {
                 expires: expiry,
-                domain: domain,
-                //domain: '.laxy.io',
+                // TODO: don't use hardcoded domain
+                // domain: domain,
+                domain: '.laxy.io',
                 secure: true
             });
     }
