@@ -2,7 +2,7 @@ import 'es6-promise';
 import axios, { AxiosResponse, AxiosRequestConfig } from 'axios';
 
 import * as Cookies from 'js-cookie';
-// import { getDomain } from 'tldjs';
+import { getDomain } from 'tldjs';
 
 import { browserLocale } from './util';
 import * as moment from 'moment';
@@ -75,16 +75,18 @@ export class WebAPI {
         if (expiry == null) {
             expiry = new Date(3000, 1, 1);
         }
-        // TODO: get the domain from settings - tldjs or vanilla js
-        // const domain = getDomain(WebAPI.apiSettings.url);
-        // const domain = new URL(WebAPI.apiSettings.url).hostname;
+        // We used tldjs getDomain rather than vanilla new URL(url).hostname
+        // since we want to ignore the subdomain (api.laxy.io -> .laxy.io).
+        // TODO: NOTE: This has security implications in some hosting contexts
+        // (eg, my-laxy-app.example.com -> .example.com; cookie will be
+        //  readable by other apps on .example.com )
+        const domain = getDomain(WebAPI.apiSettings.url) || '.laxy.io';
         Cookies.set(`access_token__${obj_id}`, token,
             {
                 expires: expiry,
-                // TODO: don't use hardcoded domain
-                // domain: domain,
-                domain: '.laxy.io',
-                secure: true
+                domain: `.${domain}`,
+                secure: true,
+                sameSite: 'Lax',
             });
     }
 
