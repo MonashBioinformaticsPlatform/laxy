@@ -14,7 +14,7 @@ volumes:
 
 services:
   django:
-    image: '${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest'
+    image: '${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:${LAXY_IMAGE_TAG-latest}'
     # user: laxy
     # We must specify the .env file so that it gets sourced - otherwise every variable in .env would
     # need to be explicitly defined like: LAXY_DEBUG=${LAXY_DEBUG} in the environment section below.
@@ -43,7 +43,7 @@ services:
     command: bash -c "sleep 10 && python3 manage.py makemigrations --no-input && python3 manage.py migrate --no-input && gunicorn laxy.wsgi -b 0.0.0.0:8001 --forwarded-allow-ips='*' --worker-class gevent --timeout 240"
 
   dev-frontend-server:
-    image: '${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest'
+    image: '${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:${LAXY_IMAGE_TAG-latest}'
     restart: 'no'
     command: echo "Service disabled in prod (but still required to be defined to override the image name)"
   # If we wanted to do a ninja frontend rebuild into static_assets
@@ -90,7 +90,7 @@ services:
       - private
 
   queue-high:
-    image: '${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest'
+    image: '${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:${LAXY_IMAGE_TAG-latest}'
     # user: laxy
     command:
       [
@@ -104,7 +104,7 @@ services:
         "-Ofair",
         "--broker=${LAXY_BROKER_URL}",
         "--concurrency=2"
-      ]       
+      ]
     stop_grace_period: 5m
     stop_signal: SIGTERM
     env_file:
@@ -123,7 +123,7 @@ services:
       - private
 
   queue-low:
-    image: '${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest'
+    image: '${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:${LAXY_IMAGE_TAG-latest}'
     # user: laxy
     command:
       [
@@ -139,7 +139,7 @@ services:
         "-Q",
         "low-priority",
         "--concurrency=8"
-      ]       
+      ]
     stop_grace_period: 5m
     stop_signal: SIGTERM
     env_file:
@@ -158,7 +158,7 @@ services:
       - private
 
   celery-beat:
-    image: '${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest'
+    image: '${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:${LAXY_IMAGE_TAG-latest}'
     # user: laxy
     env_file:
       - .env
@@ -168,7 +168,7 @@ services:
       - private
 
   flower:
-    image: '${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:latest'
+    image: '${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy:${LAXY_IMAGE_TAG-latest}'
     env_file:
       - .env
     environment:
@@ -180,7 +180,7 @@ services:
       - private
 
   nginx:
-    image: '${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy-static-nginx:latest'
+    image: '${IMAGE_REPO-docker.pkg.github.com/monashbioinformaticsplatform/laxy}/laxy-static-nginx:${LAXY_IMAGE_TAG-latest}'
     command: >
       sh -c "
         until [ -f /certs/fullchain.pem ] && [ -f /certs/key.pem ]; do
