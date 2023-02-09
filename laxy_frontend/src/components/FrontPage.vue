@@ -1,17 +1,11 @@
 <template>
   <div>
     <md-layout md-column md-gutter>
-      <md-layout
-        style="margin: 40px 10% 0 10%"
-        md-vertical-align="stretch"
-        md-column
-      >
+      <md-layout style="margin: 40px 10% 0 10%" md-vertical-align="stretch" md-column>
         <md-whiteframe md-elevation="2" class="pad-32">
           <div class="pad-32" style="background: #2196f3">
             <h1 class="md-display-2" style="text-align: center">
-              <span class="large-text logo-font" style="color: white"
-                >Laxy</span
-              >
+              <span class="large-text logo-font" style="color: white">Laxy</span>
               &nbsp;&nbsp;
               <span class="md-subheading" style="color: white">
                 <em>
@@ -61,11 +55,10 @@ import RnaSeqLaunch from "./FrontPageCards/RnaSeqLaunch.vue";
 import LatestNews from "./FrontPageCards/LatestNews.vue";
 import SplashTexts from "./FrontPageCards/SplashTexts.vue";
 
-interface FrontPage extends Vue {}
+interface FrontPage extends Vue { }
 
 export default Vue.extend({
   components: {
-    // 'input-files-form': InputFilesForm
     "callout-box": CalloutBox,
     "splash-texts": SplashTexts,
     "latest-news": LatestNews,

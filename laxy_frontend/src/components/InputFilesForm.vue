@@ -9,20 +9,15 @@
               <md-input-container>
                 <label for="data_source">Select a data source</label>
                 <md-select name="data_source" id="data_source" v-model="selected_source">
-                  <md-option
-                    v-for="source in sources"
-                    :key="source.type"
-                    :value="source.type"
-                  >{{ source.text }}</md-option>
+                  <md-option v-for="source in sources" :key="source.type" :value="source.type">{{
+                    source.text
+                  }}</md-option>
                 </md-select>
               </md-input-container>
             </md-layout>
             <md-layout md-flex="5" md-vertical-align="center">
-              <md-button
-                id="helpButton"
-                @click="openDialog('helpPopup')"
-                class="push-right md-icon-button md-raised md-dense"
-              >
+              <md-button id="helpButton" @click="openDialog('helpPopup')"
+                class="push-right md-icon-button md-raised md-dense">
                 <md-icon style="color: #bdbdbd;">help</md-icon>
               </md-button>
             </md-layout>
@@ -33,20 +28,12 @@
           </div>
 
           <div id="url_form" v-if="selected_source == 'URL'">
-            <remote-files-select
-              :show-about-box="false"
-              :show-buttons="true"
-              @files-added="addToCart"
-              placeholder="https://bioinformatics.erc.monash.edu/home/andrewperry/test/sample_data/"
-            ></remote-files-select>
+            <remote-files-select :show-about-box="false" :show-buttons="true" @files-added="addToCart"
+              placeholder="https://bioinformatics.erc.monash.edu/home/andrewperry/test/sample_data/"></remote-files-select>
           </div>
           <div id="cloudstor_public_form" v-if="selected_source == 'CLOUDSTOR_PUBLIC'">
-            <remote-files-select
-              :show-about-box="false"
-              :show-buttons="true"
-              @files-added="addToCart"
-              placeholder="https://cloudstor.aarnet.edu.au/plus/s/lnSmyyug1fexY8l"
-            ></remote-files-select>
+            <remote-files-select :show-about-box="false" :show-buttons="true" @files-added="addToCart"
+              placeholder="https://cloudstor.aarnet.edu.au/plus/s/lnSmyyug1fexY8l"></remote-files-select>
           </div>
           <div id="csv_form" v-if="selected_source == 'CSV'">
             <CSVSampleListUpload :show-about-box="false"></CSVSampleListUpload>
@@ -55,9 +42,7 @@
             <md-whiteframe md-elevation="5" class="pad-16 fill-vertical">
               <div ref="aboutClourStor">
                 Paste a link to a shared
-                <a
-                  href="https://cloudstor.aarnet.edu.au/plus/index.php/apps/files/"
-                >CloudStor</a>
+                <a href="https://cloudstor.aarnet.edu.au/plus/index.php/apps/files/">CloudStor</a>
                 folder here (eg
                 <code>https://cloudstor.aarnet.edu.au/plus/index.php/s/RaNd0MlooK1NgID</code>)
                 and the password if required.
@@ -65,10 +50,7 @@
             </md-whiteframe>
             <md-input-container>
               <label>CloudStor share link</label>
-              <md-input
-                v-model="url_input"
-                placeholder="https://cloudstor.aarnet.edu.au/plus/index.php/s/"
-              ></md-input>
+              <md-input v-model="url_input" placeholder="https://cloudstor.aarnet.edu.au/plus/index.php/s/"></md-input>
             </md-input-container>
             <md-input-container>
               <label>Link password</label>
@@ -93,20 +75,17 @@
             </md-whiteframe>
             <div v-show="!sftp_upload_credentials">
               <h4>Generate upload credentials</h4>
-              <md-input-container :class="{'md-input-invalid': dataset_name_invalid }">
+              <md-input-container :class="{ 'md-input-invalid': dataset_name_invalid }">
                 <label>Dataset name</label>
                 <md-input required id="dataset_name" v-model="dataset_name"></md-input>
                 <span class="md-error">Dataset name must be specified</span>
               </md-input-container>
-              <md-button
-                class="md-raised md-primary"
-                @click="generateSFTPUploadCredentials()"
-              >Generate</md-button>
+              <md-button class="md-raised md-primary" @click="generateSFTPUploadCredentials()">Generate</md-button>
             </div>
             <div id="sftp_upload_credentials" v-show="sftp_upload_credentials">
               <h4>Upload location generated !</h4>Please upload your data using SFTP to:
               <br />
-              <a :href="'sftp://'+sftp_upload_credentials">sftp://{{ sftp_upload_credentials }}</a>
+              <a :href="'sftp://' + sftp_upload_credentials">sftp://{{ sftp_upload_credentials }}</a>
 
               <p>
                 Username:
@@ -133,12 +112,7 @@
         </form>
       </md-layout>
 
-      <md-dialog
-        md-open-from="#helpButton"
-        md-close-to="#helpButton"
-        id="helpPopup"
-        ref="helpPopup"
-      >
+      <md-dialog md-open-from="#helpButton" md-close-to="#helpButton" id="helpPopup" ref="helpPopup">
         <md-dialog-title>Input data source help</md-dialog-title>
 
         <md-dialog-content>
@@ -151,10 +125,8 @@
               Files can be imported from a publicly shared CloudStor folder.
               Create a public link to a folder in CloudStor and paste the link here
               (see
-              <a
-                href="https://support.aarnet.edu.au/hc/en-us/articles/227469547-CloudStor-Getting-Started-Guide"
-                target="_blank"
-              >the CloudStor documentation</a>).
+              <a href="https://support.aarnet.edu.au/hc/en-us/articles/227469547-CloudStor-Getting-Started-Guide"
+                target="_blank">the CloudStor documentation</a>).
             </p>
             <h2>Example:</h2>
             <code>https://cloudstor.aarnet.edu.au/plus/s/lnSmyyug1fexY8l</code>
@@ -200,23 +172,23 @@ import {
   objListToTree,
   simplifyFastqName,
   TreeNode,
-} from "../../../../file-tree-util";
+} from "../file-tree-util";
 
-import { longestCommonSuffix } from "../../../../prefix";
-import { escapeRegExp, reverseString } from "../../../../util";
+import { longestCommonSuffix } from "../prefix";
+import { escapeRegExp, reverseString } from "../util";
 
-import { ADD_SAMPLES } from "../../../../store";
+import { ADD_SAMPLES } from "../store";
 
-import { Snackbar } from "../../../../snackbar";
-import { LaxyFile, Sample } from "../../../../model";
+import { Snackbar } from "../snackbar";
+import { LaxyFile, Sample } from "../model";
 
-import ENAFileSelect from "../../../ENA/ENAFileSelect.vue";
-import ENASearchAboutBox from "../../../ENA/ENASearchAboutBox.vue";
-import RemoteFilesSelect from "../../../RemoteSelect/RemoteFilesSelect.vue";
-import RemoteFileSelectAboutBox from "../../../RemoteSelect/RemoteFileSelectAboutBox.vue";
-import CSVSampleListUpload from "../../../CSVSampleListUpload/CSVSampleListUpload.vue";
-import CSVAboutBox from "../../../CSVSampleListUpload/CSVAboutBox.vue";
-import { ILaxyFile } from "../../../../types";
+import ENAFileSelect from "./ENA/ENAFileSelect.vue";
+import ENASearchAboutBox from "./ENA/ENASearchAboutBox.vue";
+import RemoteFilesSelect from "./RemoteSelect/RemoteFilesSelect.vue";
+import RemoteFileSelectAboutBox from "./RemoteSelect/RemoteFileSelectAboutBox.vue";
+import CSVSampleListUpload from "./CSVSampleListUpload/CSVSampleListUpload.vue";
+import CSVAboutBox from "./CSVSampleListUpload/CSVAboutBox.vue";
+import { ILaxyFile } from "../types";
 
 interface DbAccession {
   accession: string;
@@ -392,7 +364,7 @@ export default class InputFilesForm extends Vue {
 </script>
 
 <style>
-#helpPopup > div.md-dialog {
+#helpPopup>div.md-dialog {
   width: 90%;
 }
 </style>

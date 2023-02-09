@@ -81,7 +81,7 @@ import { WebAPI } from "../../../../web-api";
 
 import { Snackbar } from "../../../../snackbar";
 import BannerNotice from "../../../BannerNotice.vue";
-import InputFilesForm from "../../rnasik/ui/InputFilesForm.vue";
+import InputFilesForm from "../../../InputFilesForm.vue";
 import RemoteFilesSelect from "../../../RemoteSelect/RemoteFilesSelect.vue";
 import { FileListItem } from "../../../../file-tree-util";
 import { filenameFromUrl } from "../../../../util";

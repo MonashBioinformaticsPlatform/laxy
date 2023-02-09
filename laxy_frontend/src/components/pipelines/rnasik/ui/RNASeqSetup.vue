@@ -1,62 +1,30 @@
 <template>
   <div>
     <md-stepper @completed="startJob">
-      <md-step
-        md-label="Data source"
-        :md-continue="dataSource_stepComplete"
-        @exitstep="onExitStep('dataSource')"
-        ref="dataSource"
-      >
-        <input-files-form
-          v-on:stepDone
-          v-on:invalidData
-          v-on:dataSourceChanged
-        ></input-files-form>
+      <md-step md-label="Data source" :md-continue="dataSource_stepComplete" @exitstep="onExitStep('dataSource')"
+        ref="dataSource">
+        <input-files-form v-on:stepDone v-on:invalidData v-on:dataSourceChanged></input-files-form>
       </md-step>
       <!--<md-step md-label="Analysis" md-message="Select one" :md-disabled="true" ref="analysis">-->
       <!--<p>Select your analysis: RNAseq, ChIPSeq</p>-->
       <!--</md-step>-->
-      <md-step
-        md-label="Describe samples"
-        md-message="Specify sample names, conditions"
-        :md-continue="dataSource_stepComplete"
-        :md-disabled="!dataSource_stepComplete"
-        @exitstep="onExitStep('describeSamples')"
-        ref="describeSamples"
-      >
-        <sample-cart
-          :fields="['name', 'metadata.condition', 'R1', 'R2']"
-          :editable-fields="['name', 'metadata.condition']"
-          :show-buttons="false"
-          :show-toolbar="true"
-          :show-add-menu="false"
-          ref="describeSamples_sampleCart"
-        ></sample-cart>
+      <md-step md-label="Describe samples" md-message="Specify sample names, conditions"
+        :md-continue="dataSource_stepComplete" :md-disabled="!dataSource_stepComplete"
+        @exitstep="onExitStep('describeSamples')" ref="describeSamples">
+        <sample-cart :fields="['name', 'metadata.condition', 'R1', 'R2']"
+          :editable-fields="['name', 'metadata.condition']" :show-buttons="false" :show-toolbar="true"
+          :show-add-menu="false" ref="describeSamples_sampleCart"></sample-cart>
       </md-step>
-      <md-step
-        md-label="Reference genome"
-        md-message="Select a reference genome"
-        md-button-continue="Continue"
-        :md-continue="selectGenome_stepComplete"
-        :md-disabled="!selectGenome_stepComplete || !dataSource_stepComplete"
-        @exitstep="onExitStep('selectGenome')"
-        ref="selectGenome"
-      >
+      <md-step md-label="Reference genome" md-message="Select a reference genome" md-button-continue="Continue"
+        :md-continue="selectGenome_stepComplete" :md-disabled="!selectGenome_stepComplete || !dataSource_stepComplete"
+        @exitstep="onExitStep('selectGenome')" ref="selectGenome">
         <select-genome></select-genome>
       </md-step>
-      <md-step
-        md-label="Pipeline settings"
-        md-message="Finalise settings"
-        md-button-continue="Start job"
+      <md-step md-label="Pipeline settings" md-message="Finalise settings" md-button-continue="Start job"
         :md-continue="pipelineSettings_stepComplete && start_job_button_enabled"
-        :md-disabled="!selectGenome_stepComplete || !dataSource_stepComplete"
-        @exitstep="onExitStep('pipelineSettings')"
-        ref="pipelineSettings"
-      >
-        <pipeline-params
-          :show-buttons="false"
-          ref="pipelineParams"
-        ></pipeline-params>
+        :md-disabled="!selectGenome_stepComplete || !dataSource_stepComplete" @exitstep="onExitStep('pipelineSettings')"
+        ref="pipelineSettings">
+        <pipeline-params :show-buttons="false" ref="pipelineParams"></pipeline-params>
       </md-step>
     </md-stepper>
   </div>
@@ -79,7 +47,7 @@ import {
   Watch,
 } from "vue-property-decorator";
 
-import InputFilesForm from "./InputFilesForm.vue";
+import InputFilesForm from "../../../InputFilesForm.vue";
 import PipelineParams from "./PipelineParams.vue";
 import SelectGenome from "../../../SelectGenome.vue";
 

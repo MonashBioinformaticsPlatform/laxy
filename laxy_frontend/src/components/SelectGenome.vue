@@ -27,7 +27,8 @@
             <label for="genome_organism">Species</label>
             <md-select name="genome_organism" id="genome_organism" :required="true" v-model="selected_genome_organism"
               @change="onOrganismChange">
-              <md-option v-for="organism in genome_organism_list" :key="organism" :value="organism">{{ organism
+              <md-option v-for="organism in genome_organism_list" :key="organism" :value="organism">{{
+                organism
               }}</md-option>
             </md-select>
           </md-input-container>
@@ -63,7 +64,7 @@
                       <md-icon style="font-size: 16px">info</md-icon>
                       <md-tooltip md-direction="right">A URL to a gzipped FASTA format reference genome, eg
                         {{
-                            ensemblReleaseUrl
+                          ensemblReleaseUrl
                         }}/fasta/vicugna_pacos/dna/Vicugna_pacos.vicPac1.dna.toplevel.fa.gz</md-tooltip>
                     </span>
                   </label>
@@ -89,7 +90,7 @@
                       <md-tooltip md-direction="right">A URL to a gzipped GTF or GFF format genome annotation,
                         eg
                         {{
-                            ensemblReleaseUrl
+                          ensemblReleaseUrl
                         }}/gtf/vicugna_pacos/Vicugna_pacos.vicPac1.97.gtf.gz</md-tooltip>
                     </span>
                   </label>
@@ -152,7 +153,8 @@ import { isValidUrl } from "../util";
   filters: {}
 })
 export default class SelectGenome extends Vue {
-  public ensemblReleaseUrl: string = "http://ftp.ensembl.org/pub/release-107";
+  ensemblRelease: string = "109";
+  public ensemblReleaseUrl: string = `http://ftp.ensembl.org/pub/release-${this.ensemblRelease}`;
 
   @Sync("pipelineParams@user_genome.fasta_url")
   public custom_genome_fasta_url: string;
