@@ -1790,7 +1790,7 @@ class JobView(JSONPatchMixin, JSONView):
                         # that doesn't use rsync but moves the job file by file. It's generally slower.
                         # Since moving files is intended to be idempotent, we can run this here to
                         # catch anything that failed to rsync, somehow.
-                        move_job_files_to_archive_task.s(),
+                        # move_job_files_to_archive_task.s(),
                         # After moving the files, estimate an accurate tarball size
                         estimate_job_tarball_size.s(optional=True, use_heuristic=False),
                     ).apply_async(
