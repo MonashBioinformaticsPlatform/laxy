@@ -9,7 +9,7 @@
           <md-whiteframe class="pad-32" md-elevation="8">
             <a href="https://nf-co.re/rnaseq">nf-core/rnaseq</a>
             <br />nf-core/rnaseq is a bioinformatics pipeline that can be used
-            to analyse RNA sequencing data obtained from organisms with a
+            to analyse bulk RNA sequencing data obtained from organisms with a
             reference genome and annotation.
           </md-whiteframe>
           <h3>Pipeline parameters</h3>
@@ -20,11 +20,37 @@
           <md-input-container>
             <label for="strandedness">Strandedness</label>
             <md-select name="strandedness" id="strandedness" v-model="strandedness">
+              <md-option value="auto">auto</md-option>
               <md-option value="unstranded">unstranded</md-option>
               <md-option value="reverse">reverse</md-option>
               <md-option value="forward">forward</md-option>
             </md-select>
           </md-input-container>
+
+          <md-switch v-model="show_advanced" id="advanced-toggle" name="advanced-toggle" class="md-primary">Show
+            advanced options</md-switch>
+          <transition name="fade">
+            <md-layout v-if="show_advanced">
+              <md-input-container>
+                <label for="pipeline_version">Pipeline version</label>
+                <md-select name="pipeline_version" id="pipeline_version" v-model="pipeline_version">
+                  <md-option v-for="version in pipeline_versions" :key="version" :value="version">{{
+                    version
+                  }}</md-option>
+                </md-select>
+              </md-input-container>
+
+              <md-layout md-column>
+                <md-switch v-model="debug_mode" id="debug-toggle" name="debug-toggle" class="md-primary">Enable DEBUG
+                  mode</md-switch>
+
+                <md-switch v-model="has_umi" id="umi-toggle" name="umi-toggle" class="md-primary">
+                  Use UMIs <em>(UMIs must be in the FASTQ header from bcl2fastq demultiplexing, not in the
+                    sequence)</em></md-switch>
+              </md-layout>
+
+            </md-layout>
+          </transition>
         </md-whiteframe>
       </form>
 
@@ -57,6 +83,10 @@
       </banner-notice>
       <banner-notice v-if="!isValid_reference_genome" type="error" :show-close-button="false">Selected reference genome
         is invalid.</banner-notice>
+      <banner-notice v-if="!isValid_strandedness_option" type="error" :show-close-button="false">The selected version of
+        nf-core/rnaseq does not support 'auto' strandedness. Please select another strandedness option, or another
+        pipeline version.
+      </banner-notice>
     </md-layout>
 
     <md-snackbar md-position="bottom center" ref="snackbar" :md-duration="snackbar_duration">
@@ -91,6 +121,8 @@ import {
   Watch
 } from "vue-property-decorator";
 
+import { compareVersions } from 'compare-versions';
+
 import { Get, Sync, Call } from "vuex-pathify";
 
 import { SET_SAMPLES, CLEAR_SAMPLE_CART } from "../../../../store";
@@ -102,7 +134,7 @@ import { WebAPI } from "../../../../web-api";
 
 import { Snackbar } from "../../../../snackbar";
 import BannerNotice from "../../../BannerNotice.vue";
-import InputFilesForm from "../../rnasik/ui/InputFilesForm.vue";
+import InputFilesForm from "../../../InputFilesForm.vue";
 import SelectGenome from "../../../SelectGenome.vue";
 import { ReferenceGenome } from "../../../../types";
 import AVAILABLE_GENOMES from "../config/genomes";
@@ -136,7 +168,7 @@ export default class PipelineParams extends Vue {
   public selectedSamples: Array<Sample> = [];
 
   get pipeline_versions() {
-    // const versions = = ["1.5.3", "1.5.2", "1.5.3-laxydev", "1.5.4"];
+    // const versions = = ["3.1", "3.2", "3.10.1"];
     return get(
       this.$store.state.availablePipelines[this.pipeline_name],
       "metadata.versions",
@@ -173,6 +205,12 @@ export default class PipelineParams extends Vue {
   @Sync("pipelineParams@nf-core-rnaseq.strandedness")
   public strandedness: string;
 
+  @Sync("pipelineParams@nf-core-rnaseq.debug_mode")
+  public debug_mode: boolean;
+
+  @Sync("pipelineParams@nf-core-rnaseq.has_umi")
+  public has_umi: boolean;
+
   created() {
     this.$store.registerModule(
       ["pipelineParams", this.pipeline_name],
@@ -180,9 +218,6 @@ export default class PipelineParams extends Vue {
     );
 
     this._samples = cloneDeep(this.$store.state.samples);
-  }
-
-  mounted() {
     this.pipeline_version = this.default_pipeline_version;
   }
 
@@ -249,12 +284,21 @@ export default class PipelineParams extends Vue {
     return this.$store.get("pipelineParams/isValidReferenceGenome");
   }
 
+  get isValid_strandedness_option() {
+    if (this.strandedness == 'auto') {
+      // version 3.7+ required to support the 'auto' option
+      return compareVersions(this.pipeline_version, "3.7") >= 0
+    }
+    return true;
+  }
+
   get isValid_params() {
     let is_valid = false;
     if (
       this.isValid_reference_genome &&
       this.isValid_samples_added &&
-      this.isValid_duplicate_samples
+      this.isValid_duplicate_samples &&
+      this.isValid_strandedness_option
     ) {
       is_valid = true;
     }

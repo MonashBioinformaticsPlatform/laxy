@@ -8,7 +8,7 @@ set -o xtrace
 export DEBUG="${DEBUG:-{{ DEBUG }}}"
 
 export PIPELINE_NAME='nf-core-rnaseq'
-export NFCORE_PIPELINE_RELEASE='{{ PIPELINE_VERSION }}'
+export NFCORE_PIPELINE_RELEASE='3.2'
 export NFCORE_PIPELINE_NAME="rnaseq"
 # These variables are set via templating when the script file is created
 export JOB_ID="{{ JOB_ID }}"
@@ -31,7 +31,6 @@ export SITE_CONFIGS="${JOB_PATH}/../../config"
 export CONDA_BASE="${JOB_PATH}/../miniconda3"
 export DOWNLOAD_CACHE_PATH="${JOB_PATH}/../../cache/downloads"
 export SINGULARITY_CACHEDIR="${JOB_PATH}/../../cache/singularity"
-export SINGULARITY_LOCALCACHEDIR="${TMP}"
 export PIPELINES_CACHE_PATH="${JOB_PATH}/../../cache/pipelines"
 export SINGULARITY_TMPDIR="${TMP}"
 export AUTH_HEADER_FILE="${JOB_PATH}/.private_request_headers"
@@ -49,7 +48,7 @@ export NXF_TEMP=${TMP}
 export NXF_SINGULARITY_CACHEDIR="${SINGULARITY_CACHEDIR}"
 export NXF_OPTS='-Xms1g -Xmx7g'
 export NXF_ANSI_LOG='false'
-export NXF_VER=22.10.4
+export NXF_VER=21.04.0
 # We use a custom .nextflow directory per run so anything cached in ~/.nextflow won't interfere
 # (there seems to be some locking issues when two nextflow instances are run simultaneously, or
 #  issues downloading the nf-amazon plugin when a version is already cached in ~/.nextflow/plugins ?
@@ -61,8 +60,6 @@ mkdir -p "${INPUT_SCRIPTS_PATH}/pipeline"
 export SLURM_EXTRA_ARGS="{{ SLURM_EXTRA_ARGS|default:"" }}"
 
 # export QUEUE_TYPE="{{ QUEUE_TYPE }}"
-# nextflow itself will run on ComputeResource login node, but
-# nextflow.config can still make pipeline tasks go to SLURM
 export QUEUE_TYPE="local"
 
 if [[ ${IGNORE_SELF_SIGNED_CERTIFICATE} == "yes" ]]; then
@@ -129,13 +126,13 @@ CPUS=1
 # We use sbatch --wait --wrap rather than srun, since it seems more reliable
 # and jobs appear pending on the queue immediately
 # export SLURM_OPTIONS="--parsable \
-#                       --cpus-per-task=${CPUS} \
-#                       --mem=${MEM} \
-#                       -t 7-0:00 \
-#                       --ntasks-per-node=1 \
-#                       --ntasks=1 \
-#                       ${SLURM_EXTRA_ARGS} \
-#                       --job-name=laxy:${JOB_ID}"
+#                         --cpus-per-task=${CPUS} \
+#                         --mem=${MEM} \
+#                         -t 7-0:00 \
+#                         --ntasks-per-node=1 \
+#                         --ntasks=1 \
+#                         ${SLURM_EXTRA_ARGS} \
+#                         --job-name=laxy:${JOB_ID}"
 
 
 # if [[ "${QUEUE_TYPE}" == "slurm" ]] || [[ "${QUEUE_TYPE}" == "slurm-hybrid" ]]; then
@@ -157,8 +154,7 @@ function register_files() {
     add_to_manifest "*.bai" "bai"
     add_to_manifest "**/multiqc_report.html" "report,html,multiqc"
     add_to_manifest "**/*_fastqc.html" "report,html,fastqc"
-    # add_to_manifest "**/salmon.merged.gene_counts.tsv" "counts,degust"
-    add_to_manifest "**/star_salmon/counts.star_salmon.biotypes.tsv" "counts,degust"
+    add_to_manifest "**/salmon.merged.gene_counts.tsv" "counts,degust"
 
     # Nextflow reports
     add_to_manifest "output/results/pipeline_info/*.html" "report,html,nextflow"
@@ -190,18 +186,12 @@ function set_genome_args() {
     # See if we can find a custom reference in the fetch_files list
     local _fasta_fn=$(jq --raw-output '.params.fetch_files[] | select(.type_tags[] == "genome_sequence") | .name' "${PIPELINE_CONFIG}" || echo '')
     local _annot_fn=$(jq --raw-output '.params.fetch_files[] | select(.type_tags[] == "genome_annotation") | .name' "${PIPELINE_CONFIG}" || echo '')
-    
-    if [[ -z ${_fasta_fn} ]] && [[ -z ${_annot_fn} ]]; then
-        export USING_CUSTOM_REFERENCE=no
-    else
-        export USING_CUSTOM_REFERENCE=yes
-    fi
 
     [[ -z ${_fasta_fn} ]] || GENOME_FASTA="${INPUT_REFERENCE_PATH}/${_fasta_fn}"
     [[ -z ${_annot_fn} ]] || ANNOTATION_FILE="${INPUT_REFERENCE_PATH}/${_annot_fn}"
 
     # If there is no custom genome, then we assume we are using a pre-defined references
-    if [[ ${USING_CUSTOM_REFERENCE} == "no" ]]; then
+    if [[ -z ${_fasta_fn} ]] && [[ -z ${_annot_fn} ]]; then
         # The last part of the iGenomes-style ID is the ID used by nf-core,
         # eg Homo_sapiens/Ensembl/GRCh38 -> GRCh38
         export NFCORE_GENOME_ID="$(echo ${REFERENCE_GENOME_ID} | cut -f 3 -d '/')"
@@ -225,9 +215,45 @@ function set_genome_args() {
     fi
 }
 
+function find_strandedness() {
+    # UPDATE: Looks like nf-core/rnaseq (3.2) now does this, but only for salmon (not star_salmon)
+    #         https://github.com/nf-core/rnaseq/issues/637
+    # use: --salmon_quant_libtype A
+
+    # TODO: This could come from https://github.com/betsig/how_are_we_stranded_here, or similar
+    # eg:
+    # check_strandedness --gtf Yeast.gtf --transcripts Yeast_cdna.fasta --reads_1 Sample_A_1.fq.gz --reads_2 Sample_A_2.fq.gz
+
+    # An alternative would be to run something like:
+    #
+    # gffread -w transcripts.fa -g genome.fa genes.gtf
+    # 
+    # salmon index -t transcripts.fa -i transcripts_index --decoys decoys.txt -k 31
+    # salmon quant --writeMappings | samtools >outpath/pseudoalignments.bam
+    # _or_
+    # kallisto index -i kindex transcripts.fa
+    # kallisto quant -i kindex -o outpath --genomebam --gtf genes.gtf sample_R1.fastq.gz sample_R2.fastq.gz
+    #
+    # to generate pseudoaligments and then call rseqc:
+    # gtf2bed genes.gtf genes.bed
+    # n_reads = 200000
+    # infer_experiment.py -r genes.bed -s ${n_reads} -i outpath/pseudoalignments.bam
+
+    # It would be nice to launch this as the actual nf-core/rnaseq salmon quant task (pre-pipeline) so the result gets
+    # cached in work/ prior to the full pipeline run, but unfortunately it looks like the `salmon quant` calls
+    # by nf-core/rnaseq don't use --writeMappings (by default)
+
+    #export STRANDEDNESS='unstranded'
+    #export STRANDEDNESS='forward'
+    #export STRANDEDNESS='reverse'
+    export STRANDEDNESS=$(jq --raw-output '.params."nf-core-rnaseq".strandedness' "${PIPELINE_CONFIG}" || echo "unstranded")
+    # return $STRANDEDNESS
+}
+
 function generate_samplesheet() {
 
-    export STRANDEDNESS='auto'
+    export STRANDEDNESS='unstranded'
+    find_strandedness || true
 
     python ${INPUT_SCRIPTS_PATH}/laxy2nfcore_samplesheet.py  \
       ${INPUT_CONFIG_PATH}/pipeline_config.json ${INPUT_READS_PATH} ${STRANDEDNESS} \
@@ -235,16 +261,11 @@ function generate_samplesheet() {
 }
 
 function cleanup_nextflow_intermediates() {
-    if [[ ${USER_DEBUG_MODE} == "yes" ]]; then
-        return 0;
+    if [[ ${DEBUG} != "yes" ]]; then
+      send_event "JOB_INFO" "Cleaning up." || true
+      rm -rf "${JOB_PATH}/output/work"
+      rm -rf "${JOB_PATH}/output/.nextflow"
     fi
-    if [[ ${DEBUG} == "yes" ]]; then
-        return 0;
-    fi
-
-    send_event "JOB_INFO" "Cleaning up." || true
-    rm -rf "${JOB_PATH}/output/work"
-    rm -rf "${JOB_PATH}/output/.nextflow"
 }
 
 function get_site_nextflow_config() {
@@ -274,7 +295,7 @@ function cache_pipeline() {
 
     if [[ ! -d "${CACHED_PIPELINE_PATH}" ]]; then
         nf-core download ${NFCORE_PIPELINE_NAME} \
-                        --revision "${NFCORE_PIPELINE_RELEASE}" \
+                        --release "${NFCORE_PIPELINE_RELEASE}" \
                         --container singularity \
                         --singularity-cache-only \
                         --parallel-downloads ${LAXYDL_PARALLEL_DOWNLOADS} \
@@ -290,7 +311,7 @@ function cache_pipeline() {
 function run_nextflow() {
     cd "${JOB_PATH}/output"
 
-    module load singularity || true
+    module load singularity/3.7.1 || true
 
     # TODO: Valid genome IDs from:
     # https://github.com/nf-core/rnaseq/blob/master/conf/igenomes.config
@@ -312,33 +333,26 @@ function run_nextflow() {
     #${PREFIX_JOB_CMD} "\
     nextflow run "${NFCORE_PIPELINE_PATH}" \
        --input "${INPUT_CONFIG_PATH}/samplesheet.csv" \
-       --outdir ${JOB_PATH}/output/results \
-       ${GENOME_ARGS} \
-       ${UMI_FLAGS} \
+        ${GENOME_ARGS} \
        --aligner star_salmon \
        --pseudo_aligner salmon \
-       --save_reference \
-       ${NEXTFLOW_CONFIG_ARG} \
-       --monochrome_logs \
-       -with-trace \
-       -with-dag \
-       -name "${_nfjobname}" \
        -profile singularity \
+        ${NEXTFLOW_CONFIG_ARG} \
+       -name "${_nfjobname}" \
        -resume \
         >${JOB_PATH}/output/nextflow.log \
         2>${JOB_PATH}/output/nextflow.err
     #">>"${JOB_PATH}/slurm.jids"
-
-    # This custom config was an attempt to modify the featurecounts output,
-    # however downstream R scripts in the pipeline seems to strip out the
-    # extra columns we want anyway.
-    # -c ${INPUT_CONFIG_PATH}/laxy_nextflow.config \
 
     # TODO: Should we have the --trim_nextseq option here by default ?
     #       (assuming it's mostly benign with non-nextseq/novaseq data ?)
     #       Fancy (but potentially more fragile) way would be to look at 
     #       FASTQ headers, infer machine type from instrument ID and apply 
     #       when required.
+
+    # TODO: This sets automatic strandedness guessing for Salmon, but doesn't 
+    #       pass any strandedness guess to featureCounts
+    #   --salmon_quant_libtype A \
 
     # TODO: log nextflow events to a job-specific url (include a secret in the, expire url after run completed)
     #       It might make sense to build this as a pluggable Django app for Laxy. We'd translate some Nextflow
@@ -360,113 +374,13 @@ function run_nextflow() {
     cleanup_nextflow_intermediates || true
 }
 
-function get_salmon_inferred_strandedness() {
-    # 0=unstranded, 1=forward, 2=reverse
-    
-    # We return unstranded if unknown/no match, since this 
-    # is likely the best choice for featureCounts when 
-    # strandedness is ambigious.
-    local meta_info_json="${1}"
-    jq -r '.library_types[0]' "${meta_info_json}" | \
-        awk '{if ($0 == "U" || $0 == "IU") {print "0"} \
-        else if ($0 == "SF" || $0 == "ISF") {print "1"} \
-        else if ($0 == "SR" || $0 == "ISR") {print "2"} \
-        else {print "0"}}'
-}
-
-function post_nextflow_jobs() {
-    # This function runs some post-processing and analyis not within nf-core/rnaseq.
-    # In particular, a featureCounts output table including biotypes.
-    
-    # TODO: We currently just run featureCounts directy, however a better way might be to reuse
-    #       the existing PREPARE_GENOME and SUBREAD_FEATURECOUNTS tasks within nf-core/rnaseq,
-    #       called by a mini nextflow workflow of our own based on a skeleton of workflows/rnaseq.nf
-    #       We might be able to overide the process options as required like:
-    #  process { 
-    #    withName: SUBREAD_FEATURECOUNTS' {
-    #        ext.args   = [ '-B -C --extraAttributes gene_name,gene_biotype']
-    #        publishDir = [
-    #            path: { "${params.outdir}/${params.aligner}/featurecounts" },
-    #            mode: params.publish_dir_mode
-    #        ]
-    #    }
-    #  }
-
-    local cpus=6
-
-    # This should ideally match the version used by the current $PIPELINE_VERSION
-    # See: https://github.com/nf-core/rnaseq/blob/master/modules/nf-core/subread/featurecounts/main.nf
-    export SUBREAD_FEATURECOUNTS_CONTAINER="https://depot.galaxyproject.org/singularity/subread:2.0.1--hed695b0_0"
-    #export SUBREAD_FEATURECOUNTS_CONTAINER="docker://quay.io/biocontainers/subread:2.0.1--hed695b0_0"
-
-    # We point to the appropriate annoation file (custom or canned iGenomes)
-    local _annotation=""
-    if [[ ${USING_CUSTOM_REFERENCE} == "yes" ]]; then
-        _annotation="${ANNOTATION_FILE}"
-    else
-        _annotation="$(find ${JOB_PATH}/output/results/genome/ -name "*.gtf" | head -n1)"
-    fi
-    if [[ -z ${_annotation} ]]; then
-        send_error "post_nextflow_jobs" "Unable to find GTF reference" 1
-        exit 1
-    fi
-    _annotation="$(realpath ${_annotation})"
-
-    module load singularity || true
-
-    # We set _PRE as the prefix to our featureCounts command, possibly running
-    # inside singularity and/or as a SLURM job.
-    local _PRE=""
-    if [[ $(builtin type -P singularity) ]]; then
-        local _PATHBINDS=" -B $(realpath ${JOB_PATH}) -B $(realpath ${_annotation}) "
-        _PRE="singularity run ${_PATHBINDS} ${SUBREAD_FEATURECOUNTS_CONTAINER} -- "
-    fi
-
-    if [[ ${QUEUE_TYPE} == "slurm" ]]; then
-        _PRE="${PRE} sbatch --parsable \
-                      --cpus-per-task=${cpus} \
-                      --mem=36G \
-                      -t 7-0:00 \
-                      --job-name=laxy:${JOB_ID}:post_nextflow \
-                      ${SLURM_EXTRA_ARGS} \
-                      --wait --wrap "
-    fi
-    
-    # We grab the Salmon predicted strandedness from it's meta_info.json output file.
-    # We assume all samples have the same strandedness, just get the prediction
-    # for the first sample we find ....
-    # There are other options for this another good option would be the rseqc infer_experiment output: 
-    #    results/star_salmon/rseqc/infer_experiment/${sample_name}.infer_experiment.txt
-    # Or, the qualimap settings ()"protocol = strand-specific-forward"):
-    #    results/star_salmon/qualimap/${sample_name}/rnaseq_qc_results.txt
-    # TODO: Might be worth parsing the rseq infer_experiment numbers and putting them into 
-    #       job metadata (as per rnasik): 
-    #           send_job_metadata '{"metadata":{"results":{"strandedness":{"predicted":"'${prediction}'","bias":'${bias}'}}}}' || true
-    local _first_meta_info_json=$(find "${JOB_PATH}/output/results/star_salmon/" -type f -name meta_info.json | head -n1)
-    local _strand=$(get_salmon_inferred_strandedness "${_first_meta_info_json}")
-
-    ${_PRE} featureCounts \
-        -B -C -T ${cpus} \
-        -a "${_annotation}" \
-        -s ${_strand} --extraAttributes gene_name,gene_biotype \
-        -o "${JOB_PATH}/output/results/star_salmon/counts.star_salmon.biotypes.tsv" \
-        "${JOB_PATH}"/output/results/star_salmon/*.bam \
-            >"${JOB_PATH}/output/results/star_salmon/counts.star_salmon.biotypes.out" 2>&1
-
-}
-
-# Extract the pipeline parameters we need from pipeline_config.json
-_debug_mode=$(jq --raw-output '.params."nf-core-rnaseq".debug_mode' "${PIPELINE_CONFIG}" || echo "false")
-USER_DEBUG_MODE="no"
-if [[ "${_debug_mode}" == "true" ]]; then
-   USER_DEBUG_MODE="yes"
-fi
-
-_has_umi=$(jq --raw-output '.params."nf-core-rnaseq".has_umi' "${PIPELINE_CONFIG}" || echo "false")
-UMI_FLAGS=""
-if [[ "${_has_umi}" == "true" ]]; then
-   UMI_FLAGS=" --with_umi --skip_umi_extract --umitools_umi_separator : "
-fi
+# Extract the pipeline parameter nf-core-rnaseq.flags.all from the pipeline_config.json
+# Set the --all flag appropriately.
+#_flags_all=$(jq --raw-output '.params.nf-core-rnaseq.flags.all' "${PIPELINE_CONFIG}" || echo "false")
+#ALL_FLAG=" "
+#if [[ "${_flags_all}" == "true" ]]; then
+#    ALL_FLAG=" --all "
+#fi
 
 update_permissions || true
 
@@ -505,11 +419,11 @@ cache_pipeline
 
 cd "${JOB_PATH}/output"
 
-send_event "JOB_PIPELINE_STARTING" "Starting pipeline."
+send_event "JOB_PIPELINE_STARTING" "Pipeline starting."
+
+send_event "JOB_INFO" "Starting pipeline."
 
 run_nextflow
-
-post_nextflow_jobs
 
 cd "${JOB_PATH}"
 
@@ -519,3 +433,5 @@ job_done $EXIT_CODE
 # Remove the trap so job_done doesn't get called a second time when the script naturally exits
 trap - EXIT
 exit 0
+
+#}}

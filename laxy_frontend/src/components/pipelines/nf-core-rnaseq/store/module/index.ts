@@ -2,7 +2,9 @@ import { make } from 'vuex-pathify';
 
 const initial_state: any = {
     //flags: { all: false },
-    strandedness: 'unstranded',
+    strandedness: 'auto',
+    debug_mode: false,
+    has_umi: false,
 };
 
 const getters: any = {

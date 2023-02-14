@@ -25,12 +25,11 @@ channels:
   # conda-forge occasionally re-labels packages from 'main' to 'broken',
   # so we need this to make the environment reproducible
   - conda-forge/label/broken
-  
 dependencies:
   # General run_job.sh dependencies. Many of these will already exist on a typical
   # Linux system but we pull them in explicitly to ensure they are available, even on
   # barebones systems (eg slimmed down Docker containers)
-  - python=3.9
+  - python>=3.6
   - pip
   - conda-pack
   - aria2
@@ -45,12 +44,15 @@ dependencies:
   # For realpath
   - coreutils
   # Pipeline specific
-  - nextflow=22.10.4
-  - nf-core=2.7.2
-  # For when we don't have singularity
-  - suberead=2.0.1
+  - nextflow=21.04.0
+  - nf-core=1.14
+  # how_are_we_stranded_here dependencies ( https://github.com/betsig/how_are_we_stranded_here )
+  - kallisto=0.44.0
+  - rseqc=4.0.0
 
   - pip:
       # General run_job.sh dependency, for the laxydl downloader tool
       - git+https://github.com/MonashBioinformaticsPlatform/laxy@master#egg=laxy_downloader&subdirectory=laxy_downloader
       - semver
+      # for strandedness detection
+      - how_are_we_stranded_here
