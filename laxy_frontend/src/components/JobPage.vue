@@ -212,11 +212,15 @@
               md-column>
               <file-list v-if="job && jobIsDone && hasFilesWithTags(['report', 'html'])" class="shadow"
                 ref="report-files" title="Reports" :fileset-id="job.output_fileset_id" :tag-filters="['report', 'html']"
-                :hide-search="true" :job-id="jobId" @refresh-error="showErrorDialog"></file-list>
+                :exclude-tags="['fastqc']" :hide-search="true" :job-id="jobId"
+                @refresh-error="showErrorDialog"></file-list>
               <file-list v-if="job && jobIsDone && hasFilesWithTags(['degust', 'counts', 'strand-info'])"
                 ref="count-files" title="Count files" :fileset-id="job.output_fileset_id"
                 :tag-filters="['degust', 'counts', 'strand-info']" :hide-search="true" :job-id="jobId"
                 @action-error="showErrorDialog" @refresh-error="showErrorDialog"></file-list>
+              <file-list v-if="job && jobIsDone && hasFilesWithTags(['fastqc'])" ref="report-files"
+                title="FastQC Reports" :fileset-id="job.output_fileset_id" :tag-filters="['fastqc']" :hide-search="true"
+                :job-id="jobId" @refresh-error="showErrorDialog"></file-list>
               <file-list v-if="job && jobIsDone && hasFilesWithTags(['bam', 'bai'])" ref="alignment-files"
                 title="Alignment files" :fileset-id="job.output_fileset_id" :tag-filters="['bam', 'bai']"
                 :hide-search="false" :job-id="jobId" @refresh-error="showErrorDialog"></file-list>

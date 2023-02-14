@@ -72,14 +72,9 @@
                 </md-button>
               </md-table-cell>
             </md-table-row>
-            <md-table-row
-              v-for="node in currentLevelNodes"
-              :md-item="node.obj"
-              :key="node.id"
+            <md-table-row v-for="node in currentLevelNodes" :md-item="node.obj" :key="node.id"
               :md-selection="node.obj && selectableTypes.includes(node.meta.type) && !shouldDisableCheckbox(node.obj)"
-              @selected="onSelectedRow(node.obj)"
-              @deselected="onDeselectedRow(node.obj)"
-            >
+              @selected="onSelectedRow(node.obj)" @deselected="onDeselectedRow(node.obj)">
               <template v-if="node.meta.type === 'file'">
                 <!-- when in cart, insert a disabled checkbox
                 (since :md-selection="false"  _removes_ the checkbox)-->
@@ -87,35 +82,25 @@
                   <md-checkbox disabled></md-checkbox>
                 </md-table-cell>
 
-                <md-table-cell @click.native="getProp(node.meta, 'onclick', (n) => {})(node)">
-                  <div class="no-line-break" :class="{ strikethrough: node.obj.deleted, unavailable: !node.obj.location }">
-                    <md-icon
-                      v-if="node.meta.tags && node.meta.tags.includes('archive')"
-                    >folder_special</md-icon>
+                <md-table-cell @click.native="getProp(node.meta, 'onclick', (n) => { })(node)">
+                  <div class="no-line-break"
+                    :class="{ strikethrough: node.obj.deleted, unavailable: !node.obj.location }">
+                    <md-icon v-if="node.meta.tags && node.meta.tags.includes('archive')">folder_special</md-icon>
                     {{ node.obj.name | magic_truncate }}
                   </div>
                 </md-table-cell>
-                <md-table-cell
-                  v-if="!hideActions && !node.obj.deleted"
-                  @click.native="getProp(node.meta, 'onclick', (n) => {})(node)"
-                  md-numeric
-                >
-                  <md-spinner
-                    v-if="actionRunning[node.obj.id]"
-                    :md-size="20"
-                    class="push-right"
-                    md-indeterminate
-                  ></md-spinner>
-                  <md-button
-                    v-else-if="getDefaultViewMethod(node.obj) && node.obj.location"
-                    class="md-icon-button push-right"
-                    @click="getDefaultViewMethod(node.obj).method(node.obj)"
-                  >
+                <md-table-cell v-if="!hideActions && !node.obj.deleted"
+                  @click.native="getProp(node.meta, 'onclick', (n) => { })(node)" md-numeric>
+                  <md-spinner v-if="actionRunning[node.obj.id]" :md-size="20" class="push-right"
+                    md-indeterminate></md-spinner>
+                  <md-button v-else-if="getDefaultViewMethod(node.obj) && node.obj.location"
+                    class="md-icon-button push-right" @click="getDefaultViewMethod(node.obj).method(node.obj)">
                     <md-tooltip md-direction="top">{{ getDefaultViewMethod(node.obj).text }}</md-tooltip>
                     <md-icon>{{ getDefaultViewMethod(node.obj).icon }}</md-icon>
                   </md-button>
                   <md-button v-else-if="!node.obj.location" class="md-icon-button push-right">
-                    <md-tooltip md-direction="left">File has no recorded location. This may be a temporary situtation, or an error.</md-tooltip>
+                    <md-tooltip md-direction="left">File has no recorded location. This may be a temporary situtation,
+                      or an error.</md-tooltip>
                     <md-icon>not_listed_location</md-icon>
                   </md-button>
                   <md-button v-else :disabled="true" class="md-icon-button">
@@ -131,11 +116,8 @@
                       <i class="md-caption" style="padding-left: 16px">{{ node.obj.id }}</i>
                       <!--  -->
                       <template v-if="node.obj.location">
-                        <md-menu-item
-                          v-for="view in getViewMethodsForTags(node.obj.type_tags)"
-                          :key="view.text"
-                          @click="view.method(node.obj)"
-                        >
+                        <md-menu-item v-for="view in getViewMethodsForTags(node.obj.type_tags)" :key="view.text"
+                          @click="view.method(node.obj)">
                           <md-icon>{{ view.icon }}</md-icon>
                           <span>{{ view.text }}</span>
                         </md-menu-item>
@@ -144,7 +126,7 @@
                         <md-menu-item>
                           <md-icon>not_listed_location</md-icon>
                           <span><i>Not available</i></span>
-                          </md-menu-item>
+                        </md-menu-item>
                       </template>
                     </md-menu-content>
                   </md-menu>
@@ -159,19 +141,14 @@
               </template>
               <template v-else-if="node.meta.type === 'directory'">
                 <!-- it's a directory, not a file -->
-                <md-table-cell
-                  class="md-table-selection"
-                  @click.native="getProp(node.meta, 'onclick', enterDirectory)(node)"
-                >
+                <md-table-cell class="md-table-selection"
+                  @click.native="getProp(node.meta, 'onclick', enterDirectory)(node)">
                   <md-icon>folder</md-icon>
                 </md-table-cell>
                 <md-table-cell @click.native="getProp(node.meta, 'onclick', enterDirectory)(node)">
                   <div class="no-line-break">{{ node.name | magic_truncate }}</div>
                 </md-table-cell>
-                <md-table-cell
-                  md-numeric
-                  @click.native="getProp(node.meta, 'onclick', enterDirectory)(node)"
-                >
+                <md-table-cell md-numeric @click.native="getProp(node.meta, 'onclick', enterDirectory)(node)">
                   <md-button class="md-icon-button push-right" :disabled="true">
                     <!-- <md-icon>subdirectory_arrow_right</md-icon> -->
                     <!-- empty placeholder button to preserve layout -->
@@ -227,6 +204,7 @@ import {
   hasSharedTagOrEmpty,
   hasIntersection,
   filterByTag,
+  excludeByTag,
   filterByRegex,
   filterByFullPath,
   viewFile,
@@ -271,6 +249,14 @@ export default class NestedFileList extends Vue {
     },
   })
   public tagFilters: string[];
+
+  @Prop({
+    type: Array,
+    default: () => {
+      return [];
+    },
+  })
+  public excludeTags: string[];
 
   @Prop({ default: () => ["file"], type: Array })
   public selectableTypes: string[];
@@ -539,6 +525,7 @@ export default class NestedFileList extends Vue {
     let filtered: LaxyFile[] = map(nodelist, (n) => n.obj as LaxyFile);
     filtered = filterByTag(filtered, this.tagFilters);
     filtered = filterByRegex(filtered, strToRegex(this.regexFilters));
+    filtered = excludeByTag(filtered, this.excludeTags)
     return filtered;
   }
 

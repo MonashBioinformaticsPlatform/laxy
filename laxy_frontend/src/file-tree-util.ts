@@ -2,6 +2,7 @@
 import some from 'lodash-es/some';
 import first from 'lodash-es/first';
 import filter from 'lodash-es/filter';
+import intersection from "lodash-es/intersection";
 import forEach from 'lodash-es/forEach';
 import find from 'lodash-es/find';
 import flatten from 'lodash-es/flatten';
@@ -70,6 +71,16 @@ export function filterByTag(files: LaxyFile[], tags: string[] | null): LaxyFile[
     }
 
     return tag_filtered;
+}
+
+export function excludeByTag(files: LaxyFile[], tags: string[] | null): LaxyFile[] {
+    if (tags == null || tags.length === 0 || files == null) {
+        return files;
+    }
+
+    return filter(files, (f: LaxyFile) => {
+        return f.type_tags == null || !intersection(f.type_tags, tags).length;
+    })
 }
 
 export function filterByRegex(files: LaxyFile[], patterns: RegExp[] | null): LaxyFile[] {

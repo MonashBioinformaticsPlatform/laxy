@@ -16,29 +16,21 @@
               <div class="no-line-break">
                 <i class="md-caption">{{ file.path | magic_truncate }}</i>
               </div>
-              <div
-                class="no-line-break"
-                :class="{ strikethrough: file.deleted, unavailable: !file.location }"
-              >{{ file.name | magic_truncate }}</div>
+              <div class="no-line-break" :class="{ strikethrough: file.deleted, unavailable: !file.location }">{{
+                file.name | magic_truncate
+              }}</div>
             </md-table-cell>
             <md-table-cell md-numeric v-if="!file.deleted">
               <!--<div class="push-right">-->
-              <md-spinner
-                v-if="actionRunning[file.id]"
-                :md-size="20"
-                class="push-right"
-                md-indeterminate
-              ></md-spinner>
-              <md-button
-                v-else-if="getDefaultViewMethod(file) && file.location"
-                class="md-icon-button push-right"
-                @click="getDefaultViewMethod(file).method(file)"
-              >
+              <md-spinner v-if="actionRunning[file.id]" :md-size="20" class="push-right" md-indeterminate></md-spinner>
+              <md-button v-else-if="getDefaultViewMethod(file) && file.location" class="md-icon-button push-right"
+                @click="getDefaultViewMethod(file).method(file)">
                 <md-tooltip md-direction="top">{{ getDefaultViewMethod(file).text }}</md-tooltip>
                 <md-icon>{{ getDefaultViewMethod(file).icon }}</md-icon>
               </md-button>
               <md-button v-else-if="!file.location" class="md-icon-button push-right">
-                <md-tooltip md-direction="left">File has no recorded location. This may be a temporary situtation, or an error.</md-tooltip>
+                <md-tooltip md-direction="left">File has no recorded location. This may be a temporary situtation, or an
+                  error.</md-tooltip>
                 <md-icon>not_listed_location</md-icon>
               </md-button>
               <md-button v-else :disabled="true" class="md-icon-button">
@@ -54,11 +46,8 @@
                   <i class="md-caption" style="padding-left: 16px">{{ file.id }}</i>
                   <!--  -->
                   <template v-if="file.location">
-                    <md-menu-item
-                      v-for="view in getViewMethodsForTags(file.type_tags)"
-                      :key="view.text"
-                      @click="view.method(file)"
-                    >
+                    <md-menu-item v-for="view in getViewMethodsForTags(file.type_tags)" :key="view.text"
+                      @click="view.method(file)">
                       <md-icon>{{ view.icon }}</md-icon>
                       <span>{{ view.text }}</span>
                     </md-menu-item>
@@ -122,6 +111,7 @@ import {
   hasSharedTagOrEmpty,
   hasIntersection,
   filterByTag,
+  excludeByTag,
   filterByRegex,
   filterByFullPath,
   filterByFilename,
@@ -160,6 +150,14 @@ export default class FileList extends Vue {
     },
   })
   public tagFilters: string[];
+
+  @Prop({
+    type: Array,
+    default: () => {
+      return [];
+    },
+  })
+  public excludeTags: string[];
 
   @Prop({ default: true })
   public hideSearch: boolean;
@@ -260,6 +258,8 @@ export default class FileList extends Vue {
     let filtered: LaxyFile[] = fileset.files;
     filtered = filterByTag(filtered, this.tagFilters);
     filtered = filterByRegex(filtered, strToRegex(this.regexFilters));
+    filtered = excludeByTag(filtered, this.excludeTags)
+
     const query = this.searchQuery.trim();
     if (query.length >= this.minQueryLength) {
       filtered = filterByFilename(filtered, query, false);
