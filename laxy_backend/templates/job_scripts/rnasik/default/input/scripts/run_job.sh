@@ -48,11 +48,7 @@ readonly LAXYDL_PARALLEL_DOWNLOADS=8
 readonly JOB_FILE_PERMS='ug+rw-s,o='
 readonly JOB_DIR_PERMS='ug+rwx-s,o='
 
-# shellcheck disable=SC1054,SC1083,SC1009
-{% if SLURM_EXTRA_ARGS %}
-export SLURM_EXTRA_ARGS="{{ SLURM_EXTRA_ARGS }}"
-# shellcheck disable=SC1073
-{% endif %}
+export SLURM_EXTRA_ARGS="{{ SLURM_EXTRA_ARGS|default:"" }}"
 
 readonly QUEUE_TYPE="{{ QUEUE_TYPE }}"
 # readonly QUEUE_TYPE="local"
@@ -111,9 +107,7 @@ readonly SLURM_OPTIONS="--parsable \
                         -t 7-0:00 \
                         --ntasks-per-node=1 \
                         --ntasks=1 \
-                        {% if SLURM_EXTRA_ARGS %}
                         ${SLURM_EXTRA_ARGS} \
-                        {% endif %}
                         --job-name=laxy:${JOB_ID}"
 
 # For default QUEUE_TYPE=='local'
