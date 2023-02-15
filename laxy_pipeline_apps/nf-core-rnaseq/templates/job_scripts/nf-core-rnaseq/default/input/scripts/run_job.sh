@@ -416,8 +416,9 @@ function post_nextflow_jobs() {
     # We set _PRE as the prefix to our featureCounts command, possibly running
     # inside singularity and/or as a SLURM job.
     local _PRE=""
+    local _real_JOB_PATH=$(realpath ${JOB_PATH})  # for singularity
     if [[ $(builtin type -P singularity) ]]; then
-        local _PATHBINDS=" -B ${TMPDIR} -B $(realpath ${JOB_PATH}) -B $(realpath ${_annotation}) "
+        local _PATHBINDS=" -B ${TMPDIR} -B ${_real_JOB_PATH} -B $(realpath ${_annotation}) "
         _PRE="singularity run ${_PATHBINDS} ${SUBREAD_FEATURECOUNTS_CONTAINER} -- "
     fi
 
@@ -441,23 +442,24 @@ function post_nextflow_jobs() {
     # TODO: Might be worth parsing the rseq infer_experiment numbers and putting them into 
     #       job metadata (as per rnasik): 
     #           send_job_metadata '{"metadata":{"results":{"strandedness":{"predicted":"'${prediction}'","bias":'${bias}'}}}}' || true
-    local _first_meta_info_json=$(find "${JOB_PATH}/output/results/star_salmon/" -type f -name meta_info.json | head -n1)
+    local _first_meta_info_json=$(find "${_real_JOB_PATH}/output/results/star_salmon/" -type f -name meta_info.json | head -n1)
     local _strand=$(get_salmon_inferred_strandedness "${_first_meta_info_json}")
 
     # Ensure output directory is writable
-    chmod u+w "${JOB_PATH}/output/results/star_salmon"
+    local _outdir="${_real_JOB_PATH}/output/results/star_salmon"
+    chmod u+w "${_outdir}"
 
     ${_PRE} featureCounts \
         -B -C -T ${cpus} \
         --tmpDir "${TMPDIR}" \
         -a "${_annotation}" \
         -s ${_strand} --extraAttributes gene_name,gene_biotype \
-        -o "${JOB_PATH}/output/results/star_salmon/counts.star_salmon.biotypes.header.tsv" \
-        "${JOB_PATH}"/output/results/star_salmon/*.bam \
-            >"${JOB_PATH}/output/results/star_salmon/counts.star_salmon.biotypes.out" 2>&1
+        -o "${_outdir}/counts.star_salmon.biotypes.header.tsv" \
+        "${_outdir}/*.bam" \
+            >"${_outdir}/counts.star_salmon.biotypes.out" 2>&1
 
-    tail -n +2 "${JOB_PATH}/output/results/star_salmon/counts.star_salmon.biotypes.header.tsv" \
-               >"${JOB_PATH}/output/results/star_salmon/counts.star_salmon.biotypes.tsv"
+    tail -n +2 "${_outdir}/counts.star_salmon.biotypes.header.tsv" \
+               >"${_outdir}/counts.star_salmon.biotypes.tsv"
 
 }
 
@@ -517,9 +519,9 @@ run_nextflow
 
 post_nextflow_jobs || true
 
-cleanup_nextflow_intermediates || true
-
 cd "${JOB_PATH}"
+
+cleanup_nextflow_intermediates || true
 
 # Call job finalization with explicit exit code from the main pipeline command
 job_done $EXIT_CODE
