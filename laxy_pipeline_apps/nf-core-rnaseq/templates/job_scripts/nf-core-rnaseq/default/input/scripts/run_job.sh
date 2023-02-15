@@ -455,7 +455,7 @@ function post_nextflow_jobs() {
         -a "${_annotation}" \
         -s ${_strand} --extraAttributes gene_name,gene_biotype \
         -o "${_outdir}/counts.star_salmon.biotypes.header.tsv" \
-        "${_outdir}/*.bam" \
+        ${_outdir}/*.bam \
             >"${_outdir}/counts.star_salmon.biotypes.out" 2>&1
 
     tail -n +2 "${_outdir}/counts.star_salmon.biotypes.header.tsv" \
