@@ -158,8 +158,9 @@ function register_files() {
     add_to_manifest "*.bai" "bai"
     add_to_manifest "**/multiqc_report.html" "report,html,multiqc"
     add_to_manifest "**/*_fastqc.html" "report,html,fastqc"
-    # add_to_manifest "**/salmon.merged.gene_counts.tsv" "counts,degust"
-    add_to_manifest "**/star_salmon/counts.star_salmon.biotypes.tsv" "counts,degust"
+    add_to_manifest "**/salmon.merged.gene_counts.tsv" "counts,degust"
+    add_to_manifest "**/salmon.merged.gene_counts.biotypes.tsv" "counts,degust"
+    add_to_manifest "**/featureCounts/counts.star_featureCounts.tsv" "counts,degust"
 
     # Nextflow reports
     add_to_manifest "output/results/pipeline_info/*.html" "report,html,nextflow"
@@ -446,7 +447,9 @@ function post_nextflow_jobs() {
     local _strand=$(get_salmon_inferred_strandedness "${_first_meta_info_json}")
 
     # Ensure output directory is writable
-    local _outdir="${_real_JOB_PATH}/output/results/star_salmon"
+    local _outdir="${_real_JOB_PATH}/output/results/featureCounts"
+    local _bamdir="${_real_JOB_PATH}/output/results/star_salmon/"
+    mkdir -p "${_outdir}"
     chmod u+w "${_outdir}"
 
     ${_PRE} featureCounts \
@@ -454,13 +457,26 @@ function post_nextflow_jobs() {
         --tmpDir "${TMPDIR}" \
         -a "${_annotation}" \
         -s ${_strand} --extraAttributes gene_name,gene_biotype \
-        -o "${_outdir}/counts.star_salmon.biotypes.header.tsv" \
-        ${_outdir}/*.bam \
-            >"${_outdir}/counts.star_salmon.biotypes.out" 2>&1
+        -o "${_outdir}/counts.star_featureCounts.txt" \
+        ${_bamdir}/*.bam \
+            >"${_outdir}/counts.star_featureCounts.out" 2>&1
 
-    tail -n +2 "${_outdir}/counts.star_salmon.biotypes.header.tsv" \
-               >"${_outdir}/counts.star_salmon.biotypes.tsv"
+    # Remove featureCounds 'comment' header and rewrite long paths + suffixes in sample names
+    tail -n +2 "${_outdir}/counts.star_featureCounts.txt" | \
+               sed '1s#"$_bamdir"##' | \
+               sed '1s#\.markdup\.sorted\.bam##' \
+               >"${_outdir}/counts.star_featureCounts.tsv"
 
+    # Merge the biotypes from featureCounts into the Salmon counts tables.
+    ${INPUT_SCRIPTS_PATH}/merge_biotypes.py \
+        "${_outdir}/counts.star_featureCounts.tsv" \
+        "${JOB_PATH}/output/results/star_salmon/salmon.merged.gene_counts.tsv" \
+          >"${JOB_PATH}/output/results/star_salmon/salmon.merged.gene_counts.biotypes.tsv"
+
+    ${INPUT_SCRIPTS_PATH}/merge_biotypes.py \
+        "${_outdir}/counts.star_featureCounts.tsv" \
+        "${JOB_PATH}/output/results/salmon/salmon.merged.gene_counts.tsv" \
+          >"${JOB_PATH}/output/results/salmon/salmon.merged.gene_counts.biotypes.tsv"
 }
 
 # Extract the pipeline parameters we need from pipeline_config.json

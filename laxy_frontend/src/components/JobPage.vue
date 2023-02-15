@@ -123,7 +123,7 @@
                       (countsFile.name.startsWith(strandPredictionPrefix) &&
                         countsFile.name.includes('withNames'))) ||
                     (countsFile.path.includes('star_salmon') &&
-                      countsFile.name.includes('salmon'))
+                      countsFile.name.includes('salmon.merged.gene_counts.biotypes'))
                   ">
                     <md-button @click="openDegustLink(countsFile.id)" target="_blank">
                       <md-icon>send</md-icon>&nbsp;{{
