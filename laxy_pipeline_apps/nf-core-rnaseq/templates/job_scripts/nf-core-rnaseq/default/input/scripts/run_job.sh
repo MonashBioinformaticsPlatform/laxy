@@ -449,9 +449,12 @@ function post_nextflow_jobs() {
         -B -C -T ${cpus} \
         -a "${_annotation}" \
         -s ${_strand} --extraAttributes gene_name,gene_biotype \
-        -o "${JOB_PATH}/output/results/star_salmon/counts.star_salmon.biotypes.tsv" \
+        -o "${JOB_PATH}/output/results/star_salmon/counts.star_salmon.biotypes.header.tsv" \
         "${JOB_PATH}"/output/results/star_salmon/*.bam \
             >"${JOB_PATH}/output/results/star_salmon/counts.star_salmon.biotypes.out" 2>&1
+
+    tail -n +2 "${JOB_PATH}/output/results/star_salmon/counts.star_salmon.biotypes.header.tsv" \
+               >"${JOB_PATH}/output/results/star_salmon/counts.star_salmon.biotypes.tsv"
 
 }
 
