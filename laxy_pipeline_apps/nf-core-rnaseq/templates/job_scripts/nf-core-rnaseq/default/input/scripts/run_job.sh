@@ -21,7 +21,8 @@ export REFERENCE_GENOME_ID="{{ REFERENCE_GENOME }}"
 
 # Global variables used throughout the script
 export JOB_PATH="${PWD}"
-export TMP="${JOB_PATH}/../../tmp"
+export TMPDIR="$(realpath ${JOB_PATH}/../../tmp/${JOB_ID})"
+mkdir -p ${TMPDIR} || true
 export INPUT_READS_PATH="${JOB_PATH}/input/reads"
 export INPUT_SCRIPTS_PATH="${JOB_PATH}/input/scripts"
 export INPUT_CONFIG_PATH="${JOB_PATH}/input/config"
@@ -31,9 +32,9 @@ export SITE_CONFIGS="${JOB_PATH}/../../config"
 export CONDA_BASE="${JOB_PATH}/../miniconda3"
 export DOWNLOAD_CACHE_PATH="${JOB_PATH}/../../cache/downloads"
 export SINGULARITY_CACHEDIR="${JOB_PATH}/../../cache/singularity"
-export SINGULARITY_LOCALCACHEDIR="${TMP}"
+export SINGULARITY_LOCALCACHEDIR="${TMPDIR}"
 export PIPELINES_CACHE_PATH="${JOB_PATH}/../../cache/pipelines"
-export SINGULARITY_TMPDIR="${TMP}"
+export SINGULARITY_TMPDIR="${TMPDIR}"
 export AUTH_HEADER_FILE="${JOB_PATH}/.private_request_headers"
 export IGNORE_SELF_SIGNED_CERTIFICATE="{{ IGNORE_SELF_SIGNED_CERTIFICATE }}"
 export LAXYDL_BRANCH=master
@@ -45,7 +46,7 @@ export JOB_FILE_PERMS='ug+rw-s,o='
 export JOB_DIR_PERMS='ug+rwx-s,o='
 
 # Nextflow specific environment variables
-export NXF_TEMP=${TMP}
+export NXF_TEMP="${TMPDIR}"
 export NXF_SINGULARITY_CACHEDIR="${SINGULARITY_CACHEDIR}"
 export NXF_OPTS='-Xms1g -Xmx7g'
 export NXF_ANSI_LOG='false'
@@ -356,8 +357,6 @@ function run_nextflow() {
 
     EXIT_CODE=$?
     #set -o errexit
-
-    cleanup_nextflow_intermediates || true
 }
 
 function get_salmon_inferred_strandedness() {
@@ -418,8 +417,8 @@ function post_nextflow_jobs() {
     # inside singularity and/or as a SLURM job.
     local _PRE=""
     if [[ $(builtin type -P singularity) ]]; then
-        local _PATHBINDS=" -B $(realpath ${JOB_PATH}) -B $(realpath ${_annotation}) "
-        _PRE="singularity run ${_PATHBINDS} ${SUBREAD_FEATURECOUNTS_CONTAINER} -- "
+        local _PATHBINDS=" -B ${TMPDIR} -B $(realpath ${JOB_PATH}) -B $(realpath ${_annotation}) "
+        _PRE="singularity run --silent ${_PATHBINDS} ${SUBREAD_FEATURECOUNTS_CONTAINER} -- "
     fi
 
     if [[ ${QUEUE_TYPE} == "slurm" ]]; then
@@ -445,8 +444,12 @@ function post_nextflow_jobs() {
     local _first_meta_info_json=$(find "${JOB_PATH}/output/results/star_salmon/" -type f -name meta_info.json | head -n1)
     local _strand=$(get_salmon_inferred_strandedness "${_first_meta_info_json}")
 
+    # Ensure output directory is writable
+    chmod u+w "${JOB_PATH}/output/results/star_salmon"
+
     ${_PRE} featureCounts \
         -B -C -T ${cpus} \
+        --tmpDir "${TMPDIR}" \
         -a "${_annotation}" \
         -s ${_strand} --extraAttributes gene_name,gene_biotype \
         -o "${JOB_PATH}/output/results/star_salmon/counts.star_salmon.biotypes.header.tsv" \
@@ -473,7 +476,7 @@ fi
 
 update_permissions || true
 
-mkdir -p "${TMP}"
+mkdir -p "${TMPDIR}"
 mkdir -p input
 mkdir -p output
 
@@ -512,7 +515,9 @@ send_event "JOB_PIPELINE_STARTING" "Starting pipeline."
 
 run_nextflow
 
-post_nextflow_jobs
+post_nextflow_jobs || true
+
+cleanup_nextflow_intermediates || true
 
 cd "${JOB_PATH}"
 
