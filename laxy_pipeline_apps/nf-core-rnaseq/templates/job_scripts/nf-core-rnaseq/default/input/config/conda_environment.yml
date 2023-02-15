@@ -48,7 +48,7 @@ dependencies:
   - nextflow=22.10.4
   - nf-core=2.7.2
   # For when we don't have singularity
-  - suberead=2.0.1
+  - subread=2.0.1
 
   - pip:
       # General run_job.sh dependency, for the laxydl downloader tool
