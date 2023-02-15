@@ -418,7 +418,7 @@ function post_nextflow_jobs() {
     local _PRE=""
     if [[ $(builtin type -P singularity) ]]; then
         local _PATHBINDS=" -B ${TMPDIR} -B $(realpath ${JOB_PATH}) -B $(realpath ${_annotation}) "
-        _PRE="singularity run --silent ${_PATHBINDS} ${SUBREAD_FEATURECOUNTS_CONTAINER} -- "
+        _PRE="singularity run ${_PATHBINDS} ${SUBREAD_FEATURECOUNTS_CONTAINER} -- "
     fi
 
     if [[ ${QUEUE_TYPE} == "slurm" ]]; then
