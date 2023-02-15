@@ -46,9 +46,6 @@ dependencies:
   # Pipeline specific
   - nextflow=21.04.0
   - nf-core=1.14
-  # how_are_we_stranded_here dependencies ( https://github.com/betsig/how_are_we_stranded_here )
-  - kallisto=0.44.0
-  - rseqc=4.0.0
 
   - pip:
       # General run_job.sh dependency, for the laxydl downloader tool
