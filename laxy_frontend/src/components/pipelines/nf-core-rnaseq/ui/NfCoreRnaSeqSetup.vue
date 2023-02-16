@@ -20,10 +20,8 @@
           <md-input-container>
             <label for="strandedness">Strandedness</label>
             <md-select name="strandedness" id="strandedness" v-model="strandedness">
-              <md-option value="auto">auto</md-option>
-              <md-option value="unstranded">unstranded</md-option>
-              <md-option value="reverse">reverse</md-option>
-              <md-option value="forward">forward</md-option>
+              <md-option v-for="strand_option in standedness_options" :key="strand_option.value"
+                :value="strand_option.value">{{ strand_option.text }}</md-option>
             </md-select>
           </md-input-container>
 
@@ -177,7 +175,7 @@ export default class PipelineParams extends Vue {
   }
 
   get default_pipeline_version() {
-    return get(
+    const version = get(
       this.$store.state.availablePipelines[this.pipeline_name],
       "metadata.default_version",
       last(
@@ -186,6 +184,29 @@ export default class PipelineParams extends Vue {
         })
       )
     );
+    // For older versions, ensure the strandedness dropdown is populated
+    // with a default that is not 'auto'.
+    if (compareVersions(version, "3.7") < 0) {
+      this.strandedness = 'unstranded';
+    }
+    return version;
+  }
+
+  get standedness_options() {
+    if (this.auto_strandedness_option_supported) {
+      return [
+        { value: 'auto', text: 'auto' },
+        { value: 'unstranded', text: 'unstranded' },
+        { value: 'forward', text: 'forward' },
+        { value: 'reverse', text: 'reverse' }
+      ]
+    };
+
+    return [
+      { value: 'unstranded', text: 'unstranded' },
+      { value: 'forward', text: 'forward' },
+      { value: 'reverse', text: 'reverse' }
+    ]
   }
 
   public _samples: SampleCartItems;
@@ -284,10 +305,14 @@ export default class PipelineParams extends Vue {
     return this.$store.get("pipelineParams/isValidReferenceGenome");
   }
 
+  get auto_strandedness_option_supported() {
+    return compareVersions(this.pipeline_version, "3.7") >= 0;
+  }
+
   get isValid_strandedness_option() {
     if (this.strandedness == 'auto') {
       // version 3.7+ required to support the 'auto' option
-      return compareVersions(this.pipeline_version, "3.7") >= 0
+      return this.auto_strandedness_option_supported;
     }
     return true;
   }
