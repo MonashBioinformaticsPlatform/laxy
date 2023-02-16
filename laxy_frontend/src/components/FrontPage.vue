@@ -29,11 +29,10 @@
             <h1 class="md-display-1">Latest news</h1>
             <latest-news></latest-news>
             <h1 class="md-display-1">Launch a pipeline</h1>
-            <router-link to="/run/rnasik">
-              <rna-seq-launch route-to="/run/rnasik"></rna-seq-launch>
+            <router-link to="/run/nf-core-rnaseq">
+              <rna-seq-launch route-to="/run/nf-core-rnaseq"></rna-seq-launch>
             </router-link>
             <variant-calls-launch></variant-calls-launch>
-            <nullarbor-launch></nullarbor-launch>
           </md-layout>
         </md-whiteframe>
       </md-layout>
