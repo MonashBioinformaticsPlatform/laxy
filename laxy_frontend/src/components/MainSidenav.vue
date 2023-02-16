@@ -109,3 +109,9 @@ export default class MainSidenav extends Vue {
   }
 }
 </script>
+
+<style scoped>
+.md-sidenav .md-sidenav-content {
+  width: 320px;
+}
+</style>
