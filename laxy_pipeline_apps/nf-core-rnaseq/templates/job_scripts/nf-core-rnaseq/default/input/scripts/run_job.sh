@@ -107,6 +107,7 @@ function job_fail_or_cancel() {
     trap - EXIT
 
     cd "${JOB_PATH}"
+    capture_environment_variables || true
     cleanup_nextflow_intermediates || true
     register_files || true
     # send exit code of 1
