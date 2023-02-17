@@ -263,9 +263,9 @@ function init_conda_env() {
             ${CONDA_BASE}/bin/conda install --yes -n base -c conda-forge mamba || CONDA_INSTALL_BINARY="conda"
         fi
 
-        # Put git and curl in the base env, since we generally need them
+        # Put git, curl and jq in the base env, since we generally need them
         # We need gcc to compile some pip dependencies for laxydl, so grab that too :/
-        ${CONDA_INSTALL_BINARY} install --yes -n base -c conda-forge curl git gcc_linux-64 || return 1
+        ${CONDA_INSTALL_BINARY} install --yes -n base -c conda-forge curl git jq gcc_linux-64 || return 1
 
         # Create an empty environment
         # conda create --yes -m -n "${env_name}" || return 1
@@ -296,11 +296,9 @@ function init_conda_env() {
     # source "${CONDA_BASE}/bin/activate" "${CONDA_BASE}/envs/${env_name}"
     conda activate "${CONDA_BASE}/envs/${env_name}" || return 1
 
-    # Capture environment files if they weren't provided
-    [[ ! -f "${INPUT_CONFIG_PATH}/conda_environment.yml" ]] || \
-      conda env export >"${INPUT_CONFIG_PATH}/conda_environment.yml" || return 1
-    [[ ! -f "${INPUT_CONFIG_PATH}/conda_environment_explicit.txt" ]] || \
-      conda list --explicit >"${INPUT_CONFIG_PATH}/conda_environment_explicit.txt" || return 1
+    # Capture conda environment files
+    conda env export >"${INPUT_CONFIG_PATH}/conda_environment.snapshot.yml" || true
+    conda list --explicit >"${INPUT_CONFIG_PATH}/conda_environment_explicit.snapshot.txt" || true
 
     # We can't use send_event BEFORE the env is activated since we rely on a recent
     # version of curl (>7.55)
