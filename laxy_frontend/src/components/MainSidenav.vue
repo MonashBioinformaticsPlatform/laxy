@@ -25,13 +25,6 @@
           </span>
         </router-link>
       </md-list-item>
-      <!-- <md-list-item>
-        <router-link to="/run/rnasik">
-          <span @click="toggle('sidenav')">
-            <md-icon>play_circle_outline</md-icon>&nbsp;&nbsp;Run an RNA-Seq analysis
-          </span>
-        </router-link>
-      </md-list-item>-->
       <md-list-item v-for="pipeline in availablePipelines" :key="pipeline.id">
         <router-link :to="`/run/${pipeline.name.replace('_', '-')}`">
           <span @click="toggle('sidenav')">
@@ -109,9 +102,3 @@ export default class MainSidenav extends Vue {
   }
 }
 </script>
-
-<style scoped>
-.md-sidenav .md-sidenav-content {
-  width: 320px;
-}
-</style>
