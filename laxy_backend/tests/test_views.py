@@ -452,8 +452,8 @@ class JobViewTest(TestCase):
         self.assertEqual(response.status_code, 204)
         self.assertEqual(j.status, Job.STATUS_COMPLETE)
 
-    def test_patch_exit_code(self):
-        # set both status as cancelled
+    def test_patch_cancel_job(self):
+        # set job status as cancelled
         response = self.admin_authenticated_client.patch(
             reverse("laxy_backend:job", args=[self.job_to_cancel.uuid()]),
             data=json.dumps({"status": Job.STATUS_CANCELLED}),
@@ -465,7 +465,6 @@ class JobViewTest(TestCase):
         self.assertEqual(response.status_code, 204)
         self.assertEqual(j.status, Job.STATUS_CANCELLED)
         self.assertNotEqual(j.expiry_time, None)
-        self.assertGreater(j.expiry_time, timezone.now())
 
         # try changing the status of a cancelled job (it shouldn't change)
         response = self.admin_authenticated_client.patch(
@@ -479,7 +478,8 @@ class JobViewTest(TestCase):
         # unchanged, even though we attempted to set it to FAILED
         self.assertEqual(j.status, Job.STATUS_CANCELLED)
         self.assertNotEqual(j.expiry_time, None)
-        self.assertGreater(j.expiry_time, timezone.now())
+
+    def test_patch_exit_code(self):
 
         # set only exit_code, status gets set automatically
         response = self.admin_authenticated_client.patch(

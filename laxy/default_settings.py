@@ -99,7 +99,7 @@ default_env = PrefixedEnv(
     SENTRY_DSN=(str, ""),
     JOB_TEMPLATE_PATHS=(list, []),
     JOB_EXPIRY_TTL_DEFAULT=(int, 30 * 24 * 60 * 60),  # 30 days
-    JOB_EXPIRY_TTL_CANCELLED=(int, 1 * 60 * 60),  # 1 hour
+    JOB_EXPIRY_TTL_CANCELLED=(int, 0),  # immediate
     JOB_EXPIRY_TTL_FAILED=(int, 3 * 24 * 60 * 60),  # 3 days
     WEB_SCRAPER_BACKEND=(str, "simple"),
     WEB_SCRAPER_SPLASH_HOST=(str, "http://localhost:8050"),
@@ -516,7 +516,10 @@ CORS_ORIGIN_WHITELIST = env(
 # Applies to HTTPS only
 CSRF_TRUSTED_ORIGINS = env(
     "CSRF_TRUSTED_ORIGINS",
-    default=["laxy.io", ".laxy.io",],
+    default=[
+        "laxy.io",
+        ".laxy.io",
+    ],
     transform=_cleanup_env_list,
 )
 
@@ -674,10 +677,18 @@ WSGI_APPLICATION = "laxy.wsgi.application"
 
 _pwlib = "django.contrib.auth.password_validation."
 AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": _pwlib + "UserAttributeSimilarityValidator",},
-    {"NAME": _pwlib + "MinimumLengthValidator",},
-    {"NAME": _pwlib + "CommonPasswordValidator",},
-    {"NAME": _pwlib + "NumericPasswordValidator",},
+    {
+        "NAME": _pwlib + "UserAttributeSimilarityValidator",
+    },
+    {
+        "NAME": _pwlib + "MinimumLengthValidator",
+    },
+    {
+        "NAME": _pwlib + "CommonPasswordValidator",
+    },
+    {
+        "NAME": _pwlib + "NumericPasswordValidator",
+    },
 ]
 
 # Internationalization
@@ -752,10 +763,16 @@ LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
-        "timestamped": {"format": "{asctime}\t{levelname}\t{message}", "style": "{",},
+        "timestamped": {
+            "format": "{asctime}\t{levelname}\t{message}",
+            "style": "{",
+        },
     },
     "handlers": {
-        "console": {"class": "logging.StreamHandler", "formatter": "timestamped",},
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "timestamped",
+        },
     },
     "loggers": {
         "django": {

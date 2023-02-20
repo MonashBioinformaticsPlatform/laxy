@@ -393,7 +393,7 @@ def start_job(self, task_data=None, **kwargs):
 def get_job_expiry_for_status(status: str) -> datetime:
     _hours = 60 * 60
     if status == Job.STATUS_CANCELLED:
-        ttl = getattr(settings, "JOB_EXPIRY_TTL_CANCELLED", 1 * _hours)
+        ttl = getattr(settings, "JOB_EXPIRY_TTL_CANCELLED", 0)
     elif status == Job.STATUS_FAILED:
         ttl = getattr(settings, "JOB_EXPIRY_TTL_FAILED", 72 * _hours)
     else:

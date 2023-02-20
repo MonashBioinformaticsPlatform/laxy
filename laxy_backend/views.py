@@ -103,6 +103,7 @@ from .filters import IsOwnerFilter, IsPublicFilter
 from . import ena
 from .tasks.job import (
     bulk_move_job_rsync,
+    expire_old_job,
     start_job,
     index_remote_files,
     _finalize_job_task_err_handler,
@@ -1812,23 +1813,27 @@ class JobView(JSONPatchMixin, JSONView):
                         link_error=_finalize_job_task_err_handler.s(job_id=job.id),
                     )
 
-                            # For cancelled job we kill running tasks first, before other usual tasks
-            elif (
-                status_changed_to == Job.STATUS_CANCELLED
-            ):
+            # For a cancelled job we kill running tasks first, before other usual tasks
+            elif status_changed_to == Job.STATUS_CANCELLED:
                 task_data["status"] == Job.STATUS_CANCELLED
+                task_data["ttl"] = getattr(settings, "JOB_EXPIRY_TTL_CANCELLED", 0)
                 serializer.save(expiry_time=expiry, status=Job.STATUS_CANCELLED)
-                celery.chain(
-                    [
-                        kill_remote_job.s(task_data),
-                        index_remote_files.s(),
-                        bulk_move_job_rsync.s(),
-                        estimate_job_tarball_size.s(
-                            optional=True, use_heuristic=False
-                        ),
-                    ]
-                ).apply_async(countdown=ingestion_delay_time,
-                            link_error=_finalize_job_task_err_handler.s(job_id=job.id),)
+                cancel_tasks = [
+                    kill_remote_job.s(task_data),
+                    index_remote_files.s(),
+                    expire_old_job.s(),
+                ]
+                if job.compute_resource and job.compute_resource.archive_host:
+                    cancel_tasks.append(bulk_move_job_rsync.s())
+
+                cancel_tasks.append(
+                    estimate_job_tarball_size.s(optional=True, use_heuristic=False)
+                )
+
+                celery.chain(cancel_tasks).apply_async(
+                    countdown=ingestion_delay_time,
+                    link_error=_finalize_job_task_err_handler.s(job_id=job.id),
+                )
             else:
                 serializer.save(expiry_time=expiry)
 
