@@ -266,7 +266,8 @@ class JobDirectTarDownload(JSONView):
 
         client = stored_at.ssh_client()
         stdin, stdout, stderr = client.exec_command(
-            f'tar -chzf - --directory "{job_path}" .'
+            # eg, tar -chzf - --directory "/scratch/jobs" "12345abcdefghjobid"
+            f'tar -chzf - --directory "{stored_at.jobs_dir}" "{job.id}"'
         )
 
         if request.path.endswith(".tar.gz"):
