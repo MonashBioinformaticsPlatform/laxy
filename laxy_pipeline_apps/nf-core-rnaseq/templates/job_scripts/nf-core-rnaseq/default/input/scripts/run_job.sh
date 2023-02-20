@@ -108,7 +108,8 @@ function job_fail_or_cancel() {
 
     cd "${JOB_PATH}"
     capture_environment_variables || true
-    cleanup_nextflow_intermediates || true
+    # We keep '.command.*' and '.exitcode' files in the work directory on failure to assist debugging
+    cleanup_nextflow_intermediates_keep_work_logs || true
     register_files || true
     # send exit code of 1
     finalize_job 1
@@ -261,7 +262,32 @@ function cleanup_nextflow_intermediates() {
     fi
 
     send_event "JOB_INFO" "Cleaning up." || true
+    
     rm -rf "${JOB_PATH}/output/work"
+    rm -rf "${JOB_PATH}/output/.nextflow"
+}
+
+function cleanup_nextflow_intermediates_keep_work_logs() {
+    if [[ ${USER_DEBUG_MODE} == "yes" ]]; then
+        return 0;
+    fi
+    if [[ ${DEBUG} == "yes" ]]; then
+        return 0;
+    fi
+
+    send_event "JOB_INFO" "Cleaning up (but keeping work/* logs)." || true
+    
+    # Remove all files except logs from the Nextflow work directory
+    find "${JOB_PATH}/output/work/" -type f ! -name ".command.*" ! -name ".exitcode" -delete
+
+    # tar up the work directory so we don't need to ingest tons of little files
+    #tar cvzhf "${JOB_PATH}/output/nextflow_work_logs.tar.gz" --directory "${JOB_PATH}/output" work
+    
+    # Oneliner to tar up the Nextflow script/log files in the work directory so we don't ingest lots of little files
+    #find "${JOB_PATH}/output/work/" \( -name "*.command.*" -o -name "*.exitcode" \) -printf 'work/%P\0' | \
+    #    tar --null -cvzhf "${JOB_PATH}/output/nextflow_work_logs.tar.gz" --directory "${JOB_PATH}/output" --no-recursion -T -
+
+    # rm -rf "${JOB_PATH}/output/work"
     rm -rf "${JOB_PATH}/output/.nextflow"
 }
 
@@ -542,7 +568,8 @@ post_nextflow_jobs || true
 
 cd "${JOB_PATH}"
 
-cleanup_nextflow_intermediates || true
+# Called by job_done and job_fail_or_cancel, so we don't need this here
+# cleanup_nextflow_intermediates || true
 
 # Call job finalization with explicit exit code from the main pipeline command
 job_done $EXIT_CODE
