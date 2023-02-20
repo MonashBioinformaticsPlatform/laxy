@@ -198,7 +198,7 @@ export default class ENAFileSelect extends Vue {
   ];
 
   public ena_ids: DbAccession[] = [{ accession: "" } as DbAccession];
-  public accession_input: string = "SRR4020122, SRR4020124"; // tiny paired-end yeast example
+  public accession_input: string = "SRR5507343, SRR5507339,  SRR5507335"; // PRJNA381594: small yeast samples ~1000-5000 reads
   public hoveredSampleDetails: string = "";
 
   public submitting: boolean = false;
@@ -349,6 +349,4 @@ export default class ENAFileSelect extends Vue {
 }
 </script>
 
-<style lang="css" scoped>
-
-</style>
+<style lang="css" scoped></style>
