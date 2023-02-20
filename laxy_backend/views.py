@@ -1763,37 +1763,41 @@ class JobView(JSONPatchMixin, JSONView):
             if new_status is not None and new_status != original_status:
                 status_changed_to = new_status
 
-            if status_changed_to == Job.STATUS_CANCELLED:
-                serializer.save(expiry_time=expiry)
-                celery.chain(
-                    kill_remote_job.s(task_data), index_remote_files.s()
-                ).apply_async()
+            ingestion_delay_time = 30  # seconds
 
-            if (
-                status_changed_to == Job.STATUS_COMPLETE
-                or status_changed_to == Job.STATUS_FAILED
-            ):
+            if status_changed_to in [
+                Job.STATUS_COMPLETE,
+                Job.STATUS_FAILED,
+            ]:
                 # We don't update the status yet - an async task will do this after file indexing is complete
                 serializer.save(status=original_status, expiry_time=expiry)
 
-                ingestion_delay_time = 30  # seconds
+                task_list = []
+
                 if job.compute_resource and job.compute_resource.archive_host:
                     task_data["dst_compute_id"] = job.compute_resource.archive_host_id
-                    result = celery.chain(
-                        index_remote_files.s(task_data=task_data),
-                        set_job_status.s(),
-                        # We only determine a rough tarball estimate initially (use_heuristic=True)
-                        # Since optional=True, later tasks will run even if estimate_job_tarball_size fails
-                        estimate_job_tarball_size.s(optional=True, use_heuristic=True),
-                        bulk_move_job_rsync.s(),
-                        # move_job_files_to_archive_task is an alternative to bulk_move_job_rsync
-                        # that doesn't use rsync but moves the job file by file. It's generally slower.
-                        # Since moving files is intended to be idempotent, we can run this here to
-                        # catch anything that failed to rsync, somehow.
-                        # move_job_files_to_archive_task.s(),
-                        # After moving the files, estimate an accurate tarball size
-                        estimate_job_tarball_size.s(optional=True, use_heuristic=False),
-                    ).apply_async(
+                    task_list.extend(
+                        [
+                            index_remote_files.s(task_data=task_data),
+                            set_job_status.s(),
+                            # We only determine a rough tarball estimate initially (use_heuristic=True)
+                            # Since optional=True, later tasks will run even if estimate_job_tarball_size fails
+                            estimate_job_tarball_size.s(
+                                optional=True, use_heuristic=True
+                            ),
+                            bulk_move_job_rsync.s(),
+                            # move_job_files_to_archive_task is an alternative to bulk_move_job_rsync
+                            # that doesn't use rsync but moves the job file by file. It's generally slower.
+                            # Since moving files is intended to be idempotent, we can run this here to
+                            # catch anything that failed to rsync, somehow.
+                            # move_job_files_to_archive_task.s(),
+                            # After moving the files, estimate an accurate tarball size
+                            estimate_job_tarball_size.s(
+                                optional=True, use_heuristic=False
+                            ),
+                        ]
+                    )
+                    result = celery.chain(task_list).apply_async(
                         countdown=ingestion_delay_time,  # we give a short delay for the run_job.sh script to finish before ingestion begins
                         link_error=_finalize_job_task_err_handler.s(job_id=job.id),
                     )
@@ -1806,6 +1810,24 @@ class JobView(JSONPatchMixin, JSONView):
                         countdown=ingestion_delay_time,  # we give a short delay for the run_job.sh script to finish before ingestion begins
                         link_error=_finalize_job_task_err_handler.s(job_id=job.id),
                     )
+
+                            # For cancelled job we kill running tasks first, before other usual tasks
+            elif (
+                status_changed_to == Job.STATUS_CANCELLED
+            ):
+                task_data["status"] == Job.STATUS_CANCELLED
+                serializer.save(expiry_time=expiry, status=Job.STATUS_CANCELLED)
+                celery.chain(
+                    [
+                        kill_remote_job.s(task_data),
+                        index_remote_files.s(),
+                        bulk_move_job_rsync.s(),
+                        estimate_job_tarball_size.s(
+                            optional=True, use_heuristic=False
+                        ),
+                    ]
+                ).apply_async(countdown=ingestion_delay_time,
+                            link_error=_finalize_job_task_err_handler.s(job_id=job.id),)
             else:
                 serializer.save(expiry_time=expiry)
 
