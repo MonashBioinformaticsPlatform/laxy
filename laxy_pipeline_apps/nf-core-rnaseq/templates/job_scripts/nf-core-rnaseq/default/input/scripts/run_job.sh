@@ -228,6 +228,21 @@ function set_genome_args() {
     fi
 }
 
+function get_settings_from_pipeline_config() {
+    # Extract the pipeline parameters we need from pipeline_config.json
+    local _debug_mode=$(jq --raw-output '.params."nf-core-rnaseq".debug_mode' "${PIPELINE_CONFIG}" || echo "false")
+    export USER_DEBUG_MODE="no"
+    if [[ "${_debug_mode}" == "true" ]]; then
+        export USER_DEBUG_MODE="yes"
+    fi
+
+    local _has_umi=$(jq --raw-output '.params."nf-core-rnaseq".has_umi' "${PIPELINE_CONFIG}" || echo "false")
+    export UMI_FLAGS=""
+    if [[ "${_has_umi}" == "true" ]]; then
+        export UMI_FLAGS=" --with_umi --skip_umi_extract --umitools_umi_separator : "
+    fi
+}
+
 function generate_samplesheet() {
 
     export STRANDEDNESS='auto'
@@ -368,7 +383,7 @@ function get_salmon_inferred_strandedness() {
     # is likely the best choice for featureCounts when 
     # strandedness is ambigious.
     local meta_info_json="${1}"
-    jq -r '.library_types[0]' "${meta_info_json}" | \
+    jq --raw-output '.library_types[0]' "${meta_info_json}" | \
         awk '{if ($0 == "U" || $0 == "IU") {print "0"} \
         else if ($0 == "SF" || $0 == "ISF") {print "1"} \
         else if ($0 == "SR" || $0 == "ISR") {print "2"} \
@@ -480,19 +495,6 @@ function post_nextflow_jobs() {
           >"${JOB_PATH}/output/results/salmon/salmon.merged.gene_counts.biotypes.tsv"
 }
 
-# Extract the pipeline parameters we need from pipeline_config.json
-_debug_mode=$(jq --raw-output '.params."nf-core-rnaseq".debug_mode' "${PIPELINE_CONFIG}" || echo "false")
-USER_DEBUG_MODE="no"
-if [[ "${_debug_mode}" == "true" ]]; then
-   USER_DEBUG_MODE="yes"
-fi
-
-_has_umi=$(jq --raw-output '.params."nf-core-rnaseq".has_umi' "${PIPELINE_CONFIG}" || echo "false")
-UMI_FLAGS=""
-if [[ "${_has_umi}" == "true" ]]; then
-   UMI_FLAGS=" --with_umi --skip_umi_extract --umitools_umi_separator : "
-fi
-
 update_permissions || true
 
 mkdir -p "${TMPDIR}"
@@ -509,6 +511,8 @@ install_miniconda || fail_job 'install_miniconda' '' $?
 
 # We import the environment early to ensure we have a recent version of curl (>=7.55)
 init_conda_env "${PIPELINE_NAME}" "${PIPELINE_VERSION}" || fail_job 'init_conda_env' '' $?
+
+get_settings_from_pipeline_config || fail_job 's' 'get_settings_from_pipeline_config' $?
 
 # nextflow_self_update || true
 
