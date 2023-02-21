@@ -119,7 +119,7 @@
                 <span v-for="countsFile in filterByTag(outputFiles, ['degust'])" :key="countsFile.id">
                   <template v-if="
                     (countsFile &&
-                      (countsFile.name.startsWith(strandPredictionPrefix) &&
+                      (countsFile.name.startsWith(rnasik_strandPredictionPrefix) &&
                         countsFile.name.includes('withNames'))) ||
                     (countsFile.path.includes('star_salmon') &&
                       countsFile.name.includes('salmon.merged.gene_counts.biotypes'))
@@ -748,19 +748,29 @@ export default class JobPage extends Vue {
     return get(this.job, "metadata.results.strandedness.bias", null);
   }
 
-  get strandPredictionPrefix(): string | null {
-    return get(this.job, "metadata.results.strandedness.predicted", null);
+  get rnasik_strandPredictionPrefix(): string | null {
+    if (this.strandednessGuess == null) return null;
+    if (this.strandednessGuess == "non-stranded") return "NonStranded";
+    if (this.strandednessGuess == "forward-stranded") return "Forward";
+    if (this.strandednessGuess == "reverse-stranded") return "Reverse";
+
+    return null;
   }
 
   get strandednessGuess(): string | null {
     let strandedness = null;
-    if (this.strandPredictionPrefix) {
-      if (this.strandPredictionPrefix.startsWith("NonStranded"))
-        strandedness = "non-stranded";
-      if (this.strandPredictionPrefix.startsWith("Forward"))
+    switch (true) {
+      case (this.strandBias == null):
+        return null;
+      case (this.strandBias != null && this.strandBias >= 0.8):
         strandedness = "forward-stranded";
-      if (this.strandPredictionPrefix.startsWith("Reverse"))
+        break;
+      case (this.strandBias != null && this.strandBias <= -0.8):
         strandedness = "reverse-stranded";
+        break;
+      default:
+        strandedness = "non-stranded";
+        break;
     }
     return strandedness;
   }
