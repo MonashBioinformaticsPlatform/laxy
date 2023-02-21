@@ -973,7 +973,11 @@ def file_should_be_deleted(ff: File, max_size=200):
     has_whitelisted_path = any(
         [fnmatch.filter([ff.full_path], pattern) for pattern in whitelisted_paths]
     )
-    has_whitelisted_tag = any([tag in whitelisted_type_tags for tag in ff.type_tags])
+    
+    has_whitelisted_tag = False
+    if ff.type_tags is not None:
+        has_whitelisted_tag = any([tag in whitelisted_type_tags for tag in ff.type_tags])
+
     return (
         (not ff.deleted)
         and is_large_file
