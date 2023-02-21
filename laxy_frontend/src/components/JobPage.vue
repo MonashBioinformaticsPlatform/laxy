@@ -25,7 +25,7 @@
           : 'clear'
     ">
       <span v-if="!job.expired">
-        Job expires {{ jobExpiresSoon? "in less than 7 days": "" }} on
+        Job expires {{ jobExpiresSoon ? "in less than 7 days" : "" }} on
         &nbsp;{{ job.expiry_time }}
       </span>
       <span v-if="job.expired">Job has expired - large files are no longer available</span>
@@ -98,9 +98,8 @@
           </md-layout>
 
           <md-layout v-if="hasDegustCounts" md-flex="25" md-flex-medium="100">
-            <generic-pip @click.stop.native :hover="false"
-              :style="`background-color: ${cssColorVars['--primary-light']}`" class="fill-width" stripeColor="primary"
-              icon="dashboard" buttonIcon buttonText>
+            <generic-pip @click.stop.native :hover="false" :style="`background-color: ${cssColorVars['--primary-light']}`"
+              class="fill-width" stripeColor="primary" icon="dashboard" buttonIcon buttonText>
               <span slot="title">Send to Degust</span>
               <span slot="subtitle">
                 <template v-if="strandednessGuess">
@@ -162,7 +161,7 @@
               buttonText>
               <template v-if="!job.expired">
                 <span slot="title">Job expiry
-                  {{ jobExpiresSoon? "in less than 7 days": "" }}</span>
+                  {{ jobExpiresSoon ? "in less than 7 days" : "" }}</span>
                 <span slot="subtitle">
                   Large files associated with this job will be deleted on
                   <br />
@@ -208,19 +207,18 @@
             </md-layout>
           </transition>
           <transition name="fade">
-            <md-layout id="right-column" md-flex-medium="100" v-show="showTab === 'summary' || showTab == null"
-              md-column>
-              <file-list v-if="job && jobIsDone && hasFilesWithTags(['report', 'html'])" class="shadow"
-                ref="report-files" title="Reports" :fileset-id="job.output_fileset_id" :tag-filters="['report', 'html']"
+            <md-layout id="right-column" md-flex-medium="100" v-show="showTab === 'summary' || showTab == null" md-column>
+              <file-list v-if="job && jobIsDone && hasFilesWithTags(['report', 'html'])" class="shadow" ref="report-files"
+                title="Reports" :fileset-id="job.output_fileset_id" :tag-filters="['report', 'html']"
                 :exclude-tags="['fastqc']" :hide-search="true" :job-id="jobId"
                 @refresh-error="showErrorDialog"></file-list>
               <file-list v-if="job && jobIsDone && hasFilesWithTags(['degust', 'counts', 'strand-info'])"
                 ref="count-files" title="Count files" :fileset-id="job.output_fileset_id"
                 :tag-filters="['degust', 'counts', 'strand-info']" :hide-search="true" :job-id="jobId"
                 @action-error="showErrorDialog" @refresh-error="showErrorDialog"></file-list>
-              <file-list v-if="job && jobIsDone && hasFilesWithTags(['fastqc'])" ref="report-files"
-                title="FastQC Reports" :fileset-id="job.output_fileset_id" :tag-filters="['fastqc']" :hide-search="true"
-                :job-id="jobId" @refresh-error="showErrorDialog"></file-list>
+              <file-list v-if="job && jobIsDone && hasFilesWithTags(['fastqc'])" ref="report-files" title="FastQC Reports"
+                :fileset-id="job.output_fileset_id" :tag-filters="['fastqc']" :hide-search="true" :job-id="jobId"
+                @refresh-error="showErrorDialog"></file-list>
               <file-list v-if="job && jobIsDone && hasFilesWithTags(['bam', 'bai'])" ref="alignment-files"
                 title="Alignment files" :fileset-id="job.output_fileset_id" :tag-filters="['bam', 'bai']"
                 :hide-search="false" :job-id="jobId" @refresh-error="showErrorDialog"></file-list>
@@ -251,9 +249,9 @@
           <transition name="fade">
             <md-layout v-show="showTab === 'input'" md-column-medium>
               <md-layout id="input-files-panel">
-                <nested-file-list v-if="job && inputFilesetTree.children.length" id="input-files-card"
-                  class="fill-width" ref="input" title="Input files" root-path-name="input" :fileTree="inputFilesetTree"
-                  :job-id="jobId" :hide-search="false" @refresh-error="showErrorDialog"></nested-file-list>
+                <nested-file-list v-if="job && inputFilesetTree.children.length" id="input-files-card" class="fill-width"
+                  ref="input" title="Input files" root-path-name="input" :fileTree="inputFilesetTree" :job-id="jobId"
+                  :hide-search="false" @refresh-error="showErrorDialog"></nested-file-list>
                 <md-layout v-else md-align="center">No files (yet).</md-layout>
               </md-layout>
             </md-layout>
