@@ -208,6 +208,7 @@
           </transition>
           <transition name="fade">
             <md-layout id="right-column" md-flex-medium="100" v-show="showTab === 'summary' || showTab == null" md-column>
+              <md-progress v-if="refreshing" md-indeterminate></md-progress>
               <file-list v-if="job && jobIsDone && hasFilesWithTags(['report', 'html'])" class="shadow" ref="report-files"
                 title="Reports" :fileset-id="job.output_fileset_id" :tag-filters="['report', 'html']"
                 :exclude-tags="['fastqc']" :hide-search="true" :job-id="jobId"
@@ -248,16 +249,18 @@
           </transition>
           <transition name="fade">
             <md-layout v-show="showTab === 'input'" md-column-medium>
+              <md-progress v-if="refreshing" md-indeterminate></md-progress>
               <md-layout id="input-files-panel">
                 <nested-file-list v-if="job && inputFilesetTree.children.length" id="input-files-card" class="fill-width"
                   ref="input" title="Input files" root-path-name="input" :fileTree="inputFilesetTree" :job-id="jobId"
                   :hide-search="false" @refresh-error="showErrorDialog"></nested-file-list>
-                <md-layout v-else md-align="center">No files (yet).</md-layout>
+                <md-layout v-else-if="!refreshing" md-align="center">No files.</md-layout>
               </md-layout>
             </md-layout>
           </transition>
           <transition name="fade">
             <md-layout v-show="showTab === 'output'">
+              <md-progress v-if="refreshing" md-indeterminate></md-progress>
               <md-layout v-if="jobIsDone" md-flex="100">
                 <md-whiteframe class="pad-32 fill-width">
                   <div>
@@ -280,12 +283,13 @@
                   class="fill-width" ref="output" title="Output files" root-path-name="output"
                   :fileTree="outputFilesetTree" :job-id="jobId" :hide-search="false"
                   @refresh-error="showErrorDialog"></nested-file-list>
-                <md-layout v-else md-align="center">No files (yet).</md-layout>
+                <md-layout v-else-if="!refreshing" md-align="center">No files (yet).</md-layout>
               </md-layout>
             </md-layout>
           </transition>
           <transition name="fade">
             <md-layout v-show="showTab === 'eventlog'" md-column-medium>
+              <md-progress v-if="refreshing" md-indeterminate></md-progress>
               <md-layout id="eventlog-panel">
                 <event-log ref="eventlog" :job-id="jobId" @refresh-error="showErrorDialog"></event-log>
               </md-layout>
@@ -294,6 +298,7 @@
           <transition name="fade">
             <md-layout v-show="showTab === 'sharing'" md-column-medium>
               <md-layout v-if="isAuthenticated" id="sharing-panel" md-column>
+                <md-progress v-if="refreshing" md-indeterminate></md-progress>
                 <md-whiteframe v-if="sharingLinks && sharingLinks.length > 0" class="pad-32">
                   <h3>Sharing {{ sharingLinks.length | pluralize("Link") }}</h3>
                   <sharing-link-list @flash-message="flashSnackBarEvent" @change-link="onChangeLinkEvent"
