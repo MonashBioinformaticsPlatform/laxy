@@ -1,6 +1,6 @@
 <template>
   <md-layout md-column md-gutter>
-    <md-layout style="margin: 24px" md-vertical-align="stretch" md-column>
+    <md-layout style="margin: 24px" md-vertical-align="stretch" :md-column-medium="true" :md-row-large="true">
       <md-whiteframe md-elevation="2" class="pad-32">
 
         <md-card>
@@ -48,7 +48,7 @@
             <md-layout md-column>
               <textarea readonly rows="4" class="token-area" :class="{ 'blur-text': hideToken }"
                 v-model="masked_api_auth_token" style="resize: none; overflow: auto; word-break: break-all;">
-            </textarea>
+                </textarea>
             </md-layout>
 
             <md-button class="md-raised" @click="toggleTokenVisibility()">
@@ -70,8 +70,8 @@
           data.
           You can use this token in an HTTPS request header like <code>Authorization: Bearer {token_here}</code> when
           using the <a :href="`${openAPIUrl}`">Laxy Web API</a>.
-          This token can also be used with the <a
-            href="https://github.com/MonashBioinformaticsPlatform/laxyapi-r">laxyapi R package</a> (see vignette
+          This token can also be used with the <a href="https://github.com/MonashBioinformaticsPlatform/laxyapi-r">laxyapi
+            R package</a> (see vignette
           for example). Tokens expire after some time.
         </p>
       </md-dialog-content>
