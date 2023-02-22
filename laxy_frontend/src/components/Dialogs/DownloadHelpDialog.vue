@@ -3,9 +3,20 @@
     <md-dialog-title>Downloading</md-dialog-title>
 
     <md-dialog-content>
-      An archive of the job can be downloaded.
-      On the command line, run:
-      <code>curl "{{ tarballUrl }}" >{{ filename }}</code>
+      An archive of the job can be downloaded. <br>
+      For authorization the URL must contain a valid <code>access_token</code>, or the request must provide an API
+      key.<br>
+      On the command line, run:<br><br>
+      <template code v-if="hasAccessToken">
+        <code>curl "{{ tarballUrl }}" >{{ filename }}</code>
+      </template>
+      <template v-else>
+        <code>curl -H "Authorization: Bearer ${api_key}" "{{ tarballUrl }}" >{{ filename }}</code>
+        <br><br>
+        <p>
+          Your <code>${api_key}</code> is available under <a href="/#/profile">User Profile</a>.
+        </p>
+      </template>
     </md-dialog-content>
 
     <md-dialog-actions>
@@ -45,6 +56,10 @@ export default class DownloadHelpDialog extends Vue {
 
   get filename() {
     return basename(new URL(this.tarballUrl).pathname);
+  }
+
+  get hasAccessToken() {
+    return this.tarballUrl.includes("access_token=")
   }
 
   open() {
