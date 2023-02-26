@@ -42,7 +42,8 @@
                 <md-switch v-model="debug_mode" id="debug-toggle" name="debug-toggle" class="md-primary">Enable DEBUG
                   mode</md-switch>
 
-                <md-switch v-model="has_umi" id="umi-toggle" name="umi-toggle" class="md-primary">
+                <md-switch v-if="umi_option_supported" v-model="has_umi" id="umi-toggle" name="umi-toggle"
+                  class="md-primary">
                   Use UMIs <em>(UMIs must be in the FASTQ header from bcl2fastq demultiplexing, not in the
                     sequence)</em></md-switch>
               </md-layout>
@@ -307,6 +308,16 @@ export default class PipelineParams extends Vue {
 
   get auto_strandedness_option_supported() {
     return compareVersions(this.pipeline_version, "3.7") >= 0;
+  }
+
+  get umi_option_supported() {
+    // nf-core/rnaseq had some UMI support in earlier versions (at least since 3.2),
+    // however options were limited - we only support more recent versions here
+    const supported = compareVersions(this.pipeline_version, "3.10") >= 0;
+    if (!supported) {
+      this.has_umi = false;
+    }
+    return supported;
   }
 
   get isValid_strandedness_option() {
