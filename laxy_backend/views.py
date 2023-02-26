@@ -261,8 +261,14 @@ class JobDirectTarDownload(JSONView):
         # archived files spread across object store etc. The MyTardis-style tarball
         # download, using django-storages, would be required to do tarball downloads
         # in that case.
-        # job_path = job.abs_path_on_compute
+
         stored_at = get_primary_compute_location_for_files(job.get_files())
+        if stored_at is None:
+            return HttpResponse(
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                reason=f"Files are currently unavailable for tarball download, try again later.",
+            )
+
         job_path = job_path_on_compute(job, stored_at)
 
         client = stored_at.ssh_client()
