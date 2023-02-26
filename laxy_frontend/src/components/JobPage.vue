@@ -283,7 +283,7 @@
                   class="fill-width" ref="output" title="Output files" root-path-name="output"
                   :fileTree="outputFilesetTree" :job-id="jobId" :hide-search="false"
                   @refresh-error="showErrorDialog"></nested-file-list>
-                <md-layout v-else-if="!refreshing" md-align="center">No files (yet).</md-layout>
+                <md-layout v-else-if="!refreshing" md-align="center">No files.</md-layout>
               </md-layout>
             </md-layout>
           </transition>
