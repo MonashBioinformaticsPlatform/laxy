@@ -425,13 +425,14 @@ function post_nextflow_jobs() {
     #       called by a mini nextflow workflow of our own based on a skeleton of workflows/rnaseq.nf
     #       We might be able to overide the process options as required like:
     #  process { 
-    #    withName: SUBREAD_FEATURECOUNTS' {
-    #        ext.args   = [ '-B -C --extraAttributes gene_name,gene_biotype']
-    #        publishDir = [
-    #            path: { "${params.outdir}/${params.aligner}/featurecounts" },
-    #            mode: params.publish_dir_mode
-    #        ]
-    #    }
+    # withName: 'NFCORE_RNASEQ:RNASEQ:SUBREAD_FEATURECOUNTS' {
+    #     ext.args   = [
+    #         '-B -C',
+    #         '-t gene', 
+    #         '-g gene_biotype', 
+    #         '--extraAttributes gene_name,gene_biotype',
+    #     ].join(' ').trim()
+    # }
     #  }
 
     local cpus=6
@@ -466,13 +467,13 @@ function post_nextflow_jobs() {
     fi
 
     if [[ ${QUEUE_TYPE} == "slurm" ]]; then
-        _PRE="${PRE} sbatch --parsable \
-                      --cpus-per-task=${cpus} \
-                      --mem=36G \
-                      -t 7-0:00 \
-                      --job-name=laxy:${JOB_ID}:post_nextflow \
-                      ${SLURM_EXTRA_ARGS} \
-                      --wait --wrap "
+        _PRE="sbatch --parsable \
+                     --cpus-per-task=${cpus} \
+                     --mem=36G \
+                     -t 7-0:00 \
+                     --job-name=laxy:${JOB_ID}:post_nextflow \
+                     ${SLURM_EXTRA_ARGS} \
+                     --wait --wrap ${_PRE} "
     fi
     
     # We grab the Salmon predicted strandedness from it's meta_info.json output file.
