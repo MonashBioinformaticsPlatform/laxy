@@ -490,7 +490,7 @@ function post_nextflow_jobs() {
 
     # Ensure output directory is writable
     local _outdir="${_real_JOB_PATH}/output/results/featureCounts"
-    local _bamdir="${_real_JOB_PATH}/output/results/star_salmon/"
+    local _bamdir="${_real_JOB_PATH}/output/results/star_salmon"
     mkdir -p "${_outdir}"
     chmod u+w "${_outdir}"
 
@@ -503,10 +503,11 @@ function post_nextflow_jobs() {
         ${_bamdir}/*.bam \
             >"${_outdir}/counts.star_featureCounts.out" 2>&1
 
-    # Remove featureCounds 'comment' header and rewrite long paths + suffixes in sample names
+    # Remove featureCounts 'comment' header and rewrite long paths + suffixes in sample names
     tail -n +2 "${_outdir}/counts.star_featureCounts.txt" | \
-               sed '1s#"$_bamdir"##' | \
-               sed '1s#\.markdup\.sorted\.bam##' \
+               sed '1s#'"${_bamdir}"'##g' | \
+               sed '1s#\.markdup\.sorted\.bam##g' \
+               sed '1s#\.umi_dedup\.sorted\.bam##g' \
                >"${_outdir}/counts.star_featureCounts.tsv"
 
     # Merge the biotypes from featureCounts into the Salmon counts tables.
