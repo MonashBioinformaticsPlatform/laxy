@@ -22,7 +22,7 @@ export REFERENCE_GENOME_ID="{{ REFERENCE_GENOME }}"
 # Global variables used throughout the script
 export JOB_PATH="${PWD}"
 export TMPDIR="$(realpath ${JOB_PATH}/../../tmp/${JOB_ID})"
-mkdir -p ${TMPDIR} || true
+mkdir -p "${TMPDIR}" || true
 export INPUT_READS_PATH="${JOB_PATH}/input/reads"
 export INPUT_SCRIPTS_PATH="${JOB_PATH}/input/scripts"
 export INPUT_CONFIG_PATH="${JOB_PATH}/input/config"
@@ -201,8 +201,8 @@ function set_genome_args() {
         export USING_CUSTOM_REFERENCE=yes
     fi
 
-    [[ -z ${_fasta_fn} ]] || GENOME_FASTA="${INPUT_REFERENCE_PATH}/${_fasta_fn}"
-    [[ -z ${_annot_fn} ]] || ANNOTATION_FILE="${INPUT_REFERENCE_PATH}/${_annot_fn}"
+    [[ -z ${_fasta_fn} ]] || export GENOME_FASTA="${INPUT_REFERENCE_PATH}/${_fasta_fn}"
+    [[ -z ${_annot_fn} ]] || export ANNOTATION_FILE="${INPUT_REFERENCE_PATH}/${_annot_fn}"
 
     # If there is no custom genome, then we assume we are using a pre-defined references
     if [[ ${USING_CUSTOM_REFERENCE} == "no" ]]; then
@@ -226,6 +226,70 @@ function set_genome_args() {
             send_job_finished 1
             exit 1
         fi
+    fi
+}
+
+function normalize_annotations() {
+    # We run custom GFF/GTFs through AGAT in an attempt to ensure they are somewhat uniform and contain the 
+    # expected features (exons) and attribute fields (gene_id).
+    #
+    # The alternative would be to set the nf-core --gtf_group_features and --featurecounts_feature_type to an 
+    # appropriate identifier (eg ID, gene, or Name, and CDS vs. exon). 
+    
+    # TODO: These Prokka GTFs also don't have gene_biotype. It's unlikely we can automatically add this
+    #       field reliably (eg can't easily guess protein_coding vs tRNA).
+    #       In this case, maybe detect the lack of gene_biotype fields, add --skip_biotype_qc and/or
+    #       change --featurecounts_group_type, and ensure post_nextflow_jobs doesn't expect gene_biotype in this case
+
+    # TODO: DuRadar (NFCORE_RNASEQ:RNASEQ:DUPRADAR) seems to fail on these 'cleaned' annotations ?
+    #       We could simply add --skip_dupradar when using custom annotations, or get more sophisicated
+    #       with a custom nextflow.config that adds:
+    # process {
+    #    withName: 'NFCORE_RNASEQ:RNASEQ:DUPRADAR' {
+    #        errorStrategy 'ignore'
+    #    }
+    #}
+
+    export AGAT_CONTAINER="https://depot.galaxyproject.org/singularity/agat%3A1.0.0--pl5321hdfd78af_0"
+    if [[ ${USING_CUSTOM_REFERENCE} == "yes" ]]; then
+
+        send_event "JOB_INFO" "Standardising annotation file using AGAT" || true
+
+        module load singularity || true
+
+        # We need a copy with a real name accessible to Singularity
+        # (cached copies with hashed names don't end in .gtf/.gff etc)
+        local _tmp=$(mktemp -d)
+        local _tmp_annotation_path="${_tmp}/$(basename ${ANNOTATION_FILE})"
+        cp $(realpath ${ANNOTATION_FILE}) "${_tmp_annotation_path}"
+
+        local _out_dir=$(dirname ${ANNOTATION_FILE})
+        local _pathbinds=" -B ${_out_dir} -B ${_tmp} "
+
+        # Formatting for WebApollo (!) seems to work well in making a GFF/GTF
+        # subread/featureCounts compatible (generates exons features when missing 
+        # and adds gene_ids, fixes/removes some attributes that seem to break featureCounts).
+        # dupRadar QC uses subread featureCounts, among other parts of the pipeline.
+        singularity run ${_pathbinds} ${AGAT_CONTAINER} \
+            agat_sp_webApollo_compliant.pl \
+            -g "${_tmp_annotation_path}" \
+            -o "${_tmp_annotation_path}.agat_webapollo.gff"
+
+        # We then convert GFF to GTF
+        singularity run ${_pathbinds} ${AGAT_CONTAINER} \
+            agat_convert_sp_gff2gtf.pl \
+            -i "${_tmp_annotation_path}.agat_webapollo.gff" \
+            --gtf_version relax \
+            -o "${_out_dir}/annotation.agat.gtf"
+            
+            # --gtf_version 3 \
+            #2>"${_out_dir}/annotation.agat_relax.err"
+
+        gzip "${_out_dir}/annotation.agat.gtf"
+        export ANNOTATION_FILE="${_out_dir}/annotation.agat.gtf.gz"
+        export GENOME_ARGS=" --fasta ${GENOME_FASTA} --gtf ${ANNOTATION_FILE} "
+
+        rm -f "${_tmp_annotation_path}" "${_tmp_annotation_path}.agat_webapollo.gff"
     fi
 }
 
@@ -343,8 +407,6 @@ function run_nextflow() {
     # export NFCORE_GENOME_ID="GRCm38"    # mouse
     # export NFCORE_GENOME_ID="GRCh38"    # hoomn
     # export NFCORE_GENOME_ID="$(echo ${REFERENCE_GENOME_ID} | cut -f 3 -d '/')"
-    
-    set_genome_args
 
     # export NFCORE_PIPELINE_PATH="nf-core/rnaseq"  # download, don't use pre-cached version
 
@@ -553,6 +615,10 @@ update_laxydl || send_error 'update_laxydl' '' $?
 download_input_data "${INPUT_REFERENCE_PATH}" "reference_genome" || fail_job 'download_input_data' 'Failed to download reference genome' $?
 
 download_input_data "${INPUT_READS_PATH}" "ngs_reads" || fail_job 'download_input_data' 'Failed to download input data' $?
+
+set_genome_args
+
+normalize_annotations
 
 generate_samplesheet
 
