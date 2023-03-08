@@ -433,6 +433,7 @@ function run_nextflow() {
     nextflow run "${NFCORE_PIPELINE_PATH}" \
        --input "${INPUT_CONFIG_PATH}/samplesheet.csv" \
        --outdir ${JOB_PATH}/output/results \
+       -c ${INPUT_CONFIG_PATH}/laxy_nextflow.config \
        ${GENOME_ARGS} \
        ${UMI_FLAGS} \
        --aligner star_salmon \
