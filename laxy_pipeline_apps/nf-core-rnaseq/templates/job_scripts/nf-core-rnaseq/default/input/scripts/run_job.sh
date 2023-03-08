@@ -507,7 +507,7 @@ function get_salmon_inferred_strandedness() {
         awk '{if ($0 == "U" || $0 == "IU") {print "0"} \
         else if ($0 == "SF" || $0 == "ISF") {print "1"} \
         else if ($0 == "SR" || $0 == "ISR") {print "2"} \
-        else {print "0"}}'
+        else {print "0"}}' || echo "0"
 }
 
 function post_nextflow_jobs() {
