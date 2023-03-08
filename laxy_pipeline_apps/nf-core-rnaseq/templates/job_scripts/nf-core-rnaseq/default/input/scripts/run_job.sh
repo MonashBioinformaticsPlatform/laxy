@@ -29,6 +29,7 @@ export INPUT_CONFIG_PATH="${JOB_PATH}/input/config"
 export INPUT_REFERENCE_PATH="${JOB_PATH}/input/reference"
 export PIPELINE_CONFIG="${INPUT_CONFIG_PATH}/pipeline_config.json"
 export SITE_CONFIGS="${JOB_PATH}/../../config"
+readonly REFERENCE_BASE="${JOB_PATH}/../references/iGenomes"
 export CONDA_BASE="${JOB_PATH}/../miniconda3"
 export DOWNLOAD_CACHE_PATH="${JOB_PATH}/../../cache/downloads"
 export SINGULARITY_CACHEDIR="${JOB_PATH}/../../cache/singularity"
@@ -220,6 +221,16 @@ function set_genome_args() {
         # eg Homo_sapiens/Ensembl/GRCh38 -> GRCh38
         export NFCORE_GENOME_ID="$(echo ${REFERENCE_GENOME_ID} | cut -f 3 -d '/')"
         export GENOME_ARGS=" --genome ${NFCORE_GENOME_ID} "
+        # Use a locally cached iGenomes copy if it exists
+        if [[ -d ${REFERENCE_BASE}/${REFERENCE_GENOME_ID} ]]; then
+            GENOME_ARGS="${GENOME_ARGS} --igenomes_base=${REFERENCE_BASE} "
+        fi
+        if [[ -d ${REFERENCE_BASE}/${REFERENCE_GENOME_ID}/Sequence/STARIndex ]]; then
+            GENOME_ARGS="${GENOME_ARGS} --star_index=${REFERENCE_BASE}/${REFERENCE_GENOME_ID}/Sequence/STARIndex "
+        fi
+        if [[ -d ${REFERENCE_BASE}/${REFERENCE_GENOME_ID}/Sequence/salmon ]]; then
+            GENOME_ARGS="${GENOME_ARGS} --salmon_index=${REFERENCE_BASE}/${REFERENCE_GENOME_ID}/Sequence/salmon "
+        fi
     else
         GENOME_ARGS=" --fasta ${GENOME_FASTA} "
         
