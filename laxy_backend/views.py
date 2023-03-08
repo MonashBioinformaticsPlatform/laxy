@@ -2795,12 +2795,13 @@ class SendFileToDegust(JSONView):
         conditions = list(
             set([sample["metadata"].get("condition") for sample in samples])
         )
+        conditions = [c for c in conditions if c is not None and c.strip() != ""]
         # {'some_condition': []} dict of empty lists
         degust_conditions = OrderedDict([(condition, []) for condition in conditions])
-
         for sample in samples:
             # this is the unsanitized user supplied sample name
-            # (associated with both R1 and R2, maybe file that represent technical replicates)
+            # (associated with both R1 and R2, and possbily multiple pairs
+            #  of files that represent technical replicates)
             # name = sample["name"]
 
             name = sample.get("sanitized_name", None)
@@ -2821,11 +2822,15 @@ class SendFileToDegust(JSONView):
 
             condition = sample["metadata"].get("condition")
 
-            # TODO: Ensure the same column name doesn't occur twice in a condition ( tuple(set(degust_conditions[condition])) )
-            #       This can happen with techincal replicates where the files haven't been merged into a single sample, but instead
-            #       just have duplicate sample names
-            #       ( eg sampleA = [sampleA_L003_R1, sampleA_L003_R2] and sampleA = [sampleA_L004_R1, sampleA_L004_R2] )
-            degust_conditions[condition].append(name)
+            if condition is not None and condition.strip() != "":
+                degust_conditions[condition].append(name)
+
+        # Ensure we have no duplicated sample names in a condition
+        # (can possibly occur in some cases where we files that represent have technical
+        #  replicates that are merged under a single sample name by the pipelines)
+        for condition in degust_conditions.keys():
+            deduped = tuple(set(degust_conditions[condition]))
+            degust_conditions[condition] = deduped
 
         if not counts_file:
             return HttpResponse(
@@ -2917,13 +2922,51 @@ class SendFileToDegust(JSONView):
         if len(conditions) >= 2:
             init_select = conditions[0:2]
 
+        def _firstline(fh):
+            """
+            Read and return the first line from a file object.
+            Assumed file seek pointer is at the start.
+            """
+            line = []
+            while True:
+                chunk = fh.read(128)
+                chunk = chunk.decode("utf-8")
+                if "\n" in chunk:
+                    line.append(chunk.split("\n")[0])
+                    return "".join(line)
+                else:
+                    line.append(chunk)
+
+        # We take all the column names in the counts file, except the sample names
+        # (different pipeline versions might use 'raw' sample names input by user,
+        #  or the sanitized versions as column headers, so we remove both)
+        # TODO: valid_info_columns should probably be a Pipeline.metadata value or
+        #       pipeline app (or global) setting.
+        valid_info_columns = [
+            "Gene.ID",
+            "Chrom",
+            "Gene.Name",
+            "Biotype",
+            "gene_id",
+            "chromosome",
+            "gene_name",
+            "gene_biotype",
+        ]
+        counts_header = _firstline(counts_file.file).split("\t")
+        info_columns = list(set(counts_header).intersection(set(valid_info_columns)))
+
         degust_settings = {
             "csv_format": False,
             "replicates": replicates,
             "fc_columns": [],
-            "info_columns": ["Gene.ID", "Chrom", "Gene.Name", "Biotype"],
+            ## RNAsik
+            # info_columns": ["Gene.ID", "Chrom", "Gene.Name", "Biotype"],
+            ## nf-core/rnaseq
+            # info_columns": ["gene_id", "chromosome", "gene_name", "gene_biotype"]
+            "info_columns": info_columns,
             "analyze_server_side": True,
-            "name": f"{description} (Laxy job: {job.id})",
+            "name": f"{description}",
+            "experimentDescription": f"(Laxy job: {job.id}, file: {counts_file.id})",
             # 'primary_name': '',
             "init_select": init_select,
             # 'hidden_factor': [],
