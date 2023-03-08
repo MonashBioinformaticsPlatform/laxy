@@ -445,15 +445,32 @@ function run_nextflow() {
        -with-dag \
        -name "${_nfjobname}" \
        -profile singularity \
-       -resume \
         >${JOB_PATH}/output/nextflow.log \
         2>${JOB_PATH}/output/nextflow.err
     #">>"${JOB_PATH}/slurm.jids"
-
-    # This custom config was an attempt to modify the featurecounts output,
-    # however downstream R scripts in the pipeline seems to strip out the
-    # extra columns we want anyway.
-    # -c ${INPUT_CONFIG_PATH}/laxy_nextflow.config \
+    
+    EXIT_CODE=$?
+    # Attempt #2, resuming to catch any failures not caught by Nextflow task retries.
+    if [[ $EXIT_CODE != 0 ]]; then
+        nextflow run "${NFCORE_PIPELINE_PATH}" \
+            --input "${INPUT_CONFIG_PATH}/samplesheet.csv" \
+            --outdir ${JOB_PATH}/output/results \
+            -c ${INPUT_CONFIG_PATH}/laxy_nextflow.config \
+            ${GENOME_ARGS} \
+            ${UMI_FLAGS} \
+            --aligner star_salmon \
+            --pseudo_aligner salmon \
+            --save_reference \
+            ${NEXTFLOW_CONFIG_ARG} \
+            --monochrome_logs \
+            -with-trace \
+            -with-dag \
+            -name "${_nfjobname}" \
+            -profile singularity \
+            -resume \
+            >${JOB_PATH}/output/nextflow2.log \
+            2>${JOB_PATH}/output/nextflow2.err
+    fi
 
     # TODO: Should we have the --trim_nextseq option here by default ?
     #       (assuming it's mostly benign with non-nextseq/novaseq data ?)
