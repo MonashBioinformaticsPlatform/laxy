@@ -152,17 +152,25 @@ fi
 function register_files() {
     send_event "JOB_INFO" "Registering interesting output files."
 
-    add_to_manifest "*.fq" "fastq"
-    add_to_manifest "*.fastq" "fastq"
-    add_to_manifest "*.fq.gz" "fastq"
-    add_to_manifest "*.fastq.gz" "fastq"
-    add_to_manifest "*.bam" "bam,alignment"
-    add_to_manifest "*.bai" "bai"
-    add_to_manifest "**/multiqc_report.html" "report,html,multiqc"
-    add_to_manifest "**/*_fastqc.html" "report,html,fastqc"
-    add_to_manifest "**/salmon.merged.gene_counts.tsv" "counts,degust"
-    add_to_manifest "**/salmon.merged.gene_counts.biotypes.tsv" "counts,degust"
-    add_to_manifest "**/featureCounts/counts.star_featureCounts.tsv" "counts,degust"
+    pushd "${JOB_PATH}"
+
+    add_to_manifest "input/**/*.fq" "fastq"
+    add_to_manifest "input/**/*.fastq" "fastq"
+    add_to_manifest "input/**/*.fq.gz" "fastq"
+    add_to_manifest "input/**/*.fastq.gz" "fastq"
+    
+    add_to_manifest "output/results/**/*.fq" "fastq"
+    add_to_manifest "output/results/**/*.fastq" "fastq"
+    add_to_manifest "output/results/**/*.fq.gz" "fastq"
+    add_to_manifest "output/results/**/*.fastq.gz" "fastq"
+
+    add_to_manifest "output/results/**/*.bam" "bam,alignment"
+    add_to_manifest "output/results/**/*.bai" "bai"
+    add_to_manifest "output/results/**/multiqc_report.html" "report,html,multiqc"
+    add_to_manifest "output/results/**/*_fastqc.html" "report,html,fastqc"
+    add_to_manifest "output/results/**/salmon.merged.gene_counts.tsv" "counts,degust"
+    add_to_manifest "output/results/**/salmon.merged.gene_counts.biotypes.tsv" "counts,degust"
+    add_to_manifest "output/results/featureCounts/counts.star_featureCounts.tsv" "counts,degust"
 
     # Nextflow reports
     add_to_manifest "output/results/pipeline_info/*.html" "report,html,nextflow"
@@ -188,6 +196,8 @@ function register_files() {
      --retry-max-time 600 \
      --data-binary @"${JOB_PATH}/manifest.csv" \
      "${JOB_FILE_REGISTRATION_URL}"
+
+     popd
 }
 
 function set_genome_args() {
