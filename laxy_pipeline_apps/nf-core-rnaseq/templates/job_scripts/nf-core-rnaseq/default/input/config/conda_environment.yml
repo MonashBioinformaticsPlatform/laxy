@@ -47,6 +47,7 @@ dependencies:
   # Pipeline specific
   - nextflow=22.10.4
   - nf-core=2.7.2
+  - openjdk=17.0.3
   # For when we don't have singularity
   - subread=2.0.1
   - pandas=1.5.3
