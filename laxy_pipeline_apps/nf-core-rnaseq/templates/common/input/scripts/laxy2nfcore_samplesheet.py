@@ -283,7 +283,7 @@ if __name__ == "__main__":
         outlines.extend(sheetlines)
     else:
         for sample in jblob["sample_cart"].get("samples", []):
-            name = sample["name"]
+            name = sample.get("sanitized_name", sample["name"])
             for f in sample["files"]:
                 r1_fn = f.get("R1", {}).get("sanitized_filename", "")
                 r2_fn = f.get("R2", {}).get("sanitized_filename", "")
