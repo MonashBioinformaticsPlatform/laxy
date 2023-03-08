@@ -557,32 +557,47 @@ function post_nextflow_jobs() {
     mkdir -p "${_outdir}"
     chmod u+w "${_outdir}"
 
-    ${_PRE} featureCounts \
-        -B -C -T ${cpus} \
-        --tmpDir "${TMPDIR}" \
-        -a "${_annotation}" \
-        -s ${_strand} --extraAttributes gene_name,gene_biotype \
-        -o "${_outdir}/counts.star_featureCounts.txt" \
-        ${_bamdir}/*.bam \
-            >"${_outdir}/counts.star_featureCounts.out" 2>&1
+    # Detect paired end reads
+    local _FC_PAIRED_FLAGS=""
+    if [[ $(${INPUT_SCRIPTS_PATH}/is_paired.py ${INPUT_READS_PATH}) == "paired" ]]; then
+        _FC_PAIRED_FLAGS=" -p "
+    fi
 
-    # Remove featureCounts 'comment' header and rewrite long paths + suffixes in sample names
-    tail -n +2 "${_outdir}/counts.star_featureCounts.txt" | \
-               sed '1s#'"${_bamdir}"'##g' | \
-               sed '1s#\.markdup\.sorted\.bam##g' \
-               sed '1s#\.umi_dedup\.sorted\.bam##g' \
-               >"${_outdir}/counts.star_featureCounts.tsv"
+    # We use -Q 10 to remove multimappers, as per logic in RNAsik: 
+    # https://github.com/MonashBioinformaticsPlatform/RNAsik-pipe/blob/master/src/sikCounts.bds#L60
+    # We only run if BAMs were generated
+    if [[ -n "$(find ${_bamdir} -name '*.bam' -print -quit)" ]]; then
+        ${_PRE} featureCounts \
+            -B -C \
+            -T ${cpus} \
+            -Q 10 \
+            ${_FC_PAIRED_FLAGS} \
+            --tmpDir "${TMPDIR}" \
+            -a "${_annotation}" \
+            -s ${_strand} \
+            --extraAttributes gene_name,gene_biotype \
+            -o "${_outdir}/counts.star_featureCounts.txt" \
+            ${_bamdir}/*.bam \
+                >"${_outdir}/counts.star_featureCounts.out" 2>&1
 
-    # Merge the biotypes from featureCounts into the Salmon counts tables.
-    ${INPUT_SCRIPTS_PATH}/merge_biotypes.py \
-        "${_outdir}/counts.star_featureCounts.tsv" \
-        "${JOB_PATH}/output/results/star_salmon/salmon.merged.gene_counts.tsv" \
-          >"${JOB_PATH}/output/results/star_salmon/salmon.merged.gene_counts.biotypes.tsv"
+        # Remove featureCounts 'comment' header and rewrite long paths + suffixes in sample names
+        tail -n +2 "${_outdir}/counts.star_featureCounts.txt" | \
+                sed '1s#'"${_bamdir}"'##g' | \
+                sed '1s#\.markdup\.sorted\.bam##g' | \
+                sed '1s#\.umi_dedup\.sorted\.bam##g' \
+                >"${_outdir}/counts.star_featureCounts.tsv"
 
-    ${INPUT_SCRIPTS_PATH}/merge_biotypes.py \
-        "${_outdir}/counts.star_featureCounts.tsv" \
-        "${JOB_PATH}/output/results/salmon/salmon.merged.gene_counts.tsv" \
-          >"${JOB_PATH}/output/results/salmon/salmon.merged.gene_counts.biotypes.tsv"
+        # Merge the biotypes from featureCounts into the Salmon counts tables.
+        ${INPUT_SCRIPTS_PATH}/merge_biotypes.py \
+            "${_outdir}/counts.star_featureCounts.tsv" \
+            "${JOB_PATH}/output/results/star_salmon/salmon.merged.gene_counts.tsv" \
+            >"${JOB_PATH}/output/results/star_salmon/salmon.merged.gene_counts.biotypes.tsv"
+
+        ${INPUT_SCRIPTS_PATH}/merge_biotypes.py \
+            "${_outdir}/counts.star_featureCounts.tsv" \
+            "${JOB_PATH}/output/results/salmon/salmon.merged.gene_counts.tsv" \
+            >"${JOB_PATH}/output/results/salmon/salmon.merged.gene_counts.biotypes.tsv"
+    fi
 }
 
 update_permissions || true
