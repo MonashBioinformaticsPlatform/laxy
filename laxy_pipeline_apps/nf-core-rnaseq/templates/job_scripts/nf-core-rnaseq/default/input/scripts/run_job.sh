@@ -280,17 +280,21 @@ function normalize_annotations() {
         # subread/featureCounts compatible (generates exons features when missing 
         # and adds gene_ids, fixes/removes some attributes that seem to break featureCounts).
         # dupRadar QC uses subread featureCounts, among other parts of the pipeline.
-        singularity run ${_pathbinds} ${AGAT_CONTAINER} \
+        (cd "${JOB_PATH}/output" && \
+         singularity run ${_pathbinds} ${AGAT_CONTAINER} \
             agat_sp_webApollo_compliant.pl \
             -g "${_tmp_annotation_path}" \
-            -o "${_tmp_annotation_path}.agat_webapollo.gff"
+            -o "${_tmp_annotation_path}.agat_webapollo.gff" \
+          >>"${JOB_PATH}/output/agat.log" 2>&1)
 
         # We then convert GFF to GTF
-        singularity run ${_pathbinds} ${AGAT_CONTAINER} \
+        (cd "${JOB_PATH}/output" && \
+         singularity run ${_pathbinds} ${AGAT_CONTAINER} \
             agat_convert_sp_gff2gtf.pl \
             -i "${_tmp_annotation_path}.agat_webapollo.gff" \
             --gtf_version relax \
-            -o "${_out_dir}/annotation.agat.gtf"
+            -o "${_out_dir}/annotation.agat.gtf" \
+          >>"${JOB_PATH}/output/agat.log" 2>&1)
             
             # --gtf_version 3 \
             #2>"${_out_dir}/annotation.agat_relax.err"
