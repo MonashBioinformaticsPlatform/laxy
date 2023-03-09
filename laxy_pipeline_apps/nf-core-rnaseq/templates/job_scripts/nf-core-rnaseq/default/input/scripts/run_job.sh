@@ -272,7 +272,8 @@ function normalize_annotations() {
     #}
 
     export AGAT_CONTAINER="https://depot.galaxyproject.org/singularity/agat%3A1.0.0--pl5321hdfd78af_0"
-    if [[ ${USING_CUSTOM_REFERENCE} == "yes" ]]; then
+    if [[ ${USING_CUSTOM_REFERENCE} == "yes" && 
+          $(zgrep -Pc "\texon\t.*gene_id*" "${ANNOTATION_FILE}") == 0 ]]; then
 
         send_event "JOB_INFO" "Standardising annotation file using AGAT" || true
 
@@ -282,14 +283,14 @@ function normalize_annotations() {
         # (cached copies with hashed names don't end in .gtf/.gff etc)
         local _tmp=$(mktemp -d)
         local _tmp_annotation_path="${_tmp}/$(basename ${ANNOTATION_FILE})"
-        cp $(realpath ${ANNOTATION_FILE}) "${_tmp_annotation_path}"
+        cp $(realpath "${ANNOTATION_FILE}") "${_tmp_annotation_path}"
 
-        local _out_dir=$(dirname ${ANNOTATION_FILE})
+        local _out_dir=$(dirname "${ANNOTATION_FILE}")
         local _pathbinds=" -B ${_out_dir} -B ${_tmp} "
 
         # Formatting for WebApollo (!) seems to work well in making a GFF/GTF
         # subread/featureCounts compatible (generates exons features when missing 
-        # and adds gene_ids, fixes/removes some attributes that seem to break featureCounts).
+        # and adds gene_id attributes, fixes/removes some attributes that seem to break featureCounts).
         # dupRadar QC uses subread featureCounts, among other parts of the pipeline.
         (cd "${JOB_PATH}/output" && \
          singularity run ${_pathbinds} ${AGAT_CONTAINER} \
