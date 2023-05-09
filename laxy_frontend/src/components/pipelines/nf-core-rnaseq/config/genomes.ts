@@ -10,7 +10,31 @@
 import { ReferenceGenome } from "../../../../types";
 
 const available_genomes: ReferenceGenome[] = [
-    { 'id': 'Homo_sapiens/NCBI/GRCh38', 'organism': 'Homo sapiens', 'recommended': true },
+    {
+        'id': 'Homo_sapiens/Ensembl/GRCh38.release-109', 'organism': 'Homo sapiens',
+        'recommended': true,
+        'identifiers': { 'genbank': 'GCA_000001405.28', 'assembly_name': 'GRCh38.p13' },
+        'source': 'http://Feb2023.archive.ensembl.org/Homo_sapiens/Info/Annotation',
+        'files': [
+            {
+                'location': 'https://ftp.ensembl.org/pub/release-109/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna_sm.primary_assembly.fa.gz',
+                'name': 'Homo_sapiens.GRCh38.dna_sm.primary_assembly.fa.gz',
+                'checksum': 'md5:239580e6119c7b16865d934f78b20a08',
+                'type_tags': ['fasta'],
+            },
+            {
+                'location': 'https://ftp.ensembl.org/pub/release-109/gtf/homo_sapiens/Homo_sapiens.GRCh38.109.gtf.gz',
+                'name': 'Homo_sapiens.GRCh38.109.gtf.gz',
+                'checksum': 'md5:e35a6f36d6a03d1b673659f72f1fbb3b',
+                'type_tags': ['gtf', 'annotation'],
+            }
+        ],
+        // TODO: For 'external' tagged references, frontend should treat these as 'External genomes' and
+        //       grab the location from the fasta and gtf from the 'files' list, based on 'type_tag'.
+        // TODO: Add 'tags': ['aws-igenomes'] to all igenomes refs
+        'tags': ['external', 'rnaseq'],
+    },
+    { 'id': 'Homo_sapiens/NCBI/GRCh38', 'organism': 'Homo sapiens' },
     { 'id': 'Homo_sapiens/NCBI/GRCh38Decoy', 'organism': 'Homo sapiens' },
     { 'id': 'Homo_sapiens/NCBI/build37.2', 'organism': 'Homo sapiens' },
 
@@ -21,7 +45,54 @@ const available_genomes: ReferenceGenome[] = [
     { 'id': 'Homo_sapiens/UCSC/hg19', 'organism': 'Homo sapiens' },
     { 'id': 'Homo_sapiens/UCSC/hg38', 'organism': 'Homo sapiens' },
 
-    { 'id': 'Mus_musculus/Ensembl/GRCm38', 'organism': 'Mus musculus', 'recommended': true },
+    {
+        'id': 'Mus_musculus/Ensembl/GRCm39.release-109', 'organism': 'Mus musculus',
+        'recommended': true,
+        'identifiers': { 'genbank': 'GCA_000001635.9', 'assembly_name': '' },
+        'source': 'http://Feb2023.archive.ensembl.org/Mus_musculus/Info/Annotation',
+        'files': [
+            {
+                'location': 'https://ftp.ensembl.org/pub/release-109/fasta/mus_musculus/dna/Mus_musculus.GRCm39.dna_sm.primary_assembly.fa.gz',
+                'name': 'Mus_musculus.GRCm39.dna_sm.primary_assembly.fa.gz',
+                'checksum': 'md5:',
+                'type_tags': ['fasta'],
+            },
+            {
+                'location': 'https://ftp.ensembl.org/pub/release-109/gtf/mus_musculus/Mus_musculus.GRCm39.109.gtf.gz',
+                'name': 'Mus_musculus.GRCm39.109.gtf.gz',
+                'checksum': 'md5:',
+                'type_tags': ['gtf', 'annotation'],
+            }
+        ],
+        // TODO: For 'external' tagged references, frontend should treat these as 'External genomes' and
+        //       grab the location from the fasta and gtf from the 'files' list, based on 'type_tag'.
+        // TODO: Add 'tags': ['aws-igenomes'] to all igenomes refs
+        'tags': ['external', 'rnaseq'],
+    },
+    {
+        'id': 'Mus_musculus/Ensembl/GRCm38.release-102', 'organism': 'Mus musculus',
+        'identifiers': { 'genbank': 'GCA_000001635.8', 'assembly_name': 'GRCm38' },
+        'source': 'http://nov2020.archive.ensembl.org/Mus_musculus/Info/Annotation',
+        'files': [
+            {
+                'location': 'https://ftp.ensembl.org/pub/release-102/fasta/mus_musculus/dna/Mus_musculus.GRCm38.dna_sm.primary_assembly.fa.gz',
+                'name': 'Mus_musculus.GRCm38.dna_sm.primary_assembly.fa.gz',
+                'checksum': 'md5:',
+                'type_tags': ['fasta'],
+            },
+            {
+                'location': 'https://ftp.ensembl.org/pub/release-102/gtf/mus_musculus/Mus_musculus.GRCm38.102.gtf.gz',
+                'name': 'Mus_musculus.GRCm38.102.gtf.gz',
+                'checksum': 'md5:',
+                'type_tags': ['gtf', 'annotation'],
+            }
+        ],
+        // TODO: For 'external' tagged references, frontend should treat these as 'External genomes' and
+        //       grab the location from the fasta and gtf from the 'files' list, based on 'type_tag'.
+        // TODO: Add 'tags': ['aws-igenomes'] to all igenomes refs
+        'tags': ['external', 'rnaseq'],
+    },
+    { 'id': 'Mus_musculus/Ensembl/GRCm38', 'organism': 'Mus musculus' },
     { 'id': 'Mus_musculus/NCBI/GRCm38', 'organism': 'Mus musculus' },
     { 'id': 'Mus_musculus/NCBI/build37.2', 'organism': 'Mus musculus' },
     { 'id': 'Mus_musculus/UCSC/mm10', 'organism': 'Mus musculus' },

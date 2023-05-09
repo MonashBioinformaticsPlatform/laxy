@@ -94,7 +94,8 @@ node_modules
 
 .ignore
 laxy_frontend/dist/index.html
-laxy_frontend/dist/bundle.js
+laxy_frontend/dist/*.js
+laxy_frontend/dist/*.js.map
 laxy_frontend/dist/backend_static
 .fake-cluster-scratch
 launch.json

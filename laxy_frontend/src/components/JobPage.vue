@@ -700,13 +700,17 @@ export default class JobPage extends Vue {
     );
   }
 
+  get genomeID(): string | null {
+    return get(this.job, "params.params.genome", null);
+  }
+
   // TODO: This may be better shifted to a dedicated JobParamsCard rather than including it as a row in
   // the generic JobStatusCard
   get genomeDescription(): string | null {
-    const genome_id = get(this.job, "params.params.genome", null);
+    const genome_id = this.genomeID;
     find(AVAILABLE_GENOMES, { id: genome_id });
     const genome = find(AVAILABLE_GENOMES, { id: genome_id });
-    if (genome) {
+    if (genome_id && genome) {
       let [organism, centre, build] = genome_id.split("/");
       organism = organism.replace("_", " ");
       return `${build} (${organism})`;
@@ -800,8 +804,8 @@ export default class JobPage extends Vue {
         ]);
       }
 
-      if (this.genomeDescription != null) {
-        rows.push(["Reference genome", this.genomeDescription]);
+      if (this.genomeID != null) {
+        rows.push(["Reference genome ID", this.genomeID]);
       } else if (this.externalGenomeDescription != null) {
         rows.push([
           "Reference genome sequence",
