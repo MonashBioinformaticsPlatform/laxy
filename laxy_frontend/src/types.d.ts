@@ -35,7 +35,12 @@ declare interface ENASample {
 declare interface ReferenceGenome {
     id: string;
     organism: string;
+    source?: string;
     recommended?: boolean;
+    identifiers?: object;
+    checksums?: object;
+    files?: ILaxyFile[];
+    tags?: string[];
 }
 
 declare interface ILaxyFile {

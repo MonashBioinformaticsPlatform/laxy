@@ -1,3 +1,4 @@
+# flake8: noqa
 # This maps reference identifiers, sent via web API requests, to a relative path containing
 # the reference genome (iGenomes directory structure), like {id: path}.
 # TODO: This should be a default config somewhere, pipeline/plugin specific.
@@ -74,6 +75,7 @@ REFERENCE_GENOME_MAPPINGS = {
     "Gallus_gallus/UCSC/galGal3": "Gallus_gallus/UCSC/galGal3",
     "Gallus_gallus/UCSC/galGal4": "Gallus_gallus/UCSC/galGal4",
     "Glycine_max/Ensembl/Gm01": "Glycine_max/Ensembl/Gm01",
+    "Homo_sapiens/Ensembl/GRCh38.release-109": "Homo_sapiens/Ensembl/GRCh38.release-109",
     "Homo_sapiens/Ensembl/GRCh38": "Homo_sapiens/Ensembl/GRCh38",
     "Homo_sapiens/Ensembl/GRCh37": "Homo_sapiens/Ensembl/GRCh37",
     "Homo_sapiens/NCBI/GRCh38": "Homo_sapiens/NCBI/GRCh38",
@@ -85,6 +87,8 @@ REFERENCE_GENOME_MAPPINGS = {
     "Homo_sapiens/UCSC/hg19": "Homo_sapiens/UCSC/hg19",
     "Homo_sapiens/UCSC/hg38": "Homo_sapiens/UCSC/hg38",
     "Macaca_mulatta/Ensembl/Mmul_1": "Macaca_mulatta/Ensembl/Mmul_1",
+    "Mus_musculus/Ensembl/GRCm39.release-109": "Mus_musculus/Ensembl/GRCm39.release-109",
+    "Mus_musculus/Ensembl/GRCm38.release-102": "Mus_musculus/Ensembl/GRCm38.release-102",
     "Mus_musculus/Ensembl/GRCm38": "Mus_musculus/Ensembl/GRCm38",
     "Mus_musculus/Ensembl/NCBIM37": "Mus_musculus/Ensembl/NCBIM37",
     "Mus_musculus/NCBI/GRCm38": "Mus_musculus/NCBI/GRCm38",

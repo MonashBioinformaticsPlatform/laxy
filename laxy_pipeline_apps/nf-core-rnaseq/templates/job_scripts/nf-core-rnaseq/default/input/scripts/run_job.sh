@@ -212,26 +212,47 @@ function set_genome_args() {
         export USING_CUSTOM_REFERENCE=yes
     fi
 
+    # If _fasta_fn and _annot_fn are set, set the expected custom reference paths
     [[ -z ${_fasta_fn} ]] || export GENOME_FASTA="${INPUT_REFERENCE_PATH}/${_fasta_fn}"
     [[ -z ${_annot_fn} ]] || export ANNOTATION_FILE="${INPUT_REFERENCE_PATH}/${_annot_fn}"
 
-    # If there is no custom genome, then we assume we are using a pre-defined references
-    if [[ ${USING_CUSTOM_REFERENCE} == "no" ]]; then
+    # If reference files exist locally, use those
+    _refpath="${REFERENCE_BASE}/${REFERENCE_GENOME_ID}"
+    _genome_fa="${_refpath}/Sequence/WholeGenomeFasta/genome.fa"
+    _genes_gtf="${_refpath}/Annotation/Genes/genes.gtf"
+    if [[ -f "${_genome_fa}" ]] && [[ -f "${_genes_gtf}" ]]; then
+        GENOME_ARGS=" --fasta ${_genome_fa} --gtf ${_genes_gtf} "
+        # Add flags for locally cached STAR and Salmon index if they exist 
+        if [[ -d "${_refpath}/Sequence/STARIndex" ]]; then
+            GENOME_ARGS=" ${GENOME_ARGS} --star_index=${_refpath}/Sequence/STARIndex "
+        fi
+        if [[ -d ${REFERENCE_BASE}/${REFERENCE_GENOME_ID}/Sequence/salmon ]]; then
+            GENOME_ARGS=" ${GENOME_ARGS} --salmon_index=${_refpath}/Sequence/salmon "
+        fi
+    # If there is no custom genome, then we assume we are using a pre-defined reference
+    # defined in the igenomes.config associated with the pipeline
+    # For nf-core pipelines these are downloaded on demand from AWS iGenomes
+    # ( https://ewels.github.io/AWS-iGenomes )
+    elif [[ ${USING_CUSTOM_REFERENCE} == "no" ]]; then
         # The last part of the iGenomes-style ID is the ID used by nf-core,
         # eg Homo_sapiens/Ensembl/GRCh38 -> GRCh38
         export NFCORE_GENOME_ID="$(echo ${REFERENCE_GENOME_ID} | cut -f 3 -d '/')"
         export GENOME_ARGS=" --genome ${NFCORE_GENOME_ID} "
+
         # Use a locally cached iGenomes copy if it exists
-        if [[ -d ${REFERENCE_BASE}/${REFERENCE_GENOME_ID} ]]; then
-            GENOME_ARGS="${GENOME_ARGS} --igenomes_base=${REFERENCE_BASE} "
-        fi
-        if [[ -d ${REFERENCE_BASE}/${REFERENCE_GENOME_ID}/Sequence/STARIndex ]]; then
-            GENOME_ARGS="${GENOME_ARGS} --star_index=${REFERENCE_BASE}/${REFERENCE_GENOME_ID}/Sequence/STARIndex "
-        fi
-        if [[ -d ${REFERENCE_BASE}/${REFERENCE_GENOME_ID}/Sequence/salmon ]]; then
-            GENOME_ARGS="${GENOME_ARGS} --salmon_index=${REFERENCE_BASE}/${REFERENCE_GENOME_ID}/Sequence/salmon "
-        fi
-    else
+        # if [[ -d ${REFERENCE_BASE}/${REFERENCE_GENOME_ID} ]]; then
+        #     GENOME_ARGS="${GENOME_ARGS} --igenomes_base=${REFERENCE_BASE} "
+        # fi
+        # # Add flags for locally cached STAR and Salmon index if they exist 
+        # if [[ -d ${REFERENCE_BASE}/${REFERENCE_GENOME_ID}/Sequence/STARIndex ]]; then
+        #     GENOME_ARGS="${GENOME_ARGS} --star_index=${REFERENCE_BASE}/${REFERENCE_GENOME_ID}/Sequence/STARIndex "
+        # fi
+        # if [[ -d ${REFERENCE_BASE}/${REFERENCE_GENOME_ID}/Sequence/salmon ]]; then
+        #     GENOME_ARGS="${GENOME_ARGS} --salmon_index=${REFERENCE_BASE}/${REFERENCE_GENOME_ID}/Sequence/salmon "
+        # fi
+    fi
+
+    if [[ ${USING_CUSTOM_REFERENCE} == "yes" ]]; then
         GENOME_ARGS=" --fasta ${GENOME_FASTA} "
         
         if [[ ${_annot_fn} == *.gtf ]] || [[ ${_annot_fn} == *.gtf.gz ]]; then
@@ -419,6 +440,50 @@ function cache_pipeline() {
     mkdir -p "${INPUT_SCRIPTS_PATH}/pipeline"
     cp -r "${CACHED_PIPELINE_PATH}" "${INPUT_SCRIPTS_PATH}/pipeline/"
     export NFCORE_PIPELINE_PATH=$(realpath "${INPUT_SCRIPTS_PATH}/pipeline/nf-core-${NFCORE_PIPELINE_NAME}-${NFCORE_PIPELINE_RELEASE}/workflow")
+}
+
+function fastq_sanity_check() {
+    #
+    # Read every FASTQ with seqkit, exit with error if any fail
+    #
+
+    local orig_errexit=${-//[^e]/}
+    set -o errexit
+    local _cpus=4
+
+    send_event "JOB_INFO" "Starting seqkit stats sanity check."
+
+    mkdir -p "${JOB_PATH}/output/seqkit_stats"
+    echo -e "This directory contains the output from 'seqkit stats' for the FASTQ input files provided. " \
+            "It is primarily intended to catch corrupted FASTQ files early, before the main pipeline runs." \
+            >"${JOB_PATH}/output/seqkit_stats/README.txt"
+    
+    pushd "${INPUT_READS_PATH}"
+    # Get just the header that seqkit stats will output
+    echo ">dummy_seq\nXXX\n" | seqkit stats --tabular | head -n 1 >"${JOB_PATH}/output/seqkit_stats/seqkit_stats.tsv"
+    local _error=0
+    for fq in $(find . -name "*.f*[q,a].gz" -printf '%P\n'); do
+        local _fn=$(basename "${fq}")
+        seqkit stats --tabular --threads $_cpus $fq \
+                > >(tail -n +2 >>"${JOB_PATH}/output/seqkit_stats/seqkit_stats.tsv") \
+                2>> "${JOB_PATH}/output/seqkit_stats/seqkit_stats.err"
+
+        # Unforturnately seqkit stats doesn't return a non-zero error code for corrupt files !
+        grep -q "[ERRO]" "${JOB_PATH}/output/seqkit_stats/seqkit_stats.err" && \
+            { send_event "JOB_INFO" "Something wrong with input file: ${_fn}" & \
+              send_job_metadata '{"metadata": {"error": {"bad_input_file": "'${_fn}'"}}}';
+              if [[ -z "${orig_errexit}" ]]; then
+                set +o errexit
+              fi
+              popd
+              return 1
+            }
+    done
+
+    popd
+    if [[ -z "${orig_errexit}" ]]; then
+        set +o errexit
+    fi
 }
 
 function run_nextflow() {
@@ -678,6 +743,10 @@ download_input_data "${INPUT_READS_PATH}" "ngs_reads" || fail_job 'download_inpu
 set_genome_args
 
 normalize_annotations
+
+# This probably isn't all that necessary for nf-core/rnaseq since it runs
+# some FASTQ subsampling and FASTQC early that would catch bad FASTQs
+# fastq_sanity_check || fail_job 'fastq_sanity_check' '' $?
 
 generate_samplesheet
 
