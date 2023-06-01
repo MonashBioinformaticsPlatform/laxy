@@ -349,10 +349,19 @@ ${PREFIX_JOB_CMD} "singularity exec --nv \
                     ${OPENFOLD_CMD} \
                     >${JOB_PATH}/output/openfold.out \
                     2>${JOB_PATH}/output/openfold.err" \
-    >>"${JOB_PATH}/slurm.jids"
+    >>"${JOB_PATH}/slurm.jids" 2>"${JOB_PATH}/output/slurm.err"
+
+# Check if any of the recorded job IDs were cancelled due to TIMEOUT
+if [[ "${QUEUE_TYPE}" == "slurm" ]]; then
+    for j in $(cat slurm.jids); do 
+        if [[ $(sacct -X -n -o State -j "$j") == *"TIMEOUT"* ]]; then 
+            EXIT_CODE=140
+        fi
+    done
+fi
 
 # Call job finalization with explicit exit code from the main pipeline command
-job_done $?
+job_done "${EXIT_CODE}"
 
 # Remove the trap so job_done doesn't get called a second time when the script naturally exits
 trap - EXIT
