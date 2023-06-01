@@ -231,7 +231,7 @@ PEPTIDE_LENGTH_ESTIMATE=$(wc -c "${INPUT_PATH}/fasta/sequences.fasta" | cut -f 1
 # Fine for smaller proteins (M3/MASSIVE specific)
 # TODO: Make configurable for other HPC sites
 MEM=64G
-GPU_PARTITION_OPTS="--partition=m3g,m3h,gpu --gres=gpu:1"
+GPU_PARTITION_OPTS="--partition=m3g,gpu --gres=gpu:1"
 CPUS=8
 
 if [[ ${PEPTIDE_LENGTH_ESTIMATE} -gt 1000 ]]; then
