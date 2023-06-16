@@ -230,9 +230,9 @@ class JobAdmin(Timestamped, VersionAdmin):
     list_display = (
         "uuid",
         "created",
-        "modified",
         "completed",
         "expires",
+        "_pipeline",
         "_compute_resource",
         "_owner_email",
         "_status",
@@ -271,6 +271,13 @@ class JobAdmin(Timestamped, VersionAdmin):
 
     def expires(self, obj: Job):
         return humanize.naturaltime(obj.expiry_time)
+
+    def _pipeline(self, obj: Job):
+        pipeline = obj.params.get("pipeline", None)
+        pipeline_version = obj.params.get("params", {}).get("pipeline_version", None)
+        if pipeline is not None:
+            return format_html(f"{pipeline} ({pipeline_version})")
+        return format_html("<i>???</i>")
 
     def _compute_resource(self, obj: Job):
         c = obj.compute_resource
