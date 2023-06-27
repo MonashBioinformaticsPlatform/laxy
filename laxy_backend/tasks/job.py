@@ -23,6 +23,7 @@ from django.db.models import QuerySet
 from django.db import IntegrityError
 
 from paramiko.config import SSHConfig
+from paramiko.ssh_exception import SSHException
 
 from celery.result import AsyncResult
 from django.contrib.contenttypes.models import ContentType
@@ -1292,11 +1293,11 @@ def move_job_files_to_archive_task(self, task_data=None, *kwargs):
     track_started=True,
     acks_late=True,
     reject_on_worker_lost=True,
-    default_retry_delay=60 * 60,
-    max_retries=5,
-    # autoretry_for=(IOError, OSError,),
-    retry_backoff=600,  # 10 min, doubling each retry
-    retry_backoff_max=60 * 60 * 48,  # 48 hours
+    default_retry_delay=60,          # 1min
+    max_retries=10,
+    autoretry_for=(IOError, OSError, SSHException),
+    retry_backoff=120,               # 2 min, doubling each retry
+    retry_backoff_max=60 * 60 * 72,  # 72 hours
 )
 def bulk_move_job_rsync(self, task_data=None, optional=False, **kwargs):
     """
@@ -1419,7 +1420,8 @@ def bulk_move_job_rsync(self, task_data=None, optional=False, **kwargs):
                         _updated_file_record.delete_at_location(
                             from_location, allow_delete_default=False
                         )
-
+    except (OSError, IOError, SSHException) as ex:
+        self.retry(exc=ex)
     except BaseException as ex:
         message = get_traceback_message(ex)
         self.update_state(state=states.FAILURE, meta=message)
