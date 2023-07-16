@@ -93,6 +93,8 @@ send_event "JOB_INFO" "Getting ready to run nf-core/rnaseq"
 set -o errexit
 
 function job_done() {
+    trap - EXIT
+
     local _exit_code=${1:-$?}
     # Use the EXIT_CODE global if set
     [[ -v EXIT_CODE ]] && _exit_code=${EXIT_CODE}
@@ -149,6 +151,16 @@ CPUS=1
 if [[ "${QUEUE_TYPE}" == "local" ]]; then
     echo $$ >>"${JOB_PATH}/job.pids"
 fi
+
+# Various sanity checks to ensure the host is properly configured and in a state that can accept a job
+function host_sanity() {
+    # TODO: Move this to the genome args fn since we don't always need this to exist, but should
+    # check and fail in cases where it's supposed to be there
+    if [[ ! -d ${REFERENCE_BASE} ]]; then
+        echo "${REFERENCE_BASE} doesn't exist !"
+        exit 1
+    fi
+}
 
 function register_files() {
     send_event "JOB_INFO" "Registering interesting output files."
@@ -640,7 +652,7 @@ function post_nextflow_jobs() {
     if [[ ${QUEUE_TYPE} == "slurm" ]]; then
         _PRE="sbatch --parsable \
                      --cpus-per-task=${cpus} \
-                     --mem=36G \
+                     --mem=64G \
                      -t 7-0:00 \
                      --job-name=laxy:${JOB_ID}:post_nextflow \
                      ${SLURM_EXTRA_ARGS} \

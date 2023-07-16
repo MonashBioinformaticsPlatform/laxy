@@ -21,7 +21,8 @@ function get_input_data_urls() {
 }
 
 function capture_environment_variables() {
-    env >"${JOB_PATH}/output/job_env.out"
+    # We single quote values so that `source job_env.out` should work
+    env | sed 's/^\(.*\)=\(.*\)$/export \1='\''\2'\''/' >"${JOB_PATH}/output/job_env.out"
 }
 
 function update_permissions() {
@@ -99,8 +100,8 @@ function fail_job() {
     local _exit_code=${3:-$?}
     send_error "${_step}" "${_reason}" "${_exit_code}"
     send_job_finished "${_exit_code}"
-    remove_secrets
     update_permissions || true
+    remove_secrets
     exit ${_exit_code}
 }
 
@@ -114,8 +115,8 @@ function finalize_job() {
     fi
 
     send_job_finished "${_exit_code}"
-    remove_secrets
     update_permissions || true
+    remove_secrets
     exit ${_exit_code}
 }
 
