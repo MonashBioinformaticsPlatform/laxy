@@ -22,7 +22,10 @@ function get_input_data_urls() {
 
 function capture_environment_variables() {
     # We single quote values so that `source job_env.out` should work
-    env | sed 's/^\(.*\)=\(.*\)$/export \1='\''\2'\''/' >"${JOB_PATH}/output/job_env.out"
+    (
+        set +o xtrace
+        env | sed 's/^\(.*\)=\(.*\)$/\1='\''\2'\''/' >"${JOB_PATH}/output/job_env.out"
+    )
 }
 
 function update_permissions() {
