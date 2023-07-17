@@ -181,10 +181,21 @@ function register_files() {
     add_to_manifest "output/results/**/*.bai" "bai"
     add_to_manifest "output/results/**/multiqc_report.html" "report,html,multiqc"
     add_to_manifest "output/results/**/*_fastqc.html" "report,html,fastqc"
-    add_to_manifest "output/results/**/salmon.merged.gene_counts.tsv" "counts,degust"
-    add_to_manifest "output/results/**/salmon.merged.gene_counts.biotypes.tsv" "counts,degust"
-    add_to_manifest "output/results/featureCounts/counts.star_featureCounts.tsv" "counts,degust"
+    #add_to_manifest "output/results/**/salmon.merged.gene_counts.tsv" "counts,degust"
+    #add_to_manifest "output/results/**/salmon.merged.gene_counts.biotypes.tsv" "counts,degust"
+    #add_to_manifest "output/results/featureCounts/counts.star_featureCounts.tsv" "counts,degust"
 
+    add_to_manifest "output/results/star_salmon/salmon.merged.gene_counts_length_scaled.biotypes.tsv" "counts,degust"
+
+    if [[ ! -f "${JOB_PATH}/output/results/star_salmon/salmon.merged.gene_counts_length_scaled.biotypes.tsv" ]]; then
+        add_to_manifest "output/results/star_salmon/salmon.merged.gene_counts_length_scaled.tsv" "counts,degust"
+    fi
+
+    if [[ ! -f "${JOB_PATH}/output/results/star_salmon/salmon.merged.gene_counts_length_scaled.tsv" ]]; then
+        add_to_manifest "output/results/salmon/salmon.merged.gene_counts_length_scaled.tsv" "counts,degust"
+        add_to_manifest "output/results/salmon/salmon.merged.gene_counts_length_scaled.biotypes.tsv" "counts,degust"
+    fi
+    
     # Nextflow reports
     add_to_manifest "output/results/pipeline_info/*.html" "report,html,nextflow"
     add_to_manifest "output/results/pipeline_info/software_versions.tsv" "report,nextflow"
@@ -718,6 +729,16 @@ function post_nextflow_jobs() {
             "${_outdir}/counts.star_featureCounts.tsv" \
             "${JOB_PATH}/output/results/salmon/salmon.merged.gene_counts.tsv" \
             >"${JOB_PATH}/output/results/salmon/salmon.merged.gene_counts.biotypes.tsv"
+
+        ${INPUT_SCRIPTS_PATH}/merge_biotypes.py \
+            "${_outdir}/counts.star_featureCounts.tsv" \
+            "${JOB_PATH}/output/results/star_salmon/salmon.merged.gene_counts_length_scaled.tsv" \
+            >"${JOB_PATH}/output/results/star_salmon/salmon.merged.gene_counts_length_scaled.biotypes.tsv"
+
+        ${INPUT_SCRIPTS_PATH}/merge_biotypes.py \
+            "${_outdir}/counts.star_featureCounts.tsv" \
+            "${JOB_PATH}/output/results/salmon/salmon.merged.gene_counts_length_scaled.tsv" \
+            >"${JOB_PATH}/output/results/salmon/salmon.merged.gene_counts_length_scaled.biotypes.tsv"
     fi
 }
 

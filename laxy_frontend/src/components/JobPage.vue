@@ -17,13 +17,12 @@
     <ExpiryDialog ref="expiryInfoDialog" :job="job"></ExpiryDialog>
     <DownloadHelpDialog ref="downloadHelpDialog" :tarballUrl="tarballUrl"></DownloadHelpDialog>
 
-    <banner-notice v-if="job && jobExpiresSoon && showTopBanner" @click="openDialog('expiryInfoDialog')" :type="
-      jobExpiresSoon && !job.expired
-        ? 'warning'
-        : job.expired
-          ? 'error'
-          : 'clear'
-    ">
+    <banner-notice v-if="job && jobExpiresSoon && showTopBanner" @click="openDialog('expiryInfoDialog')" :type="jobExpiresSoon && !job.expired
+      ? 'warning'
+      : job.expired
+        ? 'error'
+        : 'clear'
+      ">
       <span v-if="!job.expired">
         Job expires {{ jobExpiresSoon ? "in less than 7 days" : "" }} on
         &nbsp;{{ job.expiry_time }}
@@ -116,22 +115,14 @@
                 See the "Count files" section below for other options.
               </span>
               <template slot="content" style="list-style-type: none;">
-                <span v-for="countsFile in filterByTag(outputFiles, ['degust'])" :key="countsFile.id">
-                  <template v-if="
-                    (countsFile &&
-                      (countsFile.name.startsWith(rnasik_strandPredictionPrefix) &&
-                        countsFile.name.includes('withNames'))) ||
-                    (countsFile.path.includes('star_salmon') &&
-                      countsFile.name.includes('salmon.merged.gene_counts.biotypes'))
-                  ">
-                    <md-button @click="openDegustLink(countsFile.id)" target="_blank">
-                      <md-icon>send</md-icon>&nbsp;{{
-                        _countsFileInfo(countsFile.name).featureSet
-                      }}&nbsp;
+                <span v-for="countsFile in primaryCountsFiles" :key="countsFile.id">
+                  <md-button @click="openDegustLink(countsFile.id)" target="_blank">
+                    <md-icon>send</md-icon>&nbsp;{{
+                      _countsFileInfo(countsFile.name).featureSet
+                    }}&nbsp;
 
-                      <md-tooltip>{{ countsFile.path }}/{{ countsFile.name }}</md-tooltip>
-                    </md-button>
-                  </template>
+                    <md-tooltip>{{ countsFile.path }}/{{ countsFile.name }}</md-tooltip>
+                  </md-button>
                 </span>
               </template>
             </generic-pip>
@@ -143,7 +134,7 @@
                 path: `/job/${jobId}/sharing`,
                 query: persistQueryParams
               })
-            " stripeColor="warn" icon="share" buttonIcon buttonText>
+              " stripeColor="warn" icon="share" buttonIcon buttonText>
               <span slot="title">Shared via secret link</span>
               <span slot="subtitle">
                 This job is accessible by anyone with the secret link
@@ -155,9 +146,8 @@
           </md-layout>
 
           <md-layout v-if="job && job.expiry_time && jobIsDone" md-flex="25" md-flex-medium="100">
-            <generic-pip class="fill-width" @click="openDialog('expiryInfoDialog')" :cardClass="
-              jobExpiresSoon ? (job.expired ? 'accent' : 'warn') : ''
-            " :stripeColor="jobExpiresSoon ? '' : 'warn'" :icon="jobExpiresSoon ? 'warning' : ''" buttonIcon
+            <generic-pip class="fill-width" @click="openDialog('expiryInfoDialog')" :cardClass="jobExpiresSoon ? (job.expired ? 'accent' : 'warn') : ''
+              " :stripeColor="jobExpiresSoon ? '' : 'warn'" :icon="jobExpiresSoon ? 'warning' : ''" buttonIcon
               buttonText>
               <template v-if="!job.expired">
                 <span slot="title">Job expiry
@@ -749,7 +739,7 @@ export default class JobPage extends Vue {
     if (filename.includes("Forward")) data.strandedness = "forward-stranded";
     if (filename.includes("Reverse")) data.strandedness = "reverse-stranded";
     if (filename.includes("proteinCoding")) data.featureSet = "Protein coding";
-    if (!filename.includes("proteinCoding")) data.featureSet = "All genes";
+    if (!filename.includes("proteinCoding")) data.featureSet = "Counts";
     return data;
   }
 
@@ -782,6 +772,26 @@ export default class JobPage extends Vue {
         break;
     }
     return strandedness;
+  }
+
+  get primaryCountsFiles(): LaxyFile[] {
+    for (let cf of this.filterByTag(this.outputFiles || [], ['degust'])) {
+      if (cf.name.startsWith(this.rnasik_strandPredictionPrefix) || cf.name.includes('withNames')) {
+        return [cf];
+      }
+      if (cf.path.includes('star_salmon') &&
+        cf.name.includes('salmon.merged.gene_counts_length_scaled.biotypes')) {
+        return [cf];
+      }
+      if (cf.name.includes('salmon.merged.gene_counts_length_scaled.biotypes')) {
+        return [cf];
+      }
+      if (cf.path.includes('salmon') &&
+        cf.name.includes('salmon.merged.gene_counts_length_scaled')) {
+        return [cf];
+      }
+    }
+    return [];
   }
 
   get badInputFile(): number | null {
