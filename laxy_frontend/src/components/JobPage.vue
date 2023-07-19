@@ -204,7 +204,7 @@
                 :exclude-tags="['fastqc']" :hide-search="true" :job-id="jobId"
                 @refresh-error="showErrorDialog"></file-list>
               <file-list v-if="job && jobIsDone && hasFilesWithTags(['degust', 'counts', 'strand-info'])"
-                ref="count-files" title="Count files" :fileset-id="job.output_fileset_id"
+                ref="count-files" title="Recommended count files" :fileset-id="job.output_fileset_id"
                 :tag-filters="['degust', 'counts', 'strand-info']" :hide-search="true" :job-id="jobId"
                 @action-error="showErrorDialog" @refresh-error="showErrorDialog"></file-list>
               <file-list v-if="job && jobIsDone && hasFilesWithTags(['fastqc'])" ref="report-files" title="FastQC Reports"
@@ -776,7 +776,7 @@ export default class JobPage extends Vue {
 
   get primaryCountsFiles(): LaxyFile[] {
     for (let cf of this.filterByTag(this.outputFiles || [], ['degust'])) {
-      if (cf.name.startsWith(this.rnasik_strandPredictionPrefix) || cf.name.includes('withNames')) {
+      if (cf.name.startsWith(this.rnasik_strandPredictionPrefix) && cf.name.includes('withNames')) {
         return [cf];
       }
       if (cf.path.includes('star_salmon') &&
