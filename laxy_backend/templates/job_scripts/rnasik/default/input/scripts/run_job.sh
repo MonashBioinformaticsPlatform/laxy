@@ -474,7 +474,7 @@ function set_genome_index_arg() {
 
     old_star=$(python -c 'import semver; print(semver.compare("'${PIPELINE_VERSION}'".split("-")[0], "1.5.4"))')
     # Pre-computed indices are different for pre-2.7.0 versions of STAR
-    if [[ "${old_star}" == "-1" ]]; then
+    if [[ "${old_star}" == "-1" && "${PIPELINE_VERSION}" != "1.5.4.1" ]]; then
         GENOME_INDEX_ARG=""
         if [[ -d "${REFERENCE_BASE}/${REFERENCE_GENOME_ID}/Sequence/STARIndex-pre-2.7.0" ]]; then
             GENOME_INDEX_ARG="${REFERENCE_BASE}/${REFERENCE_GENOME_ID}/Sequence/STARIndex-pre-2.7.0"
