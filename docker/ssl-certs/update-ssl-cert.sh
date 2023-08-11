@@ -34,7 +34,7 @@ cd /certs/
     -f fullchain.pem \
     -f chain.pem \
     ${DOMAIN_ARGS} \
-    ${EMAIL_ADDRESS} \
+    ${EMAIL_OPT} \
     --default_root /usr/share/nginx/html \
     >>/var/log/ssl-certs-cron.log 2>&1 || generate_selfsigned
 

@@ -11,7 +11,10 @@ RUN apt update && \
 RUN echo exit 0 > /usr/sbin/policy-rc.d && \
     rm -f /etc/cron.daily/apt-compat /etc/cron.daily/dpkg
 
-RUN pip3 install simp-le-client==0.19.1 six
+RUN cd / && \
+    git clone https://github.com/zenhack/simp_le.git && \
+    cd simp_le && \
+    pip install -e .
 ADD update-ssl-cert.sh /etc/cron.daily/update-ssl-cert.sh
 RUN chmod +x /etc/cron.daily/update-ssl-cert.sh
 
