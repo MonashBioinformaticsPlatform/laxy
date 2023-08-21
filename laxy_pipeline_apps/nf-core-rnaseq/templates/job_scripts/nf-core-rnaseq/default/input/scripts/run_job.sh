@@ -714,7 +714,7 @@ function post_nextflow_jobs() {
 
         # Remove featureCounts 'comment' header and rewrite long paths + suffixes in sample names
         tail -n +2 "${_outdir}/counts.star_featureCounts.txt" | \
-                sed '1s#'"${_bamdir}"'##g' | \
+                sed '1s#'"${_bamdir}/"'##g' | \
                 sed '1s#\.markdup\.sorted\.bam##g' | \
                 sed '1s#\.umi_dedup\.sorted\.bam##g' \
                 >"${_outdir}/counts.star_featureCounts.tsv"
