@@ -351,6 +351,8 @@ ${PREFIX_JOB_CMD} "singularity exec --nv \
                     2>${JOB_PATH}/output/openfold.err" \
     >>"${JOB_PATH}/slurm.jids" 2>"${JOB_PATH}/output/slurm.err"
 
+EXIT_CODE=$?
+
 # Check if any of the recorded job IDs were cancelled due to TIMEOUT
 if [[ "${QUEUE_TYPE}" == "slurm" ]]; then
     for j in $(cat slurm.jids); do 
