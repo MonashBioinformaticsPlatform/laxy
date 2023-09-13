@@ -2125,11 +2125,11 @@ class JobCreate(JSONView):
             if (
                 (
                     reference_genome_id
-                    or (reference_genome_fasta_url and reference_genome_fasta_url)
+                    or (reference_genome_fasta_url and reference_genome_annotation_url)
                 )
                 and reference_genome_id not in REFERENCE_GENOME_MAPPINGS
                 and not reference_genome_fasta_url
-                and not reference_genome_fasta_url
+                and not reference_genome_annotation_url
                 # TODO: Check URLS are valid with http/https/ftp scheme
             ):
                 job.status = Job.STATUS_FAILED
@@ -2144,6 +2144,9 @@ class JobCreate(JSONView):
             # slurm_account = slurm_config.get("account", None)
             slurm_extra_args = slurm_config.get("extra_args", None)
 
+            # shlex.quote turns None into "''", so we do this
+            shell_quote=lambda s: "" if s is None else shlex.quote(s)
+
             environment = dict(
                 DEBUG=sh_bool(getattr(settings, "DEBUG", False)),
                 IGNORE_SELF_SIGNED_CERTIFICATE=sh_bool(False),
@@ -2153,9 +2156,9 @@ class JobCreate(JSONView):
                 JOB_EVENT_URL=job_event_url,
                 JOB_FILE_REGISTRATION_URL=job_file_bulk_url,
                 JOB_INPUT_STAGED=sh_bool(False),
-                REFERENCE_GENOME=shlex.quote(reference_genome_id),
-                PIPELINE_VERSION=shlex.quote(pipeline_version),
-                PIPELINE_ALIGNER=shlex.quote(pipeline_aligner),
+                REFERENCE_GENOME=shell_quote(reference_genome_id),
+                PIPELINE_VERSION=shell_quote(pipeline_version),
+                PIPELINE_ALIGNER=shell_quote(pipeline_aligner),
                 QUEUE_TYPE=job.compute_resource.queue_type or "local",
                 # BDS_SINGLE_NODE=sh_bool(False),
                 # SLURM_ACCOUNT=slurm_account or "",
