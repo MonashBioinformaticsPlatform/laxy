@@ -105,9 +105,10 @@ def parse_fastq_table(
     :type table:
     :param key_by:
     :type key_by:
-    :param url_scheme: The URL scheme ('ftp' or 'http') to use first fastq_ftp links
-                       (ENA supports both ftp:// and http:// for these URLs).
-                       The http scheme for these ENA URLs seems undocumented / unsupported / unreliable ?
+    :param url_scheme: The URL scheme ('ftp', 'http' or 'https') to use first fastq_ftp links
+                       (ENA supports both ftp://, http:// and https:// for these URLs).
+                       The default is ftp since the http(s) scheme for these ENA URLs seems 
+                       slower / undocumented / unsupported / unreliable ?
     :type url_scheme: str
     :return:
     :rtype:
