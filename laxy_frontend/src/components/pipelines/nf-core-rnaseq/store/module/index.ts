@@ -5,6 +5,8 @@ const initial_state: any = {
     strandedness: 'auto',
     debug_mode: false,
     has_umi: false,
+    save_reference_genome: true,
+    save_genome_index: false,
 };
 
 const getters: any = {

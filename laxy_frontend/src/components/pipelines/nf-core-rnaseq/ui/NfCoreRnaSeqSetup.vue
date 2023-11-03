@@ -46,6 +46,12 @@
                   class="md-primary">
                   Use UMIs <em>(UMIs must be in the FASTQ header from bcl2fastq demultiplexing, not in the
                     sequence)</em></md-switch>
+
+                <md-switch v-model="save_reference_genome" id="save-reference-genome-toggle" 
+                           name="save-reference-genome-toggle" class="md-primary">Save reference genome</md-switch>
+
+                <md-switch v-model="save_genome_index" id="save-genome-index-toggle" 
+                           name="save-genome-index-toggle" class="md-primary">Save reference genome index</md-switch>
               </md-layout>
 
             </md-layout>
@@ -232,6 +238,12 @@ export default class PipelineParams extends Vue {
 
   @Sync("pipelineParams@nf-core-rnaseq.has_umi")
   public has_umi: boolean;
+
+  @Sync("pipelineParams@nf-core-rnaseq.save_reference_genome")
+  public save_reference_genome: boolean;
+
+  @Sync("pipelineParams@nf-core-rnaseq.save_genome_index")
+  public save_genome_index: boolean;
 
   created() {
     this.$store.registerModule(

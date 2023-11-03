@@ -402,6 +402,16 @@ function cleanup_nextflow_intermediates() {
 }
 
 function cleanup_nextflow_intermediates_keep_work_logs() {
+    local _save_genome_index=$(jq --raw-output '.params."nf-core-rnaseq".save_genome_index' "${PIPELINE_CONFIG}" || echo "false")
+    if [[ ${_save_genome_index} != 'true' ]]; then
+        rm -rf "${JOB_PATH}/output/results/genome/index"
+    fi
+
+    local _save_reference_genome=$(jq --raw-output '.params."nf-core-rnaseq".save_reference_genome' "${PIPELINE_CONFIG}" || echo "false")
+    if [[ ${_save_reference_genome} != 'true' ]]; then
+        rm -rf "${JOB_PATH}/output/results/genome"
+    fi
+
     if [[ ${USER_DEBUG_MODE} == "yes" ]]; then
         return 0;
     fi
