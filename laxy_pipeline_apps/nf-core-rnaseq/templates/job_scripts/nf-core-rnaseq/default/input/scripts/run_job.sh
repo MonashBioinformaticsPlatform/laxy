@@ -543,17 +543,17 @@ function run_nextflow() {
     nextflow run "${NFCORE_PIPELINE_PATH}" \
        --input "${INPUT_CONFIG_PATH}/samplesheet.csv" \
        --outdir ${JOB_PATH}/output/results \
-       -c ${INPUT_CONFIG_PATH}/laxy_nextflow.config \
        ${GENOME_ARGS} \
        ${UMI_FLAGS} \
        --aligner star_salmon \
        --pseudo_aligner salmon \
        --save_reference \
-       ${NEXTFLOW_CONFIG_ARG} \
        --monochrome_logs \
        -with-trace \
        -with-dag \
        -name "${_nfjobname}" \
+       -c ${INPUT_CONFIG_PATH}/laxy_nextflow.config \
+       ${NEXTFLOW_CONFIG_ARG} \
        -profile singularity \
         >${JOB_PATH}/output/nextflow.log \
         2>${JOB_PATH}/output/nextflow.err
@@ -565,17 +565,17 @@ function run_nextflow() {
         nextflow run "${NFCORE_PIPELINE_PATH}" \
             --input "${INPUT_CONFIG_PATH}/samplesheet.csv" \
             --outdir ${JOB_PATH}/output/results \
-            -c ${INPUT_CONFIG_PATH}/laxy_nextflow.config \
             ${GENOME_ARGS} \
             ${UMI_FLAGS} \
             --aligner star_salmon \
             --pseudo_aligner salmon \
             --save_reference \
-            ${NEXTFLOW_CONFIG_ARG} \
             --monochrome_logs \
             -with-trace \
             -with-dag \
             -name "${_nfjobname}" \
+            -c ${INPUT_CONFIG_PATH}/laxy_nextflow.config \
+            ${NEXTFLOW_CONFIG_ARG} \
             -profile singularity \
             -resume \
             >${JOB_PATH}/output/nextflow2.log \
@@ -620,136 +620,32 @@ function get_salmon_inferred_strandedness() {
         else {print "0"}}' || echo "0"
 }
 
-function post_nextflow_jobs() {
-    # This function runs some post-processing and analyis not within nf-core/rnaseq.
-    # In particular, a featureCounts output table including biotypes.
-    
-    # TODO: We currently just run featureCounts directy, however a better way might be to reuse
-    #       the existing PREPARE_GENOME and SUBREAD_FEATURECOUNTS tasks within nf-core/rnaseq,
-    #       called by a mini nextflow workflow of our own based on a skeleton of workflows/rnaseq.nf
-    #       We might be able to overide the process options as required like:
-    #  process { 
-    # withName: 'NFCORE_RNASEQ:RNASEQ:SUBREAD_FEATURECOUNTS' {
-    #     ext.args   = [
-    #         '-B -C',
-    #         '-t gene', 
-    #         '-g gene_biotype', 
-    #         '--extraAttributes gene_name,gene_biotype',
-    #     ].join(' ').trim()
-    # }
-    #  }
-
-    local cpus=6
-
-    # This should ideally match the version used by the current $PIPELINE_VERSION
-    # See: https://github.com/nf-core/rnaseq/blob/master/modules/nf-core/subread/featurecounts/main.nf
-    export SUBREAD_FEATURECOUNTS_CONTAINER="https://depot.galaxyproject.org/singularity/subread:2.0.1--hed695b0_0"
-    #export SUBREAD_FEATURECOUNTS_CONTAINER="docker://quay.io/biocontainers/subread:2.0.1--hed695b0_0"
-
-    # We point to the appropriate annoation file (custom or canned iGenomes)
-    local _annotation=""
-    if [[ ${USING_CUSTOM_REFERENCE} == "yes" ]]; then
-        _annotation="${ANNOTATION_FILE}"
-    else
-        _annotation="$(find ${JOB_PATH}/output/results/genome/ -name "*.gtf" | head -n1)"
-    fi
-    if [[ -z ${_annotation} ]]; then
-        send_error "post_nextflow_jobs" "Unable to find GTF reference" 1
-        exit 1
-    fi
-    _annotation="$(realpath ${_annotation})"
-
-    module load singularity || true
-
-    # We set _PRE as the prefix to our featureCounts command, possibly running
-    # inside singularity and/or as a SLURM job.
-    local _PRE=""
-    local _real_JOB_PATH=$(realpath ${JOB_PATH})  # for singularity
-    if [[ $(builtin type -P singularity) ]]; then
-        local _PATHBINDS=" -B ${TMPDIR} -B ${_real_JOB_PATH} -B $(realpath ${_annotation}) "
-        _PRE="singularity run ${_PATHBINDS} ${SUBREAD_FEATURECOUNTS_CONTAINER} -- "
+function post_nextflow_pipeline() {
+    local paired_flag=" --paired=true "
+    if [[ $(${INPUT_SCRIPTS_PATH}/is_paired.py ${INPUT_READS_PATH}) == "single" ]]; then
+        paired_flag=" --paired=false "
     fi
 
-    if [[ ${QUEUE_TYPE} == "slurm" ]]; then
-        _PRE="sbatch --parsable \
-                     --cpus-per-task=${cpus} \
-                     --mem=64G \
-                     -t 7-0:00 \
-                     --job-name=laxy:${JOB_ID}:post_nextflow \
-                     ${SLURM_EXTRA_ARGS} \
-                     --wait --wrap ${_PRE} "
-    fi
-    
-    # We grab the Salmon predicted strandedness from it's meta_info.json output file.
-    # We assume all samples have the same strandedness, just get the prediction
-    # for the first sample we find ....
-    # There are other options for this another good option would be the rseqc infer_experiment output: 
-    #    results/star_salmon/rseqc/infer_experiment/${sample_name}.infer_experiment.txt
-    # Or, the qualimap settings ()"protocol = strand-specific-forward"):
-    #    results/star_salmon/qualimap/${sample_name}/rnaseq_qc_results.txt
-    # TODO: Might be worth parsing the rseq infer_experiment numbers and putting them into 
-    #       job metadata (as per rnasik): 
-    #           send_job_metadata '{"metadata":{"results":{"strandedness":{"predicted":"'${prediction}'","bias":'${bias}'}}}}' || true
-    local _first_meta_info_json=$(find "${_real_JOB_PATH}/output/results/star_salmon/" -type f -name meta_info.json | head -n1)
-    local _strand=$(get_salmon_inferred_strandedness "${_first_meta_info_json}")
+    _nfjobname=$(echo laxy_"${JOB_ID}" | tr '[:upper:]' '[:lower:]')
 
-    # Ensure output directory is writable
-    local _outdir="${_real_JOB_PATH}/output/results/featureCounts"
-    local _bamdir="${_real_JOB_PATH}/output/results/star_salmon"
-    mkdir -p "${_outdir}"
-    chmod u+w "${_outdir}"
+    nextflow run "${INPUT_SCRIPTS_PATH}/featurecounts_postnfcore.nf" \
+       --scripts_path="${INPUT_SCRIPTS_PATH}" \
+       --bams="${JOB_PATH}/output/results/star_salmon/"'*.bam' \
+       --annotation="${JOB_PATH}/output/results/genome/genome_genes.gtf" \
+       --meta_info="${JOB_PATH}/output/results/star_salmon/"'*/aux_info/meta_info.json' \
+       ${paired_flag} \
+       --outdir ${JOB_PATH}/output/results \
+       --monochrome_logs \
+       -with-trace \
+       -with-dag \
+       -name "${_nfjobname}-featurecounts" \
+       -c "${INPUT_CONFIG_PATH}/laxy_nextflow.config" \
+       ${NEXTFLOW_CONFIG_ARG} \
+       -w "${JOB_PATH}/output/work" \
+        >${JOB_PATH}/output/post_nextflow.log \
+        2>${JOB_PATH}/output/post_nextflow.err
 
-    # Detect paired end reads
-    local _FC_PAIRED_FLAGS=""
-    if [[ $(${INPUT_SCRIPTS_PATH}/is_paired.py ${INPUT_READS_PATH}) == "paired" ]]; then
-        _FC_PAIRED_FLAGS=" -p "
-    fi
-
-    # We use -Q 10 to remove multimappers, as per logic in RNAsik: 
-    # https://github.com/MonashBioinformaticsPlatform/RNAsik-pipe/blob/master/src/sikCounts.bds#L60
-    # We only run if BAMs were generated
-    if [[ -n "$(find ${_bamdir} -name '*.bam' -print -quit)" ]]; then
-        ${_PRE} featureCounts \
-            -B -C \
-            -T ${cpus} \
-            -Q 10 \
-            ${_FC_PAIRED_FLAGS} \
-            --tmpDir "${TMPDIR}" \
-            -a "${_annotation}" \
-            -s ${_strand} \
-            --extraAttributes gene_name,gene_biotype \
-            -o "${_outdir}/counts.star_featureCounts.txt" \
-            ${_bamdir}/*.bam \
-                >"${_outdir}/counts.star_featureCounts.out" 2>&1
-
-        # Remove featureCounts 'comment' header and rewrite long paths + suffixes in sample names
-        tail -n +2 "${_outdir}/counts.star_featureCounts.txt" | \
-                sed '1s#'"${_bamdir}/"'##g' | \
-                sed '1s#\.markdup\.sorted\.bam##g' | \
-                sed '1s#\.umi_dedup\.sorted\.bam##g' \
-                >"${_outdir}/counts.star_featureCounts.tsv"
-
-        # Merge the biotypes from featureCounts into the Salmon counts tables.
-        ${INPUT_SCRIPTS_PATH}/merge_biotypes.py \
-            "${_outdir}/counts.star_featureCounts.tsv" \
-            "${JOB_PATH}/output/results/star_salmon/salmon.merged.gene_counts.tsv" \
-            >"${JOB_PATH}/output/results/star_salmon/salmon.merged.gene_counts.biotypes.tsv"
-
-        ${INPUT_SCRIPTS_PATH}/merge_biotypes.py \
-            "${_outdir}/counts.star_featureCounts.tsv" \
-            "${JOB_PATH}/output/results/salmon/salmon.merged.gene_counts.tsv" \
-            >"${JOB_PATH}/output/results/salmon/salmon.merged.gene_counts.biotypes.tsv"
-
-        ${INPUT_SCRIPTS_PATH}/merge_biotypes.py \
-            "${_outdir}/counts.star_featureCounts.tsv" \
-            "${JOB_PATH}/output/results/star_salmon/salmon.merged.gene_counts_length_scaled.tsv" \
-            >"${JOB_PATH}/output/results/star_salmon/salmon.merged.gene_counts_length_scaled.biotypes.tsv"
-
-        ${INPUT_SCRIPTS_PATH}/merge_biotypes.py \
-            "${_outdir}/counts.star_featureCounts.tsv" \
-            "${JOB_PATH}/output/results/salmon/salmon.merged.gene_counts_length_scaled.tsv" \
-            >"${JOB_PATH}/output/results/salmon/salmon.merged.gene_counts_length_scaled.biotypes.tsv"
-    fi
+# -profile singularity \
 }
 
 update_permissions || true
@@ -803,7 +699,7 @@ send_event "JOB_PIPELINE_STARTING" "Starting pipeline."
 
 run_nextflow
 
-post_nextflow_jobs || true
+post_nextflow_pipeline || true
 
 cd "${JOB_PATH}"
 
