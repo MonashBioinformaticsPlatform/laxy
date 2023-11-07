@@ -15,7 +15,8 @@ process PREPROCESS_ANNOTATION {
     // executor = 'local'
     container = 'quay.io/biocontainers/agat:1.2.0--pl5321hdfd78af_0'
     cpus = 1
-    memory = 10.GB
+    // 10.GB is not enough for Ensembl GRCh38 release 109
+    memory = 24.GB
 
     input:
         path annotation
@@ -126,88 +127,14 @@ process FEATURECOUNTS_MERGE {
         failOnError: true
 
     input:
-        val(counts_files)  // list of alternating (sample_name, counts_txt)
+         // list of [(sample_name, counts_txt), ...] pairs
+        val(counts_files)
     output:
         path('counts.star_featureCounts.tsv'), emit: counts
 
     script:
         """
-        #!/usr/bin/env python
-        import pandas as pd
-        import json
-
-        def cleanup_featurecounts(df, check_chr_boundries=True):
-            '''
-            Takes a DataFrame of typical featureCounts output an collapses all the ';' stuffed
-            fields (Chr, Start, End, Strand) into single values. Start and End then represent
-            the 5' and 3' ends of the first/last exon respectively.
-
-            If `check_chr_boundries` is `True`, skips processing if any transcipt is split 
-            over chromosomes (eg drafty genome assembly).
-
-            '''
-            all_same_chr = df['Chr'].apply(lambda x: len(set(x.split(';'))) == 1)
-
-            if check_chr_boundries and not all(all_same_chr):
-                return df
-
-            # Split the "Chr" column by ';' and keep only the first value
-            df['Chr'] = df['Chr'].str.split(';').str[0]
-            
-            # Split the "Start" column by ';' and keep only the first value
-            df['Start'] = df['Start'].str.split(';').str[0]
-            
-            # Split the "End" column by ';' and keep only the last value
-            df['End'] = df['End'].str.split(';').str[-1]
-
-            # Split the "Strand" column by ';' and keep only the first value
-            df['Strand'] = df['Strand'].str.split(';').str[0]
-
-            return df
-
-        # Groovy list as string to Python list
-        # file_paths = '${counts_files}'[1:-1].replace(' ', '').split(',')
-
-        # (we just pass in a JSON string prepared in Nextflow/Groovy via JsonOutput.toJson)
-        counts_files = json.loads('${counts_files}')
-
-        # Convert to list of tuples [(sample_name, counts.txt), ...]
-        counts_files = [(counts_files[i], counts_files[i + 1]) for i in range(0, len(counts_files), 2)]
-
-        sample_names = [f[0] for f in counts_files]
-        file_paths = [f[1] for f in counts_files]
-        
-        # print(file_paths)
-
-        df = pd.read_csv(file_paths[0], sep='\t', skiprows=1)
-
-        # We rename the "sample_name.markdup.sorted.bam" to just "sample_name"
-        df.rename(columns={df.columns[-1]: sample_names[0]}, inplace=True)
-
-        for sample_name, file_path in zip(sample_names[1:], file_paths[1:]):
-            temp_df = pd.read_csv(file_path, sep='\t', skiprows=1)
-
-            # We rename the "sample_name.sorted.bam" to just "sample_name"
-            temp_df.rename(columns={temp_df.columns[-1]: sample_name}, inplace=True)
-            
-            # Drop all columns except the first ('Geneid') and last columns
-            temp_df = temp_df.iloc[:, [0, -1]]
-
-            # Extract the last column name
-            last_column = temp_df.columns[-1]
-
-            # Merge the DataFrames on 'Geneid'
-            df = pd.merge(df, temp_df, on='Geneid', how='left')
-
-        df = cleanup_featurecounts(df)
-
-        # Alphanumerically order sample name columns so this output is deterministic
-        gene_info_cols = df.columns[:8]
-        sorted_count_cols = sorted(df.columns[8:])
-        new_col_order = list(gene_info_cols) + sorted_count_cols
-        df = df[new_col_order]
-
-        df.to_csv('counts.star_featureCounts.tsv', sep='\t', index=False)
+        ${params.scripts_path}/merge_featurecounts.py --json='${counts_files}' >counts.star_featureCounts.tsv
         """
 }
 
@@ -230,16 +157,16 @@ process SALMON_COUNTS_ADD_BIOTYPES {
         path("*.biotypes.tsv"), emit: counts
 
     script:
-    //// TODO: Alternatively, use a script in scripts/templates/merge_biotypes.py
-    ////       or just put the script verbatim in here as #!/usr/bin/env python
-    // template 'merge_biotypes.py'
-    """
-    # Merge the biotypes from featureCounts into the Salmon counts tables.
-    ${params.scripts_path}/merge_biotypes.py \
-        counts.star_featureCounts.tsv \
-        ${salmon_counts} \
-        >"${salmon_counts.getBaseName()}.biotypes.tsv"
-    """
+        //// TODO: Alternatively, use a script in scripts/templates/merge_biotypes.py
+        ////       or just put the script verbatim in here as #!/usr/bin/env python
+        // template 'merge_biotypes.py'
+        """
+        # Merge the biotypes from featureCounts into the Salmon counts tables.
+        ${params.scripts_path}/merge_biotypes.py \
+            counts.star_featureCounts.tsv \
+            ${salmon_counts} \
+            >"${salmon_counts.getBaseName()}.biotypes.tsv"
+        """
 }
 
 
@@ -264,7 +191,8 @@ workflow {
 
     // (sample_name, counts.txt)
     counts = FEATURECOUNTS.out.counts
-        .collect { [it[0].toString(), it[1].toString()] }
+        .map { [it[0].toString(), it[1].toString()] }
+        .collect(flat: false)
         .map { JsonOutput.toJson(it) }
         .view()
 

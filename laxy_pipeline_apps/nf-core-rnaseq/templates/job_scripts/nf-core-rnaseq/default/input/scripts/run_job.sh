@@ -636,8 +636,6 @@ function post_nextflow_pipeline() {
        ${paired_flag} \
        --outdir ${JOB_PATH}/output/results \
        --monochrome_logs \
-       -with-trace \
-       -with-dag \
        -name "${_nfjobname}-featurecounts" \
        -c "${INPUT_CONFIG_PATH}/laxy_nextflow.config" \
        ${NEXTFLOW_CONFIG_ARG} \
