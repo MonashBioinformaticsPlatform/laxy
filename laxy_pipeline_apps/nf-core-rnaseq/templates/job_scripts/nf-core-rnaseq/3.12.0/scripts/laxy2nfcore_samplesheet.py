@@ -1,0 +1,1 @@
+../../default/input/scripts/laxy2nfcore_samplesheet.py
