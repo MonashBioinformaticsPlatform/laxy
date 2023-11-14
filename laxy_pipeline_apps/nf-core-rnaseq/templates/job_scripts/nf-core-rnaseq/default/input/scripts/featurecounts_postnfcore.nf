@@ -17,6 +17,7 @@ process PREPROCESS_ANNOTATION {
     cpus = 1
     // 10.GB is not enough for Ensembl GRCh38 release 109
     memory = 24.GB
+    time = '3h'
 
     input:
         path annotation
@@ -46,6 +47,7 @@ process GET_SALMON_INFERRED_STRANDEDNESS {
     executor = 'local'
     cpus = 1
     memory = 128.MB
+
     // happens to contain the jq tool we need ..
     container = 'quay.io/biocontainers/fastq-scan:1.0.1--h4ac6f70_2'
 
@@ -75,6 +77,7 @@ process FEATURECOUNTS {
     container = 'quay.io/biocontainers/subread:2.0.1--hed695b0_0'
     cpus = 4
     memory = 16.GB
+    time = '24h'
 
     publishDir path: "${params.outdir}/featureCounts",
                mode: 'copy',
