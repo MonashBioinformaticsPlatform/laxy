@@ -77,7 +77,7 @@ process FEATURECOUNTS {
     container = 'quay.io/biocontainers/subread:2.0.1--hed695b0_0'
     cpus = 4
     memory = 16.GB
-    time = '24h'
+    time = '4h'
 
     publishDir path: "${params.outdir}/featureCounts",
                mode: 'copy',
