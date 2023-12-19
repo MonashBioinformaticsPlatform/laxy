@@ -637,7 +637,7 @@ function post_nextflow_pipeline() {
        --outdir ${JOB_PATH}/output/results \
        --monochrome_logs \
        -name "${_nfjobname}-featurecounts" \
-       -c "${INPUT_CONFIG_PATH}/laxy_nextflow.config" \
+       -c "${INPUT_CONFIG_PATH}/featurecounts_postnfcore.config" \
        ${NEXTFLOW_CONFIG_ARG} \
        -w "${JOB_PATH}/output/work" \
         >${JOB_PATH}/output/post_nextflow.log \
