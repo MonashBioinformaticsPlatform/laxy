@@ -376,6 +376,9 @@ function get_settings_from_pipeline_config() {
     if [[ "${_has_umi}" == "true" ]]; then
         export UMI_FLAGS=" --with_umi --skip_umi_extract --umitools_umi_separator : "
     fi
+
+    local -i _min_mapped_reads=$(jq --raw-output '.params."nf-core-rnaseq".min_mapped_reads' "${PIPELINE_CONFIG}" || echo "5")
+    export MIN_MAPPED_READS_ARG=" --min_mapped_reads ${_min_mapped_reads} "
 }
 
 function generate_samplesheet() {
@@ -545,6 +548,7 @@ function run_nextflow() {
        --outdir ${JOB_PATH}/output/results \
        ${GENOME_ARGS} \
        ${UMI_FLAGS} \
+       ${MIN_MAPPED_READS_ARG} \
        --aligner star_salmon \
        --pseudo_aligner salmon \
        --save_reference \
@@ -567,6 +571,7 @@ function run_nextflow() {
             --outdir ${JOB_PATH}/output/results \
             ${GENOME_ARGS} \
             ${UMI_FLAGS} \
+            ${MIN_MAPPED_READS_ARG} \
             --aligner star_salmon \
             --pseudo_aligner salmon \
             --save_reference \

@@ -47,11 +47,27 @@
                   Use UMIs <em>(UMIs must be in the FASTQ header from bcl2fastq demultiplexing, not in the
                     sequence)</em></md-switch>
 
-                <md-switch v-model="save_reference_genome" id="save-reference-genome-toggle" 
-                           name="save-reference-genome-toggle" class="md-primary">Save reference genome</md-switch>
+                <md-layout>
+                  <md-layout>
+                    <md-input-container>
+                      <label>Exclude samples with less this percentage of mapped reads
+                        (<code>--min_mapped_reads</code>)</label>
+                      <md-input type="number" min="0" max="100" v-model="min_mapped_reads"></md-input>
+                    </md-input-container>
+                  </md-layout>
+                  <md-layout md-flex="5" md-vertical-align="center">
+                    <md-button id="minMappedReadshelpButton" @click="openDialog('minMappedReadsHelpPopup')"
+                      class="push-right md-icon-button md-raised md-dense">
+                      <md-icon style="color: #bdbdbd;">help</md-icon>
+                    </md-button>
+                  </md-layout>
+                </md-layout>
 
-                <md-switch v-model="save_genome_index" id="save-genome-index-toggle" 
-                           name="save-genome-index-toggle" class="md-primary">Save reference genome index</md-switch>
+                <md-switch v-model="save_reference_genome" id="save-reference-genome-toggle"
+                  name="save-reference-genome-toggle" class="md-primary">Save reference genome</md-switch>
+
+                <md-switch v-model="save_genome_index" id="save-genome-index-toggle" name="save-genome-index-toggle"
+                  class="md-primary">Save reference genome index</md-switch>
               </md-layout>
 
             </md-layout>
@@ -92,6 +108,27 @@
         nf-core/rnaseq does not support 'auto' strandedness. Please select another strandedness option, or another
         pipeline version.
       </banner-notice>
+      <banner-notice v-if="!isValid_min_mapped_reads" type="error" :show-close-button="false">Invalid value for minimum
+        mapped reads - should be an integer between 0 and 100.
+      </banner-notice>
+
+
+      <md-dialog md-open-from="#minMappedReadshelpButton" md-close-to="#minMappedReadshelpButton"
+        id="minMappedReadsHelpPopup" ref="minMappedReadsHelpPopup">
+        <md-dialog-title>Minimum mapped reads</md-dialog-title>
+
+        <md-dialog-content>
+          The nf-core/rnaseq <code>--min_mapped_reads</code> option.<br />
+          Samples with mapping rates less than this are excluded from the final counts matrix and most QC steps.<br />
+          Setting this to below 5% risks some downstream steps failing, since not all tools handle samples with very
+          low mapping rates gracefully.<br />
+        </md-dialog-content>
+
+        <md-dialog-actions>
+          <md-button class="md-primary" @click="closeDialog('minMappedReadsHelpPopup')">Close</md-button>
+        </md-dialog-actions>
+      </md-dialog>
+
     </md-layout>
 
     <md-snackbar md-position="bottom center" ref="snackbar" :md-duration="snackbar_duration">
@@ -239,6 +276,9 @@ export default class PipelineParams extends Vue {
   @Sync("pipelineParams@nf-core-rnaseq.has_umi")
   public has_umi: boolean;
 
+  @Sync("pipelineParams@nf-core-rnaseq.min_mapped_reads")
+  public min_mapped_reads: number;
+
   @Sync("pipelineParams@nf-core-rnaseq.save_reference_genome")
   public save_reference_genome: boolean;
 
@@ -340,13 +380,22 @@ export default class PipelineParams extends Vue {
     return true;
   }
 
+  get isValid_min_mapped_reads() {
+    if (this.min_mapped_reads >= 0 &&
+      this.min_mapped_reads <= 100) {
+      return true;
+    }
+    return false;
+  }
+
   get isValid_params() {
     let is_valid = false;
     if (
       this.isValid_reference_genome &&
       this.isValid_samples_added &&
       this.isValid_duplicate_samples &&
-      this.isValid_strandedness_option
+      this.isValid_strandedness_option &&
+      this.isValid_min_mapped_reads
     ) {
       is_valid = true;
     }

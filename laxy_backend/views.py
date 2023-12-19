@@ -2122,6 +2122,15 @@ class JobCreate(JSONView):
                 job.params, "params.user_genome.annotation_url", None
             )
 
+            # TODO: nf-core /rnaseq specific - this should go into a pipeline specific validation hook in the
+            #       nf-core-rnaseq app that gets called based on the pipeline being started
+            _min_mapped_reads = job.params.get("params").get(
+                "min_mapped_reads", None
+            )
+            if _min_mapped_reads is not None:
+                job.params['min_mapped_reads'] = int(_min_mapped_reads)
+                job.save()
+
             if (
                 (
                     reference_genome_id
