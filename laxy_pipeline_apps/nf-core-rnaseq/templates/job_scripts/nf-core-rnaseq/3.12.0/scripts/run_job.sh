@@ -228,8 +228,8 @@ function register_files() {
 
 function set_genome_args() {
     # See if we can find a custom reference in the fetch_files list
-    local _fasta_fn=$(jq --raw-output '.params.fetch_files[] | select(.type_tags[] == "genome_sequence") | .name' "${PIPELINE_CONFIG}" || echo '')
-    local _annot_fn=$(jq --raw-output '.params.fetch_files[] | select(.type_tags[] == "genome_annotation") | .name' "${PIPELINE_CONFIG}" || echo '')
+    local _fasta_fn=$(jq -e --raw-output '.params.fetch_files[] | select(.type_tags[] == "genome_sequence") | .name' "${PIPELINE_CONFIG}" || echo '')
+    local _annot_fn=$(jq -e --raw-output '.params.fetch_files[] | select(.type_tags[] == "genome_annotation") | .name' "${PIPELINE_CONFIG}" || echo '')
     
     if [[ -z ${_fasta_fn} ]] && [[ -z ${_annot_fn} ]]; then
         export USING_CUSTOM_REFERENCE=no
@@ -370,19 +370,19 @@ function normalize_annotations() {
 
 function get_settings_from_pipeline_config() {
     # Extract the pipeline parameters we need from pipeline_config.json
-    local _debug_mode=$(jq --raw-output '.params."nf-core-rnaseq".debug_mode' "${PIPELINE_CONFIG}" || echo "false")
+    local _debug_mode=$(jq -e --raw-output '.params."nf-core-rnaseq".debug_mode' "${PIPELINE_CONFIG}" || echo "false")
     export USER_DEBUG_MODE="no"
     if [[ "${_debug_mode}" == "true" ]]; then
         export USER_DEBUG_MODE="yes"
     fi
 
-    local _has_umi=$(jq --raw-output '.params."nf-core-rnaseq".has_umi' "${PIPELINE_CONFIG}" || echo "false")
+    local _has_umi=$(jq -e --raw-output '.params."nf-core-rnaseq".has_umi' "${PIPELINE_CONFIG}" || echo "false")
     export UMI_FLAGS=""
     if [[ "${_has_umi}" == "true" ]]; then
         export UMI_FLAGS=" --with_umi --skip_umi_extract --umitools_umi_separator : "
     fi
 
-    local -i _min_mapped_reads=$(jq --raw-output '.params."nf-core-rnaseq".min_mapped_reads' "${PIPELINE_CONFIG}" || echo "5")
+    local -i _min_mapped_reads=$(jq -e --raw-output '.params."nf-core-rnaseq".min_mapped_reads' "${PIPELINE_CONFIG}" || echo "5")
     export MIN_MAPPED_READS_ARG=" --min_mapped_reads ${_min_mapped_reads} "
 }
 
@@ -410,12 +410,12 @@ function cleanup_nextflow_intermediates() {
 }
 
 function cleanup_nextflow_intermediates_keep_work_logs() {
-    local _save_genome_index=$(jq --raw-output '.params."nf-core-rnaseq".save_genome_index' "${PIPELINE_CONFIG}" || echo "false")
+    local _save_genome_index=$(jq -e --raw-output '.params."nf-core-rnaseq".save_genome_index' "${PIPELINE_CONFIG}" || echo "false")
     if [[ ${_save_genome_index} != 'true' ]]; then
         rm -rf "${JOB_PATH}/output/results/genome/index"
     fi
 
-    local _save_reference_genome=$(jq --raw-output '.params."nf-core-rnaseq".save_reference_genome' "${PIPELINE_CONFIG}" || echo "false")
+    local _save_reference_genome=$(jq -e --raw-output '.params."nf-core-rnaseq".save_reference_genome' "${PIPELINE_CONFIG}" || echo "false")
     if [[ ${_save_reference_genome} != 'true' ]]; then
         rm -rf "${JOB_PATH}/output/results/genome"
     fi
@@ -623,7 +623,7 @@ function get_salmon_inferred_strandedness() {
     # is likely the best choice for featureCounts when 
     # strandedness is ambigious.
     local meta_info_json="${1}"
-    jq --raw-output '.library_types[0]' "${meta_info_json}" | \
+    jq -e --raw-output '.library_types[0]' "${meta_info_json}" | \
         awk '{if ($0 == "U" || $0 == "IU") {print "0"} \
         else if ($0 == "SF" || $0 == "ISF") {print "1"} \
         else if ($0 == "SR" || $0 == "ISR") {print "2"} \

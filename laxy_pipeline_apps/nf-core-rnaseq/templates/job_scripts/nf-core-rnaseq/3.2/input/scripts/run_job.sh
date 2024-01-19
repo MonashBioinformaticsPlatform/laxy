@@ -184,8 +184,8 @@ function register_files() {
 
 function set_genome_args() {
     # See if we can find a custom reference in the fetch_files list
-    local _fasta_fn=$(jq --raw-output '.params.fetch_files[] | select(.type_tags[] == "genome_sequence") | .name' "${PIPELINE_CONFIG}" || echo '')
-    local _annot_fn=$(jq --raw-output '.params.fetch_files[] | select(.type_tags[] == "genome_annotation") | .name' "${PIPELINE_CONFIG}" || echo '')
+    local _fasta_fn=$(jq -e --raw-output '.params.fetch_files[] | select(.type_tags[] == "genome_sequence") | .name' "${PIPELINE_CONFIG}" || echo '')
+    local _annot_fn=$(jq -e --raw-output '.params.fetch_files[] | select(.type_tags[] == "genome_annotation") | .name' "${PIPELINE_CONFIG}" || echo '')
 
     [[ -z ${_fasta_fn} ]] || GENOME_FASTA="${INPUT_REFERENCE_PATH}/${_fasta_fn}"
     [[ -z ${_annot_fn} ]] || ANNOTATION_FILE="${INPUT_REFERENCE_PATH}/${_annot_fn}"
@@ -246,7 +246,7 @@ function find_strandedness() {
     #export STRANDEDNESS='unstranded'
     #export STRANDEDNESS='forward'
     #export STRANDEDNESS='reverse'
-    export STRANDEDNESS=$(jq --raw-output '.params."nf-core-rnaseq".strandedness' "${PIPELINE_CONFIG}" || echo "unstranded")
+    export STRANDEDNESS=$(jq -e --raw-output '.params."nf-core-rnaseq".strandedness' "${PIPELINE_CONFIG}" || echo "unstranded")
     # return $STRANDEDNESS
 }
 
@@ -376,7 +376,7 @@ function run_nextflow() {
 
 # Extract the pipeline parameter nf-core-rnaseq.flags.all from the pipeline_config.json
 # Set the --all flag appropriately.
-#_flags_all=$(jq --raw-output '.params.nf-core-rnaseq.flags.all' "${PIPELINE_CONFIG}" || echo "false")
+#_flags_all=$(jq -e --raw-output '.params.nf-core-rnaseq.flags.all' "${PIPELINE_CONFIG}" || echo "false")
 #ALL_FLAG=" "
 #if [[ "${_flags_all}" == "true" ]]; then
 #    ALL_FLAG=" --all "

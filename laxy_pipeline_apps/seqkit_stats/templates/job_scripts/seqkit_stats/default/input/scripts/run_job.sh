@@ -152,7 +152,7 @@ function register_files() {
 
 # Extract the pipeline parameter seqkit_stats.flags.all from the pipeline_config.json
 # Set the --all flag appropriately.
-_flags_all=$(jq --raw-output '.params.seqkit_stats.flags.all' "${PIPELINE_CONFIG}" || echo "false")
+_flags_all=$(jq -e --raw-output '.params.seqkit_stats.flags.all' "${PIPELINE_CONFIG}" || echo "false")
 ALL_FLAG=" "
 if [[ "${_flags_all}" == "true" ]]; then
     ALL_FLAG=" --all "
