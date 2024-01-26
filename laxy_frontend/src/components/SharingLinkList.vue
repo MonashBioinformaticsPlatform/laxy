@@ -1,58 +1,82 @@
 <template>
-  <md-table>
-    <md-table-header>
-      <md-table-row>
-        <md-table-head>Link</md-table-head>
-        <md-table-head>Expires</md-table-head>
-        <md-table-head style="text-align: right;">Action</md-table-head>
-      </md-table-row>
-    </md-table-header>
-    <md-table-body>
-      <md-table-row v-for="link in sharingLinks" :key="link.id">
-        <md-table-cell>
-          <a v-if="!linkIsExpired(link)" :id="link.id" :href="formatSharingLink(link)">
-            <md-icon>link</md-icon>
-            {{ formatSharingLink(link) | truncate }}
-          </a>
-          <span v-else>
-            <md-icon>timer_off</md-icon>
-            <span class="expired-link">{{ formatSharingLink(link) | truncate }}</span>
-          </span>
-        </md-table-cell>
-        <md-table-cell>
-          <span :class="{ 'expired-link': linkIsExpired(link) }">{{ formatExpiryString(link.expiry_time) }}</span>
-          <md-menu v-if="allowExpiryEdit" md-size="4" class="push-left">
-            <md-button class="md-icon-button" md-menu-trigger>
-              <md-icon>arrow_drop_down</md-icon>
-            </md-button>
+  <div>
+    <md-table>
+      <md-table-header>
+        <md-table-row>
+          <md-table-head>Link</md-table-head>
+          <md-table-head>Expires</md-table-head>
+          <md-table-head style="text-align: right;">Action</md-table-head>
+        </md-table-row>
+      </md-table-header>
+      <md-table-body>
+        <md-table-row v-for="link in sharingLinks" :key="link.id">
+          <md-table-cell>
+            <a v-if="!linkIsExpired(link)" :id="link.id" :href="formatSharingLink(link)">
+              <md-icon>link</md-icon>
+              {{ formatSharingLink(link) | truncate }}
+            </a>
+            <span v-else>
+              <md-icon>timer_off</md-icon>
+              <span class="expired-link">{{ formatSharingLink(link) | truncate }}</span>
+            </span>
+          </md-table-cell>
+          <md-table-cell>
+            <span :class="{ 'expired-link': linkIsExpired(link) }">{{ formatExpiryString(link.expiry_time) }}</span>
+            <md-menu v-if="allowExpiryEdit" md-size="4" class="push-left">
+              <md-button class="md-icon-button" md-menu-trigger>
+                <md-icon>arrow_drop_down</md-icon>
+              </md-button>
 
-            <md-menu-content>
-              <span class="md-subheading" style="font-weight: bold; padding-left: 16px">Change expiry to</span>
-              <!--  -->
-              <md-menu-item v-for="expires_in in access_token_lifetime_options" :key="expires_in"
-                @click="updateSharingLink(jobId, expires_in)">
-                <span v-if="typeof expires_in == 'number'">{{ expires_in | duration('seconds').humanize() }} from
-                  now</span>
-                <span v-else>{{ expires_in }} expires</span>
-              </md-menu-item>
-            </md-menu-content>
-          </md-menu>
-        </md-table-cell>
-        <md-table-cell md-numeric>
-          <md-button v-if="!linkIsExpired(link)" class="md-icon-button push-right"
-            @click="setClipboardFlash(formatSharingLink(link), 'Copied link to clipboard !')">
-            <md-icon>file_copy</md-icon>
-            <md-tooltip md-direction="top">Copy to clipboard</md-tooltip>
-          </md-button>
-          <md-button v-if="showDeleteButton" class="md-icon-button" :class="{ 'push-right': linkIsExpired(link) }"
-            @click="deleteSharingLink(link.id)">
-            <md-icon>delete</md-icon>
-            <md-tooltip md-direction="top">Delete</md-tooltip>
-          </md-button>
-        </md-table-cell>
-      </md-table-row>
-    </md-table-body>
-  </md-table>
+              <md-menu-content>
+                <span class="md-subheading" style="font-weight: bold; padding-left: 16px">Change expiry to</span>
+                <!--  -->
+                <md-menu-item v-for="expires_in in access_token_lifetime_options" :key="expires_in"
+                  @click="updateSharingLink(jobId, expires_in)">
+                  <span v-if="typeof expires_in == 'number'">{{ expires_in | duration('seconds').humanize() }} from
+                    now</span>
+                  <span v-else>{{ expires_in }} expires</span>
+                </md-menu-item>
+              </md-menu-content>
+            </md-menu>
+          </md-table-cell>
+          <md-table-cell md-numeric>
+            <md-button v-if="!linkIsExpired(link)" class="md-icon-button push-right"
+              @click="setClipboardFlash(formatSharingLink(link), 'Copied link to clipboard !')">
+              <md-icon>file_copy</md-icon>
+              <md-tooltip md-direction="top">Copy to clipboard</md-tooltip>
+            </md-button>
+            <md-button v-if="showDeleteButton" class="md-icon-button" :class="{ 'push-right': linkIsExpired(link) }"
+              @click="deleteSharingLink(link.id)">
+              <md-icon>delete</md-icon>
+              <md-tooltip md-direction="top">Delete</md-tooltip>
+            </md-button>
+          </md-table-cell>
+        </md-table-row>
+      </md-table-body>
+    </md-table>
+    <div v-if="sharingLinks.length > 0">
+        <md-button @click="showCurlInfo = !showCurlInfo">
+          <span v-if="!showCurlInfo">▶</span><span v-else>▼</span> Download using &nbsp; <code>curl</code>
+        </md-button>
+      <md-layout class="pad-16" v-show="showCurlInfo">
+        While the access token is valid, this Laxy run can be downloaded as a tar archive on the commandline like:<br />
+        <md-table>
+          <md-table-row>
+            <md-table-cell>
+              <code>{{ formatCurlCli(sharingLinks[0]) }}</code>
+            </md-table-cell>
+            <md-table-cell>
+              <md-button v-if="!linkIsExpired(sharingLinks[0])" class="md-icon-button push-right"
+                @click="setClipboardFlash(formatCurlCli(sharingLinks[0]), 'Copied link to clipboard !')">
+                <md-icon>file_copy</md-icon>
+                <md-tooltip md-direction="top">Copy to clipboard</md-tooltip>
+              </md-button>
+            </md-table-cell>
+          </md-table-row>
+        </md-table>
+      </md-layout>
+    </div>
+  </div>
 </template>
 
 <script lang="ts">
@@ -75,6 +99,8 @@ import { WebAPI } from "../web-api";
 
 import { CopyToClipboard } from '../clipboard-mixin';
 
+import { LaxySharingLink } from "../types";
+
 @Component({
   filters: {},
 })
@@ -83,7 +109,7 @@ export default class SharingLinkList extends mixins(CopyToClipboard) {
   public jobId: string;
 
   @Prop({ type: Array })
-  public sharingLinks: any[];
+  public sharingLinks: LaxySharingLink[];
 
   @Prop({ type: Boolean, default: true })
   public showDeleteButton: boolean;
@@ -91,6 +117,11 @@ export default class SharingLinkList extends mixins(CopyToClipboard) {
   @Prop({ type: Boolean, default: true })
   public allowExpiryEdit: boolean;
 
+  @Prop({ type: Boolean, default: true })
+  public showCurlHelper: boolean;
+
+  public showCurlInfo = false;
+  
   private _days = 24 * 60 * 60; // seconds in a day
   public access_token_lifetime_options: any[] = [
     1 * this._days,
@@ -100,7 +131,7 @@ export default class SharingLinkList extends mixins(CopyToClipboard) {
     "Never (∞)",
   ];
 
-  formatSharingLink(link: any) {
+  formatSharingLink(link: LaxySharingLink) {
     const rel = `#/job/${link.object_id}/?access_token=${link.token}`;
     return this.relToFullLink(rel);
   }
@@ -112,8 +143,8 @@ export default class SharingLinkList extends mixins(CopyToClipboard) {
     return abs_link;
   }
 
-  @Memoize((link: any) => link.id)
-  linkIsExpired(link: any) {
+  @Memoize((link: LaxySharingLink) => link.id)
+  linkIsExpired(link: LaxySharingLink) {
     return moment(link.expiry_time).isBefore(Date.now());
   }
 
@@ -139,6 +170,14 @@ export default class SharingLinkList extends mixins(CopyToClipboard) {
     return formatted;
   }
 
+  tarballUrl(link: LaxySharingLink): string {
+    return WebAPI.downloadJobTarballUrl(this.jobId, link.token);
+  }
+
+  formatCurlCli(link: LaxySharingLink) {
+    return `curl "${this.tarballUrl(link)}" >${this.jobId}.tar.gz`
+  }
+
   async updateSharingLink(job_id: string, expires_in: number | string) {
     this.$emit("change-link", { job_id: job_id, expires_in: expires_in });
   }
@@ -146,6 +185,5 @@ export default class SharingLinkList extends mixins(CopyToClipboard) {
   async deleteSharingLink(link_id: string) {
     this.$emit("delete-link", link_id);
   }
-
 }
 </script>
