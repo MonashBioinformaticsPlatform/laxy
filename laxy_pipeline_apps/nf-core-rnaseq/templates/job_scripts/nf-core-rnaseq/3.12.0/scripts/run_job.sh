@@ -641,7 +641,7 @@ function post_nextflow_pipeline() {
     nextflow run "${INPUT_SCRIPTS_PATH}/featurecounts_postnfcore.nf" \
        --scripts_path="${INPUT_SCRIPTS_PATH}" \
        --bams="${JOB_PATH}/output/results/star_salmon/"'*.bam' \
-       --annotation="${JOB_PATH}/output/results/genome/genome_genes.gtf" \
+       --annotation="${ANNOTATION_FILE}" \
        --meta_info="${JOB_PATH}/output/results/star_salmon/"'*/aux_info/meta_info.json' \
        ${paired_flag} \
        --outdir ${JOB_PATH}/output/results \
