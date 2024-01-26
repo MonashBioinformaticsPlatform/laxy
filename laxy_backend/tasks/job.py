@@ -945,11 +945,13 @@ def file_should_be_deleted(ff: File, max_size=200):
         "**/sikRun/refFiles/**",
         "input/*.fastq.gz",
         "input/*.fastq",
-        "input/*.fq.gz" "input/**/*.fastq.gz",
+        "input/*.fq.gz", 
+        "input/**/*.fastq.gz",
         "input/**/*.fastq",
         "input/**/*.fq.gz",
         "input/reads/*",
         "input/reads/**/*",
+        #"input/reference/*",
     ]
 
     if extension in always_delete_extensions:
