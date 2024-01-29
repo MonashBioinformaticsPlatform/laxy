@@ -246,6 +246,9 @@ function set_genome_args() {
     _genome_fa="${_refpath}/Sequence/WholeGenomeFasta/genome.fa"
     _genes_gtf="${_refpath}/Annotation/Genes/genes.gtf"
     if [[ -f "${_genome_fa}" ]] && [[ -f "${_genes_gtf}" ]]; then
+        export ANNOTATION_FILE="${_genes_gtf}"
+        export GENOME_FASTA="${_genome_fa}"
+
         GENOME_ARGS=" --fasta ${_genome_fa} --gtf ${_genes_gtf} "
         # Add flags for locally cached STAR and Salmon index if they exist 
         if [[ -d "${_refpath}/Sequence/STARIndex" ]]; then
