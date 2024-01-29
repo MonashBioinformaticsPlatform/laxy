@@ -90,7 +90,10 @@ if __name__ == "__main__":
 
     pair_suffix = detect_pairing_suffix(files, extn)
 
-    if len(pair_suffix) == 2:
-        sys.stdout.write("paired")
-    else:
-        sys.stdout.write("single")
+    try:
+        if pair_suffix is not None and len(pair_suffix) == 2:
+            sys.stdout.write("paired")
+        else:
+            sys.stdout.write("single")
+    except:
+        sys.stdout.write("unknown")
