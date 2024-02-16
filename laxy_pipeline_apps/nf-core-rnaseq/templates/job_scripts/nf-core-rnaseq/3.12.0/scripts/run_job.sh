@@ -390,8 +390,7 @@ function get_settings_from_pipeline_config() {
 }
 
 function generate_samplesheet() {
-
-    export STRANDEDNESS='auto'
+    export STRANDEDNESS=$(jq -e --raw-output '.params."nf-core-rnaseq".strandedness' "${PIPELINE_CONFIG}" || echo "auto")
 
     python ${INPUT_SCRIPTS_PATH}/laxy2nfcore_samplesheet.py  \
       ${INPUT_CONFIG_PATH}/pipeline_config.json ${INPUT_READS_PATH} ${STRANDEDNESS} \
