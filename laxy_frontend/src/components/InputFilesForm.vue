@@ -31,13 +31,14 @@
             <remote-files-select :show-about-box="false" :show-buttons="true" @files-added="addToCart"
               placeholder="https://bioinformatics.erc.monash.edu/home/andrewperry/test/sample_data/"></remote-files-select>
           </div>
-          <div id="cloudstor_public_form" v-if="selected_source == 'CLOUDSTOR_PUBLIC'">
+          <div id="nextcloud_public_form" v-if="selected_source == 'NEXTCLOUD_PUBLIC'">
             <remote-files-select :show-about-box="false" :show-buttons="true" @files-added="addToCart"
-              placeholder="https://cloudstor.aarnet.edu.au/plus/s/lnSmyyug1fexY8l"></remote-files-select>
+              placeholder="https://files.monash-bioinformatics-platform.cloud.edu.au/s/jzWk59iwXgzHL8p"></remote-files-select>
           </div>
           <div id="csv_form" v-if="selected_source == 'CSV'">
             <CSVSampleListUpload :show-about-box="false"></CSVSampleListUpload>
           </div>
+          <!--
           <div id="cloudstor_form" v-if="selected_source == 'CLOUDSTOR'">
             <md-whiteframe md-elevation="5" class="pad-16 fill-vertical">
               <div ref="aboutClourStor">
@@ -108,6 +109,7 @@
             </div>
             <hr />
           </div>
+          -->
           <br />
         </form>
       </md-layout>
@@ -119,17 +121,17 @@
           <ENASearchAboutBox v-if="selected_source == 'ENA'" ref="aboutENA"></ENASearchAboutBox>
           <RemoteFileSelectAboutBox v-if="selected_source == 'URL'"></RemoteFileSelectAboutBox>
           <CSVAboutBox v-if="selected_source == 'CSV'"></CSVAboutBox>
-          <div v-if="selected_source == 'CLOUDSTOR_PUBLIC'">
-            <h2>Importing files from CloudStor</h2>
+          <div v-if="selected_source == 'NEXTCLOUD_PUBLIC'">
+            <h2>Importing files from Nextcloud / Owncloud</h2>
             <p>
-              Files can be imported from a publicly shared CloudStor folder.
-              Create a public link to a folder in CloudStor and paste the link here
+              Files can be imported from a publicly shared Nextcloud or Owncloud folder.
+              Create a public link to a folder in the Nextcloud / Owncloud instance and paste the link here
               (see
-              <a href="https://support.aarnet.edu.au/hc/en-us/articles/227469547-CloudStor-Getting-Started-Guide"
-                target="_blank">the CloudStor documentation</a>).
+              <a href="https://docs.nextcloud.com/server/latest/user_manual/en/files/sharing.html#public-link-shares"
+                target="_blank">the Nextcloud documentation</a>).
             </p>
             <h2>Example:</h2>
-            <code>https://cloudstor.aarnet.edu.au/plus/s/lnSmyyug1fexY8l</code>
+            <code>https://files.monash-bioinformatics-platform.cloud.edu.au/s/jzWk59iwXgzHL8p</code>
           </div>
         </md-dialog-content>
 
@@ -210,13 +212,13 @@ export default class InputFilesForm extends Vue {
   sources: object = [
     { type: "ENA", text: "Public data from ENA or SRA" },
     { type: "URL", text: "Files on a web or FTP server (URL)" },
-    { type: "CLOUDSTOR_PUBLIC", text: "Public CloudStor Share" },
+    { type: "NEXTCLOUD_PUBLIC", text: "Public Nextcloud/Owncloud Share" },
     { type: "CSV", text: "Sample list from CSV / Excel" },
     // {type: 'SFTP_UPLOAD', text: 'SFTP upload'},
   ];
   selected_source: string = "ENA";
   url_input: string = "";
-  cloudstor_link_password: string = "";
+  // cloudstor_link_password: string = "";
   user_email: string = "my.username@example.com";
   sftp_upload_host: string = "laxy.erc.monash.edu";
   sftp_upload_path: string = "";
@@ -267,18 +269,6 @@ export default class InputFilesForm extends Vue {
       a.host != null &&
       a.host != window.location.host &&
       includes(valid_protocols, a.protocol)
-    );
-  }
-
-  isCloudStorURL(url: string): boolean {
-    const valid_protocols = ["https:"];
-    const a = document.createElement("a");
-    a.href = url;
-    return (
-      a.host != null &&
-      a.host != window.location.host &&
-      includes(valid_protocols, a.protocol) &&
-      a.host == "cloudstor.aarnet.edu.au"
     );
   }
 
@@ -350,11 +340,6 @@ export default class InputFilesForm extends Vue {
   @Watch("url_input", { immediate: true })
   onURLInputChanged(newVal: string, oldVal: string) {
     if (this.selected_source == "URL" && this.isValidURL(newVal)) {
-      this.$emit("stepDone");
-    } else if (
-      this.selected_source == "CLOUDSTOR" &&
-      this.isCloudStorURL(newVal)
-    ) {
       this.$emit("stepDone");
     } else {
       this.$emit("invalidData");

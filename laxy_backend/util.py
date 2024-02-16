@@ -133,12 +133,6 @@ def find_filename_and_size_from_url(url, sanitize_name=True, **kwargs):
     if filename is None or (scheme == "file" or scheme == "ftp" or scheme == "sftp"):
         filename = os.path.basename(urlparse(url).path)
 
-    # Special case: get query string for filename when CloudStor content-disposition fails
-    # eg from url: https://cloudstor.aarnet.edu.au/plus/s/s3cre3t/download?path=%2F&files=SRR1234567_1.fastq.gz"
-    if filename == "download" and urlparse(url).netloc == "cloudstor.aarnet.edu.au":
-        qs = parse_qs(urlparse(url).query)
-        filename = qs.get("files", [None])[0]
-
     # TODO: Should we disallow this, given that it actually reads the local filesystem and may be
     #  unsafe or an information leak if used with arbitrary user supplied URLs ?
     if scheme == "file":

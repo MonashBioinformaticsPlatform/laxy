@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/1.11/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/1.11/ref/settings/
 """
+
 import logging
 
 import os
@@ -105,6 +106,7 @@ default_env = PrefixedEnv(
     WEB_SCRAPER_SPLASH_HOST=(str, "http://localhost:8050"),
     DEGUST_URL=(str, "http://degust.erc.monash.edu"),
     EMAIL_DOMAIN_ALLOWED_COMPUTE=(dictify_json_loads, {"*": ["*"]}),
+    LINK_SCRAPER_MAPPINGS=(dictify_json_loads, {}),
 )
 
 
@@ -287,6 +289,19 @@ to one the don't actually own and access compute resources you don't intend them
 
 ALLOWED_HOSTS = env("ALLOWED_HOSTS", transform=_cleanup_env_list)
 
+LINK_SCRAPER_MAPPINGS = env(
+    "LINK_SCRAPER_MAPPINGS",
+)
+"""
+A JSON object of {URL: function} pairs, that map a URL to be scraped for hyperlinks (or a webdav endpoint)
+and the function that can scrape this URL. The function should typically be one of the parsing functions 
+found in laxy_backend.scraping eg
+
+```json
+{"://some.webdev.example.com/": "parse_nextcloud_webdav", "://simple.hrefs.example.com/": "parse_simple_index_links"}
+```
+"""
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.11/howto/deployment/checklist/
 
@@ -366,7 +381,7 @@ CELERYBEAT_SCHEDULE = {
     "expire_old_jobs": {
         "task": "laxy_backend.tasks.job.expire_old_jobs",
         # "schedule": timedelta(minutes=15)
-        "schedule": timedelta(hours=6)
+        "schedule": timedelta(hours=6),
         # "schedule": timedelta(seconds=60)
         # "schedule": crontab(minute='*/15')
     },

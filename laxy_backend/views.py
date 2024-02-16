@@ -24,10 +24,10 @@ from paramiko import SSHClient, ssh_exception, RSAKey, AutoAddPolicy
 
 from laxy_backend.scraping import (
     render_page,
-    parse_cloudstor_links,
+    parse_nextcloud_links,
     parse_simple_index_links,
     is_apache_index_page,
-    parse_cloudstor_webdav,
+    parse_nextcloud_webdav,
 )
 from . import paramiko_monkeypatch
 
@@ -189,19 +189,32 @@ from django.contrib.auth import get_user_model
 from .data.genomics.genomes import REFERENCE_GENOME_MAPPINGS
 from contextlib import closing
 
-# This is a mapping of 'matchers' to link parsing functions.
-# The matchers can be simple strings, which are tested as a substring of the URL,
-# or a function like matcher(url, page_text). The matcher function returns True or False.
-LINK_SCRAPER_MAPPINGS = [
-    ("://cloudstor.aarnet.edu.au/plus/s/", parse_cloudstor_webdav),
-    # ('://cloudstor.aarnet.edu.au/plus/s/', parse_cloudstor_links),
-    (is_apache_index_page, parse_simple_index_links),
-    ("://", parse_simple_index_links),
-]
-
 User = get_user_model()
 
 logger = logging.getLogger(__name__)
+
+# This is a mapping of 'matchers' to link parsing functions.
+# The matchers can be simple strings, which are tested as a substring of the URL,
+# or a function like matcher(url, page_text). The matcher function returns True or False.
+
+LINK_SCRAPER_MAPPINGS = [
+    (is_apache_index_page, parse_simple_index_links),
+    ("://", parse_simple_index_links),
+]
+# Add (URL:link_parser) function mappings from settings
+# We want the ones from settings first so they take precedence
+_noop = lambda: None
+
+
+def _log_missing_link_scraper_fn():
+    logger.error("Missing/unimported function for LINK_SCRAPER_MAPPINGS")
+
+
+_link_scrapers = [
+    (url, globals().get(fn, _log_missing_link_scraper_fn))
+    for url, fn in getattr(settings, "LINK_SCRAPER_MAPPINGS", {}).items()
+]
+LINK_SCRAPER_MAPPINGS = _link_scrapers + LINK_SCRAPER_MAPPINGS
 
 
 class PingView(APIView):

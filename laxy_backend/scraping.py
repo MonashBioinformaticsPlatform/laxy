@@ -4,13 +4,21 @@ import re
 from fnmatch import fnmatch
 from typing import List, Union, Pattern
 from contextlib import closing
-from urllib.parse import urljoin, urlparse, parse_qs, unquote, quote, quote_plus
+from urllib.parse import (
+    urljoin,
+    urlparse,
+    urlunparse,
+    parse_qs,
+    unquote,
+    quote,
+    quote_plus,
+)
 from pathlib import Path
 import asyncio
 import concurrent.futures
 import requests
 from bs4 import BeautifulSoup
-import webdav.client
+import webdav3.client
 
 from django.conf import settings
 
@@ -247,9 +255,9 @@ def parse_simple_index_links(
     return listing
 
 
-def parse_cloudstor_links(text: str, url=None) -> List[dict]:
+def parse_nextcloud_links(text: str, url=None) -> List[dict]:
     """
-    Parse CloudStor (and ownCloud?) shared folder page.
+    Parse Nextcloud / ownCloud shared folder page (without using WebDAV).
 
     :param text: Rendered page text (must have be rendered with Javascript enabled, eg via Splash)
     :type text: str
@@ -293,27 +301,24 @@ def parse_cloudstor_links(text: str, url=None) -> List[dict]:
     return links
 
 
-def parse_cloudstor_webdav(text: Union[str, None] = None, url=None) -> List[dict]:
+def parse_nextcloud_webdav(text: Union[str, None] = None, url=None) -> List[dict]:
     """
-    Return the file and directory listing for a CloudStor public shared link,
+    Return the file and directory listing for a ownCloud/Nextcloud WebDAV shared link,
     via WebDAV. `text` is ignored but included for link parser plugin compatibility.
-
-    (Could be adapted for generic ownCloud/Nextcloud WebDAV, or other WebDAV servers)
 
     :param text: Usused, included for link parser plugin compatibility.
     :type text: str
-    :param url: The CloudStor public share URL (eg https://cloudstor.aarnet.edu.au/plus/s/lnSmyyug1fexY8l)
+    :param url: The public share URL (eg https://somenextcloud.net/s/lnSmyyug1fexY8l)
     :type url: str
     :return: A list of dicts describing the files and directories
     :rtype: List[dict]
     """
 
-    base_url = "https://cloudstor.aarnet.edu.au/plus"
-    if base_url.startswith(url):
-        raise ValueError(f"parse_cloudstor_webdav: url must contain {base_url}")
+    _base_url = urlparse(url)
+    base_url = urlunparse((_base_url.scheme, _base_url.netloc, "", "", "", ""))
 
     webdav_server = f"{base_url}/public.php/webdav/"
-    # eg, for the URL "https://cloudstor.aarnet.edu.au/plus/s/lnSmyyug1fexY8l", share_id = 'lnSmyyug1fexY8l'
+    # eg, for the URL "https://somenextcloud.net/s/lnSmyyug1fexY8l", share_id = 'lnSmyyug1fexY8l'
     share_id = list(os.path.split(urlparse(url).path)).pop()
     path = parse_qs(urlparse(url).query).get("path", ["/"])[0].strip("/")
     _pathparts = list(os.path.split(path))
@@ -325,7 +330,7 @@ def parse_cloudstor_webdav(text: Union[str, None] = None, url=None) -> List[dict
         "webdav_login": share_id,
         "webdav_password": "null",
     }
-    client = webdav.client.Client(options)
+    client = webdav3.client.Client(options)
     ls = client.list(remote_path=path)
     is_top_level = path in ["/", ""] and "webdav/" in ls
 
