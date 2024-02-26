@@ -389,6 +389,15 @@ function get_settings_from_pipeline_config() {
     export MIN_MAPPED_READS_ARG=" --min_mapped_reads ${_min_mapped_reads} "
 }
 
+function remove_index_reads() {
+    # We frequently see I1/I2 index or UMI reads passed by users
+    # Ideally these would be filtered / warned about in the UI, there are cases (like passing tarballs)
+    # where the user has no opportunity to exclude them. Given that this nf-core/rnaseq wrapper currently does
+    # not use I1 / I2 reads (eg as UMIs), we instead delete them before creating the samplesheet.
+    find ${INPUT_READS_PATH} -type f -name "*_I1_001.f*.gz" -delete
+    find ${INPUT_READS_PATH} -type f -name "*_I2_001.f*.gz" -delete
+}
+
 function generate_samplesheet() {
     export STRANDEDNESS=$(jq -e --raw-output '.params."nf-core-rnaseq".strandedness' "${PIPELINE_CONFIG}" || echo "auto")
 
@@ -688,6 +697,8 @@ update_laxydl || send_error 'update_laxydl' '' $?
 download_input_data "${INPUT_REFERENCE_PATH}" "reference_genome" || fail_job 'download_input_data' 'Failed to download reference genome' $?
 
 download_input_data "${INPUT_READS_PATH}" "ngs_reads" || fail_job 'download_input_data' 'Failed to download input data' $?
+
+remove_index_reads
 
 set_genome_args
 
