@@ -576,12 +576,12 @@ function run_nextflow() {
        ${NEXTFLOW_CONFIG_ARG} \
        -profile singularity \
         >${JOB_PATH}/output/nextflow.log \
-        2>${JOB_PATH}/output/nextflow.err
+        2>${JOB_PATH}/output/nextflow.err || EXIT_CODE=$?
     #">>"${JOB_PATH}/slurm.jids"
     
     EXIT_CODE=$?
     # Attempt #2, resuming to catch any failures not caught by Nextflow task retries.
-    if [[ $EXIT_CODE != 0 ]]; then
+    if [[ ${EXIT_CODE} != 0 ]]; then
         nextflow run "${NFCORE_PIPELINE_PATH}" \
             --input "${INPUT_CONFIG_PATH}/samplesheet.csv" \
             --outdir ${JOB_PATH}/output/results \
@@ -594,7 +594,7 @@ function run_nextflow() {
             --monochrome_logs \
             -with-trace \
             -with-dag \
-            -name "${_nfjobname}" \
+            -name "${_nfjobname}_2" \
             -c ${INPUT_CONFIG_PATH}/laxy_nextflow.config \
             ${NEXTFLOW_CONFIG_ARG} \
             -profile singularity \
