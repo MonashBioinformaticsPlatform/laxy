@@ -36,6 +36,7 @@ import requests
 import rest_framework_jwt
 import celery
 from celery import shared_task
+from celery.result import AsyncResult
 from datetime import datetime
 from django.conf import settings
 from django.contrib.admin.views.decorators import user_passes_test
@@ -1899,6 +1900,8 @@ def get_abs_backend_url(
 
     if request is not None:
         url = urlparse(request.build_absolute_uri(path_query_frag))
+    else:
+        url = urlparse(f"{api_baseurl}{path_query_frag}")
     if api_baseurl:
         apiurl = urlparse(api_baseurl)
         url = url._replace(netloc=apiurl.netloc)
@@ -1943,6 +1946,23 @@ def _task_err_handler(cxt=None, ex=None, job_id=None):
             job.compute_resource.dispose()
 
 
+def _set_request_params_from_pipelinerun(request, pipelinerun_obj: PipelineRun):
+    """
+    Take an Request object (for a JobCreate POST) and a PipelineRun instance,
+    copy the content of the PipelineRun JSON to the 'params' field of the
+    Request.data (to ultimately become Job.params).
+
+    Return the modified Request with the 'params' field.
+    """
+    pipelinerun = PipelineRunSerializer(pipelinerun_obj).data
+
+    pipelinerun["pipelinerun_id"] = str(pipelinerun["id"])
+    del pipelinerun["id"]
+    request.data["params"] = json.dumps(pipelinerun)
+
+    return request
+
+
 class JobCreate(JSONView):
     queryset = Job.objects.all()
     serializer_class = JobSerializerRequest
@@ -1974,16 +1994,7 @@ class JobCreate(JSONView):
         if pipeline_run_id:
             try:
                 pipelinerun_obj = PipelineRun.objects.get(id=pipeline_run_id)
-                pipelinerun = PipelineRunSerializer(pipelinerun_obj).data
-
-                samplecart = pipelinerun.get("sample_cart", {})
-                if samplecart is None:
-                    samplecart = {}
-                samplecart_id = samplecart.get("id", None)
-
-                pipelinerun["pipelinerun_id"] = str(pipelinerun["id"])
-                del pipelinerun["id"]
-                request.data["params"] = json.dumps(pipelinerun)
+                request = _set_request_params_from_pipelinerun(request, pipelinerun_obj)
 
             except PipelineRun.DoesNotExist:
                 return HttpResponse(
@@ -1993,7 +2004,6 @@ class JobCreate(JSONView):
 
         if request.data.get("params"):
             _params = json.loads(request.data["params"])
-
             #
             # TODO: Also add sanitize_filename to every file in the _params["fetch_files"] list
             #
@@ -2022,6 +2032,11 @@ class JobCreate(JSONView):
 
             # We associate the previously created SampleCart with our new Job object
             # (SampleCarts effectively should be readonly once associated with a Job).
+            samplecart_id = (
+                json.loads(request.data["params"])
+                .get("sample_cart", {})
+                .get("id", None)
+            )
             if samplecart_id:
                 samplecart = SampleCart.objects.get(id=samplecart_id)
                 samplecart.job = job
@@ -2038,35 +2053,7 @@ class JobCreate(JSONView):
             job_id = job.id
             job = Job.objects.get(id=job_id)
 
-            callback_url = get_abs_backend_url(
-                reverse("laxy_backend:job", args=[job.id]), request
-            )
-
-            job_event_url = get_abs_backend_url(
-                reverse("laxy_backend:create_job_eventlog", args=[job.id]), request
-            )
-
-            job_file_bulk_url = get_abs_backend_url(
-                reverse("laxy_backend:job_file_bulk", args=[job_id]), request
-            )
-
-            # port = request.META.get('SERVER_PORT', 8001)
-            # # domain = get_current_site(request).domain
-            # # public_ip = requests.get('https://api.ipify.org').text
-            # callback_url = (u'{scheme}://{domain}:{port}/api/v1/job/{job_id}/'.format(
-            #     scheme=request.scheme,
-            #     domain=PUBLIC_IP,
-            #     port=port,
-            #     job_id=job_id))
-
-            # DRF API key
-            # token, _ = Token.objects.get_or_create(user=request.user)
-            # callback_auth_header = 'Authorization: Token %s' % token.key
-
-            # JWT access token for user (expiring by default, so better)
-            # TODO: Set the expiry of this token based on the maximum allowed job walltime
-            callback_auth_header = get_jwt_user_header_str(request.user.username)
-
+            #### Check authorization to run this particular pipeline
             pipeline_name = job.params.get("pipeline", None)
             try:
                 pipeline_obj = Pipeline.objects.get(name=pipeline_name)
@@ -2084,145 +2071,196 @@ class JobCreate(JSONView):
                     % pipeline_name,
                     status=status.HTTP_403_FORBIDDEN,
                 )
+            ####
 
-            # TODO: Given a pipeline, look up the appropriate validation and param prep functions,
-            #       call these on job.params (or pipeline_run.params ?)
-            #       We need to refactor out the RNAsik specific stuff here, maybe into a
-            #       laxy_backend/pipelines/rnasik.py and laxy_backend/pipelines/seqkit_stats.py,
-            #       and maybe some generic stuff in laxy_backend/pipelines/__init__.py
-            #
-            # validate_pipeline_params[pipeline_name](job.params)
-            # run_job_params = prepare_pipeline_params[pipeline_name](job.params)
-
-            # TODO: Maybe use the mappings in templates/genomes.json
-            #       Maybe do all genome_id to path resolution in run_job.sh
-            # reference_genome_id = "Saccharomyces_cerevisiae/Ensembl/R64-1-1"
-            reference_genome_id = job.params.get("params").get("genome", None)
-
-            # TODO: Validate that pipeline_version and pipeline_aligner are
-            #       one of the valid values, as per reference_genome_id
-            #       We really need a consistent way / pattern to do this server-side 'form validation'
-            #       maybe with a DRF Serializer.
-            #       (probably the frontend should request valid values from the backend to populate forms,
-            #        and then use the same data to validate serverside, as per REFERENCE_GENOME_MAPPINGS)
-            default_pipeline_version = (
-                "default"  # "1.5.4"  # '1.5.1+c53adf6'  # '1.5.1'
-            )
-            pipeline_version = job.params.get("params").get(
-                "pipeline_version", default_pipeline_version
-            )
-            pipeline_aligner = job.params.get("params").get("pipeline_aligner", "star")
-
-            # TODO: This ID check should probably move into the PipelineRun
-            #       params serializer.
-            reference_genome_fasta_url = pydash.get(
-                job.params, "params.user_genome.fasta_url", None
-            )
-            reference_genome_annotation_url = pydash.get(
-                job.params, "params.user_genome.annotation_url", None
+            callback_url = get_abs_backend_url(
+                reverse("laxy_backend:job", args=[job.id]), request
             )
 
-            # TODO: nf-core /rnaseq specific - this should go into a pipeline specific validation hook in the
-            #       nf-core-rnaseq app that gets called based on the pipeline being started
-            _min_mapped_reads = job.params.get("params").get(
-                "min_mapped_reads", None
-            )
-            if _min_mapped_reads is not None:
-                job.params['min_mapped_reads'] = int(_min_mapped_reads)
-                job.save()
-
-            if (
-                (
-                    reference_genome_id
-                    or (reference_genome_fasta_url and reference_genome_annotation_url)
-                )
-                and reference_genome_id not in REFERENCE_GENOME_MAPPINGS
-                and not reference_genome_fasta_url
-                and not reference_genome_annotation_url
-                # TODO: Check URLS are valid with http/https/ftp scheme
-            ):
-                job.status = Job.STATUS_FAILED
-                job.save()
-                # job.delete()
-                return HttpResponse(
-                    reason="Unknown reference genome",
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-            slurm_config = job.compute_resource.extra.get("slurm", {})
-            # slurm_account = slurm_config.get("account", None)
-            slurm_extra_args = slurm_config.get("extra_args", None)
-
-            # shlex.quote turns None into "''", so we do this
-            shell_quote=lambda s: "" if s is None else shlex.quote(s)
-
-            environment = dict(
-                DEBUG=sh_bool(getattr(settings, "DEBUG", False)),
-                IGNORE_SELF_SIGNED_CERTIFICATE=sh_bool(False),
-                JOB_ID=job_id,
-                JOB_PATH=job.abs_path_on_compute,
-                JOB_COMPLETE_CALLBACK_URL=callback_url,
-                JOB_EVENT_URL=job_event_url,
-                JOB_FILE_REGISTRATION_URL=job_file_bulk_url,
-                JOB_INPUT_STAGED=sh_bool(False),
-                REFERENCE_GENOME=shell_quote(reference_genome_id),
-                PIPELINE_VERSION=shell_quote(pipeline_version),
-                PIPELINE_ALIGNER=shell_quote(pipeline_aligner),
-                QUEUE_TYPE=job.compute_resource.queue_type or "local",
-                # BDS_SINGLE_NODE=sh_bool(False),
-                # SLURM_ACCOUNT=slurm_account or "",
-                SLURM_EXTRA_ARGS=slurm_extra_args or "",
+            job_event_url = get_abs_backend_url(
+                reverse("laxy_backend:create_job_eventlog", args=[job.id]), request
             )
 
-            task_data = dict(
-                job_id=job_id,
-                clobber=False,
-                # this is job.params
-                # pipeline_run_config=pipeline_run.to_json(),
-                # gateway=settings.CLUSTER_MANAGEMENT_HOST,
-                # We don't pass JOB_AUTH_HEADER as 'environment'
-                # since we don't want it to leak into the shell env
-                # or any output of the run_job.sh script.
-                job_auth_header=callback_auth_header,
-                environment=environment,
+            job_file_bulk_url = get_abs_backend_url(
+                reverse("laxy_backend:job_file_bulk", args=[job_id]), request
             )
 
-            # TESTING: Start cluster, run job, (pre-existing data), stop cluster
-            # tasks.run_job_chain(task_data)
+            # JWT access token for user (expiring by default, so better)
+            # TODO: Set the expiry of this token based on the maximum allowed job walltime
+            callback_auth_header = get_jwt_user_header_str(request.user.username)
+            # DRF API key
+            # token, _ = Token.objects.get_or_create(user=request.user)
+            # callback_auth_header = 'Authorization: Token %s' % token.key
 
-            result = start_job.apply_async(
-                args=(task_data,), link_error=_task_err_handler.s(job_id=job_id)
+            result = self.start_job(
+                job,
+                callback_url=callback_url,
+                job_event_url=job_event_url,
+                job_file_bulk_url=job_file_bulk_url,
+                callback_auth_header=callback_auth_header,
             )
-            # Non-async for testing
-            # result = start_job(task_data)
 
-            # result = celery.chain(# tasks.stage_job_config.s(task_data),
-            #                # tasks.stage_input_files.s(),
-            #                tasks.start_job.s(task_data),
-            #                ).apply_async()
-
-            # TODO: Make this error handler work.
-            # .apply_async(link_error=self._task_err_handler.s(job_id))
-
-            # Update the representation of the compute_resource to the uuid,
-            # otherwise it is serialized to 'ComputeResource object'
-            # serializer.validated_data.update(
-            #     compute_resource=job.compute_resource.id)
-
-            # apparently validated_data doesn't include this (if it's flagged
-            # read-only ?), so we add it back
-            # serializer.validated_data.update(id=job_id)
-
-            job = Job.objects.get(id=job_id)
             if result.state == "FAILURE":
                 raise result.result
                 # return Response({'error': result.traceback},
                 #                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+            job = Job.objects.get(id=job_id)
             serializer = self.response_serializer(job)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def start_job(
+        self,
+        job: Job,
+        callback_url=None,
+        job_event_url=None,
+        job_file_bulk_url=None,
+        callback_auth_header=None,
+    ) -> AsyncResult:
+        job_id = job.id
+
+        if callback_url is None:
+            callback_url = get_abs_backend_url(
+                reverse("laxy_backend:job", args=[job_id])
+            )
+        if job_event_url is None:
+            job_event_url = get_abs_backend_url(
+                reverse("laxy_backend:create_job_eventlog", args=[job_id])
+            )
+        if job_file_bulk_url is None:
+            job_file_bulk_url = get_abs_backend_url(
+                reverse("laxy_backend:job_file_bulk", args=[job_id])
+            )
+        if callback_auth_header is None:
+            callback_auth_header = get_jwt_user_header_str(job.owner.username)
+
+        # TODO: Given a pipeline, look up the appropriate validation and param prep functions,
+        #       call these on job.params (or pipeline_run.params ?)
+        #       We need to refactor out the RNAsik specific stuff here, maybe into a
+        #       laxy_backend/pipelines/rnasik.py and laxy_backend/pipelines/seqkit_stats.py,
+        #       and maybe some generic stuff in laxy_backend/pipelines/__init__.py
+        #
+        # validate_pipeline_params[pipeline_name](job.params)
+        # run_job_params = prepare_pipeline_params[pipeline_name](job.params)
+
+        # TODO: Maybe use the mappings in templates/genomes.json
+        #       Maybe do all genome_id to path resolution in run_job.sh
+        # reference_genome_id = "Saccharomyces_cerevisiae/Ensembl/R64-1-1"
+        reference_genome_id = job.params.get("params").get("genome", None)
+
+        # TODO: Validate that pipeline_version and pipeline_aligner are
+        #       one of the valid values, as per reference_genome_id
+        #       We really need a consistent way / pattern to do this server-side 'form validation'
+        #       maybe with a DRF Serializer.
+        #       (probably the frontend should request valid values from the backend to populate forms,
+        #        and then use the same data to validate serverside, as per REFERENCE_GENOME_MAPPINGS)
+        default_pipeline_version = "default"  # "1.5.4"  # '1.5.1+c53adf6'  # '1.5.1'
+        pipeline_version = job.params.get("params").get(
+            "pipeline_version", default_pipeline_version
+        )
+        pipeline_aligner = job.params.get("params").get("pipeline_aligner", "star")
+
+        # TODO: This ID check should probably move into the PipelineRun
+        #       params serializer.
+        reference_genome_fasta_url = pydash.get(
+            job.params, "params.user_genome.fasta_url", None
+        )
+        reference_genome_annotation_url = pydash.get(
+            job.params, "params.user_genome.annotation_url", None
+        )
+
+        # TODO: nf-core /rnaseq specific - this should go into a pipeline specific validation hook in the
+        #       nf-core-rnaseq app that gets called based on the pipeline being started
+        _min_mapped_reads = job.params.get("params").get("min_mapped_reads", None)
+        if _min_mapped_reads is not None:
+            job.params["min_mapped_reads"] = int(_min_mapped_reads)
+            job.save()
+
+        if (
+            (
+                reference_genome_id
+                or (reference_genome_fasta_url and reference_genome_annotation_url)
+            )
+            and reference_genome_id not in REFERENCE_GENOME_MAPPINGS
+            and not reference_genome_fasta_url
+            and not reference_genome_annotation_url
+            # TODO: Check URLS are valid with http/https/ftp scheme
+        ):
+            job.status = Job.STATUS_FAILED
+            job.save()
+            # job.delete()
+            return HttpResponse(
+                reason="Unknown reference genome",
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        slurm_config = job.compute_resource.extra.get("slurm", {})
+        # slurm_account = slurm_config.get("account", None)
+        slurm_extra_args = slurm_config.get("extra_args", None)
+
+        # shlex.quote turns None into "''", so we do this
+        shell_quote = lambda s: "" if s is None else shlex.quote(s)
+
+        environment = dict(
+            DEBUG=sh_bool(getattr(settings, "DEBUG", False)),
+            IGNORE_SELF_SIGNED_CERTIFICATE=sh_bool(False),
+            JOB_ID=job_id,
+            JOB_PATH=job.abs_path_on_compute,
+            JOB_COMPLETE_CALLBACK_URL=callback_url,
+            JOB_EVENT_URL=job_event_url,
+            JOB_FILE_REGISTRATION_URL=job_file_bulk_url,
+            JOB_INPUT_STAGED=sh_bool(False),
+            REFERENCE_GENOME=shell_quote(reference_genome_id),
+            PIPELINE_VERSION=shell_quote(pipeline_version),
+            PIPELINE_ALIGNER=shell_quote(pipeline_aligner),
+            QUEUE_TYPE=job.compute_resource.queue_type or "local",
+            # BDS_SINGLE_NODE=sh_bool(False),
+            # SLURM_ACCOUNT=slurm_account or "",
+            SLURM_EXTRA_ARGS=slurm_extra_args or "",
+        )
+
+        task_data = dict(
+            job_id=job_id,
+            clobber=False,
+            # this is job.params
+            # pipeline_run_config=pipeline_run.to_json(),
+            # gateway=settings.CLUSTER_MANAGEMENT_HOST,
+            # We don't pass JOB_AUTH_HEADER as 'environment'
+            # since we don't want it to leak into the shell env
+            # or any output of the run_job.sh script.
+            job_auth_header=callback_auth_header,
+            environment=environment,
+        )
+
+        # TESTING: Start cluster, run job, (pre-existing data), stop cluster
+        # tasks.run_job_chain(task_data)
+
+        result = start_job.apply_async(
+            args=(task_data,), link_error=_task_err_handler.s(job_id=job_id)
+        )
+        # Non-async for testing
+        # result = start_job(task_data)
+
+        # result = celery.chain(# tasks.stage_job_config.s(task_data),
+        #                # tasks.stage_input_files.s(),
+        #                tasks.start_job.s(task_data),
+        #                ).apply_async()
+
+        # TODO: Make this error handler work.
+        # .apply_async(link_error=self._task_err_handler.s(job_id))
+
+        # Update the representation of the compute_resource to the uuid,
+        # otherwise it is serialized to 'ComputeResource object'
+        # serializer.validated_data.update(
+        #     compute_resource=job.compute_resource.id)
+
+        # apparently validated_data doesn't include this (if it's flagged
+        # read-only ?), so we add it back
+        # serializer.validated_data.update(id=job_id)
+
+        return result
 
 
 class JobPagination(PageNumberPagination):

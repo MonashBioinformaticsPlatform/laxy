@@ -40,6 +40,8 @@ from .models import (
     AccessToken,
     URIValidator,
 )
+from .views import get_abs_backend_url, JobCreate
+from .jwt_helpers import get_jwt_user_header_str
 
 from laxy_backend.models import get_compute_resource_for_location
 from laxy_backend.util import split_laxy_sftp_url
@@ -258,6 +260,7 @@ class JobAdmin(Timestamped, VersionAdmin):
         "copy_to_archive",
         "move_job_files_to_archive",
         "bulk_rsync_job",
+        "rerun_job",
     )
 
     color_mappings = {
@@ -445,6 +448,35 @@ class JobAdmin(Timestamped, VersionAdmin):
             )
 
     bulk_rsync_job.short_description = "Bulk move (rsync) job(s) to archive location"
+
+    @takes_instance_or_queryset
+    def rerun_job(self, request, queryset):
+        for job in queryset:
+            job_id = job.id
+
+            callback_url = get_abs_backend_url(
+                reverse("laxy_backend:job", args=[job.id])  # , request
+            )
+
+            job_event_url = get_abs_backend_url(
+                reverse("laxy_backend:create_job_eventlog", args=[job.id])  # , request
+            )
+
+            job_file_bulk_url = get_abs_backend_url(
+                reverse("laxy_backend:job_file_bulk", args=[job_id])  # , request
+            )
+
+            # callback_auth_header = get_jwt_user_header_str(job.owner.username)
+
+            result = JobCreate().start_job(
+                job,
+                callback_url=callback_url,
+                job_event_url=job_event_url,
+                job_file_bulk_url=job_file_bulk_url,
+                # callback_auth_header=callback_auth_header,
+            )
+
+    rerun_job.short_description = "Restart job in-place (blindly re-runs run_job.sh)"
 
 
 def do_nothing_validator(value):
