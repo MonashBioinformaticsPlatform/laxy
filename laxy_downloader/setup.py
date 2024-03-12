@@ -53,7 +53,7 @@ setup(
         "requests==2.26.0",
         "toolz==0.10.0",
         "backoff==1.10.0",
-        "attrdict==2.0.1",
+        "attrdict @ git+https://github.com/caotians1/AttrDict.git@master",
         "trio==0.8.0",
         "psutil==5.8.0",
         "python-magic==0.4.15",
