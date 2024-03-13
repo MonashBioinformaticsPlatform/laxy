@@ -552,6 +552,8 @@ function run_nextflow() {
     # Nextflow job names must be all lowercase, can't start with a number, can't contain dashes
     # regex: ^[a-z](?:[a-z\d]|[-_](?=[a-z\d])){0,79}$
     _nfjobname=$(echo laxy_"${JOB_ID}" | tr '[:upper:]' '[:lower:]')
+    
+    EXIT_CODE=0
 
     #set +o errexit
     #${PREFIX_JOB_CMD} "\
@@ -595,7 +597,7 @@ function run_nextflow() {
             -profile singularity \
             -resume \
             >${JOB_PATH}/output/nextflow2.log \
-            2>${JOB_PATH}/output/nextflow2.err
+            2>${JOB_PATH}/output/nextflow2.err || EXIT_CODE=$?
     fi
 
     # TODO: Should we have the --trim_nextseq option here by default ?
@@ -618,7 +620,7 @@ function run_nextflow() {
     #export TOWER_ACCESS_TOKEN="${NEXTFLOW_TOWER_TOKEN}"
     #-with-tower
 
-    EXIT_CODE=$?
+    #EXIT_CODE=$?
     #set -o errexit
 }
 

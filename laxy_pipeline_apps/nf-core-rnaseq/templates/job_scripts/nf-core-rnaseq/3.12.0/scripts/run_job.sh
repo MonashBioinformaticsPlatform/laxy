@@ -557,6 +557,8 @@ function run_nextflow() {
     # regex: ^[a-z](?:[a-z\d]|[-_](?=[a-z\d])){0,79}$
     _nfjobname=$(echo laxy_"${JOB_ID}" | tr '[:upper:]' '[:lower:]')
 
+    EXIT_CODE=0
+
     #set +o errexit
     #${PREFIX_JOB_CMD} "\
     nextflow run "${NFCORE_PIPELINE_PATH}" \
@@ -579,7 +581,7 @@ function run_nextflow() {
         2>${JOB_PATH}/output/nextflow.err || EXIT_CODE=$?
     #">>"${JOB_PATH}/slurm.jids"
     
-    EXIT_CODE=$?
+    #EXIT_CODE=$?
     # Attempt #2, resuming to catch any failures not caught by Nextflow task retries.
     if [[ ${EXIT_CODE} != 0 ]]; then
         nextflow run "${NFCORE_PIPELINE_PATH}" \
@@ -600,7 +602,7 @@ function run_nextflow() {
             -profile singularity \
             -resume \
             >${JOB_PATH}/output/nextflow2.log \
-            2>${JOB_PATH}/output/nextflow2.err
+            2>${JOB_PATH}/output/nextflow2.err || EXIT_CODE=$?
     fi
 
     # TODO: Should we have the --trim_nextseq option here by default ?
@@ -623,7 +625,7 @@ function run_nextflow() {
     #export TOWER_ACCESS_TOKEN="${NEXTFLOW_TOWER_TOKEN}"
     #-with-tower
 
-    EXIT_CODE=$?
+    #EXIT_CODE=$?
     #set -o errexit
 }
 
