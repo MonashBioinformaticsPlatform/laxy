@@ -2045,11 +2045,9 @@ class JobCreate(JSONView):
 
             # We associate the previously created SampleCart with our new Job object
             # (SampleCarts effectively should be readonly once associated with a Job).
-            samplecart_id = (
-                json.loads(request.data["params"])
-                .get("sample_cart", {})
-                .get("id", None)
-            )
+            samplecart = json.loads(request.data["params"]).get("sample_cart", {}) or {} 
+            samplecart_id = samplecart.get("id", None)
+
             if samplecart_id:
                 samplecart = SampleCart.objects.get(id=samplecart_id)
                 samplecart.job = job
@@ -2723,10 +2721,7 @@ class JobClone(JSONView):
         #
         _support_deprecated_sample_set = True
         if _support_deprecated_sample_set:
-            samplecart = job.params.get("sample_cart", {})
-            if samplecart is None:
-                samplecart = {}
-            samplecart_id = samplecart.get("id", None)
+            samplecart_id = (job.params.get("sample_cart", {}) or {}).get("id", None)
             if samplecart_id is None:
                 samplecart_id = job.params.get("sample_set", {}).get("id", None)
                 logger.warning(
@@ -2853,8 +2848,7 @@ class SendFileToDegust(JSONView):
 
         counts_file: File = self.get_object()
         job = counts_file.fileset.jobs_as_output.first()
-        sample_cart = job.params.get("sample_cart", {})
-        samples = sample_cart.get("samples", [])
+        samples = (job.params.get("sample_cart", {}) or {}).get("samples", [])
         conditions = list(
             set([sample["metadata"].get("condition") for sample in samples])
         )

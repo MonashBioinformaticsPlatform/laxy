@@ -450,7 +450,7 @@ def get_urls_from_pipeline_config_deprecated_sample_cart(
     """
 
     url_filename_mapping = dict()
-    samples = config.get("sample_cart", {}).get("samples", [])
+    samples = (config.get("sample_cart", {}) or {}).get("samples", [])
     if not samples:
         samples = config.get("sample_set", {}).get("samples", [])
 
