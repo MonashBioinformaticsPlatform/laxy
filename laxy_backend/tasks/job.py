@@ -251,6 +251,9 @@ def start_job(self, task_data=None, **kwargs):
     gateway = job.compute_resource.gateway_server
 
     environment = task_data.get("environment", {})
+    # slurm_extra_args = job.compute_resource.extra.get("slurm", {}).get("extra_args", "")
+    slurm_extra_args = environment.get("SLURM_EXTRA_ARGS", "")
+
     job_auth_header = task_data.get("job_auth_header", "")
     # environment.update(JOB_ID=job_id)
     _init_fabric_env()
@@ -343,6 +346,7 @@ def start_job(self, task_data=None, **kwargs):
                             f"--cpus-per-task={cpus} "
                             f"--mem={mem} "
                             f"--time={time} "
+                            f"{slurm_extra_args} "
                             f"{job_script_path} "
                             f" >>slurm.jids"
                         )
