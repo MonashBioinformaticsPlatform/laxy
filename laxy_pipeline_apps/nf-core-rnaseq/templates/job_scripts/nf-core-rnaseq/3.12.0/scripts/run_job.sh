@@ -185,17 +185,29 @@ function register_files() {
     add_to_manifest "output/results/**/*_fastqc.html" "report,html,fastqc"
     #add_to_manifest "output/results/**/salmon.merged.gene_counts.tsv" "counts,degust"
     #add_to_manifest "output/results/**/salmon.merged.gene_counts.biotypes.tsv" "counts,degust"
-    #add_to_manifest "output/results/featureCounts/counts.star_featureCounts.tsv" "counts,degust"
+    
+    add_to_manifest "output/results/featureCounts/counts.star_featureCounts.tsv" "counts"
 
-    add_to_manifest "output/results/star_salmon/salmon.merged.gene_counts_length_scaled.biotypes.tsv" "counts,degust"
+    # Estimated counts scaled up to the original library size,
+    # and length-scaled to remove effects of differential transcript usage between samples 
+    # when looking at gene-level expression (tximport countsFromAbundance="lengthScaledTPM") from Salmon shouldn't be used for 3' focused sequencing
+    # local _jobpage_counts_prefix="salmon.merged.gene_counts_length_scaled"
+    
+    # Estimated counts scale up to original library size (tximport countsFromAbundance="scaledTPM")
+    # Does not account for potential bias from differtial transcript usage between samples, but is
+    # more approriate for 3' focused sequencing
+    # see: https://bioconductor.org/packages/devel/bioc/vignettes/tximport/inst/doc/tximport.html#Downstream_DGE_in_Bioconductor
+    local _jobpage_counts_prefix="salmon.merged.gene_counts_scaled"
 
-    if [[ ! -f "${JOB_PATH}/output/results/star_salmon/salmon.merged.gene_counts_length_scaled.biotypes.tsv" ]]; then
-        add_to_manifest "output/results/star_salmon/salmon.merged.gene_counts_length_scaled.tsv" "counts,degust"
+    add_to_manifest "output/results/star_salmon/${_jobpage_counts_prefix}.biotypes.tsv" "counts,degust"
+
+    if [[ ! -f "${JOB_PATH}/output/results/star_salmon/${_jobpage_counts_prefix}.biotypes.tsv" ]]; then
+        add_to_manifest "output/results/star_salmon/${_jobpage_counts_prefix}.tsv" "counts,degust"
     fi
 
-    if [[ ! -f "${JOB_PATH}/output/results/star_salmon/salmon.merged.gene_counts_length_scaled.tsv" ]]; then
-        add_to_manifest "output/results/salmon/salmon.merged.gene_counts_length_scaled.tsv" "counts,degust"
-        add_to_manifest "output/results/salmon/salmon.merged.gene_counts_length_scaled.biotypes.tsv" "counts,degust"
+    if [[ ! -f "${JOB_PATH}/output/results/star_salmon/${_jobpage_counts_prefix}.tsv" ]]; then
+        add_to_manifest "output/results/salmon/${_jobpage_counts_prefix}.tsv" "counts,degust"
+        add_to_manifest "output/results/salmon/${_jobpage_counts_prefix}.biotypes.tsv" "counts,degust"
     fi
     
     # Nextflow reports

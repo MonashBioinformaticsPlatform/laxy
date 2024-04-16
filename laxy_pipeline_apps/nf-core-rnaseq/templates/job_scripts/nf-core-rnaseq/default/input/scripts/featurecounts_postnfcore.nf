@@ -222,8 +222,10 @@ workflow {
             [
                 "${workflow.launchDir}/results/star_salmon/salmon.merged.gene_counts.tsv",
                 "${workflow.launchDir}/results/salmon/salmon.merged.gene_counts.tsv",
+                "${workflow.launchDir}/results/star_salmon/salmon.merged.gene_counts_scaled.tsv",
+                "${workflow.launchDir}/results/salmon/salmon.merged.gene_counts_scaled.tsv",
                 "${workflow.launchDir}/results/star_salmon/salmon.merged.gene_counts_length_scaled.tsv",
-                "${workflow.launchDir}/results/salmon/salmon.merged.gene_counts_length_scaled.tsv"
+                "${workflow.launchDir}/results/salmon/salmon.merged.gene_counts_length_scaled.tsv",
             ],
     )
     .tap { salmon_counts }
