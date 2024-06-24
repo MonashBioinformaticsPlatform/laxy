@@ -29,7 +29,7 @@ ADD --chown=laxy:laxy . /app/
 # RUN chown -R laxy:laxy /app
 
 RUN export PIP_DISABLE_PIP_VERSION_CHECK=1 && \
-    pip3 install -U pip==19.2.2 && \
+    pip3 install -U pip==21.3.1 && \
     pip3 install -U -r requirements.txt
 
 # We collect Django admin staticfiles, to be shared with the nginx container

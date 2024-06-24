@@ -168,7 +168,8 @@ services:
       - django
 
   splash:
-    image: scrapinghub/splash:3.4.1
+    # https://hub.docker.com/layers/scrapinghub/splash/master/images/sha256-02d75b5b052f3d91c2f2b308c1c402bd11464beb3ed0a468253921c2c39b2b8e
+    image: scrapinghub/splash:master
     command: --disable-ui --disable-lua --disable-browser-caches --max-timeout 300
     expose:
       - "8050"
