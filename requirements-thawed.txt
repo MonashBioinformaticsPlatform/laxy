@@ -58,6 +58,10 @@ djangorestframework-csv
 # whitenoise
 # whitenoise[brotli]
 
+# for Django django.contrib.auth.hashers
+bcrypt
+argon2-cffi
+
 # django-jsonfield, the schinckel one, now at https://github.com/adamchainz/django-jsonfield
 git+https://github.com/adamchainz/django-jsonfield#egg=django-jsonfield
 

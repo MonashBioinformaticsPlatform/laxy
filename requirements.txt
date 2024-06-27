@@ -8,10 +8,11 @@ appdirs==1.4.3
 asn1crypto==0.24.0
 attrdict==2.0.0
 attrs==22.2.0
+argon2-cffi
 Babel==2.5.3
 backoff==1.8.0
 BaseHash
-# bcrypt==3.1.6
+bcrypt
 beautifulsoup4==4.7.1
 biopython==1.70
 boto3==1.9.81
