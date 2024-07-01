@@ -2045,7 +2045,7 @@ class JobCreate(JSONView):
 
             # We associate the previously created SampleCart with our new Job object
             # (SampleCarts effectively should be readonly once associated with a Job).
-            samplecart = json.loads(request.data["params"]).get("sample_cart", {}) or {} 
+            samplecart = json.loads(request.data["params"]).get("sample_cart", {}) or {}
             samplecart_id = samplecart.get("id", None)
 
             if samplecart_id:
@@ -3028,6 +3028,9 @@ class SendFileToDegust(JSONView):
             "init_select": init_select,
             # 'hidden_factor': [],
             "link_column": "Gene.ID",
+            "min_counts": 10,
+            # "min_cpm": 10,
+            # "min_cpm_samples": 2
         }
 
         degust_settings_url = f"{degust_api_url}/degust/{degust_id}/settings"
