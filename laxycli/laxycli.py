@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from typing import List
+from typing import List, Mapping
 import os
 import sys
 import time
@@ -13,7 +13,7 @@ from argparse import ArgumentParser, Namespace
 logger = logging.getLogger(__name__)
 
 
-def get_auth_headers(filepath=".private_request_headers"):
+def get_auth_headers(filepath=".private_request_headers") -> Mapping:
     if os.path.exists(filepath):
         with open(filepath, "r") as fh:
             headers_lines = fh.read().splitlines()
@@ -53,7 +53,7 @@ def get_token_from_headers(headers: dict) -> str:
     return parts[1]
 
 
-def decode_jwt(token: str) -> dict:
+def decode_jwt(token: str) -> Mapping:
     try:
         import jwt
     except:
@@ -208,7 +208,7 @@ def create_job(args: Namespace) -> None:
     logger.info(job_blob)
 
 
-def download_job(api_base_url: str, job_id: str, headers: dict) -> None:
+def download_job(api_base_url: str, job_id: str, headers: Mapping) -> None:
     """
     Downloads the job tarball from the API.
 
@@ -227,10 +227,34 @@ def download_job(api_base_url: str, job_id: str, headers: dict) -> None:
 
     # Stream the download to the file
     with open(output_filename, "wb") as f:
-        for chunk in response.iter_content(chunk_size=8192):
+        for chunk in response.iter_content(chunk_size=16384):
             f.write(chunk)
 
     logger.info(f"Downloaded job {job_id} to {output_filename}.")
+
+
+def download_file(
+    api_base_url: str, job_id: str, file_path: str, headers: Mapping
+) -> None:
+    """
+    Downloads a specific file from a job using the Laxy API.
+
+    :param api_base_url: URL of the Laxy API.
+    :param job_id: ID of the job.
+    :param file_path: Path of the file to download.
+    :param headers: Headers for the API request.
+    """
+    file_download_url = f"{api_base_url}/job/{job_id}/files/{file_path}?download"
+
+    response = requests.get(file_download_url, headers=headers, stream=True)
+    response.raise_for_status()
+
+    filename = file_path.split("/")[-1]
+    with open(filename, "wb") as f:
+        for chunk in response.iter_content(chunk_size=16384):
+            f.write(chunk)
+
+    logger.info(f"Downloaded file {filename} from job {job_id}.")
 
 
 def main():
@@ -303,6 +327,29 @@ def main():
     job_download_parser.set_defaults(
         func=lambda args: download_job(
             args.api_base_url, args.job_id, get_auth_headers()
+        )
+    )
+
+    # Subparser for the 'file download' command
+    file_download_parser = subparsers.add_parser(
+        "file", parents=[parent_parser], help="File related commands"
+    )
+    file_download_subparsers = file_download_parser.add_subparsers(
+        title="subcommands", dest="subcommand", help="File actions"
+    )
+
+    file_download_cmd_parser = file_download_subparsers.add_parser(
+        "download", parents=[parent_parser], help="Download a specific file from a job"
+    )
+    file_download_cmd_parser.add_argument(
+        "job_id", type=str, help="The ID of the job containing the file."
+    )
+    file_download_cmd_parser.add_argument(
+        "path", type=str, help="The path of the file to download."
+    )
+    file_download_cmd_parser.set_defaults(
+        func=lambda args: download_file(
+            args.api_base_url, args.job_id, args.path, get_auth_headers()
         )
     )
 
