@@ -203,9 +203,9 @@
                 title="Reports" :fileset-id="job.output_fileset_id" :tag-filters="['report', 'html']"
                 :exclude-tags="['fastqc']" :hide-search="true" :job-id="jobId"
                 @refresh-error="showErrorDialog"></file-list>
-              <file-list v-if="job && jobIsDone && hasFilesWithTags(['degust', 'counts', 'strand-info'])"
+              <file-list v-if="job && jobIsDone && hasFilesWithTags(['counts', 'strand-info'])"
                 ref="count-files" title="Recommended count files" :fileset-id="job.output_fileset_id"
-                :tag-filters="['degust', 'counts', 'strand-info']" :hide-search="true" :job-id="jobId"
+                :tag-filters="['counts', 'strand-info']" :hide-search="true" :job-id="jobId"
                 @action-error="showErrorDialog" @refresh-error="showErrorDialog"></file-list>
               <file-list v-if="job && jobIsDone && hasFilesWithTags(['fastqc'])" ref="report-files" title="FastQC Reports"
                 :fileset-id="job.output_fileset_id" :tag-filters="['fastqc']" :hide-search="true" :job-id="jobId"
