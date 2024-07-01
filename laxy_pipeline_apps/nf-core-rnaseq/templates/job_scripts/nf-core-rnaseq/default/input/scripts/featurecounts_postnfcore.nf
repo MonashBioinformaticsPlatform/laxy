@@ -6,7 +6,7 @@ params.bams = file('results/star_salmon/*.bam')
 params.annotation = file('reference/genes.gtf.gz')
 params.meta_info = file('results/star_salmon/*/aux_info/meta_info.json')
 params.paired = true
-params.use_annotation_as_is = false
+params.clean_annotation = false
 params.outdir = file('results')
 //params.scripts_path = workflow.scriptFile.getParent()
 
@@ -23,24 +23,37 @@ process PREPROCESS_ANNOTATION {
         path annotation
     output:
         path 'annotation.gxf'
-    script:
-        """
-        if [[ "${params.use_annotation_as_is}" == "true" ]]; then
-            if [[ ${annotation} =~ \.gz\$ ]]; then
-                gunzip -c ${annotation} >annotation.gxf
-            else
-                ln -s ${annotation} annotation.gxf
-            fi
-        else
-            agat_sp_webApollo_compliant.pl \
-              -g ${annotation} \
-              -o annotation.fixed.gff
+    shell:
+    // We are using Groovy dollar slashy string syntax here
+    $/
+    if [[ !{annotation} =~ \.gz$ ]]; then
+        gunzip -c !{annotation} >annotation.gxf
+    else
+        ln -s !{annotation} annotation.gxf
+    fi
 
-            agat_convert_sp_gff2gtf.pl \
-              --gff annotation.fixed.gff \
-              -o annotation.gxf
-        fi
-        """
+    # We always convert GFF to GTF
+    if [[ !{annotation} =~ \.(gff|gff3|gff\.gz|gff3\.gz)$ ]]; then
+        mv annotation.gxf annotation.gff
+
+        agat_convert_sp_gff2gtf.pl \
+          --gff annotation.gff \
+          -o annotation.gxf
+    fi
+
+    if [[ !{params.clean_annotation} == "true" ]]; then
+        mv annotation.gxf annotation.pre-agat.gxf
+
+        # This removes gene_biotype and gene_name from exon features, but
+        # leaves it on gene features. The result is no gene_biotype,gene_name columns
+        # in the featureCounts output. But it often fixes problematic annotation 
+        # files so that featureCounts doesnt complain. There may be a better AGAT
+        # option here that fixes things but is less agressive.
+        agat_sp_webApollo_compliant.pl \
+          -g annotation.pre-agat.gxf \
+          -o annotation.gxf
+    fi
+    /$
 }
 
 process GET_SALMON_INFERRED_STRANDEDNESS {
