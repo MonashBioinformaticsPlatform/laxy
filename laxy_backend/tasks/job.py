@@ -944,18 +944,20 @@ def file_should_be_deleted(ff: File, max_size=200):
         "**/sikRun/logs/**",
     ]
     whitelisted_type_tags = ["report", "counts", "degust"]
-    always_delete_extensions = [".tmp", ".bam", ".bai", ".bw", ".bedGraph"]
+    always_delete_extensions = [".tmp", ".bam", ".bai", ".bw", ".bigWig", ".bedGraph"]
     always_delete_paths = [
         "**/sikRun/refFiles/**",
+        "output/results/work/**",
+        "output/results/genome/**",
         "input/*.fastq.gz",
         "input/*.fastq",
-        "input/*.fq.gz", 
+        "input/*.fq.gz",
         "input/**/*.fastq.gz",
         "input/**/*.fastq",
         "input/**/*.fq.gz",
         "input/reads/*",
         "input/reads/**/*",
-        #"input/reference/*",
+        # "input/reference/*",
     ]
 
     if extension in always_delete_extensions:
@@ -980,10 +982,12 @@ def file_should_be_deleted(ff: File, max_size=200):
     has_whitelisted_path = any(
         [fnmatch.filter([ff.full_path], pattern) for pattern in whitelisted_paths]
     )
-    
+
     has_whitelisted_tag = False
     if ff.type_tags is not None:
-        has_whitelisted_tag = any([tag in whitelisted_type_tags for tag in ff.type_tags])
+        has_whitelisted_tag = any(
+            [tag in whitelisted_type_tags for tag in ff.type_tags]
+        )
 
     return (
         (not ff.deleted)
@@ -1299,10 +1303,10 @@ def move_job_files_to_archive_task(self, task_data=None, *kwargs):
     track_started=True,
     acks_late=True,
     reject_on_worker_lost=True,
-    default_retry_delay=60,          # 1min
+    default_retry_delay=60,  # 1min
     max_retries=10,
     autoretry_for=(IOError, OSError, SSHException),
-    retry_backoff=120,               # 2 min, doubling each retry
+    retry_backoff=120,  # 2 min, doubling each retry
     retry_backoff_max=60 * 60 * 72,  # 72 hours
 )
 def bulk_move_job_rsync(self, task_data=None, optional=False, **kwargs):
