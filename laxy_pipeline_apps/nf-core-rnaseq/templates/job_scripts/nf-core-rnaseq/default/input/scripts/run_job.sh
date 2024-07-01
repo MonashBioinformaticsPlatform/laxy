@@ -52,6 +52,8 @@ export NXF_SINGULARITY_CACHEDIR="${SINGULARITY_CACHEDIR}"
 export NXF_OPTS='-Xms1g -Xmx7g'
 export NXF_ANSI_LOG='false'
 export NXF_VER=22.10.4
+#export NXF_VER=23.10.3
+
 # We use a custom .nextflow directory per run so anything cached in ~/.nextflow won't interfere
 # (there seems to be some locking issues when two nextflow instances are run simultaneously, or
 #  issues downloading the nf-amazon plugin when a version is already cached in ~/.nextflow/plugins ?
@@ -65,6 +67,8 @@ export SLURM_EXTRA_ARGS="{{ SLURM_EXTRA_ARGS|default:"" }}"
 # export QUEUE_TYPE="{{ QUEUE_TYPE }}"
 # nextflow itself will run on ComputeResource login node, but
 # nextflow.config can still make pipeline tasks go to SLURM
+# TODO: This should probably be QUEUE_TYPE="slurm" (or taken from ComputeResource params) 
+#       - we need to add a ${_PRE} to submit the nextflow process as a SLURM task
 export QUEUE_TYPE="local"
 
 if [[ ${IGNORE_SELF_SIGNED_CERTIFICATE} == "yes" ]]; then
@@ -181,33 +185,50 @@ function register_files() {
     add_to_manifest "output/results/**/*.bai" "bai"
     add_to_manifest "output/results/**/multiqc_report.html" "report,html,multiqc"
     add_to_manifest "output/results/**/*_fastqc.html" "report,html,fastqc"
-    #add_to_manifest "output/results/**/salmon.merged.gene_counts.tsv" "counts,degust"
-    #add_to_manifest "output/results/**/salmon.merged.gene_counts.biotypes.tsv" "counts,degust"
+
+    # Tag 'degust' for a "Send to Degust" button (but not front page)
+    #add_to_manifest "output/results/**/salmon.merged.gene_counts.tsv" "degust"
+    #add_to_manifest "output/results/**/salmon.merged.gene_counts.biotypes.tsv" "degust"
+    add_to_manifest "output/results/**/salmon.merged.gene_counts_scaled.tsv" "degust"
+    add_to_manifest "output/results/**/salmon.merged.gene_counts_scaled.biotypes.tsv" "degust"
+    add_to_manifest "output/results/**/salmon.merged.gene_counts_length_scaled.tsv" "degust"
+    add_to_manifest "output/results/**/salmon.merged.gene_counts_length_scaled.biotypes.tsv" "degust"
     
-    add_to_manifest "output/results/featureCounts/counts.star_featureCounts.tsv" "counts"
+    # featureCounts on front page, tagged 'counts'
+    add_to_manifest "output/results/featureCounts/counts.star_featureCounts.tsv" "counts,degust,front-page"
 
     # Estimated counts scaled up to the original library size,
     # and length-scaled to remove effects of differential transcript usage between samples 
     # when looking at gene-level expression (tximport countsFromAbundance="lengthScaledTPM") from Salmon shouldn't be used for 3' focused sequencing
     # local _jobpage_counts_prefix="salmon.merged.gene_counts_length_scaled"
-    
-    # Estimated counts scale up to original library size (tximport countsFromAbundance="scaledTPM")
+
+    # Estimated counts scaled up to original library size (tximport countsFromAbundance="scaledTPM")
     # Does not account for potential bias from differtial transcript usage between samples, but is
     # more approriate for 3' focused sequencing
     # see: https://bioconductor.org/packages/devel/bioc/vignettes/tximport/inst/doc/tximport.html#Downstream_DGE_in_Bioconductor
-    local _jobpage_counts_prefix="salmon.merged.gene_counts_scaled"
+    # local _jobpage_counts_prefix="salmon.merged.gene_counts_scaled"
 
+    # Unscaled Salmon counts. May suffer from bias due to differential transcript usage, but correlates much better with
+    # simple featureCounts output
+    local _jobpage_counts_prefix="salmon.merged.gene_counts"
+
+    # Here we find a single Salmon counts file to put on the front page 
+    # (tagged 'counts' for front page, and 'degust' for a button)
     add_to_manifest "output/results/star_salmon/${_jobpage_counts_prefix}.biotypes.tsv" "counts,degust"
 
     if [[ ! -f "${JOB_PATH}/output/results/star_salmon/${_jobpage_counts_prefix}.biotypes.tsv" ]]; then
-        add_to_manifest "output/results/star_salmon/${_jobpage_counts_prefix}.tsv" "counts,degust"
+        add_to_manifest "output/results/star_salmon/${_jobpage_counts_prefix}.tsv" "counts,degust,front-page"
     fi
 
     if [[ ! -f "${JOB_PATH}/output/results/star_salmon/${_jobpage_counts_prefix}.tsv" ]]; then
-        add_to_manifest "output/results/salmon/${_jobpage_counts_prefix}.tsv" "counts,degust"
-        add_to_manifest "output/results/salmon/${_jobpage_counts_prefix}.biotypes.tsv" "counts,degust"
+        add_to_manifest "output/results/salmon/${_jobpage_counts_prefix}.tsv" "counts,degust,front-page"
+        add_to_manifest "output/results/salmon/${_jobpage_counts_prefix}.biotypes.tsv" "counts,degust,front-page"
     fi
     
+    # Catch these if not already tagged above
+    add_to_manifest "output/results/**/salmon.merged.gene_counts.tsv" "degust"
+    add_to_manifest "output/results/**/salmon.merged.gene_counts.biotypes.tsv" "degust"
+
     # Nextflow reports
     add_to_manifest "output/results/pipeline_info/*.html" "report,html,nextflow"
     add_to_manifest "output/results/pipeline_info/software_versions.tsv" "report,nextflow"
@@ -336,6 +357,7 @@ function normalize_annotations() {
 
         send_event "JOB_INFO" "Standardising annotation file using AGAT" || true
 
+        module unload singularity || true
         module load singularity || true
 
         # We need a copy with a real name accessible to Singularity
@@ -357,6 +379,9 @@ function normalize_annotations() {
             -g "${_tmp_annotation_path}" \
             -o "${_tmp_annotation_path}.agat_webapollo.gff" \
           >>"${JOB_PATH}/output/agat.log" 2>&1)
+
+        # TODO: Run agat_sp_fix_features_locations_duplicated.pl since rsem-prepare-reference for Salmon *hates*
+        #       genes/exons split across chromosomes. May have implications for drafty fragmented assmeblies ?
 
         # We then convert GFF to GTF
         (cd "${JOB_PATH}/output" && \
@@ -549,6 +574,7 @@ function fastq_sanity_check() {
 function run_nextflow() {
     cd "${JOB_PATH}/output"
 
+    module unload singularity || true
     module load singularity || true
 
     # TODO: Valid genome IDs from:

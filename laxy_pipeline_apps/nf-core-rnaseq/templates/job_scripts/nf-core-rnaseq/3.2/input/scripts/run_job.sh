@@ -320,7 +320,8 @@ function cache_pipeline() {
 function run_nextflow() {
     cd "${JOB_PATH}/output"
 
-    module load singularity/3.7.1 || true
+    module unload singularity || true
+    module load singularity || true
 
     # TODO: Valid genome IDs from:
     # https://github.com/nf-core/rnaseq/blob/master/conf/igenomes.config
