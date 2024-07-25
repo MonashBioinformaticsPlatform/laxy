@@ -434,6 +434,7 @@ INSTALLED_APPS = [
     "rest_framework_social_oauth2",  # OAuth2 callback ('complete') endpoints
     "rest_social_auth",  # Login endpoints, hands off to social login services
     "laxy_backend",
+    "laxy_pipeline_apps.rnasik",
     "laxy_pipeline_apps.seqkit_stats",  # a pipeline plugin for Laxy
     "laxy_pipeline_apps.nf-core-rnaseq",  # a pipeline plugin for Laxy
     "laxy_pipeline_apps.openfold",

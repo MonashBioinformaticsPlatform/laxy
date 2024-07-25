@@ -31,7 +31,7 @@ dependencies:
   # General run_job.sh dependencies. Many of these will already exist on a typical
   # Linux system but we pull them in explicitly to ensure they are available, even on
   # barebones systems (eg slimmed down Docker containers)
-  - python=3.6.*
+  - python=3.6.7
   - pip
   - conda-pack
   - aria2
@@ -50,9 +50,12 @@ dependencies:
   - bwa=0.7.17
   - mash
   - qualimap=2.2.2b=0
+  - multiqc=1.15  # 1.17 is not compatible with Python 3.6.7
   # Appears to be missing from dependencies
   - pandas<1
   - pip:
+      # For Python 3.6 support, overriding version installed as multiqc dependency
+      - rich-click==1.2.1
       # General run_job.sh dependency, for the laxydl downloader tool
       - git+https://github.com/MonashBioinformaticsPlatform/laxy@master#egg=laxy_downloader&subdirectory=laxy_downloader
       - semver

@@ -31,9 +31,10 @@ dependencies:
   # General run_job.sh dependencies. Many of these will already exist on a typical
   # Linux system but we pull them in explicitly to ensure they are available, even on
   # barebones systems (eg slimmed down Docker containers)
-  - python=3.6.*
+  - python=3.6.7
   - pip
   - conda-pack
+  # TODO: conda package https://gitlab.com/q3aql/aria2-static-builds
   - aria2
   # older openssl and icu required to support aria2 on some systems
   - openssl=1.0.2p
@@ -50,7 +51,6 @@ dependencies:
   - bwa=0.7.17
   - bigdatascript=v2.0rc10  # pansapiens/bigdatascript
   - openjdk=11.0.8
-  - python=3.6.7
   - hisat2=2.2.1
   - bedtools=2.25.0
   - picard=2.18.9
@@ -58,11 +58,15 @@ dependencies:
   - qualimap=2.2.2d
   - htslib=1.9
   - fastqc=0.11.7
-  - multiqc=1.10.1
+  - multiqc=1.15  # 1.17 is not compatible with Python 3.6.7
   - mash
+  # R 3.4.1 installed for picard seems to have a libicuuc incompatiblity - so we upgrade to a compatible version
+  - r-base=3.5
   # Appears to be missing from dependencies
   - pandas<1
   - pip:
+      # For Python 3.6 support, overriding version installed as multiqc dependency
+      - rich-click==1.2.1
       # General run_job.sh dependency, for the laxydl downloader tool
       - git+https://github.com/MonashBioinformaticsPlatform/laxy@master#egg=laxy_downloader&subdirectory=laxy_downloader
       - semver
