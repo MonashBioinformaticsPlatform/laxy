@@ -140,7 +140,8 @@ init_conda_env "${PIPELINE_NAME}" "${PIPELINE_VERSION}" || fail_job 'init_conda_
 ####
 
 # TODO: This should be part of a ComputeResource specific pre-amble
-module load singularity/3.9.2 || true
+module unload singularity || true
+module load singularity || true
 
 # Takes:   ghcr.io/pansapiens/openfold:42e71db
 # Returns: openfold_42e71db.sif
