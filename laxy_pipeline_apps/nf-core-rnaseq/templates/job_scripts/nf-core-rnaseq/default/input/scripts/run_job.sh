@@ -426,8 +426,9 @@ function remove_index_reads() {
     # Ideally these would be filtered / warned about in the UI, however there are cases (like passing tarballs)
     # where the user has no opportunity to exclude them. Given that this nf-core/rnaseq wrapper currently does
     # not use I1 / I2 reads (eg as UMIs), we instead delete them before creating the samplesheet.
-    find ${INPUT_READS_PATH} \( -type f -or -type l \) -name "*_I1_001.f*.gz" -delete
-    find ${INPUT_READS_PATH} \( -type f -or -type l \) -name "*_I2_001.f*.gz" -delete
+    find ${INPUT_READS_PATH} -type f -name "*_I1_001.f*.gz" -delete
+    find ${INPUT_READS_PATH} -type f -name "*_I2_001.f*.gz" -delete
+}
 
 function generate_samplesheet() {
 
