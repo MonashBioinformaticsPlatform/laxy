@@ -29,9 +29,9 @@ jobs:
       - name: Run tests
         run: |
           if [ -f docker-compose.test.yml ]; then
-            docker-compose --file docker-compose.yml --file docker-compose.test.yml build \
+            docker compose --file docker-compose.yml --file docker-compose.test.yml build \
                            --build-arg GIT_COMMIT=${{ github.sha }} sut
-            docker-compose --file docker-compose.yml --file docker-compose.test.yml run sut
+            docker compose --file docker-compose.yml --file docker-compose.test.yml run sut
           else
             docker build . --file docker/laxy/Dockerfile
           fi
