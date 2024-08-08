@@ -415,6 +415,12 @@ function get_settings_from_pipeline_config() {
         export UMI_FLAGS=" --with_umi --skip_umi_extract --umitools_umi_separator : "
     fi
 
+    local _skip_trimming=$(jq -e --raw-output '.params."nf-core-rnaseq".skip_trimming' "${PIPELINE_CONFIG}" || echo "false")
+    export EXTRA_FLAGS=""
+    if [[ "${_skip_trimming}" == "true" ]]; then
+        export EXTRA_FLAGS="${EXTRA_FLAGS} --skip-trimming "
+    fi
+
     local -i _min_mapped_reads=$(jq -e --raw-output '.params."nf-core-rnaseq".min_mapped_reads' "${PIPELINE_CONFIG}" || echo "5")
     export MIN_MAPPED_READS_ARG=" --min_mapped_reads ${_min_mapped_reads} "
 }
@@ -598,6 +604,7 @@ function run_nextflow() {
        ${GENOME_ARGS} \
        ${UMI_FLAGS} \
        ${MIN_MAPPED_READS_ARG} \
+       ${EXTRA_FLAGS} \
        --aligner star_salmon \
        --pseudo_aligner salmon \
        --save_reference \
@@ -621,6 +628,7 @@ function run_nextflow() {
             ${GENOME_ARGS} \
             ${UMI_FLAGS} \
             ${MIN_MAPPED_READS_ARG} \
+            ${EXTRA_FLAGS} \
             --aligner star_salmon \
             --pseudo_aligner salmon \
             --save_reference \

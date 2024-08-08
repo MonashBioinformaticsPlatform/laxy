@@ -8,6 +8,7 @@ const initial_state: any = {
     min_mapped_reads: 5,
     save_reference_genome: true,
     save_genome_index: false,
+    skip_trimming: false,
 };
 
 const getters: any = {

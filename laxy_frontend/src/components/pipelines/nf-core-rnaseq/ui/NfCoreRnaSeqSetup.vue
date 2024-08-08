@@ -68,6 +68,9 @@
 
                 <md-switch v-model="save_genome_index" id="save-genome-index-toggle" name="save-genome-index-toggle"
                   class="md-primary">Save reference genome index</md-switch>
+
+                <md-switch v-model="skip_trimming" id="skip-trimming-toggle" name="skip-trimming-toggle"
+                  class="md-primary">Skip trimming reads</md-switch>
               </md-layout>
 
             </md-layout>
@@ -284,6 +287,9 @@ export default class PipelineParams extends Vue {
 
   @Sync("pipelineParams@nf-core-rnaseq.save_genome_index")
   public save_genome_index: boolean;
+
+  @Sync("pipelineParams@nf-core-rnaseq.skip_trimming")
+  public skip_trimming: boolean;
 
   created() {
     this.$store.registerModule(
