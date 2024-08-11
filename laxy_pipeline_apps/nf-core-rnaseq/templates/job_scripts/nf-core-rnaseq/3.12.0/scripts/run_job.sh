@@ -418,7 +418,7 @@ function get_settings_from_pipeline_config() {
     local _skip_trimming=$(jq -e --raw-output '.params."nf-core-rnaseq".skip_trimming' "${PIPELINE_CONFIG}" || echo "false")
     export EXTRA_FLAGS=""
     if [[ "${_skip_trimming}" == "true" ]]; then
-        export EXTRA_FLAGS="${EXTRA_FLAGS} --skip-trimming "
+        export EXTRA_FLAGS="${EXTRA_FLAGS} --skip_trimming "
     fi
 
     local -i _min_mapped_reads=$(jq -e --raw-output '.params."nf-core-rnaseq".min_mapped_reads' "${PIPELINE_CONFIG}" || echo "5")
