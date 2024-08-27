@@ -1059,6 +1059,12 @@ export default class JobPage extends Vue {
   }
 
   openLinkInTab(url: string) {
+    const access_token = this.access_token;
+    if (access_token) {
+      const urlObj = new URL(url, window.location.origin);
+      urlObj.searchParams.set('access_token', access_token);
+      url = urlObj.toString();
+    }
     window.open(url);
   }
 
