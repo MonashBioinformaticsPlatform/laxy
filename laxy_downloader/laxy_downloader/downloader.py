@@ -40,6 +40,7 @@ import magic
 import trio
 import asks
 from attrdict import AttrDict
+from filelock import FileLock
 
 logger = logging.getLogger(__name__)
 # logging.basicConfig(format='%(levelname)s: %(asctime)s -- %(message)s', level=logging.INFO)
@@ -214,27 +215,23 @@ def download_url(
             shutil.move(tmpfilepath, filepath)
             return filepath
 
-    # We download to a temporary file then move it once
-    # the download is complete
     tmpfilepath = None
     status_code = None
-    try:
-        logger.info(f"Starting download: {url} ({url_to_cache_key(url)})")
-        with closing(
-            request_with_retries("GET", url, stream=True, headers=headers, auth=auth)
-        ) as download:
-            content_length = download.headers.get("content-length", None)
-            if content_length is not None:
-                content_length = int(content_length)
-            status_code = download.status_code
+    content_length = None  # Initialize content_length here
+    lock_path = f"{filepath}.lock"
+    lock = FileLock(lock_path, timeout=600)  # 10 minutes timeout
 
-            # TODO: This isn't very smart caching - we don't look at
-            #       HTTP cache headers, just rely on the file size and
-            #       reported Content-Length alone. Content-Length might not
-            #       even be returned by some servers.
-            # ( https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching )
-            if content_length and check_existing_size and os.path.exists(filepath):
-                if os.path.getsize(filepath) == content_length:
+    try:
+        with lock:
+            # Check if the file already exists and has the correct size
+            if check_existing_size and os.path.exists(filepath):
+                # Get content length before checking file size
+                with closing(request_with_retries("HEAD", url, headers=headers, auth=auth)) as head_request:
+                    content_length = head_request.headers.get("content-length")
+                    if content_length is not None:
+                        content_length = int(content_length)
+
+                if content_length is not None and os.path.getsize(filepath) == content_length:
                     logger.info(
                         "File of correct size %s (%s bytes) already "
                         "exists, skipping download" % (filepath, content_length)
@@ -248,34 +245,45 @@ def download_url(
                     )
                     os.remove(filepath)
 
-            with tempfile.NamedTemporaryFile(
-                mode="wb",
-                dir=directory,
-                prefix=f"{filename}.",
-                suffix=".tmp",
-                delete=False,
-            ) as tmpfile:
-                tmpfilepath = str(Path(directory, tmpfile.name))
-                for chunk in download.iter_content(chunk_size=chunk_size):
-                    status_code = download.status_code
-                    tmpfile.write(chunk)
+            logger.info(f"Starting download: {url} ({url_to_cache_key(url)})")
+            with closing(
+                request_with_retries("GET", url, stream=True, headers=headers, auth=auth)
+            ) as download:
+                content_length = download.headers.get("content-length", None)
+                if content_length is not None:
+                    content_length = int(content_length)
+                status_code = download.status_code
 
-                    # TODO: Stream this through xxhash64 or MD5 by default and
-                    #       always return the checksum
+                with tempfile.NamedTemporaryFile(
+                    mode="wb",
+                    dir=directory,
+                    prefix=f"{filename}.",
+                    suffix=".tmp",
+                    delete=False,
+                ) as tmpfile:
+                    tmpfilepath = str(Path(directory, tmpfile.name))
+                    for chunk in download.iter_content(chunk_size=chunk_size):
+                        status_code = download.status_code
+                        tmpfile.write(chunk)
 
-            # TODO: If the stream ends prematurely, an exception isn't
-            #       raised - we need to deal with this
-            #       (eg, rely on expected Content-Length ?)
-            #       If content_length > final file_size, we could also resume
-            #       by adding a Range header (
-            #        header = {'Range': 'bytes=%d-' % file_size}
-            #       (and reopen tmpfilepath as mode='ab')
-            file_size = os.path.getsize(tmpfilepath)
-            if content_length is not None and file_size < content_length:
-                raise Exception(
-                    "Downloaded file appears incomplete based on "
-                    "Content-Length header."
-                )
+                # TODO: Stream this through xxhash64 or MD5 by default and
+                #       always return the checksum
+                # TODO: If the stream ends prematurely, an exception isn't
+                #       raised - we need to deal with this
+                #       (eg, rely on expected Content-Length ?)
+                #       If content_length > final file_size, we could also resume
+                #       by adding a Range header (
+                #        header = {'Range': 'bytes=%d-' % file_size}
+                #       (and reopen tmpfilepath as mode='ab')
+                file_size = os.path.getsize(tmpfilepath)
+                if content_length is not None and file_size < content_length:
+                    raise Exception(
+                        "Downloaded file appears incomplete based on "
+                        "Content-Length header."
+                    )
+
+            # Move the temporary file to the final location
+            shutil.move(tmpfilepath, filepath)
 
     except Exception as e:
         if status_code:
@@ -294,8 +302,12 @@ def download_url(
 
         logger.error("%s" % str(e))
         raise e
-
-    shutil.move(tmpfilepath, filepath)
+    finally:
+        # Ensure the lock file is removed
+        try:
+            os.remove(lock_path)
+        except OSError:
+            pass
 
     return filepath
 
@@ -468,13 +480,16 @@ def get_urls_from_pipeline_config_deprecated_sample_cart(
                 else:
                     continue
 
-                url_filename_mapping[url] = sanitized_filename
                 if required_type_tags is None:
                     url_filename_mapping[url] = sanitized_filename
                 else:
-                    if set(required_type_tags).issubset(
+                    if isinstance(url_descriptor, dict) and set(required_type_tags).issubset(
                         set(url_descriptor.get("type_tags", []))
                     ):
+                        url_filename_mapping[url] = sanitized_filename
+                    elif isinstance(url_descriptor, str):
+                        # If url_descriptor is a string, we can't check type_tags
+                        # You might want to decide how to handle this case
                         url_filename_mapping[url] = sanitized_filename
 
     return url_filename_mapping
