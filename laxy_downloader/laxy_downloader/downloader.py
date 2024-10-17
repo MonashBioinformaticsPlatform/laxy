@@ -245,7 +245,6 @@ def download_url(
                 tmpfilepath = str(Path(directory, tmpfile.name))
                 if scheme == "ftp":
                     urllib.request.urlretrieve(url, filename=tmpfilepath)
-                    file_size = os.path.getsize(tmpfilepath)
                 else:
                     with closing(
                         request_with_retries(
@@ -255,11 +254,9 @@ def download_url(
                         status_code = download.status_code
                         for chunk in download.iter_content(chunk_size=chunk_size):
                             tmpfile.write(chunk)
-
                     tmpfile.flush()
-                    file_size = os.path.getsize(tmpfilepath)
 
-
+                file_size = os.path.getsize(tmpfilepath)
                 if content_length is not None and file_size < int(content_length):
                     raise Exception(
                         f"Downloaded file size ({file_size}) appears incomplete based on "
