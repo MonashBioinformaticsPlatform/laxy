@@ -34,7 +34,7 @@ readonly SINGULARITY_TMPDIR="${TMP}"
 readonly AUTH_HEADER_FILE="${JOB_PATH}/.private_request_headers"
 readonly IGNORE_SELF_SIGNED_CERTIFICATE="{{ IGNORE_SELF_SIGNED_CERTIFICATE }}"
 readonly LAXYDL_BRANCH=master
-readonly LAXYDL_USE_ARIA2C=yes
+readonly LAXYDL_USE_ARIA2C=no
 readonly LAXYDL_PARALLEL_DOWNLOADS=8
 
 # These are applied via chmod to all files and directories in the run, upon completion

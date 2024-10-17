@@ -39,7 +39,7 @@ export SINGULARITY_TMPDIR="${TMPDIR}"
 export AUTH_HEADER_FILE="${JOB_PATH}/.private_request_headers"
 export IGNORE_SELF_SIGNED_CERTIFICATE="{{ IGNORE_SELF_SIGNED_CERTIFICATE }}"
 export LAXYDL_BRANCH=master
-export LAXYDL_USE_ARIA2C=yes
+export LAXYDL_USE_ARIA2C=no
 export LAXYDL_PARALLEL_DOWNLOADS=8
 
 # These are applied via chmod to all files and directories in the run, upon completion
