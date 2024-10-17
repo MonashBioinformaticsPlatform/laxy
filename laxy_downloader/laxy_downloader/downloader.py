@@ -7,7 +7,18 @@ from contextlib import closing
 from urllib.parse import urlparse, urlsplit, urlunsplit, unquote
 from pathlib import Path
 import shutil
-from typing import Dict, Iterable, List, Sequence, Tuple, Union, Mapping, Set, Callable
+from typing import (
+    Dict,
+    Iterable,
+    List,
+    Sequence,
+    Tuple,
+    Union,
+    Mapping,
+    Set,
+    Callable,
+    Optional,
+)
 import logging
 import sys
 import os
@@ -148,168 +159,166 @@ def request_with_retries(*args, **kwargs):
 
 
 def download_url(
-    url,
-    filepath,
-    headers=None,
-    username=None,
-    password=None,
-    tmp_directory=None,
-    cleanup_on_exception=True,
-    check_existing_size=True,
-    remove_existing=True,
-    chunk_size=1024,
-):
+    url: str,
+    filepath: Union[str, Path],
+    headers: Optional[Dict[str, str]] = None,
+    username: Optional[str] = None,
+    password: Optional[str] = None,
+    tmp_directory: Optional[str] = None,
+    cleanup_on_exception: bool = True,
+    check_existing_size: bool = True,
+    remove_existing: bool = True,
+    chunk_size: int = 1024,
+) -> str:
     """
+    Download a file from a given URL to a specified filepath, with support for both HTTP(S) and FTP protocols.
 
-    :param chunk_size:
-    :type chunk_size:
-    :param tmp_directory:
-    :type tmp_directory:
-    :param cleanup_on_exception:
-    :type cleanup_on_exception:
-    :param check_existing_size:
-    :type check_existing_size:
-    :param remove_existing:
-    :type remove_existing:
-    :param url:
-    :type url:
-    :param filepath:
-    :type filepath:
-    :param headers: A dictionary of HTTP headers to use for the request.
-    :type headers: dict
-    :param username:
-    :type username:
-    :param password:
-    :type password:
-    :return:
-    :rtype:
+    This function implements file locking to ensure thread-safety when multiple processes
+    attempt to download the same file. It also supports checking and removing existing files,
+    as well as cleaning up temporary files in case of exceptions.
+
+    Args:
+        url (str): The URL of the file to download.
+        filepath (str): The local path where the downloaded file should be saved.
+        headers (Optional[Dict[str, str]]): Additional HTTP headers to send with the request.
+        username (Optional[str]): Username for basic authentication.
+        password (Optional[str]): Password for basic authentication.
+        tmp_directory (Optional[str]): Directory to use for temporary files. If None, uses the parent directory of filepath.
+        cleanup_on_exception (bool): Whether to remove temporary files if an exception occurs during download.
+        check_existing_size (bool): Whether to check the size of an existing file before downloading.
+        remove_existing (bool): Whether to remove an existing file if its size doesn't match the expected size.
+        chunk_size (int): The size of chunks to use when streaming the download.
+
+    Returns:
+        str: The path to the downloaded file.
+
+    Raises:
+        Exception: If the download fails or if the downloaded file is incomplete.
     """
-
     auth = None
     if username is not None and password is not None:
-        auth = HTTPBasicAuth("user", "pass")
+        auth = HTTPBasicAuth(username, password)
 
     if headers is None:
         headers = {}
 
     filepath = Path(filepath)
-    directory = tmp_directory
-    if directory is None:
-        directory = str(filepath.parent)
-
+    directory = tmp_directory or str(filepath.parent)
     filename = filepath.name
     filepath = str(filepath)
 
     scheme = urlparse(url).scheme
 
-    # TODO: We should unify parts of the FTP vs HTTP(S) code,
-    #       or at least factor out the FTP and HTTP parts here
-    #       into functions
-    if scheme == "ftp":
-        with tempfile.NamedTemporaryFile(
-            mode="wb", dir=directory, prefix=f"{filename}.", suffix=".tmp", delete=False
-        ) as tmpfile:
-            tmpfilepath = str(Path(directory, tmpfile.name))
-            logger.info(f"Starting download: {url} ({url_to_cache_key(url)})")
-            urllib.request.urlretrieve(url, filename=tmpfilepath)
-            shutil.move(tmpfilepath, filepath)
-            return filepath
-
     tmpfilepath = None
     status_code = None
-    content_length = None  # Initialize content_length here
     lock_path = f"{filepath}.lock"
     lock = FileLock(lock_path, timeout=600)  # 10 minutes timeout
 
     try:
         with lock:
-            # Check if the file already exists and has the correct size
-            if check_existing_size and os.path.exists(filepath):
-                # Get content length before checking file size
-                with closing(request_with_retries("HEAD", url, headers=headers, auth=auth)) as head_request:
-                    content_length = head_request.headers.get("content-length")
-                    if content_length is not None:
-                        content_length = int(content_length)
+            content_length = get_content_length(url, headers, auth, scheme)
 
-                if content_length is not None and os.path.getsize(filepath) == content_length:
+            if check_existing_size and os.path.exists(filepath):
+                if content_length is not None and os.path.getsize(filepath) == int(
+                    content_length
+                ):
                     logger.info(
-                        "File of correct size %s (%s bytes) already "
-                        "exists, skipping download" % (filepath, content_length)
+                        f"File of correct size {filepath} ({content_length} bytes) already "
+                        "exists, skipping download"
                     )
                     return filepath
                 elif remove_existing:
                     logger.info(
-                        "File exists %s but is incorrect size "
-                        "(%s bytes). Deleting existing file."
-                        % (filepath, content_length)
+                        f"File exists {filepath} but is incorrect size "
+                        f"({content_length} bytes). Deleting existing file."
                     )
                     os.remove(filepath)
 
             logger.info(f"Starting download: {url} ({url_to_cache_key(url)})")
-            with closing(
-                request_with_retries("GET", url, stream=True, headers=headers, auth=auth)
-            ) as download:
-                content_length = download.headers.get("content-length", None)
-                if content_length is not None:
-                    content_length = int(content_length)
-                status_code = download.status_code
-
-                with tempfile.NamedTemporaryFile(
-                    mode="wb",
-                    dir=directory,
-                    prefix=f"{filename}.",
-                    suffix=".tmp",
-                    delete=False,
-                ) as tmpfile:
-                    tmpfilepath = str(Path(directory, tmpfile.name))
-                    for chunk in download.iter_content(chunk_size=chunk_size):
+            with tempfile.NamedTemporaryFile(
+                mode="wb",
+                dir=directory,
+                prefix=f"{filename}.",
+                suffix=".tmp",
+                delete=False,
+            ) as tmpfile:
+                tmpfilepath = str(Path(directory, tmpfile.name))
+                if scheme == "ftp":
+                    urllib.request.urlretrieve(url, filename=tmpfilepath)
+                    file_size = os.path.getsize(tmpfilepath)
+                else:
+                    with closing(
+                        request_with_retries(
+                            "GET", url, stream=True, headers=headers, auth=auth
+                        )
+                    ) as download:
                         status_code = download.status_code
-                        tmpfile.write(chunk)
+                        for chunk in download.iter_content(chunk_size=chunk_size):
+                            tmpfile.write(chunk)
 
-                # TODO: Stream this through xxhash64 or MD5 by default and
-                #       always return the checksum
-                # TODO: If the stream ends prematurely, an exception isn't
-                #       raised - we need to deal with this
-                #       (eg, rely on expected Content-Length ?)
-                #       If content_length > final file_size, we could also resume
-                #       by adding a Range header (
-                #        header = {'Range': 'bytes=%d-' % file_size}
-                #       (and reopen tmpfilepath as mode='ab')
-                file_size = os.path.getsize(tmpfilepath)
-                if content_length is not None and file_size < content_length:
+                    tmpfile.flush()
+                    file_size = os.path.getsize(tmpfilepath)
+
+
+                if content_length is not None and file_size < int(content_length):
                     raise Exception(
-                        "Downloaded file appears incomplete based on "
-                        "Content-Length header."
+                        f"Downloaded file size ({file_size}) appears incomplete based on "
+                        f"Content-Length header ({content_length})."
                     )
 
-            # Move the temporary file to the final location
             shutil.move(tmpfilepath, filepath)
 
     except Exception as e:
-        if status_code:
-            logger.error(
-                "Download failed (%s %s): %s"
-                % (status_code, response_codes[status_code], url)
-            )
-        else:
-            logger.error("Download failed: %s" % url)
-        if cleanup_on_exception and tmpfilepath:
-            try:
-                os.remove(tmpfilepath)
-            except (IOError, OSError) as ex:
-                logger.error("Failed to remove temporary file: %s" % tmpfilepath)
-                raise ex
-
-        logger.error("%s" % str(e))
-        raise e
+        handle_download_exception(
+            e, status_code, url, cleanup_on_exception, tmpfilepath
+        )
     finally:
-        # Ensure the lock file is removed
         try:
             os.remove(lock_path)
         except OSError:
             pass
 
     return filepath
+
+
+def get_content_length(url, headers, auth, scheme):
+    """
+    Get the content length of a file from a given URL.
+
+    Args:
+        url (str): The URL of the file.
+        headers (dict): Additional HTTP headers to send with the request.
+        auth (requests.auth.HTTPBasicAuth): Authentication credentials.
+        scheme (str): The scheme of the URL (http, https or ftp).
+
+    Returns:
+        Optional[int]: The content length if available, None otherwise.
+    """
+    if scheme == "ftp":
+        with closing(urllib.request.urlopen(url)) as response:
+            return response.info().get("Content-Length", None)
+    else:
+        with closing(
+            request_with_retries("HEAD", url, headers=headers, auth=auth)
+        ) as head_request:
+            return head_request.headers.get("content-length", None)
+
+
+def handle_download_exception(e, status_code, url, cleanup_on_exception, tmpfilepath):
+    if status_code:
+        logger.error(
+            f"Download failed ({status_code} {response_codes[status_code]}): {url}"
+        )
+    else:
+        logger.error(f"Download failed: {url}")
+    if cleanup_on_exception and tmpfilepath:
+        try:
+            os.remove(tmpfilepath)
+        except (IOError, OSError) as ex:
+            logger.error(f"Failed to remove temporary file: {tmpfilepath}")
+            raise ex
+    logger.error(str(e))
+    raise e
 
 
 def _download_with_wget(url: str, output_path: str) -> subprocess.CompletedProcess:
@@ -483,9 +492,9 @@ def get_urls_from_pipeline_config_deprecated_sample_cart(
                 if required_type_tags is None:
                     url_filename_mapping[url] = sanitized_filename
                 else:
-                    if isinstance(url_descriptor, dict) and set(required_type_tags).issubset(
-                        set(url_descriptor.get("type_tags", []))
-                    ):
+                    if isinstance(url_descriptor, dict) and set(
+                        required_type_tags
+                    ).issubset(set(url_descriptor.get("type_tags", []))):
                         url_filename_mapping[url] = sanitized_filename
                     elif isinstance(url_descriptor, str):
                         # If url_descriptor is a string, we can't check type_tags

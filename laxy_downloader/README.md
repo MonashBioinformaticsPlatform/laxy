@@ -15,6 +15,23 @@ See: `laxydl --help`
 Example:
 ```bash
 laxydl --pipeline-config pipeline_config.json --no-progress --destination-path /shared/jobs/XYZZY/input/
+
+
+Or a more complex test, demonstrating concurrent downloads of the same URL(s) with multiple processes into the same cache directory (eg, in the case where two jobs have the same input file):
+```bash
+mkdir -p /tmp/laxydl_cache /tmp/laxydl_test /tmp/laxydl_test2 /tmp/laxydl_test3
+
+laxydl download -vvv --cache-path /tmp/laxydl_cache --no-progress --unpack --parallel-downloads 4 --pipeline-config laxy_downloader/tests/test_data/pipeline_config_smaller.json --create-missing-directories --skip-existing --destination-path /tmp/laxydl_test --no-aria2c &
+
+laxydl download -vvv --cache-path /tmp/laxydl_cache --no-progress --unpack --parallel-downloads 4 --pipeline-config laxy_downloader/tests/test_data/pipeline_config_smaller.json --create-missing-directories --skip-existing --destination-path /tmp/laxydl_test2 --no-aria2c &
+
+laxydl download -vvv --cache-path /tmp/laxydl_cache --no-progress --unpack --parallel-downloads 4 --pipeline-config laxy_downloader/tests/test_data/pipeline_config_smaller.json --create-missing-directories --skip-existing --destination-path /tmp/laxydl_test3 --no-aria2c &
+
+# Wait for all background jobs to finish
+wait
+
+ls -lah /tmp/laxydl_cache
+ls -lah /tmp/laxydl_test*
 ```
 
 ### Development

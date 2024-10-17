@@ -1,0 +1,239 @@
+{
+    "owner": "AzJrs0mU0qpTXNNou8LkNZ",
+    "params": {
+        "genome": null,
+        "description": "test non-aria2c",
+        "fetch_files": [
+            {
+                "name": "Saccharomyces_cerevisiae.R64-1-1.dna_sm.toplevel.fa.gz",
+                "location": "http://ftp.ensembl.org/pub/release-112/fasta/saccharomyces_cerevisiae/dna/Saccharomyces_cerevisiae.R64-1-1.dna_sm.toplevel.fa.gz",
+                "type_tags": [
+                    "reference_genome",
+                    "genome_sequence",
+                    "fasta"
+                ]
+            },
+            {
+                "name": "Saccharomyces_cerevisiae.R64-1-1.112.gtf.gz",
+                "location": "http://ftp.ensembl.org/pub/release-112/gtf/saccharomyces_cerevisiae/Saccharomyces_cerevisiae.R64-1-1.112.gtf.gz",
+                "type_tags": [
+                    "reference_genome",
+                    "genome_annotation",
+                    "gtf"
+                ]
+            },
+            {
+                "name": "SRR5507337_1.fastq.gz",
+                "checksum": "md5:4bb53adf0a4c6a047fcd786e3f5d7a00",
+                "location": "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR550/007/SRR5507337/SRR5507337_1.fastq.gz",
+                "metadata": {
+                    "read_pair": "R1",
+                    "paired_file": "SRR5507337_2.fastq.gz"
+                },
+                "type_tags": [
+                    "ena",
+                    "ngs_reads"
+                ]
+            },
+            {
+                "name": "SRR5507337_2.fastq.gz",
+                "checksum": "md5:bda15e5e896efc46df4641de34c01f90",
+                "location": "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR550/007/SRR5507337/SRR5507337_2.fastq.gz",
+                "metadata": {
+                    "read_pair": "R2",
+                    "paired_file": "SRR5507337_1.fastq.gz"
+                },
+                "type_tags": [
+                    "ena",
+                    "ngs_reads"
+                ]
+            },
+            {
+                "name": "SRR5507336_1.fastq.gz",
+                "checksum": "md5:46ddbd4526503def97cd78e5fa350717",
+                "location": "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR550/006/SRR5507336/SRR5507336_1.fastq.gz",
+                "metadata": {
+                    "read_pair": "R1",
+                    "paired_file": "SRR5507336_2.fastq.gz"
+                },
+                "type_tags": [
+                    "ena",
+                    "ngs_reads"
+                ]
+            },
+            {
+                "name": "SRR5507336_2.fastq.gz",
+                "checksum": "md5:a4309870132ce65243ac2eb42b89ffba",
+                "location": "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR550/006/SRR5507336/SRR5507336_2.fastq.gz",
+                "metadata": {
+                    "read_pair": "R2",
+                    "paired_file": "SRR5507336_1.fastq.gz"
+                },
+                "type_tags": [
+                    "ena",
+                    "ngs_reads"
+                ]
+            }
+        ],
+        "user_genome": {
+            "fasta_url": "http://ftp.ensembl.org/pub/release-112/fasta/saccharomyces_cerevisiae/dna/Saccharomyces_cerevisiae.R64-1-1.dna_sm.toplevel.fa.gz",
+            "annotation_url": "http://ftp.ensembl.org/pub/release-112/gtf/saccharomyces_cerevisiae/Saccharomyces_cerevisiae.R64-1-1.112.gtf.gz"
+        },
+        "nf-core-rnaseq": {
+            "has_umi": false,
+            "debug_mode": false,
+            "strandedness": "auto",
+            "skip_trimming": true,
+            "min_mapped_reads": 5,
+            "save_genome_index": false,
+            "save_reference_genome": false
+        },
+        "pipeline_version": "3.10.1"
+    },
+    "pipeline": "nf-core-rnaseq",
+    "description": "test non-aria2c",
+    "sample_cart": {
+        "id": "XUsxgjBpN10mkRex5HnyRX",
+        "name": "Sample set created on 2024-10-15T03:47:31.474947+00:00",
+        "owner": "AzJrs0mU0qpTXNNou8LkNZ",
+        "samples": [
+            {
+                "name": "SRR5507337",
+                "files": [
+                    {
+                        "R1": {
+                            "name": "SRR5507337_1.fastq.gz",
+                            "checksum": "md5:4bb53adf0a4c6a047fcd786e3f5d7a00",
+                            "location": "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR550/007/SRR5507337/SRR5507337_1.fastq.gz",
+                            "type_tags": [
+                                "ena"
+                            ],
+                            "sanitized_filename": "SRR5507337_1.fastq.gz"
+                        },
+                        "R2": {
+                            "name": "SRR5507337_2.fastq.gz",
+                            "checksum": "md5:bda15e5e896efc46df4641de34c01f90",
+                            "location": "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR550/007/SRR5507337/SRR5507337_2.fastq.gz",
+                            "type_tags": [
+                                "ena"
+                            ],
+                            "sanitized_filename": "SRR5507337_2.fastq.gz"
+                        }
+                    }
+                ],
+                "metadata": {
+                    "ena": {
+                        "fastq_ftp": [
+                            {
+                                "R1": "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR550/007/SRR5507337/SRR5507337_1.fastq.gz"
+                            },
+                            {
+                                "R2": "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR550/007/SRR5507337/SRR5507337_2.fastq.gz"
+                            }
+                        ],
+                        "fastq_md5": [
+                            "4bb53adf0a4c6a047fcd786e3f5d7a00",
+                            "bda15e5e896efc46df4641de34c01f90"
+                        ],
+                        "run_alias": "ACH1_SCX2_ACTAAG_L003_R2_001.fastq.gz",
+                        "base_count": "58275030",
+                        "read_count": 1059546,
+                        "broker_name": "",
+                        "center_name": "",
+                        "fastq_bytes": [
+                            45654078,
+                            9212155
+                        ],
+                        "study_alias": "PRJNA381594",
+                        "library_name": "ACH1_SCX2",
+                        "sample_alias": "ACH1_SCX2",
+                        "run_accession": "SRR5507337",
+                        "library_layout": "PAIRED",
+                        "library_source": "TRANSCRIPTOMIC",
+                        "study_accession": "PRJNA381594",
+                        "experiment_alias": "ACH1_SCX2",
+                        "instrument_model": "Illumina HiSeq 2500",
+                        "library_strategy": "RNA-Seq",
+                        "sample_accession": "SAMN06681202",
+                        "library_selection": "RT-PCR",
+                        "instrument_platform": "ILLUMINA",
+                        "experiment_accession": "SRX2783069",
+                        "secondary_sample_accession": "SRS2165206"
+                    },
+                    "condition": ""
+                },
+                "sanitized_name": "SRR5507337"
+            },
+            {
+                "name": "SRR5507336",
+                "files": [
+                    {
+                        "R1": {
+                            "name": "SRR5507336_1.fastq.gz",
+                            "checksum": "md5:46ddbd4526503def97cd78e5fa350717",
+                            "location": "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR550/006/SRR5507336/SRR5507336_1.fastq.gz",
+                            "type_tags": [
+                                "ena"
+                            ],
+                            "sanitized_filename": "SRR5507336_1.fastq.gz"
+                        },
+                        "R2": {
+                            "name": "SRR5507336_2.fastq.gz",
+                            "checksum": "md5:a4309870132ce65243ac2eb42b89ffba",
+                            "location": "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR550/006/SRR5507336/SRR5507336_2.fastq.gz",
+                            "type_tags": [
+                                "ena"
+                            ],
+                            "sanitized_filename": "SRR5507336_2.fastq.gz"
+                        }
+                    }
+                ],
+                "metadata": {
+                    "ena": {
+                        "fastq_ftp": [
+                            {
+                                "R1": "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR550/006/SRR5507336/SRR5507336_1.fastq.gz"
+                            },
+                            {
+                                "R2": "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR550/006/SRR5507336/SRR5507336_2.fastq.gz"
+                            }
+                        ],
+                        "fastq_md5": [
+                            "46ddbd4526503def97cd78e5fa350717",
+                            "a4309870132ce65243ac2eb42b89ffba"
+                        ],
+                        "run_alias": "PFK1_SD3_GACCGT_L003_R1_001.fastq.gz",
+                        "base_count": "131382515",
+                        "read_count": 2388773,
+                        "broker_name": "",
+                        "center_name": "",
+                        "fastq_bytes": [
+                            103744090,
+                            20606815
+                        ],
+                        "study_alias": "PRJNA381594",
+                        "library_name": "PFK1_SD3",
+                        "sample_alias": "PFK1_SD3",
+                        "run_accession": "SRR5507336",
+                        "library_layout": "PAIRED",
+                        "library_source": "TRANSCRIPTOMIC",
+                        "study_accession": "PRJNA381594",
+                        "experiment_alias": "PFK1_SD3",
+                        "instrument_model": "Illumina HiSeq 2500",
+                        "library_strategy": "RNA-Seq",
+                        "sample_accession": "SAMN06681203",
+                        "library_selection": "RT-PCR",
+                        "instrument_platform": "ILLUMINA",
+                        "experiment_accession": "SRX2783068",
+                        "secondary_sample_accession": "SRS2165205"
+                    },
+                    "condition": ""
+                },
+                "sanitized_name": "SRR5507336"
+            }
+        ]
+    },
+    "created_time": "2024-10-15T03:47:32.927631Z",
+    "modified_time": "2024-10-15T03:47:33.079830Z",
+    "pipelinerun_id": "XYD8YRT20MgooSLWpCP7oX"
+}
