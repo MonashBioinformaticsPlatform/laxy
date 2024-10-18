@@ -10,6 +10,7 @@ from collections import OrderedDict
 import json
 from basehash import base62
 import requests
+import urllib
 import cgi
 import os
 from operator import itemgetter
@@ -17,6 +18,7 @@ from functools import cmp_to_key
 from typing import Mapping, Sequence
 import unicodedata
 from text_unidecode import unidecode
+from contextlib import contextmanager
 
 from urllib.parse import urlparse, unquote, parse_qs
 from cache_memoize import cache_memoize
@@ -30,6 +32,8 @@ from rest_framework.request import Request
 
 from . import models
 from pathlib import Path
+
+import backoff
 
 
 def has_method(obj, method_name: str) -> bool:
@@ -94,6 +98,18 @@ def ordereddicts_to_dicts(d: OrderedDict) -> dict:
     return json.loads(json.dumps(d))
 
 
+@backoff.on_exception(
+    backoff.expo,
+    (requests.exceptions.RequestException, urllib.error.URLError),
+    max_tries=3,
+    jitter=backoff.full_jitter,
+)
+def requests_head_with_retries(url, **kwargs):
+    response = requests.head(url, **kwargs)
+    response.raise_for_status()
+    return response
+
+
 @cache_memoize(timeout=3 * 60 * 60, cache_alias="memoize")
 def find_filename_and_size_from_url(url, sanitize_name=True, **kwargs):
     """
@@ -117,8 +133,7 @@ def find_filename_and_size_from_url(url, sanitize_name=True, **kwargs):
     filename = None
     if scheme in ["http", "https"]:
         try:
-            head = requests.head(url, **kwargs)
-
+            head = requests_head_with_retries(url, **kwargs)
             filename_header = cgi.parse_header(
                 head.headers.get("content-disposition", "")
             )[-1]
@@ -127,14 +142,24 @@ def find_filename_and_size_from_url(url, sanitize_name=True, **kwargs):
             file_size = head.headers.get("content-length", None)
             if file_size is not None:
                 file_size = int(file_size)
-        except:
+        except requests.exceptions.RequestException as e:
             pass
+            # raise ValueError(f"Failed to retrieve headers for URL: {url}") from e
 
+    # HACK: Fallback for Nextcloud/Owncloud URLs
+    #       This would be best implemented as a list of fallback functions
+    #       we can supply and enable specific rules via settings ?
+    # if filename == "download" or not filename:
+    #     parsed_url = urlparse(url)
+    #     match = re.search(r'/s/[^/]+/download\?path=.*&files=(.+)', parsed_url.path + '?' + parsed_url.query)
+    #     if match:
+    #         filename = unquote(match.group(1))
+
+    # Apache etc (in some configurations) doesn't set the Content-Disposition header,
+    # so we fallback to using the URL path to get a filename when filename=None
     if filename is None or (scheme == "file" or scheme == "ftp" or scheme == "sftp"):
         filename = os.path.basename(urlparse(url).path)
 
-    # TODO: Should we disallow this, given that it actually reads the local filesystem and may be
-    #  unsafe or an information leak if used with arbitrary user supplied URLs ?
     if scheme == "file":
         file_size = os.path.getsize(urlparse(url).path)
 
