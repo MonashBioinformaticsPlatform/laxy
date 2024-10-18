@@ -163,7 +163,10 @@ def add_commandline_args(parser: argparse.ArgumentParser) -> argparse.ArgumentPa
         help="Return the cache key associated with a URL. Useful if you'd like to verify if a URL exists in the cache directory.",
     )
     url_to_cachekey_parser.add_argument(
-        "url", nargs=1, default=str, help="URL to find cache key for.",
+        "url",
+        nargs=1,
+        default=str,
+        help="URL to find cache key for.",
     )
     url_to_cachekey_parser.add_argument(
         "--cache-path",
