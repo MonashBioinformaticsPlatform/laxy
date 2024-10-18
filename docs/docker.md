@@ -7,15 +7,15 @@
 Laxy (and associated services) can run under Docker Compose.
 
 ```bash
-docker-compose -f docker-compose.yml -f docker-compose.dev.yml build --build-arg GIT_COMMIT=$(git log -1 --format=%H)
-docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+docker compose -f docker-compose.yml -f docker-compose.dev.yml build --build-arg GIT_COMMIT=$(git log -1 --format=%H)
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 ```
 
 Once running, to watch the logs:
 ```bash
-docker-compose logs -f -t
+docker compose logs -f -t
 # or for just one service (eg django)
-# docker-compose logs -f -t django
+# docker compose logs -f -t django
 ```
 
 To manually create the admin user (`docker-compose.dev.yml` does this itself using
@@ -30,7 +30,7 @@ docker container exec -it laxy_django_1 \
 
 To pull down the stack, do:
 ```bash
-docker-compose down
+docker compose down
 ```
 
 ##### Database dumps and migrations
@@ -40,26 +40,26 @@ Migrate database in Docker container:
 export LAXY_ENV=dev
 
 # or if the container isn't running:
-docker-compose -f docker-compose.yml -f docker-compose.${LAXY_ENV}.yml run django python manage.py migrate
+docker compose -f docker-compose.yml -f docker-compose.${LAXY_ENV}.yml run django python manage.py migrate
 ```
 
 Run an ad-hoc data migration script (rare task):
 ```bash
-docker-compose -f docker-compose.yml -f docker-compose.${LAXY_ENV}.yml exec django /bin/bash -c \
+docker compose -f docker-compose.yml -f docker-compose.${LAXY_ENV}.yml exec django /bin/bash -c \
   "/app/manage.py shell < /app/scripts/ad-hoc-migrations/add-strandedness-metadata.py"
 ```
 
 Dump fixtures (JSON formatted database records):
 ```bash
-docker-compose -f docker-compose.yml -f docker-compose.${LAXY_ENV}.yml run django python manage.py dumpdata --indent 2
+docker compose -f docker-compose.yml -f docker-compose.${LAXY_ENV}.yml run django python manage.py dumpdata --indent 2
 
 # Just the defined ComputeResource records:
-docker-compose -f docker-compose.yml -f docker-compose.${LAXY_ENV}.yml run django python manage.py dumpdata \
+docker compose -f docker-compose.yml -f docker-compose.${LAXY_ENV}.yml run django python manage.py dumpdata \
        laxy_backend.computeresource \
        --indent 2
 
 # Or a single model of interest, by primary key:
-docker-compose -f docker-compose.yml -f docker-compose.${LAXY_ENV}.yml run django python manage.py dumpdata \
+docker compose -f docker-compose.yml -f docker-compose.${LAXY_ENV}.yml run django python manage.py dumpdata \
        laxy_backend.sampleset \
        --pks 3lSCcJPlvkMq1oCO6hM4XL \
        --indent 2
@@ -86,7 +86,7 @@ DROP DATABASE test_laxy;
 
 Dropping all tables (careful !):
 ```bash
- docker-compose -f docker-compose.yml -f docker-compose.${LAXY_ENV}.yml \
+ docker compose -f docker-compose.yml -f docker-compose.${LAXY_ENV}.yml \
    run db /bin/bash -c \
    'echo -e "DROP SCHEMA public CASCADE;\n CREATE SCHEMA public;" | PGPASSWORD=postgres psql -h db -p 5432 -w postgres postgres'
 ```
@@ -101,7 +101,7 @@ we can export a tar archive of the database files like:
 
 ```bash
 DBTAR=postgres-dbdata-$(date +%s).tar
-docker-compose run --no-deps --rm -v dbdata:/var/lib/postgresql/data/pgdata -v $(pwd):/backup db tar cvf /backup/${DBTAR} /var/lib/postgresql/data/pgdata
+docker compose run --no-deps --rm -v dbdata:/var/lib/postgresql/data/pgdata -v $(pwd):/backup db tar cvf /backup/${DBTAR} /var/lib/postgresql/data/pgdata
 
 # We can also do this with plain Docker, if we use the correct container name (eg laxy_db_1_*)
 # docker run --rm --volumes-from laxy_db_1 -v $(pwd):/backup busybox tar cvf /backup/${DBTAR} /var/lib/postgresql/data/pgdata
@@ -113,10 +113,10 @@ We can copy this archive back into a new volume container (`database_copy`) like
 # DBTAR=postgres-dbdata-*.tar
 DBVOLNAME=database_copy
 # DBVOLNAME=laxy_dbdata
-docker-compose stop db
+docker compose stop db
 docker volume create ${DBVOLNAME}
 docker run --rm -v ${DBVOLNAME}:/var/lib/postgresql/data/pgdata  -v $(pwd):/backup busybox tar xvf /backup/${DBTAR}
-docker-compose start db
+docker compose start db
 ```
 
 To clone the volume 'directly' into a new volume, use the 
@@ -130,17 +130,17 @@ To clone the volume 'directly' into a new volume, use the
 
 ##### To manually restart just the `django` service without bringing the whole stack down/up
 ```bash
-docker-compose restart django
+docker compose restart django
 ```
 
 ##### To tail logs for a particular service/container
 ```bash
-docker-compose logs --timestamps --tail="10" -f django
+docker compose logs --timestamps --tail="10" -f django
 ```
 
 #### Production
 
 ```bash
-docker-compose -f docker-compose.yml -f docker-compose.prod.yml build
-docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.yml -f docker-compose.prod.yml build
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
