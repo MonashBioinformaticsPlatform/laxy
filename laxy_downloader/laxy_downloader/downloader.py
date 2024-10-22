@@ -168,7 +168,6 @@ def temporary_file(mode="wb", dir=None, prefix=None, suffix=None):
         yield tmp
     finally:
         tmp.close()
-        os.unlink(tmp.name)
 
 
 def download_url(
@@ -181,7 +180,7 @@ def download_url(
     cleanup_on_exception: bool = True,
     check_existing_size: bool = True,
     remove_existing: bool = True,
-    chunk_size: int = 1024,
+    chunk_size: int = 1024 * 1024,  # 1Mb chunk size
     max_retries: int = 3,
 ) -> str:
     """
