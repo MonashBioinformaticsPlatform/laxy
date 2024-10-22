@@ -38,9 +38,9 @@ export PIPELINES_CACHE_PATH="${JOB_PATH}/../../cache/pipelines"
 export SINGULARITY_TMPDIR="${TMPDIR}"
 export AUTH_HEADER_FILE="${JOB_PATH}/.private_request_headers"
 export IGNORE_SELF_SIGNED_CERTIFICATE="{{ IGNORE_SELF_SIGNED_CERTIFICATE }}"
-export LAXYDL_BRANCH=master
+export LAXYDL_BRANCH=${LAXYDL_BRANCH:-master}
 export LAXYDL_USE_ARIA2C=${LAXYDL_USE_ARIA2C:-yes}
-export LAXYDL_PARALLEL_DOWNLOADS=8
+export LAXYDL_PARALLEL_DOWNLOADS=${LAXYDL_PARALLEL_DOWNLOADS:-8}
 
 # These are applied via chmod to all files and directories in the run, upon completion
 export JOB_FILE_PERMS='ug+rw-s,o='

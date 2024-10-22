@@ -6,7 +6,7 @@ Intended to be run by the job script on a compute node.
 ### Install
 
 ```bash
-pip install -e git+https://github.com/MonashBioinformaticsPlatform/laxy/laxy_downloader@master#egg=laxy_downloader
+pip install -e "laxy_downloader @ git+https://github.com/MonashBioinformaticsPlatform/laxy@master#egg=laxy_downloader&subdirectory=laxy_downloader"
 ```
 
 ### Usage
