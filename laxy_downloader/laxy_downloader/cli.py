@@ -175,6 +175,32 @@ def add_commandline_args(parser: argparse.ArgumentParser) -> argparse.ArgumentPa
         type=str,
     )
 
+    delete_cache_parser = subparsers.add_parser(
+        "delete-cached",
+        help="Delete specific files from the cache based on URLs or pipeline configuration.",
+    )
+    delete_cache_parser.add_argument(
+        "urls", nargs="*", default=list(), help="URL(s) to remove from cache."
+    )
+    delete_cache_parser.add_argument(
+        "--pipeline-config",
+        help="Path to a pipeline_config.json file from Laxy.",
+        type=argparse.FileType("r"),
+    )
+    delete_cache_parser.add_argument(
+        "--type-tags",
+        help="When using --pipeline-config, only delete files tagged with all these type_tags "
+        "('--type-tag=tag_one,tag_two' means must have both tag_one _and_ tag_two). ",
+        type=_split_comma_sep_args,
+        default=[],
+    )
+    delete_cache_parser.add_argument(
+        "--cache-path",
+        help="Path to the laxydl cache directory.",
+        default=get_default_cache_path(),
+        type=str,
+    )
+
     # Add common options to the main parser and most subparsers
     for p in [parser, dl_parser, cache_parser]:
         p.add_argument(
@@ -547,6 +573,38 @@ def main():
                 f"Or if that fails, try killing the aria2c process(es):  kill {aria_pids}"
             )
             sys.exit(1)
+
+    if args.command == "delete-cached":
+        urls_to_delete = set(args.urls)
+
+        if args.pipeline_config:
+            config = parse_pipeline_config(args.pipeline_config)
+            url_filenames = get_urls_from_pipeline_config(
+                config, required_type_tags=args.type_tags
+            )
+            urls_to_delete.update(url_filenames.keys())
+
+        if not urls_to_delete:
+            logger.error(
+                "No URLs specified for deletion. Use --help for usage information."
+            )
+            sys.exit(1)
+
+        deleted_count = 0
+        for url in urls_to_delete:
+            filepath = get_url_cached_path(url, args.cache_path)
+            try:
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+                    logger.info(f"Deleted cached file: {filepath}")
+                    deleted_count += 1
+                else:
+                    logger.info(f"File not found in cache: {filepath}")
+            except Exception as ex:
+                logger.error(f"Failed to delete {filepath}: {str(ex)}")
+
+        logger.info(f"Deleted {deleted_count} file(s) from cache.")
+        sys.exit(0)
 
 
 if __name__ == "__main__":
