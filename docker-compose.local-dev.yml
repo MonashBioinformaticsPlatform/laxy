@@ -1,8 +1,7 @@
-version: "3.7"
-
 volumes:
   fake-cluster-scratch:
   fake-archive-storage:
+
 
 services:
   db:
@@ -210,10 +209,3 @@ services:
     ports:
       # dev
       - "9999:80"
-
-  portainer:
-    image: alpine
-    entrypoint:
-      - /bin/echo
-    command: "Service disabled"
-    restart: "no"

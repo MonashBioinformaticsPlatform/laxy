@@ -1,5 +1,3 @@
-version: '3.7'
-
 services:
   django:
     image: laxy:latest
@@ -178,22 +176,7 @@ services:
       - queue-high
       - queue-low
 
-  portainer:
-    image: portainer/portainer:latest
-    environment:
-      - PORTAINER_ADMIN_PASSWORD=_this_wont_work_unless_overridden_with_hashed_htpasswd_
-    # TODO: Use password file and Docker Compose secrets
-    # https://portainer.readthedocs.io/en/stable/configuration.html#inside-a-file
-    # https://docs.docker.com/engine/swarm/secrets/#use-secrets-in-compose
-    command: --admin-password='${PORTAINER_ADMIN_PASSWORD}'
-    ports:
-      - "9000:9000"
-    volumes:
-      - portainer_data:/data
-      - /var/run/docker.sock:/var/run/docker.sock
-
 volumes:
   dbdata: null
   rabbitmq_data: null
   celerybeat-schedule: null
-  portainer_data: null

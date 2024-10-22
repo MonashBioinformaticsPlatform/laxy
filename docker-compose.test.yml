@@ -1,5 +1,3 @@
-version: "3.7"
-
 services:
   db:
     image: postgres:10-alpine
@@ -131,13 +129,6 @@ services:
     ports:
       # dev
       - "9999:80"
-
-  portainer:
-    image: alpine
-    entrypoint:
-      - /bin/echo
-    command: "Service disabled"
-    restart: "no"
 
 volumes:
   test-dbdata:
