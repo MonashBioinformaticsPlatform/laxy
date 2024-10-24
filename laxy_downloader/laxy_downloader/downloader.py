@@ -201,6 +201,7 @@ def download_url(
         check_existing_size (bool): Whether to check the size of an existing file before downloading.
         remove_existing (bool): Whether to remove an existing file if its size doesn't match the expected size.
         chunk_size (int): The size of chunks to use when streaming the download.
+        max_retries (int): The maximum number of retry attempts for the download.
 
     Returns:
         str: The path to the downloaded file.
@@ -212,15 +213,12 @@ def download_url(
     if username is not None and password is not None:
         auth = HTTPBasicAuth(username, password)
 
-    if headers is None:
-        headers = {}
-
+    headers = headers or {}
     filepath = Path(filepath)
     directory = tmp_directory or str(filepath.parent)
     filename = filepath.name
     filepath = str(filepath)
-
-    scheme = urlparse(url).scheme
+    scheme = urlparse(url).scheme.lower()
 
     lock_path = f"{filepath}.lock"
     lock = FileLock(lock_path, timeout=60 * 60 * 12)  # 12 hours timeout
@@ -247,46 +245,80 @@ def download_url(
                 logger.info(
                     f"Starting download (attempt {attempt + 1}/{max_retries}): {url} ({url_to_cache_key(url)})"
                 )
+
+                # Get size of partial download if it exists
+                partial_size = (
+                    os.path.getsize(filepath) if os.path.exists(filepath) else None
+                )
+
                 with temporary_file(
                     mode="wb", dir=directory, prefix=f"{filename}.", suffix=".tmp"
                 ) as tmpfile:
+                    if partial_size is not None:
+                        # Copy existing partial download
+                        shutil.copy2(filepath, tmpfile.name)
+
                     if scheme == "ftp":
                         urllib.request.urlretrieve(url, filename=tmpfile.name)
                     else:
+                        request_headers = headers.copy()
+                        if partial_size is not None and partial_size > 0:
+                            request_headers["Range"] = f"bytes={partial_size}-"
+
                         with closing(
                             request_with_retries(
-                                "GET", url, stream=True, headers=headers, auth=auth
+                                "GET",
+                                url,
+                                stream=True,
+                                headers=request_headers,
+                                auth=auth,
                             )
                         ) as download:
                             download.raise_for_status()
-                            for chunk in download.iter_content(chunk_size=chunk_size):
-                                tmpfile.write(chunk)
 
-                    tmpfile.flush()
-                    os.fsync(tmpfile.fileno())
+                            # If server ignored our range request and sent full file
+                            if partial_size and download.status_code == 200:
+                                mode = "wb"  # Start fresh since we got the full file
+                            else:
+                                mode = "ab" if partial_size else "wb"
 
+                            with open(tmpfile.name, mode) as f:
+                                for chunk in download.iter_content(
+                                    chunk_size=chunk_size
+                                ):
+                                    f.write(chunk)
+                                f.flush()
+                                os.fsync(f.fileno())
+
+                    # Check if download is complete
                     file_size = os.path.getsize(tmpfile.name)
-                    if content_length is not None and file_size == int(content_length):
+                    if content_length is None or file_size == int(content_length):
                         shutil.move(tmpfile.name, filepath)
                         return filepath
-                    elif attempt < max_retries - 1:
-                        logger.warning(
-                            f"Downloaded file size ({file_size}) does not match Content-Length ({content_length}). Retrying..."
-                        )
                     else:
-                        raise Exception(
-                            f"Downloaded file size ({file_size}) does not match Content-Length ({content_length}) after {max_retries} attempts."
-                        )
+                        # Save partial download for next attempt
+                        shutil.move(tmpfile.name, filepath)
+                        if attempt < max_retries - 1:
+                            logger.warning(
+                                f"Downloaded file size ({file_size}) does not match Content-Length ({content_length}). Retrying..."
+                            )
+                        else:
+                            raise Exception(
+                                f"Downloaded file size ({file_size}) does not match Content-Length ({content_length}) after {max_retries} attempts."
+                            )
 
     except Exception as e:
-        handle_download_exception(e, None, url, cleanup_on_exception, None)
+        handle_download_exception(
+            e, getattr(e, "status_code", None), url, cleanup_on_exception, None
+        )
+        raise  # Re-raise the exception after cleanup
     finally:
+        # Clean up the lock file if it exists
         try:
-            os.remove(lock_path)
-        except OSError:
-            pass
-
-    return filepath
+            if os.path.exists(lock_path):
+                os.unlink(lock_path)
+        except OSError as e:
+            logger.warning(f"Failed to remove lock file {lock_path}: {e}")
 
 
 def get_content_length(url, headers, auth, scheme):
