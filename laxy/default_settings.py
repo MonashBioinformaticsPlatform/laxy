@@ -92,8 +92,8 @@ default_env = PrefixedEnv(
     FILE_CACHE_PATH=(str, tempfile.gettempdir()),
     SOCIAL_AUTH_GOOGLE_OAUTH2_KEY=(str, ""),
     SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET=(str, ""),
-    SOCIAL_AUTH_WHITELISTED_DOMAINS=(list, []),
-    SOCIAL_AUTH_WHITELISTED_EMAILS=(list, []),
+    SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_DOMAINS=(list, []),
+    SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_EMAILS=(list, []),
     CORS_ORIGIN_WHITELIST=(list, []),
     CSRF_TRUSTED_ORIGINS=(list, []),
     USE_SSL=(bool, False),
@@ -600,15 +600,19 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_USE_UNIQUE_USER_ID = True
 
 # Note: this only applies to django-social-auth logins, not Django local accounts (which may be
 #       created by eg django-registration)
-if env("SOCIAL_AUTH_WHITELISTED_DOMAINS", default=[]):  # only if non-empty list
-    SOCIAL_AUTH_WHITELISTED_DOMAINS = env(
-        "SOCIAL_AUTH_WHITELISTED_DOMAINS", transform=_cleanup_env_list
+if env(
+    "SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_DOMAINS", default=[]
+):  # only if non-empty list
+    SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_DOMAINS = env(
+        "SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_DOMAINS", transform=_cleanup_env_list
     )
     # Do we need SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_DOMAINS ??
 
-if env("SOCIAL_AUTH_WHITELISTED_EMAILS", default=[]):  # only if non-empty list
-    SOCIAL_AUTH_WHITELISTED_EMAILS = env(
-        "SOCIAL_AUTH_WHITELISTED_EMAILS", transform=_cleanup_env_list
+if env(
+    "SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_EMAILS", default=[]
+):  # only if non-empty list
+    SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_EMAILS = env(
+        "SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_EMAILS", transform=_cleanup_env_list
     )
 
 # https://github.com/st4lk/django-rest-social-auth#settings
@@ -709,10 +713,10 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Requires argon2-cffi and bcrypt packages
 PASSWORD_HASHERS = [
-    'django.contrib.auth.hashers.Argon2PasswordHasher',
-    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
-    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
-    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
+    "django.contrib.auth.hashers.Argon2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher",
+    "django.contrib.auth.hashers.BCryptSHA256PasswordHasher",
 ]
 
 
