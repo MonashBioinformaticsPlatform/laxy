@@ -335,7 +335,7 @@ def start_job(self, task_data=None, **kwargs):
             with cd(working_dir):
                 with shell_env(**environment):
                     cpus = 1
-                    mem = "4G"
+                    mem = "8G"
                     time = "7-00:00:00"
                     logger.info(f"queue_type = {job.compute_resource.queue_type}")
                     if job.compute_resource.queue_type == "slurm":

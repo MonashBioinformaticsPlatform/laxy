@@ -351,7 +351,7 @@ function normalize_annotations() {
     #    }
     #}
 
-    export AGAT_CONTAINER="https://depot.galaxyproject.org/singularity/agat%3A1.0.0--pl5321hdfd78af_0"
+    export AGAT_CONTAINER="https://depot.galaxyproject.org/singularity/agat%3A1.4.1--pl5321hdfd78af_0"
     if [[ ${USING_CUSTOM_REFERENCE} == "yes" && 
           $(zgrep -Pc "\texon\t.*gene_id*" "${ANNOTATION_FILE}") == 0 ]]; then
 
