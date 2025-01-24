@@ -118,7 +118,7 @@
                 <span v-for="countsFile in primaryCountsFiles" :key="countsFile.id">
                   <md-button @click="openDegustLink(countsFile.id)" target="_blank">
                     <md-icon>send</md-icon>&nbsp;{{
-                      _countsFileInfo(countsFile.name).featureSet
+                      _countsFileInfo(countsFile).featureSet
                     }}&nbsp;
 
                     <md-tooltip>{{ countsFile.path }}/{{ countsFile.name }}</md-tooltip>
@@ -729,17 +729,21 @@ export default class JobPage extends Vue {
   }
 
   _countsFileInfo(
-    filename: string
+    file: LaxyFile
   ): { strandedness: string; featureSet: string } {
     let data: { strandedness: string; featureSet: string } = {
       strandedness: "",
-      featureSet: ""
+      featureSet: "Counts"
     };
-    if (filename.includes("NonStranded")) data.strandedness = "non-stranded";
-    if (filename.includes("Forward")) data.strandedness = "forward-stranded";
-    if (filename.includes("Reverse")) data.strandedness = "reverse-stranded";
-    if (filename.includes("proteinCoding")) data.featureSet = "Protein coding";
-    if (!filename.includes("proteinCoding")) data.featureSet = "Counts";
+    if (file.name.includes("NonStranded")) data.strandedness = "non-stranded";
+    if (file.name.includes("Forward")) data.strandedness = "forward-stranded";
+    if (file.name.includes("Reverse")) data.strandedness = "reverse-stranded";
+    if (file.name.includes("proteinCoding")) data.featureSet = "Protein coding";
+    if (file.name.includes("featureCounts")) data.featureSet = "featureCounts file";
+    if (file.name.includes("salmon")) {
+      let salmon_run_type = file.path.endsWith('/star_salmon') ? "STAR → Salmon" : "Salmon";
+      data.featureSet = `${salmon_run_type} counts`
+    }
     return data;
   }
 
@@ -775,23 +779,43 @@ export default class JobPage extends Vue {
   }
 
   get primaryCountsFiles(): LaxyFile[] {
-    for (let cf of this.filterByTag(this.outputFiles || [], ['degust'])) {
-      if (cf.name.startsWith(this.rnasik_strandPredictionPrefix) && cf.name.includes('withNames')) {
-        return [cf];
-      }
-      if (cf.path.includes('star_salmon') &&
-        cf.name.includes('salmon.merged.gene_counts_length_scaled.biotypes')) {
-        return [cf];
-      }
-      if (cf.name.includes('salmon.merged.gene_counts_length_scaled.biotypes')) {
-        return [cf];
-      }
-      if (cf.path.includes('salmon') &&
-        cf.name.includes('salmon.merged.gene_counts_length_scaled')) {
-        return [cf];
-      }
+    let files: LaxyFile[] = [];
+    const outputFiles: LaxyFile[] = this.outputFiles || [];
+
+    // Helper function to check if a file is a specific type
+    const isFileType = (file: LaxyFile, pathEnd: string, nameIncludes: string): boolean => {
+        return file.path.endsWith(pathEnd) && file.name.includes(nameIncludes);
+    };
+
+    // Logic here actually only ever returns one preferred file, but we've left the API such that
+    // we could return a list of filesfor the UI to display.
+    for (const file of this.filterByTag(outputFiles, ['degust'])) {
+        // RNAsik files
+        if (this.rnasik_strandPredictionPrefix && 
+            file.name.startsWith(this.rnasik_strandPredictionPrefix) && 
+            file.name.includes('withNames')) {
+            files = [file];
+        }
+        // featureCounts from nf-core/rnaseq
+        else if (isFileType(file, '/featureCounts', 'counts.star_featureCounts.tsv')) {
+            files = [file];
+        }
+        // star_salmon files
+        else if (isFileType(file, '/star_salmon', 'salmon.merged.gene_counts.biotypes.tsv')) {
+            files = [file];
+        }
+        // salmon files (only if no star_salmon for the same sample)
+        else if (isFileType(file, '/salmon', 'salmon.merged.gene_counts.biotypes.tsv')) {
+            const hasStarSalmon = outputFiles.some((f: LaxyFile) => 
+                isFileType(f, '/star_salmon', 'salmon.merged.gene_counts.biotypes.tsv')
+            );
+            if (!hasStarSalmon) {
+                files = [file];
+            }
+        }
     }
-    return [];
+
+    return files;
   }
 
   get badInputFile(): number | null {
