@@ -129,7 +129,7 @@ Sphinx==1.6.6
 sphinx-rtd-theme==0.2.4
 sphinxcontrib-websupport==1.0.1
 text-unidecode==1.3
-toolz==0.9.0
+toolz==0.12.0
 typing==3.6.6
 typing-extensions==3.7.4.2
 unicodecsv==0.14.1
