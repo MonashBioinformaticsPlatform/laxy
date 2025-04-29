@@ -14,6 +14,7 @@ RUN echo exit 0 > /usr/sbin/policy-rc.d && \
 RUN cd / && \
     git clone https://github.com/zenhack/simp_le.git && \
     cd simp_le && \
+    python -m pip install --upgrade pip setuptools wheel && \
     pip install -e .
 ADD update-ssl-cert.sh /etc/cron.daily/update-ssl-cert.sh
 RUN chmod +x /etc/cron.daily/update-ssl-cert.sh
