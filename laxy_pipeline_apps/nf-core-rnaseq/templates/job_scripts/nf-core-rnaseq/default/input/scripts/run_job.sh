@@ -33,9 +33,12 @@ readonly REFERENCE_BASE="${JOB_PATH}/../references/iGenomes"
 export CONDA_BASE="${JOB_PATH}/../miniconda3"
 export DOWNLOAD_CACHE_PATH="${JOB_PATH}/../../cache/downloads"
 export SINGULARITY_CACHEDIR="${JOB_PATH}/../../cache/singularity"
+export APPTAINER_CACHEDIR="${SINGULARITY_CACHEDIR}"
+export APPTAINER_LOCALCACHEDIR="${TMPDIR}"
 export SINGULARITY_LOCALCACHEDIR="${TMPDIR}"
 export PIPELINES_CACHE_PATH="${JOB_PATH}/../../cache/pipelines"
 export SINGULARITY_TMPDIR="${TMPDIR}"
+export APPTAINER_TMPDIR="${TMPDIR}"
 export AUTH_HEADER_FILE="${JOB_PATH}/.private_request_headers"
 export IGNORE_SELF_SIGNED_CERTIFICATE="{{ IGNORE_SELF_SIGNED_CERTIFICATE }}"
 export LAXYDL_BRANCH=${LAXYDL_BRANCH:-master}
@@ -49,10 +52,11 @@ export JOB_DIR_PERMS='ug+rwx-s,o='
 # Nextflow specific environment variables
 export NXF_TEMP="${TMPDIR}"
 export NXF_SINGULARITY_CACHEDIR="${SINGULARITY_CACHEDIR}"
+export NXF_APPTAINER_CACHEDIR="${SINGULARITY_CACHEDIR}"
+export NXF_APPTAINER_TMPDIR="${TMPDIR}"
 export NXF_OPTS='-Xms1g -Xmx7g'
 export NXF_ANSI_LOG='false'
-export NXF_VER=22.10.4
-#export NXF_VER=23.10.3
+export NXF_VER=24.10.5
 
 # We use a custom .nextflow directory per run so anything cached in ~/.nextflow won't interfere
 # (there seems to be some locking issues when two nextflow instances are run simultaneously, or
@@ -357,8 +361,8 @@ function normalize_annotations() {
 
         send_event "JOB_INFO" "Standardising annotation file using AGAT" || true
 
-        module unload singularity || true
-        module load singularity || true
+        #module unload singularity || true
+        #module load singularity || true
 
         # We need a copy with a real name accessible to Singularity
         # (cached copies with hashed names don't end in .gtf/.gff etc)
@@ -374,7 +378,7 @@ function normalize_annotations() {
         # and adds gene_id attributes, fixes/removes some attributes that seem to break featureCounts).
         # dupRadar QC uses subread featureCounts, among other parts of the pipeline.
         (cd "${JOB_PATH}/output" && \
-         singularity run ${_pathbinds} ${AGAT_CONTAINER} \
+         apptainer run ${_pathbinds} ${AGAT_CONTAINER} \
             agat_sp_webApollo_compliant.pl \
             -g "${_tmp_annotation_path}" \
             -o "${_tmp_annotation_path}.agat_webapollo.gff" \
@@ -385,7 +389,7 @@ function normalize_annotations() {
 
         # We then convert GFF to GTF
         (cd "${JOB_PATH}/output" && \
-         singularity run ${_pathbinds} ${AGAT_CONTAINER} \
+         apptainer run ${_pathbinds} ${AGAT_CONTAINER} \
             agat_convert_sp_gff2gtf.pl \
             -i "${_tmp_annotation_path}.agat_webapollo.gff" \
             --gtf_version relax \
@@ -513,7 +517,7 @@ function nextflow_self_update() {
 }
 
 function cache_pipeline() {
-    # Use the nf-core tool to pre-cache a release of the pipeline, and all singularity containers.
+    # Use the nf-core tool to pre-cache a release of the pipeline, and all apptainer containers.
     # We make a copy of the pipeline code into our job to preserve it.
     mkdir -p "${PIPELINES_CACHE_PATH}"
     export CACHED_PIPELINE_PATH=$(realpath "${PIPELINES_CACHE_PATH}/nf-core-${NFCORE_PIPELINE_NAME}-${NFCORE_PIPELINE_RELEASE}")
@@ -521,15 +525,17 @@ function cache_pipeline() {
     if [[ ! -d "${CACHED_PIPELINE_PATH}" ]]; then
         nf-core download ${NFCORE_PIPELINE_NAME} \
                         --revision "${NFCORE_PIPELINE_RELEASE}" \
-                        --container singularity \
-                        --singularity-cache-only \
+                        --container-system singularity \
+                        --container-cache-utilisation amend \
                         --parallel-downloads ${LAXYDL_PARALLEL_DOWNLOADS} \
                         --compress none \
+                        --download-configuration no \
                         --outdir "${CACHED_PIPELINE_PATH}"
     fi
 
     mkdir -p "${INPUT_SCRIPTS_PATH}/pipeline"
     cp -r "${CACHED_PIPELINE_PATH}" "${INPUT_SCRIPTS_PATH}/pipeline/"
+    #_NFCORE_PIPELINE_RELEASE_UNDERSCORED=$(echo "${NFCORE_PIPELINE_RELEASE}" | tr '.' '_')
     export NFCORE_PIPELINE_PATH=$(realpath "${INPUT_SCRIPTS_PATH}/pipeline/nf-core-${NFCORE_PIPELINE_NAME}-${NFCORE_PIPELINE_RELEASE}/workflow")
 }
 
@@ -580,8 +586,8 @@ function fastq_sanity_check() {
 function run_nextflow() {
     cd "${JOB_PATH}/output"
 
-    module unload singularity || true
-    module load singularity || true
+    #module unload singularity || true
+    #module load singularity || true
 
     # TODO: Valid genome IDs from:
     # https://github.com/nf-core/rnaseq/blob/master/conf/igenomes.config
@@ -617,7 +623,7 @@ function run_nextflow() {
        -name "${_nfjobname}" \
        -c ${INPUT_CONFIG_PATH}/laxy_nextflow.config \
        ${NEXTFLOW_CONFIG_ARG} \
-       -profile singularity \
+       -profile apptainer \
         >${JOB_PATH}/output/nextflow.log \
         2>${JOB_PATH}/output/nextflow.err || EXIT_CODE=$?
     #">>"${JOB_PATH}/slurm.jids"
@@ -640,7 +646,7 @@ function run_nextflow() {
             -name "${_nfjobname}_2" \
             -c ${INPUT_CONFIG_PATH}/laxy_nextflow.config \
             ${NEXTFLOW_CONFIG_ARG} \
-            -profile singularity \
+            -profile apptainer \
             -resume \
             >${JOB_PATH}/output/nextflow2.log \
             2>${JOB_PATH}/output/nextflow2.err || EXIT_CODE=$?
@@ -707,7 +713,7 @@ function post_nextflow_pipeline() {
         >${JOB_PATH}/output/post_nextflow.log \
         2>${JOB_PATH}/output/post_nextflow.err
 
-# -profile singularity \
+# -profile apptainer \
 }
 
 update_permissions || true
