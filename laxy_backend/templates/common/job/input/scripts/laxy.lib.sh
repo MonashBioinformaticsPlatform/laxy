@@ -265,6 +265,7 @@ function init_conda_env() {
         if [[ "${CONDA_INSTALL_BINARY}" == "mamba" ]]; then
             CONDA_INSTALL_BINARY=${CONDA_BASE}/bin/mamba
             ${CONDA_BASE}/bin/conda install --yes -n base -c conda-forge mamba || CONDA_INSTALL_BINARY="conda"
+            ${CONDA_BASE}/bin/conda update --yes -n base -c conda-forge mamba || CONDA_INSTALL_BINARY="conda"
         fi
 
         # Put git, curl and jq in the base env, since we generally need them
