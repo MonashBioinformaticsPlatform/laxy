@@ -2247,6 +2247,9 @@ class JobCreate(JSONView):
 
         # TESTING: Start cluster, run job, (pre-existing data), stop cluster
         # tasks.run_job_chain(task_data)
+        
+        # Ensure the Job record is saved before starting, since the task may read it
+        job.save()
 
         result = start_job.apply_async(
             args=(task_data,), link_error=_task_err_handler.s(job_id=job_id)
