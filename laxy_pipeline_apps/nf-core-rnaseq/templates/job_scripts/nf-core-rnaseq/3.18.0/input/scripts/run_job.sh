@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+##
+# nf-core/rnaseq v3.18.0 wrapper script
+##
+
 set -o nounset
 set -o pipefail
 set -o xtrace
@@ -26,6 +30,8 @@ mkdir -p "${TMPDIR}" || true
 export INPUT_REFERENCE_PATH="${JOB_PATH}/input/reference"
 readonly REFERENCE_BASE="${JOB_PATH}/../references/iGenomes"
 export PIPELINES_CACHE_PATH="${JOB_PATH}/../../cache/pipelines"
+
+declare -a TRIMMER_ARGS=()
 
 # Nextflow specific environment variables
 export NXF_TEMP="${TMPDIR}"
@@ -376,6 +382,14 @@ function get_settings_from_pipeline_config() {
 
     local -i _min_mapped_reads=$(jq -e --raw-output '.params."nf-core-rnaseq".min_mapped_reads' "${PIPELINE_CONFIG}" || echo "5")
     export MIN_MAPPED_READS_ARG=" --min_mapped_reads ${_min_mapped_reads} "
+    
+    local _trimmer=$(jq -e --raw-output '.params."nf-core-rnaseq".trimmer' "${PIPELINE_CONFIG}" || echo "")
+    TRIMMER_ARGS=()
+    if [[ "${_trimmer}" == "fastp" ]]; then
+        TRIMMER_ARGS=(--trimmer fastp --extra_fastp_args "--trim_poly_g --trim_poly_x")
+    elif [[ "${_trimmer}" == "trimgalore" ]]; then
+        TRIMMER_ARGS=(--trimmer trimgalore)
+    fi
 }
 
 function remove_index_reads() {
@@ -560,6 +574,7 @@ function run_nextflow() {
        ${UMI_FLAGS} \
        ${MIN_MAPPED_READS_ARG} \
        ${EXTRA_FLAGS} \
+       "${TRIMMER_ARGS[@]}" \
        --aligner star_salmon \
        --pseudo_aligner salmon \
        --save_reference \
@@ -584,6 +599,7 @@ function run_nextflow() {
             ${UMI_FLAGS} \
             ${MIN_MAPPED_READS_ARG} \
             ${EXTRA_FLAGS} \
+            "${TRIMMER_ARGS[@]}" \
             --aligner star_salmon \
             --pseudo_aligner salmon \
             --save_reference \

@@ -71,8 +71,26 @@
 
                 <md-switch v-model="skip_trimming" id="skip-trimming-toggle" name="skip-trimming-toggle"
                   class="md-primary">Skip trimming reads</md-switch>
-              </md-layout>
 
+                <md-layout v-if="trimmer_option_supported && !skip_trimming">
+                  <md-layout>
+                    <md-input-container>
+                      <label for="trimmer">Trimmer</label>
+                      <md-select name="trimmer" id="trimmer" v-model="trimmer">
+                        <md-option v-for="trimmer_option in trimmer_options" :key="trimmer_option.value"
+                          :value="trimmer_option.value">{{ trimmer_option.text }}</md-option>
+                      </md-select>
+                    </md-input-container>
+                  </md-layout>
+                  <md-layout md-flex="5" md-vertical-align="center">
+                    <md-button id="fastpHelpButton" @click="openDialog('fastpHelpPopup')"
+                      class="push-right md-icon-button md-raised md-dense">
+                      <md-icon style="color: #bdbdbd;">help</md-icon>
+                    </md-button>
+                  </md-layout>
+                </md-layout>
+
+              </md-layout>
             </md-layout>
           </transition>
         </md-whiteframe>
@@ -129,6 +147,20 @@
 
         <md-dialog-actions>
           <md-button class="md-primary" @click="closeDialog('minMappedReadsHelpPopup')">Close</md-button>
+        </md-dialog-actions>
+      </md-dialog>
+
+      <md-dialog md-open-from="#fastpHelpButton" md-close-to="#fastpHelpButton" id="fastpHelpPopup"
+        ref="fastpHelpPopup">
+        <md-dialog-title>Fastp Trimmer</md-dialog-title>
+
+        <md-dialog-content>
+          When using the 'fastp' trimmer, the flags <code>--trim_poly_g --trim_poly_x</code> are enabled by default to
+          remove polyG/polyX tails.
+        </md-dialog-content>
+
+        <md-dialog-actions>
+          <md-button class="md-primary" @click="closeDialog('fastpHelpPopup')">Close</md-button>
         </md-dialog-actions>
       </md-dialog>
 
@@ -256,6 +288,13 @@ export default class PipelineParams extends Vue {
     ]
   }
 
+  get trimmer_options() {
+    return [
+      { value: 'fastp', text: 'fastp' },
+      { value: 'trimgalore', text: 'trimgalore' }
+    ]
+  }
+
   public _samples: SampleCartItems;
   get samples(): SampleCartItems {
     this._samples = cloneDeep(this.$store.state.samples);
@@ -272,6 +311,9 @@ export default class PipelineParams extends Vue {
 
   @Sync("pipelineParams@nf-core-rnaseq.strandedness")
   public strandedness: string;
+
+  @Sync("pipelineParams@nf-core-rnaseq.trimmer")
+  public trimmer: string;
 
   @Sync("pipelineParams@nf-core-rnaseq.debug_mode")
   public debug_mode: boolean;
@@ -336,6 +378,12 @@ export default class PipelineParams extends Vue {
     if (this.$store.state.use_custom_genome) {
       data.params.genome = null;
     }
+
+    // If skipping trimming, set the trimmer param to blank
+    if (this.skip_trimming) {
+      data.params['nf-core-rnaseq'].trimmer = '';
+    }
+
     return data;
   }
 
@@ -362,6 +410,11 @@ export default class PipelineParams extends Vue {
 
   get isValid_reference_genome() {
     return this.$store.get("pipelineParams/isValidReferenceGenome");
+  }
+
+  get trimmer_option_supported() {
+    let supported_versions = ['3.18.0'];
+    return supported_versions.includes(this.pipeline_version);
   }
 
   get auto_strandedness_option_supported() {

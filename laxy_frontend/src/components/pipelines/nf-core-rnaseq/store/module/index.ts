@@ -3,6 +3,7 @@ import { make } from 'vuex-pathify';
 const initial_state: any = {
     //flags: { all: false },
     strandedness: 'auto',
+    trimmer: 'fastp',
     debug_mode: false,
     has_umi: false,
     min_mapped_reads: 5,

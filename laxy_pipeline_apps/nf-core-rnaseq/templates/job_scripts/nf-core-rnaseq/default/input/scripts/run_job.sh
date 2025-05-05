@@ -45,6 +45,8 @@ export LAXYDL_BRANCH=${LAXYDL_BRANCH:-master}
 export LAXYDL_USE_ARIA2C=${LAXYDL_USE_ARIA2C:-yes}
 export LAXYDL_PARALLEL_DOWNLOADS=${LAXYDL_PARALLEL_DOWNLOADS:-8}
 
+declare -a TRIMMER_ARGS=()
+
 # These are applied via chmod to all files and directories in the run, upon completion
 export JOB_FILE_PERMS='ug+rw-s,o='
 export JOB_DIR_PERMS='ug+rwx-s,o='
@@ -429,6 +431,14 @@ function get_settings_from_pipeline_config() {
 
     local -i _min_mapped_reads=$(jq -e --raw-output '.params."nf-core-rnaseq".min_mapped_reads' "${PIPELINE_CONFIG}" || echo "5")
     export MIN_MAPPED_READS_ARG=" --min_mapped_reads ${_min_mapped_reads} "
+
+    local _trimmer=$(jq -e --raw-output '.params."nf-core-rnaseq".trimmer' "${PIPELINE_CONFIG}" || echo "")
+    TRIMMER_ARGS=()
+    if [[ "${_trimmer}" == "fastp" ]]; then
+        TRIMMER_ARGS=(--trimmer fastp --extra_fastp_args "--trim_poly_g --trim_poly_x")
+    elif [[ "${_trimmer}" == "trimgalore" ]]; then
+        TRIMMER_ARGS=(--trimmer trimgalore)
+    fi
 }
 
 function remove_index_reads() {
@@ -614,6 +624,7 @@ function run_nextflow() {
        ${UMI_FLAGS} \
        ${MIN_MAPPED_READS_ARG} \
        ${EXTRA_FLAGS} \
+       "${TRIMMER_ARGS[@]}" \
        --aligner star_salmon \
        --pseudo_aligner salmon \
        --save_reference \
@@ -637,6 +648,7 @@ function run_nextflow() {
             ${UMI_FLAGS} \
             ${MIN_MAPPED_READS_ARG} \
             ${EXTRA_FLAGS} \
+            "${TRIMMER_ARGS[@]}" \
             --aligner star_salmon \
             --pseudo_aligner salmon \
             --save_reference \
