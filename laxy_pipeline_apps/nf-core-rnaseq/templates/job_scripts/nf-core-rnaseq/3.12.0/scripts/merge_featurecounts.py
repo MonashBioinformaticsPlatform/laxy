@@ -1,1 +1,0 @@
-../../default/input/scripts/merge_featurecounts.py

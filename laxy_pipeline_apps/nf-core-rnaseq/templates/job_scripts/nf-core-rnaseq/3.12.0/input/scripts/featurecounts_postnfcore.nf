@@ -1,0 +1,1 @@
+../../../default/input/scripts/featurecounts_postnfcore.nf
