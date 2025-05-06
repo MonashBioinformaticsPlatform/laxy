@@ -45,8 +45,6 @@ export LAXYDL_BRANCH=${LAXYDL_BRANCH:-master}
 export LAXYDL_USE_ARIA2C=${LAXYDL_USE_ARIA2C:-yes}
 export LAXYDL_PARALLEL_DOWNLOADS=${LAXYDL_PARALLEL_DOWNLOADS:-8}
 
-declare -a TRIMMER_ARGS=()
-
 # These are applied via chmod to all files and directories in the run, upon completion
 export JOB_FILE_PERMS='ug+rw-s,o='
 export JOB_DIR_PERMS='ug+rwx-s,o='
@@ -58,7 +56,6 @@ export NXF_APPTAINER_CACHEDIR="${SINGULARITY_CACHEDIR}"
 export NXF_APPTAINER_TMPDIR="${TMPDIR}"
 export NXF_OPTS='-Xms1g -Xmx7g'
 export NXF_ANSI_LOG='false'
-# export NXF_VER=24.10.5
 export NXF_VER=22.10.4
 
 # We use a custom .nextflow directory per run so anything cached in ~/.nextflow won't interfere
@@ -432,14 +429,6 @@ function get_settings_from_pipeline_config() {
 
     local -i _min_mapped_reads=$(jq -e --raw-output '.params."nf-core-rnaseq".min_mapped_reads' "${PIPELINE_CONFIG}" || echo "5")
     export MIN_MAPPED_READS_ARG=" --min_mapped_reads ${_min_mapped_reads} "
-
-    local _trimmer=$(jq -e --raw-output '.params."nf-core-rnaseq".trimmer' "${PIPELINE_CONFIG}" || echo "")
-    TRIMMER_ARGS=()
-    if [[ "${_trimmer}" == "fastp" ]]; then
-        TRIMMER_ARGS=(--trimmer fastp --extra_fastp_args "--trim_poly_g --trim_poly_x")
-    elif [[ "${_trimmer}" == "trimgalore" ]]; then
-        TRIMMER_ARGS=(--trimmer trimgalore)
-    fi
 }
 
 function remove_index_reads() {
@@ -597,8 +586,8 @@ function fastq_sanity_check() {
 function run_nextflow() {
     cd "${JOB_PATH}/output"
 
-    #module unload singularity || true
-    #module load singularity || true
+    module unload singularity || true
+    module load singularity || true
 
     # TODO: Valid genome IDs from:
     # https://github.com/nf-core/rnaseq/blob/master/conf/igenomes.config
@@ -625,7 +614,6 @@ function run_nextflow() {
        ${UMI_FLAGS} \
        ${MIN_MAPPED_READS_ARG} \
        ${EXTRA_FLAGS} \
-       "${TRIMMER_ARGS[@]}" \
        --aligner star_salmon \
        --pseudo_aligner salmon \
        --save_reference \
@@ -649,7 +637,6 @@ function run_nextflow() {
             ${UMI_FLAGS} \
             ${MIN_MAPPED_READS_ARG} \
             ${EXTRA_FLAGS} \
-            "${TRIMMER_ARGS[@]}" \
             --aligner star_salmon \
             --pseudo_aligner salmon \
             --save_reference \
