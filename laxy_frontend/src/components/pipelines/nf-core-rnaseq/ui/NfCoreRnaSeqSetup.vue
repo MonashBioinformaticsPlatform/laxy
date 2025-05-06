@@ -168,7 +168,7 @@
 
     <md-snackbar md-position="bottom center" ref="snackbar" :md-duration="snackbar_duration">
       <span>{{ snackbar_message }}</span>
-      <md-button class="md-accent" @click="$refs.snackbar.close()">Dismiss</md-button>
+      <md-button class="md-accent" @click="closeSnackbar">Dismiss</md-button>
     </md-snackbar>
   </div>
 </template>
@@ -555,12 +555,32 @@ export default class PipelineParams extends Vue {
     (this.$refs[ref] as MdDialog).close();
   }
 
+  closeSnackbar() {
+    const snackbar = this.$refs.snackbar as any;
+    if (snackbar && typeof snackbar.close === "function") {
+      snackbar.close();
+    }
+  }
+
   onSelect(rows: any) {
     this.selectedSamples = rows as Array<Sample>;
   }
 
   routeTo(name: string, params: any = {}) {
     this.$router.push({ name: name, params: params });
+  }
+
+  @Watch("pipeline_version", { immediate: true })
+  onPipelineVersionChange(newVersion: string, oldVersion: string) {
+    if (!this.trimmer_option_supported) {
+      this.trimmer = "";
+    } else if (this.trimmer === "") {
+      this.trimmer = "fastp";
+    }
+
+    if (newVersion && compareVersions(newVersion, "3.7") < 0 && this.strandedness === 'auto') {
+      this.strandedness = 'unstranded';
+    }
   }
 
   beforeRouteLeave(to: any, from: any, next: any) {
