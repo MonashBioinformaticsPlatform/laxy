@@ -49,17 +49,17 @@ setup(
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=[
-        "asks==3.0.0",
-        "requests==2.26.0",
-        "toolz==0.10.0",
-        "backoff==1.10.0",
+        "asks",
+        "requests",
+        "toolz",
+        "backoff",
         "attrdict @ git+https://github.com/caotians1/AttrDict.git@master",
-        "trio==0.25.1",
-        "psutil==5.8.0",
-        "python-magic==0.4.15",
-        "text-unidecode==1.3",
-        "typing-extensions==4.1.1",
-        "filelock==3.3.2",
+        "trio",
+        "psutil",
+        "python-magic",
+        "text-unidecode",
+        "typing-extensions",
+        "filelock",
         "pyaria2 @ git+https://github.com/pansapiens/pyaria2.git#egg=pyaria2-0.2.1.2",
     ],
     # pip deprecated dependency_links :/
