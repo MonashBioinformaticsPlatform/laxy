@@ -49,12 +49,12 @@ setup(
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=[
-        "asks==2.2.1",
+        "asks==3.0.0",
         "requests==2.26.0",
         "toolz==0.10.0",
         "backoff==1.10.0",
         "attrdict @ git+https://github.com/caotians1/AttrDict.git@master",
-        "trio==0.3.0",
+        "trio>=0.25.1",
         "psutil==5.8.0",
         "python-magic==0.4.15",
         "text-unidecode==1.3",
