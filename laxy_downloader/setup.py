@@ -54,7 +54,7 @@ setup(
         "toolz==0.10.0",
         "backoff==1.10.0",
         "attrdict @ git+https://github.com/caotians1/AttrDict.git@master",
-        "trio>=0.25.1",
+        "trio==0.25.1",
         "psutil==5.8.0",
         "python-magic==0.4.15",
         "text-unidecode==1.3",
