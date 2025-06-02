@@ -2,7 +2,7 @@
   <div>
     <md-layout md-gutter>
       <md-layout md-flex="100" md-column>
-        <h3>Input data</h3>
+        <h3>{{ titleText }}</h3>
         <form novalidate @submit.stop.prevent="submit">
           <md-layout>
             <md-layout>
@@ -206,7 +206,12 @@ interface DbAccession {
     CSVSampleListUpload,
     CSVAboutBox,
   },
-  props: {},
+  props: {
+    titleText: {
+      type: String,
+      default: "Input data",
+    },
+  },
 })
 export default class InputFilesForm extends Vue {
   sources: object = [
