@@ -13,7 +13,7 @@
 # Packages here should generally be unversioned, unless a specific version is known to be required.
 #
 
-name: nf-core-rnaseq-brbseq
+name: nf-core-rnaseq-brbseq-3.18.0
 channels:
   - conda-forge
   - bioconda
@@ -28,7 +28,7 @@ dependencies:
   # General run_job.sh dependencies. Many of these will already exist on a typical
   # Linux system but we pull them in explicitly to ensure they are available, even on
   # barebones systems (eg slimmed down Docker containers)
-  - python=3.10
+  - python=3.12
   - pip
   - conda-pack
   - aria2
@@ -38,6 +38,7 @@ dependencies:
   - curl
   - wget
   - awscli
+  - tqdm
   - jq
   - parallel
   # For realpath
@@ -45,9 +46,10 @@ dependencies:
   # Pipeline specific
   - nextflow=24.10.6
   - nf-core=2.14.1
-  - pandas=1.5.3
+  - pandas
 
   - pip:
       # General run_job.sh dependency, for the laxydl downloader tool
       - git+https://github.com/MonashBioinformaticsPlatform/laxy@master#egg=laxy_downloader&subdirectory=laxy_downloader
       - semver
+      - pdiff
