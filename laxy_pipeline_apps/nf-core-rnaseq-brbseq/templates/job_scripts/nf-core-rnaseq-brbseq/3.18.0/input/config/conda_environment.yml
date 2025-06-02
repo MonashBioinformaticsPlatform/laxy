@@ -1,0 +1,53 @@
+---
+# This environment contains the minimal packages required without listing automatically installed
+# dependencies or specific versions.
+# It can be used as a template for building an environment with a specific version of a pipeline,
+# which is then exported as `conda env export >conda_environment.yml`
+#
+# (We maintain this simplified environment file since while keeping the output of `conda env export`
+#  is great for reproducible environments it makes it difficult to identify just the required
+#  core packages when all their implicit dependencies are also listed.
+#  The flag `conda env export --from-history` does a similar thing, but doesn't contain specific
+#  overridden package versions and seems to exclude pip installed packages)
+#
+# Packages here should generally be unversioned, unless a specific version is known to be required.
+#
+
+name: nf-core-rnaseq-brbseq
+channels:
+  - conda-forge
+  - bioconda
+  - anaconda
+  - defaults
+  - r
+  # conda-forge occasionally re-labels packages from 'main' to 'broken',
+  # so we need this to make the environment reproducible
+  - conda-forge/label/broken
+  
+dependencies:
+  # General run_job.sh dependencies. Many of these will already exist on a typical
+  # Linux system but we pull them in explicitly to ensure they are available, even on
+  # barebones systems (eg slimmed down Docker containers)
+  - python=3.10
+  - pip
+  - conda-pack
+  - aria2
+  # older openssl and icu required to support aria2 on some systems
+  # - openssl=1.0.2p
+  # - "icu=58.*"
+  - curl
+  - wget
+  - awscli
+  - jq
+  - parallel
+  # For realpath
+  - coreutils
+  # Pipeline specific
+  - nextflow=24.10.6
+  - nf-core=2.14.1
+  - pandas=1.5.3
+
+  - pip:
+      # General run_job.sh dependency, for the laxydl downloader tool
+      - git+https://github.com/MonashBioinformaticsPlatform/laxy@master#egg=laxy_downloader&subdirectory=laxy_downloader
+      - semver
