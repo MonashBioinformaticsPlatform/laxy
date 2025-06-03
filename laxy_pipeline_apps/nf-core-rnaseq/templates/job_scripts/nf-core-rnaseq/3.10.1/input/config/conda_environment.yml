@@ -54,5 +54,6 @@ dependencies:
 
   - pip:
       # General run_job.sh dependency, for the laxydl downloader tool
-      - git+https://github.com/MonashBioinformaticsPlatform/laxy@master#egg=laxy_downloader&subdirectory=laxy_downloader
+      - git+https://github.com/MonashBioinformaticsPlatform/laxy@1bf87be#egg=laxy_downloader&subdirectory=laxy_downloader
       - semver
+      - chardet

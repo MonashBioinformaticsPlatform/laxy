@@ -38,7 +38,7 @@ export PIPELINES_CACHE_PATH="${JOB_PATH}/../../cache/pipelines"
 export SINGULARITY_TMPDIR="${TMPDIR}"
 export AUTH_HEADER_FILE="${JOB_PATH}/.private_request_headers"
 export IGNORE_SELF_SIGNED_CERTIFICATE="{{ IGNORE_SELF_SIGNED_CERTIFICATE }}"
-export LAXYDL_BRANCH=${LAXYDL_BRANCH:-master}
+export LAXYDL_BRANCH="1bf87be" # ${LAXYDL_BRANCH:-master}
 export LAXYDL_USE_ARIA2C=${LAXYDL_USE_ARIA2C:-yes}
 export LAXYDL_PARALLEL_DOWNLOADS=${LAXYDL_PARALLEL_DOWNLOADS:-8}
 
@@ -729,7 +729,9 @@ get_settings_from_pipeline_config || fail_job 's' 'get_settings_from_pipeline_co
 
 # nextflow_self_update || true
 
-update_laxydl || send_error 'update_laxydl' '' $?
+if ! command -v laxydl >/dev/null 2>&1; then
+    update_laxydl || send_error 'update_laxydl' '' $?
+fi
 
 ####
 #### Stage input data ###
