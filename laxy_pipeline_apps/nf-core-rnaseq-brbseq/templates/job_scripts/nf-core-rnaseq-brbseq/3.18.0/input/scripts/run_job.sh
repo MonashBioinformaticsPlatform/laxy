@@ -361,28 +361,28 @@ function normalize_annotations() {
 
 function get_settings_from_pipeline_config() {
     # Extract the pipeline parameters we need from pipeline_config.json
-    local _debug_mode=$(jq -e --raw-output '.params.'"${PIPELINE_NAME}"'.debug_mode' "${PIPELINE_CONFIG}" || echo "false")
+    local _debug_mode=$(jq -e --raw-output '.params["'${PIPELINE_NAME}'"].debug_mode' "${PIPELINE_CONFIG}" || echo "false")
     export USER_DEBUG_MODE="no"
     if [[ "${_debug_mode}" == "true" ]]; then
         export USER_DEBUG_MODE="yes"
     fi
 
-    local _has_umi=$(jq -e --raw-output '.params.'"${PIPELINE_NAME}"'.has_umi' "${PIPELINE_CONFIG}" || echo "false")
+    local _has_umi=$(jq -e --raw-output '.params["'${PIPELINE_NAME}'"].has_umi' "${PIPELINE_CONFIG}" || echo "false")
     export UMI_FLAGS=""
     if [[ "${_has_umi}" == "true" ]]; then
         export UMI_FLAGS=" --with_umi --skip_umi_extract --umitools_umi_separator : "
     fi
 
-    local _skip_trimming=$(jq -e --raw-output '.params.'"${PIPELINE_NAME}"'.skip_trimming' "${PIPELINE_CONFIG}" || echo "false")
+    local _skip_trimming=$(jq -e --raw-output '.params["'${PIPELINE_NAME}'"].skip_trimming' "${PIPELINE_CONFIG}" || echo "false")
     export EXTRA_FLAGS=""
     if [[ "${_skip_trimming}" == "true" ]]; then
         export EXTRA_FLAGS="${EXTRA_FLAGS} --skip_trimming "
     fi
 
-    local -i _min_mapped_reads=$(jq -e --raw-output '.params.'"${PIPELINE_NAME}"'.min_mapped_reads' "${PIPELINE_CONFIG}" || echo "5")
+    local -i _min_mapped_reads=$(jq -e --raw-output '.params["'${PIPELINE_NAME}'"].min_mapped_reads' "${PIPELINE_CONFIG}" || echo "5")
     export MIN_MAPPED_READS_ARG=" --min_mapped_reads ${_min_mapped_reads} "
     
-    local _trimmer=$(jq -e --raw-output '.params.'"${PIPELINE_NAME}"'.trimmer' "${PIPELINE_CONFIG}" || echo "")
+    local _trimmer=$(jq -e --raw-output '.params["'${PIPELINE_NAME}'"].trimmer' "${PIPELINE_CONFIG}" || echo "")
     TRIMMER_ARGS=()
     if [[ "${_trimmer}" == "fastp" ]]; then
         TRIMMER_ARGS=(--trimmer fastp --extra_fastp_args "--trim_poly_g --trim_poly_x")
@@ -400,12 +400,18 @@ function remove_index_reads() {
     find ${INPUT_READS_PATH} -type f -name "*_I2_001.f*.gz" -delete
 }
 
-function generate_samplesheet() {
-    export STRANDEDNESS=$(jq -e --raw-output '.params.'"${PIPELINE_NAME}"'.strandedness' "${PIPELINE_CONFIG}" || echo "auto")
-
-    python ${INPUT_SCRIPTS_PATH}/laxy2nfcore_samplesheet.py  \
-      ${INPUT_CONFIG_PATH}/pipeline_config.json ${INPUT_READS_PATH} ${STRANDEDNESS} \
-      >${INPUT_CONFIG_PATH}/samplesheet.csv
+function generate_fqdemux_samplesheet() {
+    python ${INPUT_SCRIPTS_PATH}/laxy2fqdemux_samplesheets.py \
+      "${PIPELINE_CONFIG}" \
+      "${INPUT_READS_PATH}" \
+      "${INPUT_CONFIG_PATH}/fqdemux_samplesheet.tsv" \
+      "${INPUT_CONFIG_PATH}/fqdemux_readstructures.tsv"
+    
+    # Check if the files were created successfully, otherwise exit
+    if [[ ! -f "${INPUT_CONFIG_PATH}/fqdemux_samplesheet.tsv" ]] || [[ ! -f "${INPUT_CONFIG_PATH}/fqdemux_readstructures.tsv" ]]; then
+        send_event "JOB_ERROR" "Failed to generate fqdemux input samplesheets."
+        exit 1
+    fi
 }
 
 function cleanup_nextflow_intermediates() {
@@ -423,12 +429,12 @@ function cleanup_nextflow_intermediates() {
 }
 
 function cleanup_nextflow_intermediates_keep_work_logs() {
-    local _save_genome_index=$(jq -e --raw-output '.params.'"${PIPELINE_NAME}"'.save_genome_index' "${PIPELINE_CONFIG}" || echo "false")
+    local _save_genome_index=$(jq -e --raw-output '.params["'${PIPELINE_NAME}'"].save_genome_index' "${PIPELINE_CONFIG}" || echo "false")
     if [[ ${_save_genome_index} != 'true' ]]; then
         rm -rf "${JOB_PATH}/output/results/genome/index"
     fi
 
-    local _save_reference_genome=$(jq -e --raw-output '.params.'"${PIPELINE_NAME}"'.save_reference_genome' "${PIPELINE_CONFIG}" || echo "false")
+    local _save_reference_genome=$(jq -e --raw-output '.params["'${PIPELINE_NAME}'"].save_reference_genome' "${PIPELINE_CONFIG}" || echo "false")
     if [[ ${_save_reference_genome} != 'true' ]]; then
         rm -rf "${JOB_PATH}/output/results/genome"
     fi
@@ -503,12 +509,16 @@ function cache_fqdemux_pipeline() {
 }
 
 function run_fqdemux_pipeline() {
-    nextflow run main.nf \
+    nextflow run MonashBioinformaticsPlatform/fqdemux \
+        -c ${INPUT_CONFIG_PATH}/laxy_nextflow.config \
+        ${NEXTFLOW_CONFIG_ARG} \
         --barcodes_samplesheet ${JOB_PATH}/input/config/fqdemux_samplesheet.tsv \
         --readstructure_samplesheet ${JOB_PATH}/input/config/fqdemux_readstructures.tsv \
         --outdir ${JOB_PATH}/output/results \
         -profile slurm \
         -resume
+
+    cp ${JOB_PATH}/output/results/samplesheet.csv ${INPUT_CONFIG_PATH}/samplesheet.csv
 }
 
 function fastq_sanity_check() {
@@ -580,7 +590,7 @@ function run_nextflow() {
     #set +o errexit
     #${PREFIX_JOB_CMD} "\
     nextflow run "${NFCORE_PIPELINE_PATH}" \
-       --input "${INPUT_CONFIG_PATH}/samplesheet.csv" \
+       --input "${INPUT_CONFIG_PATH}/rnaseq_samplesheet.csv" \
        --outdir ${JOB_PATH}/output/results \
        ${GENOME_ARGS} \
        ${UMI_FLAGS} \
@@ -712,7 +722,9 @@ get_settings_from_pipeline_config || fail_job 's' 'get_settings_from_pipeline_co
 
 # nextflow_self_update || true
 
-update_laxydl || send_error 'update_laxydl' '' $?
+if ! command -v laxydl >/dev/null 2>&1; then
+    update_laxydl || send_error 'update_laxydl' '' $?
+fi
 
 ####
 #### Stage input data ###
@@ -732,19 +744,19 @@ normalize_annotations
 # some FASTQ subsampling and FASTQC early that would catch bad FASTQs
 # fastq_sanity_check || fail_job 'fastq_sanity_check' '' $?
 
-generate_samplesheet
-
 get_site_nextflow_config || true
 
 cache_pipeline
 
 cache_fqdemux_pipeline
 
+generate_fqdemux_samplesheet
+
 cd "${JOB_PATH}/output"
 
-# send_event "JOB_PIPELINE_STARTING" "Starting demultiplexing pipeline."
+send_event "JOB_PIPELINE_STARTING" "Starting demultiplexing pipeline."
 
-# run_fqdemux_pipeline
+run_fqdemux_pipeline
 
 send_event "JOB_PIPELINE_STARTING" "Starting rnaseq pipeline."
 

@@ -37,7 +37,6 @@ dependencies:
   # - "icu=58.*"
   - curl
   - wget
-  - awscli
   - tqdm
   - jq
   - parallel
