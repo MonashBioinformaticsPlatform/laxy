@@ -37,6 +37,9 @@ export default class CsvTextForm extends Vue {
   @Prop({ default: "sample_id,barcode\nsample1,TACGAGTACAGACA" })
   public placeholderText: string;
 
+  @Prop({ default: null })
+  public showColumns: string[] | null;
+
   public csv_text: string = "";
 
   created() {
@@ -80,10 +83,21 @@ export default class CsvTextForm extends Vue {
 
     return dataRows.map(line => {
       const values = line.split(delimiter).map(field => field.trim());
-      const rowObject: Record<string, string> = {};
+      let rowObject: Record<string, string> = {};
       headers.forEach((header, index) => {
         rowObject[header] = values[index] || ''; // Handle potential missing values for a header
       });
+
+      if (this.showColumns && this.showColumns.length > 0) {
+        const filteredRowObject: Record<string, string> = {};
+        this.showColumns.forEach(columnName => {
+          if (rowObject.hasOwnProperty(columnName)) {
+            filteredRowObject[columnName] = rowObject[columnName];
+          }
+        });
+        return filteredRowObject;
+      }
+
       return rowObject;
     });
   }

@@ -120,13 +120,14 @@
         <csv-text-form 
           title-text="Paste your barcode samplesheet here (CSV or TSV)" 
           label-text="Barcode samplesheet" 
-          :placeholder-text="'sample_id,barcode\nsample1,TACGAGTACAGACA'" 
+          :show-columns="['*title', 'barcode']"
+          :placeholder-text="'*title,barcode\nsample1,TACGAGTACAGACA\n\n(other columns are ignored)'" 
           @data-modified="handleCsvDataModified"></csv-text-form>
       </md-whiteframe>
 
       <md-whiteframe v-if="barcodeSamplesheetData && barcodeSamplesheetData.length > 0" class="pad-16" md-elevation="2">
         <h4>Barcode sample sheet preview</h4>
-        <md-table v-if="barcodeSamplesheetHeaders.length > 0">
+        <md-table v-if="barcodeSamplesheetHeaders.length > 0" style="width: fit-content;">
           <md-table-row>
             <md-table-head v-for="header in barcodeSamplesheetHeaders" :key="header">{{ header }}</md-table-head>
           </md-table-row>
@@ -164,6 +165,9 @@
       </banner-notice>
       <banner-notice v-if="!isValid_min_mapped_reads" type="error" :show-close-button="false">Invalid value for minimum
         mapped reads - should be an integer between 0 and 100.
+      </banner-notice>
+      <banner-notice v-if="!isValid_barcode_samplesheet" type="error" :show-close-button="false">
+        Barcode samplesheet must contain at least one row with required headers: 'barcode' and one of '*title', 'title', or 'sample_id'.
       </banner-notice>
 
 
@@ -495,6 +499,20 @@ export default class PipelineParams extends Vue {
     return false;
   }
 
+  get isValid_barcode_samplesheet() {
+    // Check if we have at least one row
+    if (!this.barcodeSamplesheetData || this.barcodeSamplesheetData.length === 0) {
+      return false;
+    }
+
+    // Check if required headers are present
+    const headers = this.barcodeSamplesheetHeaders;
+    const hasBarcode = headers.includes('barcode');
+    const hasTitleHeader = headers.includes('*title') || headers.includes('title') || headers.includes('sample_id');
+    
+    return hasBarcode && hasTitleHeader;
+  }
+
   get isValid_params() {
     let is_valid = false;
     if (
@@ -502,7 +520,8 @@ export default class PipelineParams extends Vue {
       this.isValid_samples_added &&
       this.isValid_duplicate_samples &&
       this.isValid_strandedness_option &&
-      this.isValid_min_mapped_reads
+      this.isValid_min_mapped_reads &&
+      this.isValid_barcode_samplesheet
     ) {
       is_valid = true;
     }
