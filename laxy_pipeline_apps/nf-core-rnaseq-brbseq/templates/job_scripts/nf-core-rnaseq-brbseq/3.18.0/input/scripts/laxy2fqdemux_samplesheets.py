@@ -14,8 +14,8 @@ except ImportError:
         "WARNING: text_unidecode not installed, skipping unicode to ascii conversion for sample IDs.\n"
     )
 
-    def unidecode(s):
-        return s
+    def unidecode(txt: str) -> str:
+        return txt
 
 def sanitize_identifier(identifier: str) -> str:
     """

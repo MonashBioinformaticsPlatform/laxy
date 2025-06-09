@@ -16,6 +16,7 @@
             <label>Description</label>
             <md-input v-model="description" placeholder="Description of pipeline run ..."></md-input>
           </md-input-container>
+          <!--
           <md-input-container>
             <label for="strandedness">Strandedness</label>
             <md-select name="strandedness" id="strandedness" v-model="strandedness">
@@ -23,7 +24,7 @@
                 :value="strand_option.value">{{ strand_option.text }}</md-option>
             </md-select>
           </md-input-container>
-
+          -->
           <md-switch v-model="show_advanced" id="advanced-toggle" name="advanced-toggle" class="md-primary">Show
             advanced options</md-switch>
           <transition name="fade">

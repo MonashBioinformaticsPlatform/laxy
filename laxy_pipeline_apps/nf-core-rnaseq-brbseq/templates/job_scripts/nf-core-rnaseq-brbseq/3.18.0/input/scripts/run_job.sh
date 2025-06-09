@@ -23,6 +23,8 @@ export NFCORE_PIPELINE_RELEASE='{{ PIPELINE_VERSION }}'
 export NFCORE_PIPELINE_NAME="rnaseq"
 export REFERENCE_GENOME_ID="{{ REFERENCE_GENOME }}"
 
+export FQDEMUX_VERSION="c298903"
+
 # run_job.sh specific variables or overrides
 export TMPDIR="$(realpath ${JOB_PATH}/../../tmp/${JOB_ID})"
 mkdir -p "${TMPDIR}" || true
@@ -505,11 +507,12 @@ function cache_pipeline() {
 }
 
 function cache_fqdemux_pipeline() {
-    nextflow pull MonashBioinformaticsPlatform/fqdemux
+    nextflow pull -revision ${FQDEMUX_VERSION} MonashBioinformaticsPlatform/fqdemux
 }
 
 function run_fqdemux_pipeline() {
     nextflow run MonashBioinformaticsPlatform/fqdemux \
+        -revision ${FQDEMUX_VERSION} \
         -c ${INPUT_CONFIG_PATH}/laxy_nextflow.config \
         ${NEXTFLOW_CONFIG_ARG} \
         --barcodes_samplesheet ${JOB_PATH}/input/config/fqdemux_samplesheet.tsv \
@@ -519,6 +522,10 @@ function run_fqdemux_pipeline() {
         -resume
 
     cp ${JOB_PATH}/output/results/samplesheet.csv ${INPUT_CONFIG_PATH}/samplesheet.csv
+    # Remove the 'unmatched' (no barcode) sample from the copy of the samplesheet we will use
+    sed -i '/^unmatched/d' ${INPUT_CONFIG_PATH}/samplesheet.csv
+    # Change the standedness in the samplesheet to 'reverse' as expected for BRB-seq
+    sed -i 's/,auto$/,reverse/' ${INPUT_CONFIG_PATH}/samplesheet.csv
 }
 
 function fastq_sanity_check() {
@@ -590,7 +597,7 @@ function run_nextflow() {
     #set +o errexit
     #${PREFIX_JOB_CMD} "\
     nextflow run "${NFCORE_PIPELINE_PATH}" \
-       --input "${INPUT_CONFIG_PATH}/rnaseq_samplesheet.csv" \
+       --input "${INPUT_CONFIG_PATH}/samplesheet.csv" \
        --outdir ${JOB_PATH}/output/results \
        ${GENOME_ARGS} \
        ${UMI_FLAGS} \
@@ -599,6 +606,8 @@ function run_nextflow() {
        "${TRIMMER_ARGS[@]}" \
        --aligner star_salmon \
        --pseudo_aligner salmon \
+       --skip_rseqc \
+       --salmon_quant_libtype ISR \
        --save_reference \
        --monochrome_logs \
        -with-trace \
@@ -624,6 +633,8 @@ function run_nextflow() {
             "${TRIMMER_ARGS[@]}" \
             --aligner star_salmon \
             --pseudo_aligner salmon \
+            --skip_rseqc \
+            --skip_rseqc ISR \
             --save_reference \
             --monochrome_logs \
             -with-trace \
