@@ -5,15 +5,15 @@ const initial_state: any = {
     strandedness: 'auto',
     trimmer: 'fastp',
     debug_mode: false,
-    has_umi: false,
+    has_umi: true,
     min_mapped_reads: 5,
     save_reference_genome: true,
     save_genome_index: false,
     skip_trimming: false,
     barcode_samplesheet: [],
     readstructure: {
-        R1: '14B14M122T',
-        R2: '150T',
+        R1: '14B14M',
+        R2: '+T',
     },
 };
 
