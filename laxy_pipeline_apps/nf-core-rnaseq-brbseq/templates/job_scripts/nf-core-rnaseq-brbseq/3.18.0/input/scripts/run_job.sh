@@ -404,6 +404,7 @@ function remove_index_reads() {
 
 function generate_fqdemux_samplesheet() {
     python ${INPUT_SCRIPTS_PATH}/laxy2fqdemux_samplesheets.py \
+      --single-ended R2 \
       "${PIPELINE_CONFIG}" \
       "${INPUT_READS_PATH}" \
       "${INPUT_CONFIG_PATH}/fqdemux_samplesheet.tsv" \

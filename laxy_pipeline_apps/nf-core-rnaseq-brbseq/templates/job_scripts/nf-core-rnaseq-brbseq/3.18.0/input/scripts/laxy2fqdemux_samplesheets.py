@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import json
 import re
+import argparse
 
 # Attempt to import unidecode, but provide a fallback if not available
 try:
@@ -30,17 +31,27 @@ def sanitize_identifier(identifier: str) -> str:
     return identifier
 
 def main():
-    if len(sys.argv) != 5:
-        sys.stderr.write(
-            "Usage: laxy2fqdemux_samplesheets.py <pipeline_config.json> <input_reads_path> "
-            "<output_barcodes.tsv> <output_readstructures.tsv>\n"
-        )
-        sys.exit(1)
+    parser = argparse.ArgumentParser(
+        description="Generate fqdemux samplesheets from Laxy pipeline config."
+    )
+    parser.add_argument("pipeline_config_json", help="Path to pipeline_config.json")
+    parser.add_argument("input_reads_path", help="Path to the input reads directory")
+    parser.add_argument("output_barcodes_tsv", help="Path for the output barcodes.tsv")
+    parser.add_argument(
+        "output_readstructures_tsv", help="Path for the output readstructures.tsv"
+    )
+    parser.add_argument(
+        "--single-ended",
+        choices=["R1", "R2"],
+        default="R1",
+        help="Specify the main read (R1 or R2) to be listed first in the read structures sheet. Defaults to R1.",
+    )
+    args = parser.parse_args()
 
-    pipeline_config_json_path = sys.argv[1]
-    input_reads_path = sys.argv[2]
-    output_barcodes_tsv_path = sys.argv[3]
-    output_readstructures_tsv_path = sys.argv[4]
+    pipeline_config_json_path = args.pipeline_config_json
+    input_reads_path = args.input_reads_path
+    output_barcodes_tsv_path = args.output_barcodes_tsv
+    output_readstructures_tsv_path = args.output_readstructures_tsv
 
     with open(pipeline_config_json_path, "r") as fh:
         jblob = json.load(fh)
@@ -82,7 +93,8 @@ def main():
 
 
     # --- Generate Read Structures Samplesheet (fqdemux_readstructures.tsv) ---
-    readstructures_data = []
+    r1_reads = []
+    r2_reads = []
     read_structures_map = brbseq_params.get("readstructure", {})
 
     if not read_structures_map:
@@ -120,10 +132,23 @@ def main():
         current_read_structure = read_structures_map.get(read_pair_type)
 
         if current_read_structure:
-            readstructures_data.append(f"{full_file_path}\t{current_read_structure}")
+            line = f"{full_file_path}\t{current_read_structure}"
+            if read_pair_type == "R1":
+                r1_reads.append(line)
+            elif read_pair_type == "R2":
+                r2_reads.append(line)
         else:
             sys.stderr.write(f"WARNING: No read structure found for read type '{read_pair_type}' (file: {file_name_only}).\n")
             
+    # Sort reads to ensure deterministic order before combining
+    r1_reads.sort()
+    r2_reads.sort()
+
+    if args.single_ended == "R1":
+        readstructures_data = r1_reads + r2_reads
+    else: # main read is R2
+        readstructures_data = r2_reads + r1_reads
+        
     with open(output_readstructures_tsv_path, "w") as fh:
         fh.write("filename\tread_structure\n")
         for line in readstructures_data:
