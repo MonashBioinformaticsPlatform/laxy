@@ -689,7 +689,7 @@ function get_salmon_inferred_strandedness() {
 
 function post_nextflow_pipeline() {
     local paired_flag=" --paired=true "
-    if [[ $(${INPUT_SCRIPTS_PATH}/is_paired.py ${INPUT_READS_PATH}) == "single" ]]; then
+    if [[ $(${INPUT_SCRIPTS_PATH}/is_paired.py ${JOB_PATH}/output/results/demultiplexed/output) == "single" ]]; then
         paired_flag=" --paired=false "
     fi
 
