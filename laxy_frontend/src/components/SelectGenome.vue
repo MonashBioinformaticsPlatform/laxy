@@ -151,7 +151,7 @@ import { isValidUrl } from "../util";
   filters: {}
 })
 export default class SelectGenome extends Vue {
-  ensemblRelease: string = "112";
+  ensemblRelease: string = "114";
   public ensemblReleaseUrl: string = `http://ftp.ensembl.org/pub/release-${this.ensemblRelease}`;
 
   @Sync("pipelineParams@user_genome.fasta_url")
@@ -167,6 +167,9 @@ export default class SelectGenome extends Vue {
 
   @Prop({ default: () => AVAILABLE_GENOMES, type: Array })
   public genomes: Array<ReferenceGenome>;
+
+  @Prop({ default: null, type: String })
+  public initialGenomeId: string | null;
 
   @Sync("use_custom_genome")
   public use_custom_genome: boolean;
@@ -203,6 +206,12 @@ export default class SelectGenome extends Vue {
     ".gff",
     ".gff3"
   ];
+
+  created() {
+    if (this.initialGenomeId) {
+      this.reference_genome = this.initialGenomeId;
+    }
+  }
 
   get selected_genome_organism(): string {
     return (

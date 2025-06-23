@@ -16,19 +16,17 @@
             <label>Description</label>
             <md-input v-model="description" placeholder="Description of pipeline run ..."></md-input>
           </md-input-container>
-          <!--
-          <md-input-container>
-            <label for="strandedness">Strandedness</label>
-            <md-select name="strandedness" id="strandedness" v-model="strandedness">
-              <md-option v-for="strand_option in standedness_options" :key="strand_option.value"
-                :value="strand_option.value">{{ strand_option.text }}</md-option>
-            </md-select>
-          </md-input-container>
-          -->
           <md-switch v-model="show_advanced" id="advanced-toggle" name="advanced-toggle" class="md-primary">Show
             advanced options</md-switch>
           <transition name="fade">
             <md-layout v-if="show_advanced">
+              <md-input-container>
+                <label for="strandedness">Strandedness</label>
+                <md-select name="strandedness" id="strandedness" v-model="strandedness">
+                  <md-option v-for="strand_option in standedness_options" :key="strand_option.value"
+                    :value="strand_option.value">{{ strand_option.text }}</md-option>
+                </md-select>
+              </md-input-container>
               <md-input-container>
                 <label for="pipeline_version">Pipeline version</label>
                 <md-select name="pipeline_version" id="pipeline_version" v-model="pipeline_version">
@@ -110,11 +108,11 @@
       </form>
 
       <md-whiteframe class="pad-16" md-elevation="2">
-        <select-genome :genomes="available_genomes"></select-genome>
+        <select-genome :genomes="available_genomes" :initial-genome-id="initial_genome_id"></select-genome>
       </md-whiteframe>
 
       <md-whiteframe class="pad-16" md-elevation="2">
-        <input-files-form title-text="FASTQ files"></input-files-form>
+        <input-files-form title-text="FASTQ files" initial-selected-source="NEXTCLOUD_PUBLIC"></input-files-form>
       </md-whiteframe>
 
       <md-whiteframe class="pad-16" md-elevation="2">
@@ -271,6 +269,7 @@ import AVAILABLE_GENOMES from "../config/genomes";
 export default class PipelineParams extends Vue {
   public pipeline_name: string = "nf-core-rnaseq-brbseq";
   public available_genomes: Array<ReferenceGenome> = AVAILABLE_GENOMES;
+  public initial_genome_id: string = "Mus_musculus/Ensembl/GRCm39.release-109";
 
   @Prop({ default: true, type: Boolean })
   public showButtons: boolean;
