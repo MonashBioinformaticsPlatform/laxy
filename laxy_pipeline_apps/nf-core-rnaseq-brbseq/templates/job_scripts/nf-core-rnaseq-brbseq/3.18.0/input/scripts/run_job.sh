@@ -19,7 +19,7 @@ export INPUT_SCRIPTS_PATH="${JOB_PATH}/input/scripts"
 # Source common environment variables
 source "${INPUT_SCRIPTS_PATH}/env.sh" || exit 1
 
-export NFCORE_PIPELINE_RELEASE='{{ PIPELINE_VERSION }}'
+export NFCORE_PIPELINE_RELEASE="${PIPELINE_VERSION}"
 export NFCORE_PIPELINE_NAME="rnaseq"
 export REFERENCE_GENOME_ID="{{ REFERENCE_GENOME }}"
 
@@ -497,7 +497,6 @@ function cache_pipeline() {
                         --container-cache-utilisation amend \
                         --parallel-downloads ${LAXYDL_PARALLEL_DOWNLOADS} \
                         --compress none \
-                        --download-configuration no \
                         --outdir "${CACHED_PIPELINE_PATH}"
     fi
 
@@ -525,52 +524,16 @@ function run_fqdemux_pipeline() {
     cp ${JOB_PATH}/output/results/samplesheet.csv ${INPUT_CONFIG_PATH}/samplesheet.csv
     # Remove the 'unmatched' (no barcode) sample from the copy of the samplesheet we will use
     sed -i '/^unmatched/d' ${INPUT_CONFIG_PATH}/samplesheet.csv
+
+    # Drop copy the R2 filenames to the R1 column, then drop the values in third column (fastq_2)
+    # So we are 'single-ended' using only the R2 reads.
+    # awk -F, \
+    #   'BEGIN {OFS=","} NR==1 {print; next} {$2=$3; $3=""; print}' \
+    #   ${INPUT_CONFIG_PATH}/samplesheet.csv >${INPUT_CONFIG_PATH}/samplesheet.csv.tmp && \
+    #   mv ${INPUT_CONFIG_PATH}/samplesheet.csv.tmp ${INPUT_CONFIG_PATH}/samplesheet.csv
+
     # Change the standedness in the samplesheet to 'reverse' as expected for BRB-seq
-    sed -i 's/,auto$/,reverse/' ${INPUT_CONFIG_PATH}/samplesheet.csv
-}
-
-function fastq_sanity_check() {
-    #
-    # Read every FASTQ with seqkit, exit with error if any fail
-    #
-
-    local orig_errexit=${-//[^e]/}
-    set -o errexit
-    local _cpus=4
-
-    send_event "JOB_INFO" "Starting seqkit stats sanity check."
-
-    mkdir -p "${JOB_PATH}/output/seqkit_stats"
-    echo -e "This directory contains the output from 'seqkit stats' for the FASTQ input files provided. " \
-            "It is primarily intended to catch corrupted FASTQ files early, before the main pipeline runs." \
-            >"${JOB_PATH}/output/seqkit_stats/README.txt"
-    
-    pushd "${INPUT_READS_PATH}"
-    # Get just the header that seqkit stats will output
-    echo ">dummy_seq\nXXX\n" | seqkit stats --tabular | head -n 1 >"${JOB_PATH}/output/seqkit_stats/seqkit_stats.tsv"
-    local _error=0
-    for fq in $(find . -name "*.f*[q,a].gz" -printf '%P\n'); do
-        local _fn=$(basename "${fq}")
-        seqkit stats --tabular --threads $_cpus $fq \
-                > >(tail -n +2 >>"${JOB_PATH}/output/seqkit_stats/seqkit_stats.tsv") \
-                2>> "${JOB_PATH}/output/seqkit_stats/seqkit_stats.err"
-
-        # Unforturnately seqkit stats doesn't return a non-zero error code for corrupt files !
-        grep -q "[ERRO]" "${JOB_PATH}/output/seqkit_stats/seqkit_stats.err" && \
-            { send_event "JOB_INFO" "Something wrong with input file: ${_fn}" & \
-              send_job_metadata '{"metadata": {"error": {"bad_input_file": "'${_fn}'"}}}';
-              if [[ -z "${orig_errexit}" ]]; then
-                set +o errexit
-              fi
-              popd
-              return 1
-            }
-    done
-
-    popd
-    if [[ -z "${orig_errexit}" ]]; then
-        set +o errexit
-    fi
+    # sed -i 's/,auto$/,reverse/' ${INPUT_CONFIG_PATH}/samplesheet.csv
 }
 
 function run_nextflow() {
@@ -605,11 +568,12 @@ function run_nextflow() {
        ${MIN_MAPPED_READS_ARG} \
        ${EXTRA_FLAGS} \
        "${TRIMMER_ARGS[@]}" \
+       --extra_star_align_args '"--alignIntronMax 1000000 --alignIntronMin 20 --alignMatesGapMax 1000000 --alignSJoverhangMin 8 --outFilterMismatchNmax 999 --outFilterMultimapNmax 20 --outFilterType BySJout --outFilterMismatchNoverLmax 0.1 --clip3pAdapterSeq AAAAAAAA"' \
+       --extra_salmon_quant_args '"--noLengthCorrection"' \
        --aligner star_salmon \
        --pseudo_aligner salmon \
-       --skip_rseqc \
-       --salmon_quant_libtype ISR \
-       --save_reference \
+       --save_reference=true \
+       --save_umi_intermeds=true \
        --monochrome_logs \
        -with-trace \
        -with-dag \
@@ -620,7 +584,9 @@ function run_nextflow() {
         >${JOB_PATH}/output/nextflow.log \
         2>${JOB_PATH}/output/nextflow.err || EXIT_CODE=$?
     #">>"${JOB_PATH}/slurm.jids"
-    
+
+    #  --save_align_intermeds=true \
+
     #EXIT_CODE=$?
     # Attempt #2, resuming to catch any failures not caught by Nextflow task retries.
     if [[ ${EXIT_CODE} != 0 ]]; then
@@ -632,11 +598,12 @@ function run_nextflow() {
             ${MIN_MAPPED_READS_ARG} \
             ${EXTRA_FLAGS} \
             "${TRIMMER_ARGS[@]}" \
+            --extra_star_align_args '"--alignIntronMax 1000000 --alignIntronMin 20 --alignMatesGapMax 1000000 --alignSJoverhangMin 8 --outFilterMismatchNmax 999 --outFilterMultimapNmax 20 --outFilterType BySJout --outFilterMismatchNoverLmax 0.1 --clip3pAdapterSeq AAAAAAAA"' \
+            --extra_salmon_quant_args '"--noLengthCorrection"' \
             --aligner star_salmon \
             --pseudo_aligner salmon \
-            --skip_rseqc \
-            --skip_rseqc ISR \
-            --save_reference \
+            --save_reference=true \
+            --save_umi_intermeds=true \
             --monochrome_logs \
             -with-trace \
             -with-dag \
@@ -648,6 +615,9 @@ function run_nextflow() {
             >${JOB_PATH}/output/nextflow2.log \
             2>${JOB_PATH}/output/nextflow2.err || EXIT_CODE=$?
     fi
+
+    #  --save_align_intermeds=true \
+
 
     # TODO: Should we have the --trim_nextseq option here by default ?
     #       (assuming it's mostly benign with non-nextseq/novaseq data ?)
@@ -697,7 +667,7 @@ function post_nextflow_pipeline() {
 
     nextflow run "${INPUT_SCRIPTS_PATH}/featurecounts_postnfcore.nf" \
        --scripts_path="${INPUT_SCRIPTS_PATH}" \
-       --bams="${JOB_PATH}/output/results/star_salmon/"'*.bam' \
+       --bams="${JOB_PATH}/output/results/star_salmon/"'*.umi_dedup.sorted.bam' \
        --annotation="${ANNOTATION_FILE}" \
        --meta_info="${JOB_PATH}/output/results/star_salmon/"'*/aux_info/meta_info.json' \
        ${paired_flag} \
@@ -726,6 +696,7 @@ mkdir -p "${INPUT_CONFIG_PATH}" "${INPUT_SCRIPTS_PATH}" "${INPUT_READS_PATH}"
 ####
 
 install_miniconda || fail_job 'install_miniconda' '' $?
+# install_miniforge || fail_job 'install_miniforge' '' $?
 
 # We import the environment early to ensure we have a recent version of curl (>=7.55)
 init_conda_env "${PIPELINE_NAME}" "${PIPELINE_VERSION}" || fail_job 'init_conda_env' '' $?
@@ -751,10 +722,6 @@ remove_index_reads
 set_genome_args
 
 normalize_annotations
-
-# This probably isn't all that necessary for nf-core/rnaseq since it runs
-# some FASTQ subsampling and FASTQC early that would catch bad FASTQs
-# fastq_sanity_check || fail_job 'fastq_sanity_check' '' $?
 
 get_site_nextflow_config || true
 

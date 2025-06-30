@@ -11,6 +11,7 @@ export PIPELINE_VERSION="{{ PIPELINE_VERSION }}"
 
 # Global variables used throughout the script
 export TMP="${PWD}/../tmp"
+export TMPDIR="${TMP}"
 export JOB_PATH=${PWD}
 export INPUT_READS_PATH="${JOB_PATH}/input/reads"
 export INPUT_SCRIPTS_PATH="${JOB_PATH}/input/scripts"
@@ -18,6 +19,7 @@ export INPUT_CONFIG_PATH="${JOB_PATH}/input/config"
 export PIPELINE_CONFIG="${INPUT_CONFIG_PATH}/pipeline_config.json"
 export SITE_CONFIGS="${JOB_PATH}/../../config"
 export CONDA_BASE="${JOB_PATH}/../miniconda3"
+# export CONDA_BASE="${JOB_PATH}/../miniforge3"
 export DOWNLOAD_CACHE_PATH="${JOB_PATH}/../../cache/downloads"
 export SINGULARITY_CACHEDIR="${JOB_PATH}/../../cache/singularity"
 export APPTAINER_CACHEDIR="${SINGULARITY_CACHEDIR}"
