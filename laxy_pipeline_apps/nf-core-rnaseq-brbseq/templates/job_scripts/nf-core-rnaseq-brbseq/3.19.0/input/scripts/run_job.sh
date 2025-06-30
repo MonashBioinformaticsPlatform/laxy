@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 ##
-# nf-core/rnaseq v3.18.0 wrapper script
+# BRB-seq (fqdemux + nf-core/rnaseq) wrapper script
 ##
 
 set -o nounset

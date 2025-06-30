@@ -13,7 +13,7 @@
 # Packages here should generally be unversioned, unless a specific version is known to be required.
 #
 
-name: nf-core-rnaseq-brbseq-3.18.0
+name: nf-core-rnaseq-brbseq-3.19.0
 channels:
   - conda-forge
   - bioconda
