@@ -239,6 +239,20 @@ function install_miniconda() {
     fi
 }
 
+function install_miniforge() {
+    send_event "JOB_INFO" "Installing/detecting local conda installation (Miniforge)."
+
+    if [[ ! -d "${CONDA_BASE}" ]]; then
+        local filename="Miniforge3-$(uname)-$(uname -m).sh"
+        local url="https://github.com/conda-forge/miniforge/releases/latest/download/${filename}"
+
+        download_somehow "${url}" "${TMP}/${filename}" || return 1
+
+        chmod +x "${TMP}/${filename}"
+        "${TMP}/${filename}" -b -p "${CONDA_BASE}"
+    fi
+}
+
 function init_conda_env() {
 
     CONDA_INSTALL_BINARY=mamba
