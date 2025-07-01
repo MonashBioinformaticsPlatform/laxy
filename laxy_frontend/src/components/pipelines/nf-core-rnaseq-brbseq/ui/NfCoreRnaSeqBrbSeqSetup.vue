@@ -465,7 +465,7 @@ export default class PipelineParams extends Vue {
   }
 
   get trimmer_option_supported() {
-    let supported_versions = ['3.18.0'];
+    let supported_versions = ['3.18.0', '3.19.0'];
     return supported_versions.includes(this.pipeline_version);
   }
 
