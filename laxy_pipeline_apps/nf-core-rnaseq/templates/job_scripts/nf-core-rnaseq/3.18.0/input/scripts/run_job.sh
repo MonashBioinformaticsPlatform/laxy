@@ -20,7 +20,7 @@ export INPUT_SCRIPTS_PATH="${JOB_PATH}/input/scripts"
 source "${INPUT_SCRIPTS_PATH}/env.sh" || exit 1
 
 # export PIPELINE_NAME='nf-core-rnaseq'
-export NFCORE_PIPELINE_RELEASE='{{ PIPELINE_VERSION }}'
+export NFCORE_PIPELINE_RELEASE="${PIPELINE_VERSION}"
 export NFCORE_PIPELINE_NAME="rnaseq"
 export REFERENCE_GENOME_ID="{{ REFERENCE_GENOME }}"
 
@@ -489,8 +489,9 @@ function cache_pipeline() {
                         --container-cache-utilisation amend \
                         --parallel-downloads ${LAXYDL_PARALLEL_DOWNLOADS} \
                         --compress none \
-                        --download-configuration no \
                         --outdir "${CACHED_PIPELINE_PATH}"
+                        
+                        # --download-configuration no \
     fi
 
     mkdir -p "${INPUT_SCRIPTS_PATH}/pipeline"
