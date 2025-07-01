@@ -12,6 +12,7 @@ import UserProfile from './components/UserProfile.vue';
 import RNASeqSetup from './components/pipelines/rnasik/ui/RNASeqSetup.vue';
 import SeqkitStatsSetup from './components/pipelines/seqkit_stats/ui/SeqkitStatsSetup.vue';
 import NfCoreRnaSeqSetup from './components/pipelines/nf-core-rnaseq/ui/NfCoreRnaSeqSetup.vue';
+import NfCoreRnaSeqBrbSeqSetup from './components/pipelines/nf-core-rnaseq-brbseq/ui/NfCoreRnaSeqBrbSeqSetup.vue';
 import OpenfoldSetup from './components/pipelines/openfold/ui/OpenfoldSetup.vue';
 import RemoteFilesSelect from './components/RemoteSelect/RemoteFilesSelect.vue';
 import SampleCart from './components/SampleCart.vue';
@@ -203,6 +204,7 @@ export function addPipelineRoutes(pipelines: { name: string }[]) {
         'rnasik': RNASeqSetup,
         'seqkit_stats': SeqkitStatsSetup,
         'nf-core-rnaseq': NfCoreRnaSeqSetup,
+        'nf-core-rnaseq-brbseq': NfCoreRnaSeqBrbSeqSetup,
         'openfold': OpenfoldSetup,
     };
     const routes = [];

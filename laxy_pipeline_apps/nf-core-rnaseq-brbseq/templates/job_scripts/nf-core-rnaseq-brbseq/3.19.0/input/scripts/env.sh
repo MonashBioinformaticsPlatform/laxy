@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-export PIPELINE_NAME='nf-core-rnaseq'
+export PIPELINE_NAME='nf-core-rnaseq-brbseq'
 # These variables are set via templating when the script file is created
 export JOB_ID="{{ JOB_ID }}"
 export JOB_COMPLETE_CALLBACK_URL="{{ JOB_COMPLETE_CALLBACK_URL }}"
@@ -19,6 +19,7 @@ export INPUT_CONFIG_PATH="${JOB_PATH}/input/config"
 export PIPELINE_CONFIG="${INPUT_CONFIG_PATH}/pipeline_config.json"
 export SITE_CONFIGS="${JOB_PATH}/../../config"
 export CONDA_BASE="${JOB_PATH}/../miniconda3"
+# export CONDA_BASE="${JOB_PATH}/../miniforge3"
 export DOWNLOAD_CACHE_PATH="${JOB_PATH}/../../cache/downloads"
 export SINGULARITY_CACHEDIR="${JOB_PATH}/../../cache/singularity"
 export APPTAINER_CACHEDIR="${SINGULARITY_CACHEDIR}"
@@ -28,7 +29,7 @@ export SINGULARITY_LOCALCACHEDIR="${TMPDIR}"
 export APPTAINER_LOCALCACHEDIR="${TMPDIR}"
 export AUTH_HEADER_FILE="${JOB_PATH}/.private_request_headers"
 export IGNORE_SELF_SIGNED_CERTIFICATE="{{ IGNORE_SELF_SIGNED_CERTIFICATE }}"
-export LAXYDL_BRANCH="1bf87be" # ${LAXYDL_BRANCH:-master}
+export LAXYDL_BRANCH=${LAXYDL_BRANCH:-master}
 export LAXYDL_USE_ARIA2C=${LAXYDL_USE_ARIA2C:-yes}
 export LAXYDL_PARALLEL_DOWNLOADS=${LAXYDL_PARALLEL_DOWNLOADS:-8}
 

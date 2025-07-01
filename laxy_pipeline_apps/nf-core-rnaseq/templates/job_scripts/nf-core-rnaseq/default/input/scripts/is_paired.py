@@ -5,12 +5,17 @@ import os
 import argparse
 import string
 from pathlib import Path
-from collections import OrderedDict, Iterable
+from collections import OrderedDict
 import itertools
 import json
 import re
 from urllib.parse import unquote
 import unicodedata
+
+if sys.version_info.major == 3 and sys.version_info.minor < 10:
+    from collections import Iterable
+else:
+    from collections.abc import Iterable
 
 
 extensions = [

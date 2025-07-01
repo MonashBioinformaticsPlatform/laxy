@@ -2,7 +2,7 @@
   <div>
     <md-layout md-gutter>
       <md-layout md-flex="100" md-column>
-        <h3>Input data</h3>
+        <h3>{{ titleText }}</h3>
         <form novalidate @submit.stop.prevent="submit">
           <md-layout>
             <md-layout>
@@ -132,6 +132,14 @@
             </p>
             <h2>Example:</h2>
             <code>https://files.monash-bioinformatics-platform.cloud.edu.au/s/jzWk59iwXgzHL8p</code>
+            <hr/>
+            <p>
+              <div class="info-section">
+              <md-icon class="info-icon">info</md-icon>
+              Monash and affiliated users can use the Nextcloud instance at <a href="https://files.monash-bioinformatics-platform.cloud.edu.au" target="_blank">files.monash-bioinformatics-platform.cloud.edu.au</a>
+              - <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank">see this handy video guide</a>
+              </div>
+            </p>
           </div>
         </md-dialog-content>
 
@@ -196,6 +204,11 @@ interface DbAccession {
   accession: string;
 }
 
+interface DataSource {
+  type: string;
+  text: string;
+}
+
 @Component({
   components: {
     "vue-markdown": VueMarkdown,
@@ -206,10 +219,15 @@ interface DbAccession {
     CSVSampleListUpload,
     CSVAboutBox,
   },
-  props: {},
 })
 export default class InputFilesForm extends Vue {
-  sources: object = [
+  @Prop({ type: String, default: "Input data" })
+  titleText!: string;
+
+  @Prop({ type: String, default: "ENA" })
+  initialSelectedSource!: string;
+
+  sources: DataSource[] = [
     { type: "ENA", text: "Public data from ENA or SRA" },
     { type: "URL", text: "Files on a web or FTP server (URL)" },
     { type: "NEXTCLOUD_PUBLIC", text: "Public Nextcloud/Owncloud Share" },
@@ -227,6 +245,19 @@ export default class InputFilesForm extends Vue {
   password_valid_days: number = 2;
   password_expiry: Date = this.daysInFuture(2);
   dataset_name_invalid: boolean = false;
+
+  created() {
+    this.selected_source = this.initialSelectedSource;
+  }
+
+  @Watch("initialSelectedSource")
+  onInitialSelectedSourceChanged(newVal: string) {
+    this.selected_source = newVal;
+  }
+
+  submit() {
+    // This form doesn't actually get submitted, this is to satisfy the template
+  }
 
   email_username() {
     return this.user_email.split("@")[0];

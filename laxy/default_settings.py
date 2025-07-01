@@ -437,7 +437,8 @@ INSTALLED_APPS = [
     "laxy_pipeline_apps.rnasik",
     "laxy_pipeline_apps.seqkit_stats",  # a pipeline plugin for Laxy
     "laxy_pipeline_apps.nf-core-rnaseq",  # a pipeline plugin for Laxy
-    "laxy_pipeline_apps.openfold",
+    "laxy_pipeline_apps.nf-core-rnaseq-brbseq",  # a pipeline plugin for Laxy
+    "laxy_pipeline_apps.openfold",  # a pipeline plugin for Laxy
 ]
 
 MIDDLEWARE = [

@@ -5,30 +5,28 @@
     <md-layout md-column>
       <form novalidate>
         <md-whiteframe class="pad-32">
-          <h2>nf-core/rnaseq</h2>
+          <h2>BRB-seq demux + nf-core/rnaseq</h2>
           <md-whiteframe class="pad-32" md-elevation="8">
-            <a href="https://nf-co.re/rnaseq">nf-core/rnaseq</a>
-            <br />nf-core/rnaseq is a bioinformatics pipeline that can be used
-            to analyse bulk RNA sequencing data obtained from organisms with a
-            reference genome and annotation.
+            BRB-seq demultiplexing + <a href="https://nf-co.re/rnaseq">nf-core/rnaseq</a>
+            <br />This pipeline runs demultiplexing for BRB-seq samples, then 
+            runs the standard nf-core/rnaseq pipeline for transcript quantification
           </md-whiteframe>
           <h3>Pipeline parameters</h3>
           <md-input-container>
             <label>Description</label>
             <md-input v-model="description" placeholder="Description of pipeline run ..."></md-input>
           </md-input-container>
-          <md-input-container>
-            <label for="strandedness">Strandedness</label>
-            <md-select name="strandedness" id="strandedness" v-model="strandedness">
-              <md-option v-for="strand_option in standedness_options" :key="strand_option.value"
-                :value="strand_option.value">{{ strand_option.text }}</md-option>
-            </md-select>
-          </md-input-container>
-
           <md-switch v-model="show_advanced" id="advanced-toggle" name="advanced-toggle" class="md-primary">Show
             advanced options</md-switch>
           <transition name="fade">
             <md-layout v-if="show_advanced">
+              <md-input-container>
+                <label for="strandedness">Strandedness</label>
+                <md-select name="strandedness" id="strandedness" v-model="strandedness">
+                  <md-option v-for="strand_option in standedness_options" :key="strand_option.value"
+                    :value="strand_option.value">{{ strand_option.text }}</md-option>
+                </md-select>
+              </md-input-container>
               <md-input-container>
                 <label for="pipeline_version">Pipeline version</label>
                 <md-select name="pipeline_version" id="pipeline_version" v-model="pipeline_version">
@@ -90,18 +88,53 @@
                   </md-layout>
                 </md-layout>
 
+              <md-layout md-column>
+                <h3>Read structure for demultiplexing</h3>
+                <md-input-container>
+                  <label>R1 read structure</label>
+                  <md-input v-model="readstructure_R1" placeholder="14B14M122T"></md-input>
+                </md-input-container>
+
+                <md-input-container>
+                  <label>R2 read structure</label>
+                  <md-input v-model="readstructure_R2" placeholder="150T"></md-input>
+                </md-input-container>
               </md-layout>
+
+            </md-layout>
             </md-layout>
           </transition>
         </md-whiteframe>
       </form>
 
       <md-whiteframe class="pad-16" md-elevation="2">
-        <select-genome :genomes="available_genomes"></select-genome>
+        <select-genome :genomes="available_genomes" :initial-genome-id="initial_genome_id"></select-genome>
       </md-whiteframe>
 
       <md-whiteframe class="pad-16" md-elevation="2">
-        <input-files-form></input-files-form>
+        <input-files-form title-text="FASTQ files" initial-selected-source="NEXTCLOUD_PUBLIC"></input-files-form>
+      </md-whiteframe>
+
+      <md-whiteframe class="pad-16" md-elevation="2">
+        <csv-text-form 
+          title-text="Paste your barcode samplesheet here (CSV or TSV)" 
+          label-text="Barcode samplesheet" 
+          :show-columns="['*title', 'barcode']"
+          :placeholder-text="'*title,barcode\nsample1,TACGAGTACAGACA\n\n(other columns are ignored)'" 
+          @data-modified="handleCsvDataModified"></csv-text-form>
+      </md-whiteframe>
+
+      <md-whiteframe v-if="barcodeSamplesheetData && barcodeSamplesheetData.length > 0" class="pad-16" md-elevation="2">
+        <h4>Barcode sample sheet preview</h4>
+        <md-table v-if="barcodeSamplesheetHeaders.length > 0" style="width: fit-content;">
+          <md-table-row>
+            <md-table-head v-for="header in barcodeSamplesheetHeaders" :key="header">{{ header }}</md-table-head>
+          </md-table-row>
+
+          <md-table-row v-for="(row, rowIndex) in barcodeSamplesheetData" :key="rowIndex">
+            <md-table-cell v-for="header in barcodeSamplesheetHeaders" :key="header">{{ row[header] }}</md-table-cell>
+          </md-table-row>
+        </md-table>
       </md-whiteframe>
 
       <md-whiteframe class="pad-32" md-elevation="8">
@@ -131,6 +164,9 @@
       </banner-notice>
       <banner-notice v-if="!isValid_min_mapped_reads" type="error" :show-close-button="false">Invalid value for minimum
         mapped reads - should be an integer between 0 and 100.
+      </banner-notice>
+      <banner-notice v-if="!isValid_barcode_samplesheet" type="error" :show-close-button="false">
+        Barcode samplesheet must contain at least one row with required headers: 'barcode' and one of '*title', 'title', or 'sample_id'.
       </banner-notice>
 
 
@@ -212,6 +248,7 @@ import { WebAPI } from "../../../../web-api";
 import { Snackbar } from "../../../../snackbar";
 import BannerNotice from "../../../BannerNotice.vue";
 import InputFilesForm from "../../../InputFilesForm.vue";
+import CsvTextForm from "../../../CsvTextForm.vue";
 import SelectGenome from "../../../SelectGenome.vue";
 import { ReferenceGenome } from "../../../../types";
 import AVAILABLE_GENOMES from "../config/genomes";
@@ -220,6 +257,7 @@ import AVAILABLE_GENOMES from "../config/genomes";
   components: {
     BannerNotice,
     InputFilesForm,
+    CsvTextForm,
     SelectGenome
   },
   props: {},
@@ -229,8 +267,9 @@ import AVAILABLE_GENOMES from "../config/genomes";
   }
 })
 export default class PipelineParams extends Vue {
-  public pipeline_name: string = "nf-core-rnaseq";
+  public pipeline_name: string = "nf-core-rnaseq-brbseq";
   public available_genomes: Array<ReferenceGenome> = AVAILABLE_GENOMES;
+  public initial_genome_id: string = "Mus_musculus/Ensembl/GRCm39.release-109";
 
   @Prop({ default: true, type: Boolean })
   public showButtons: boolean;
@@ -243,6 +282,10 @@ export default class PipelineParams extends Vue {
 
   public pipelinerun_uuid: string | null = null;
   public selectedSamples: Array<Sample> = [];
+
+  // Removed local properties for barcode samplesheet, will use store + computed for headers
+  // public barcodeSamplesheetData: Record<string, string>[] = [];
+  // public barcodeSamplesheetHeaders: string[] = [];
 
   get pipeline_versions() {
     // const versions = = ["3.1", "3.2", "3.10.1"];
@@ -309,29 +352,38 @@ export default class PipelineParams extends Vue {
   @Sync("pipelineParams@pipeline_version")
   public pipeline_version: string;
 
-  @Sync("pipelineParams@nf-core-rnaseq.strandedness")
+  @Sync("pipelineParams@nf-core-rnaseq-brbseq.strandedness")
   public strandedness: string;
 
-  @Sync("pipelineParams@nf-core-rnaseq.trimmer")
+  @Sync("pipelineParams@nf-core-rnaseq-brbseq.trimmer")
   public trimmer: string;
 
-  @Sync("pipelineParams@nf-core-rnaseq.debug_mode")
+  @Sync("pipelineParams@nf-core-rnaseq-brbseq.debug_mode")
   public debug_mode: boolean;
 
-  @Sync("pipelineParams@nf-core-rnaseq.has_umi")
+  @Sync("pipelineParams@nf-core-rnaseq-brbseq.has_umi")
   public has_umi: boolean;
 
-  @Sync("pipelineParams@nf-core-rnaseq.min_mapped_reads")
+  @Sync("pipelineParams@nf-core-rnaseq-brbseq.min_mapped_reads")
   public min_mapped_reads: number;
 
-  @Sync("pipelineParams@nf-core-rnaseq.save_reference_genome")
+  @Sync("pipelineParams@nf-core-rnaseq-brbseq.save_reference_genome")
   public save_reference_genome: boolean;
 
-  @Sync("pipelineParams@nf-core-rnaseq.save_genome_index")
+  @Sync("pipelineParams@nf-core-rnaseq-brbseq.save_genome_index")
   public save_genome_index: boolean;
 
-  @Sync("pipelineParams@nf-core-rnaseq.skip_trimming")
+  @Sync("pipelineParams@nf-core-rnaseq-brbseq.skip_trimming")
   public skip_trimming: boolean;
+
+  @Sync("pipelineParams@nf-core-rnaseq-brbseq.barcode_samplesheet") // Sync with the new store property
+  public barcodeSamplesheetData: Record<string, string>[];
+
+  @Sync("pipelineParams@nf-core-rnaseq-brbseq.readstructure.R1") // Sync for R1 read structure
+  public readstructure_R1: string;
+
+  @Sync("pipelineParams@nf-core-rnaseq-brbseq.readstructure.R2") // Sync for R2 read structure
+  public readstructure_R2: string;
 
   created() {
     this.$store.registerModule(
@@ -447,6 +499,20 @@ export default class PipelineParams extends Vue {
     return false;
   }
 
+  get isValid_barcode_samplesheet() {
+    // Check if we have at least one row
+    if (!this.barcodeSamplesheetData || this.barcodeSamplesheetData.length === 0) {
+      return false;
+    }
+
+    // Check if required headers are present
+    const headers = this.barcodeSamplesheetHeaders;
+    const hasBarcode = headers.includes('barcode');
+    const hasTitleHeader = headers.includes('*title') || headers.includes('title') || headers.includes('sample_id');
+    
+    return hasBarcode && hasTitleHeader;
+  }
+
   get isValid_params() {
     let is_valid = false;
     if (
@@ -454,7 +520,8 @@ export default class PipelineParams extends Vue {
       this.isValid_samples_added &&
       this.isValid_duplicate_samples &&
       this.isValid_strandedness_option &&
-      this.isValid_min_mapped_reads
+      this.isValid_min_mapped_reads &&
+      this.isValid_barcode_samplesheet
     ) {
       is_valid = true;
     }
@@ -581,6 +648,17 @@ export default class PipelineParams extends Vue {
     if (newVersion && compareVersions(newVersion, "3.7") < 0 && this.strandedness === 'auto') {
       this.strandedness = 'unstranded';
     }
+  }
+
+  get barcodeSamplesheetHeaders(): string[] {
+    if (this.barcodeSamplesheetData && this.barcodeSamplesheetData.length > 0) {
+      return Object.keys(this.barcodeSamplesheetData[0]);
+    }
+    return [];
+  }
+
+  public handleCsvDataModified(data: Record<string, string>[]) {
+    this.$store.set(`pipelineParams/${this.pipeline_name}/barcode_samplesheet`, data);
   }
 
   beforeRouteLeave(to: any, from: any, next: any) {
