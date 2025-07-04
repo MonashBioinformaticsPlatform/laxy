@@ -45,7 +45,7 @@ dependencies:
   # Pipeline specific
   - nextflow=24.10.5
   - nf-core=2.14.1
-  - openjdk=23.0.2
+  - openjdk
   - pandas=1.5.3
 
   - pip:
