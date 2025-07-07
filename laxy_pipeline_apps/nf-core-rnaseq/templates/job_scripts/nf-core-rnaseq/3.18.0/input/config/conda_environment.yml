@@ -44,7 +44,6 @@ dependencies:
   - coreutils
   # Pipeline specific
   - nextflow=24.10.5
-  - nf-core=2.14.1
   - openjdk
   - pandas=1.5.3
 
@@ -53,3 +52,4 @@ dependencies:
       - git+https://github.com/MonashBioinformaticsPlatform/laxy@1bf87be#egg=laxy_downloader&subdirectory=laxy_downloader
       - semver
       - chardet
+      - nf-core==3.3.1
