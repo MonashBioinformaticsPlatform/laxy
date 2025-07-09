@@ -28,9 +28,11 @@ export SINGULARITY_LOCALCACHEDIR="${TMPDIR}"
 export APPTAINER_LOCALCACHEDIR="${TMPDIR}"
 export AUTH_HEADER_FILE="${JOB_PATH}/.private_request_headers"
 export IGNORE_SELF_SIGNED_CERTIFICATE="{{ IGNORE_SELF_SIGNED_CERTIFICATE }}"
-export LAXYDL_BRANCH="1bf87be" # ${LAXYDL_BRANCH:-master}
+export LAXYDL_BRANCH="1bf87be"  # unused when using apptainer instead
 export LAXYDL_USE_ARIA2C=${LAXYDL_USE_ARIA2C:-yes}
 export LAXYDL_PARALLEL_DOWNLOADS=${LAXYDL_PARALLEL_DOWNLOADS:-8}
+export LAXYDL_CONTAINER_IMAGE="ghcr.io/monashbioinformaticsplatform/laxy/laxy-downloader:0b5f608"
+export LAXYDL_APPTAINER_PREFIX="apptainer exec -B ${JOB_PATH} -B ${DOWNLOAD_CACHE_PATH} docker://${LAXYDL_CONTAINER_IMAGE}"
 
 # These are applied via chmod to all files and directories in the run, upon completion
 export JOB_FILE_PERMS='ug+rw-s,o='

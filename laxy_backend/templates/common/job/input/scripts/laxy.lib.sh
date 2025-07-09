@@ -190,6 +190,8 @@ function download_input_data() {
             TYPE_TAGS_ARG="--type-tags ${TAG}"
         fi
 
+        LAXYDL_APPTAINER_PREFIX="${LAXYDL_APPTAINER_PREFIX:-}"
+
         mkdir -p "${DOWNLOAD_CACHE_PATH}"
 
         LAXYDL_EXTRA_ARGS=""
@@ -197,7 +199,7 @@ function download_input_data() {
             LAXYDL_EXTRA_ARGS=" ${LAXYDL_EXTRA_ARGS} --no-aria2c "
         fi
 
-        laxydl download \
+        ${LAXYDL_APPTAINER_PREFIX} laxydl download \
             ${LAXYDL_INSECURE} \
             -vvv \
             ${LAXYDL_EXTRA_ARGS} \

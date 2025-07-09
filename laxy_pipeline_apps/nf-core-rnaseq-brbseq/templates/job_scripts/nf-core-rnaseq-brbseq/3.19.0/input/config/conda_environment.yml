@@ -43,12 +43,13 @@ dependencies:
   # For realpath
   - coreutils
   # Pipeline specific
+  - openjdk
   - nextflow=24.10.6
   - nf-core=2.14.1
   - pandas
 
   - pip:
       # General run_job.sh dependency, for the laxydl downloader tool
-      - git+https://github.com/MonashBioinformaticsPlatform/laxy@master#egg=laxy_downloader&subdirectory=laxy_downloader
+      #- git+https://github.com/MonashBioinformaticsPlatform/laxy@master#egg=laxy_downloader&subdirectory=laxy_downloader
       - semver
       - pdiff

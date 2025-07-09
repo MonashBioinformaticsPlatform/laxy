@@ -701,9 +701,9 @@ get_settings_from_pipeline_config || fail_job 's' 'get_settings_from_pipeline_co
 
 # nextflow_self_update || true
 
-if ! command -v laxydl >/dev/null 2>&1; then
-    update_laxydl || send_error 'update_laxydl' '' $?
-fi
+# if ! command -v laxydl >/dev/null 2>&1; then
+#     update_laxydl || send_error 'update_laxydl' '' $?
+# fi
 
 ####
 #### Stage input data ###
