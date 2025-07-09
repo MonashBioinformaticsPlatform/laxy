@@ -15,4 +15,4 @@ WORKDIR /app/laxy_downloader
 # Install the application and its dependencies
 RUN pip install .
 
-ENTRYPOINT ["laxydl"]
+CMD ["laxydl"]
