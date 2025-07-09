@@ -738,11 +738,15 @@ export default class JobPage extends Vue {
     if (file.name.includes("NonStranded")) data.strandedness = "non-stranded";
     if (file.name.includes("Forward")) data.strandedness = "forward-stranded";
     if (file.name.includes("Reverse")) data.strandedness = "reverse-stranded";
+    
     if (file.name.includes("proteinCoding")) data.featureSet = "Protein coding";
-    if (file.name.includes("featureCounts")) data.featureSet = "featureCounts file";
-    if (file.name.includes("salmon")) {
+    if (file.name.includes("featureCounts")) {
+      data.featureSet = "featureCounts file";
+    } else if (file.name.includes("salmon")) {
       let salmon_run_type = file.path.endsWith('/star_salmon') ? "STAR → Salmon" : "Salmon";
       data.featureSet = `${salmon_run_type} counts`
+    } else {
+      data.featureSet = "Counts"
     }
     return data;
   }
@@ -779,43 +783,44 @@ export default class JobPage extends Vue {
   }
 
   get primaryCountsFiles(): LaxyFile[] {
-    let files: LaxyFile[] = [];
     const outputFiles: LaxyFile[] = this.outputFiles || [];
+    const degustFiles = this.filterByTag(outputFiles, ['degust']);
 
     // Helper function to check if a file is a specific type
     const isFileType = (file: LaxyFile, pathEnd: string, nameIncludes: string): boolean => {
         return file.path.endsWith(pathEnd) && file.name.includes(nameIncludes);
     };
 
-    // Logic here actually only ever returns one preferred file, but we've left the API such that
-    // we could return a list of filesfor the UI to display.
-    for (const file of this.filterByTag(outputFiles, ['degust'])) {
-        // RNAsik files
-        if (this.rnasik_strandPredictionPrefix && 
-            file.name.startsWith(this.rnasik_strandPredictionPrefix) && 
-            file.name.includes('withNames')) {
-            files = [file];
+    const checkers = [
+        // Priority 1: RNAsik files
+        (file: LaxyFile): boolean => {
+            return !!this.rnasik_strandPredictionPrefix &&
+                file.name.startsWith(this.rnasik_strandPredictionPrefix as string) &&
+                file.name.includes('withNames');
+        },
+        // Priority 2: featureCounts counts file
+        (file: LaxyFile): boolean => {
+            return isFileType(file, '/featureCounts', 'counts.star_featureCounts.tsv');
+        },
+        // Priority 3: star_salmon counts file
+        (file: LaxyFile): boolean => {
+            return isFileType(file, '/star_salmon', 'salmon.merged.gene_counts.biotypes.tsv');
+        },
+        // Priority 4: salmon pseudo-mapping counts file
+        (file: LaxyFile): boolean => {
+            return isFileType(file, '/salmon', 'salmon.merged.gene_counts.biotypes.tsv');
         }
-        // featureCounts from nf-core/rnaseq
-        else if (isFileType(file, '/featureCounts', 'counts.star_featureCounts.tsv')) {
-            files = [file];
-        }
-        // star_salmon files
-        else if (isFileType(file, '/star_salmon', 'salmon.merged.gene_counts.biotypes.tsv')) {
-            files = [file];
-        }
-        // salmon files (only if no star_salmon for the same sample)
-        else if (isFileType(file, '/salmon', 'salmon.merged.gene_counts.biotypes.tsv')) {
-            const hasStarSalmon = outputFiles.some((f: LaxyFile) => 
-                isFileType(f, '/star_salmon', 'salmon.merged.gene_counts.biotypes.tsv')
-            );
-            if (!hasStarSalmon) {
-                files = [file];
-            }
+    ];
+
+    // Check each rule in order, returning the first file that matches
+    for (const checker of checkers) {
+        const foundFile = degustFiles.find(checker);
+        if (foundFile) {
+            return [foundFile];
         }
     }
 
-    return files;
+    return [];
   }
 
   get badInputFile(): number | null {
