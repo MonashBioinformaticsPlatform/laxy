@@ -10,6 +10,10 @@ import xmltodict
 import pandas
 from django.db import transaction
 from cache_memoize import cache_memoize
+
+# TODO: Rather than using enasearch, which appears unmaintained, we should consider the ENA OpenAPI directly:
+#  Documented here: https://docs.google.com/document/d/1RPHmK8Pvm9UxSa21Ej3MkGoGYO9baSxwxk_dOuWWyNE/edit
+#  Swagger/OpenAPI: https://www.ebi.ac.uk/ena/portal/api/swagger-ui.html
 import enasearch
 
 from .models import File, FileSet
