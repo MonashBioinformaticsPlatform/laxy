@@ -14,44 +14,90 @@ Ensure the associated public key (eg `~/.ssh/laxy-compute-resource.pub`) is adde
 `~/.ssh/authorized_keys` on the compute resource host. It's a good idea to test that
 you can login manually using SSH with the generated private key and username.
 
-### Directory structure on a compute node
+## Directory structure
 
-This is the directory structure that pipeline `run_job.sh` scripts should expect, relative to
-the `base_dir` defined for a `ComputeResource`.
+Each `ComputeResource` (eg HPC cluster, or server) has a workspace directory for Laxy defined by `base_dir` (`ComputeResource.extra['base_dir']`) - this can be set via the admin interface along with other parameters, eg:
 
+`ComputeResource.extra` JSON:
+```json
+{"slurm": {"time": "2-00:00:00", "extra_args": "--account=ab12"}, "base_dir": "/scratch/laxy/jobs", "username": "ubuntu", "queue_type": "slurm", "private_key": "SecretSSHprivateKeyBase64encodedAsAbove"}
 ```
-{base_dir}.
-          ├── tmp
-          ├── cache
-          │   ├── singularity
-          │   ├── pipelines
-          │   └── downloads
-          │               ├── .laxydl_cache
-          │               └── .aria2_rpc_secret-{hostname}
-          ├── config
-          │   ├── nextflow.config
-          │   └── rnasik
-          ├── jobs
-              ├── {job_ids}
-              └── miniconda3
+
+The directory structure on the remote host looks like this:
+
+```bash
+/scratch/laxy
+├── cache
+│   ├── singularity
+│   ├── pipelines
+│   └── downloads
+│               ├── .laxydl_cache
+│               └── .aria2_rpc_secret-{hostname}
+├── config
+│   ├── nextflow.config
+│   └── rnasik
+├── jobs
+│   └── {job_id}
+|   └── miniconda3
+├── job_templates
+│   └── job_scripts
+│       └── {pipeline_name}
+│          └── {version}
+│              └── input
+│                 └── scripts
+├── references/
+└── tmp/
 ```
+
+### Cached files
+
 Cached input download files are stored in `cache/downloads` with filenames based on a hash of the URL. 
 The empty file `.laxydl_cache` must be present here to allow `laxydl` to expire old cached files.
 The `aria2c` RPC secret is also stored here (if the `aria2c` daemon reports `Unauthorized` when `laxydl`
 attempts to connect, this file may have somehow got out of sync with the running server. Remove this file 
-and kill the running `aria2c` daemon process).
+and kill the running `aria2c` daemon process). 
 
-Cached Singularity images and nf-core pipelines are stored in `cache/singularity` and `cache/pipelines` respectively.
+`laxydl` can also run in a mode without aria2c - newer pipelines may shift to this mode via apptainer to simplify dependency management.
 
-Config files specific to this `ComputeResource` that a `run_job.sh` script may depend on are kept in `config` (and 
-pipeline-specific sub-directories inside `config`).
+Cached Singularity (Apptainer) images and nf-core pipelines are stored in `cache/singularity` and `cache/pipelines` respectively.
+
+The `tmp` path should have _enough_ storage and is generally used by `run_job.sh` and pipelines in preference 
+to the usual default `/tmp` which is often size contrained. 
+
+### The config folder
+
+Config files specific to this `ComputeResource` that a `run_job.sh` script may depend on are kept in `config` (and pipeline-specific sub-directories inside `config`). Best practise is for these to be copied into the job `input/config` directory and used from there so they are preserved with the archived job.
+
+### The jobs folder
 
 Job folders are created in `jobs`, with the `{job_id}` as a directory name.
 The `miniconda3` directory contains a conda installation and enviroments for specific pipeline versions.
 (This conda location is deprecated - in the future the `miniconda3` directory will be moved into `cache`)
 
-The `tmp` path should have _enough_ storage and is generally used by `run_job.sh` and pipelines in preference 
-to the usual default `/tmp` which is often size contrained. 
+### Overriding default job scripts: job_templates
+
+The built-in job scripts (eg `run_job.sh`) can be overridding on a specific remote host by placing scripts in the `job_templates/job_scripts/{pipeline_name}/{version}` directory, following the structure of `laxy_pipeline_apps/{pipeline_name}/templates/job_scripts/{pipeline_name}/{version}/`. Generally you'll copy a script from the built-in job scripts and modify it to suit your needs. This feature is useful for testing/debugging changes to job scripts, or in cases where it isn't practical to use the existing configuration options to change behaviour on a specific `ComputeResource`.
+
+### (Genome) References
+
+`jobs/references` is for storing genome references that are shared across jobs (and other large reference datasets required by pipelines).
+
+Maybe pipelines are configured to discover references based on the iGenomes directory structure (but additional non-iGenomes references can and should be added there). See `laxy_backend/data/genomics/genomes.py` and `laxy_frontend/src/config/genomics/genomes.ts` for how there are currently configured.
+
+```bash
+jobs/references/
+└── iGenomes
+    ├── Homo_sapiens
+    │   ├── Ensembl
+    │   ├── NCBI
+    │   └── UCSC
+    └── Mus_musculus
+        ├── Ensembl
+        ├── NCBI
+        └── UCSC
+```
+
+> NOTE: `references` should be moved out of `jobs` in the future.
 
 ## Adding additional pipelines
 
@@ -77,3 +123,4 @@ A pipeline consists of:
   - Vuex module should add specific values to the existing pipelineParams
   - route might be added via a Vuex mutation / action, to a route mapping in the root store ? (plugin can call routes.addPipelineRoutes itself)
   - a simple mechanism to register this module (ideally some imports and a single line in 'pipelines_config.ts')
+

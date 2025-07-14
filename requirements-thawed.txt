@@ -97,6 +97,7 @@ git+https://github.com/maykinmedia/drf_openapi.git@105-proxy-label-cannot-be-dec
 
 git+https://github.com/pansapiens/json-merge-patch.git#egg=json_merge_patch
 jsonpatch
+jsonschema
 
 # Celery task queue
 celery<=4.4.7

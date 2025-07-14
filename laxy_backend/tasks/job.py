@@ -27,7 +27,7 @@ from paramiko.ssh_exception import SSHException
 
 from celery.result import AsyncResult
 from django.contrib.contenttypes.models import ContentType
-from django.template import TemplateDoesNotExist
+from django.template import TemplateDoesNotExist, Template, Context
 from django.template.loader import get_template, render_to_string, select_template
 from celery.utils.log import get_task_logger
 from celery import shared_task
@@ -237,6 +237,42 @@ def get_job_template_files(pipeline_name, pipeline_version):
     return out_paths
 
 
+def _remote_rglobdict(pathspec: str, relative_to: str = "") -> Mapping[str, str]:
+    """
+    A remote version of rglobdict that uses `find` over SSH (via Fabric).
+
+    Returns a mapping of relative paths to absolute paths for each file
+    discovered.
+
+    :param pathspec: A path on the remote host (globbing is unsupported, use find syntax eg path/to/dir)
+    :type pathspec: str
+    :param relative_to: The base to create relative paths from.
+    :type relative_to: str
+    :return: A mapping of relative paths to absolute paths.
+    :rtype: Mapping[str, str]
+    """
+    from fabric.api import run, hide, settings as fabsettings
+
+    # we use 'hide' to prevent stdout going to log, too noisy
+    # if the path doesn't exist, find will exit with non-zero, so we warn only
+    with hide("output", "warnings"), fabsettings(warn_only=True):
+        # We use find to get a list of files, then readlink to get absolute paths
+        # This is a bit convoluted but a reliable way to get absolute paths for files
+        # found by `find`.
+        cmd = f"find {pathspec} -type f -print0 | xargs -0 readlink -f"
+        lslines = run(cmd)
+
+    if not lslines.succeeded:
+        logger.warning(
+            f"Could not list remote files for pathspec: {pathspec} "
+            f"(command: {cmd}, stderr: {lslines.stderr})"
+        )
+        return {}
+
+    files_abs = [l for l in lslines.splitlines() if l.strip()]
+    return {os.path.relpath(p, relative_to): p for p in files_abs}
+
+
 @shared_task(bind=True, track_started=True)
 def start_job(self, task_data=None, **kwargs):
     from ..models import Job
@@ -265,9 +301,8 @@ def start_job(self, task_data=None, **kwargs):
     job_script_template_vars = dict(environment)
 
     def template_filelike(fpath):
-        return BytesIO(
-            render_to_string(fpath, context=job_script_template_vars).encode("utf-8")
-        )
+        rendered_string = render_to_string(fpath, context=job_script_template_vars)
+        return BytesIO(rendered_string.replace("\r\n", "\n").encode("utf-8"))
 
     config_json = BytesIO(json.dumps(job.params).encode("utf-8"))
     job_script_template_vars["JOB_AUTH_HEADER"] = job_auth_header
@@ -323,6 +358,88 @@ def start_job(self, task_data=None, **kwargs):
                 if local_fpath:
                     flike = template_filelike(local_fpath)
                     put(flike, join(working_dir, remote_relpath), mode=fmode)
+
+            # Precedence is local compute > app > common, so we copy local compute last
+            # to overwrite other files.
+            if job.compute_resource and job.compute_resource.jobs_dir:
+                from toolz.dicttoolz import merge as merge_dicts
+
+                # In the future we may make this a completely different (non-relative) path
+                config_base_path = (Path(job.compute_resource.jobs_dir) / "..").resolve()
+                remote_templates_base = config_base_path / "job_templates"
+
+                remote_common_path = remote_templates_base / "common"
+                remote_pipeline_path = (
+                    remote_templates_base / "job_scripts" / pipeline_name
+                )
+                remote_default_path = remote_pipeline_path / "default"
+                remote_version_path = remote_pipeline_path / pipeline_version
+
+                # Ensure paths are children of the config_base_path to prevent path traversal outside config_base_path
+                for p in [remote_common_path, remote_default_path, remote_version_path]:
+                    try:
+                        p.resolve().relative_to(config_base_path)
+                    except ValueError:
+                        msg = f"Insecure path detected for remote template: {p} is not a child of {config_base_path}"
+                        logger.error(msg)
+                        raise ValueError(msg)
+
+                remote_common_path = str(remote_common_path)
+                remote_default_path = str(remote_default_path)
+                remote_version_path = str(remote_version_path)
+
+                remote_common_files = _remote_rglobdict(
+                    remote_common_path, relative_to=remote_common_path
+                )
+                remote_default_files = _remote_rglobdict(
+                    remote_default_path, relative_to=remote_default_path
+                )
+                remote_version_files = _remote_rglobdict(
+                    remote_version_path, relative_to=remote_version_path
+                )
+
+                # Later dicts overwrite earlier ones
+                remote_templates_all = merge_dicts(
+                    remote_common_files, remote_default_files, remote_version_files
+                )
+
+                if remote_templates_all:
+                    job.params["job_template_overrides"] = sorted(
+                        list(remote_templates_all.keys())
+                    )
+                    job.save(update_fields=["params"])
+                    logger.info(
+                        f"Found {len(remote_templates_all)} job template files on compute resource, "
+                        f"will be applied over built-in templates."
+                    )
+
+                for remote_relpath, remote_abspath in remote_templates_all.items():
+                    fmode = infer_chmod(remote_relpath)
+                    remote_abspath_q = shlex.quote(remote_abspath)
+                    remote_file_content_result = run(f"cat {remote_abspath_q}")
+
+                    if remote_file_content_result.succeeded:
+                        # Treat the file content as a Django template and render it
+                        template = Template(remote_file_content_result)
+                        # Django Templates require a Context object.
+                        # job_script_template_vars is a dict.
+                        context = Context(job_script_template_vars)
+                        rendered_content = template.render(context)
+                        rendered_content_unix = rendered_content.replace("\r\n", "\n")
+                        flike = BytesIO(rendered_content_unix.encode("utf-8"))
+
+                        # Upload the rendered file
+                        logger.info(f"Applying remote template: {remote_relpath}")
+                        job.log_event(
+                            "JOB_INFO",
+                            f"Applying custom job template file from remote host: {remote_relpath}",
+                        )
+                        put(flike, join(working_dir, remote_relpath), mode=fmode)
+                    else:
+                        logger.warning(
+                            f"Could not read remote template file: {remote_abspath} "
+                            f"(stderr: {remote_file_content_result.stderr})"
+                        )
 
             result = put(
                 curl_headers, join(working_dir, ".private_request_headers"), mode=0o600

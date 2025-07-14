@@ -77,6 +77,9 @@ Jinja2>=2.10.1
 jmespath==0.9.3
 jsonpatch==1.23
 jsonpointer==2.0
+# jsonschema v3.2.0 is the last version that supports Python 3.6
+# https://github.com/python-jsonschema/jsonschema/blob/main/CHANGELOG.rst#v320
+jsonschema==3.2.0
 lxml==4.6.3
 Markdown==3.0.1
 MarkupSafe==1.0

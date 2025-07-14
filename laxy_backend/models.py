@@ -19,6 +19,8 @@ from django.db.utils import IntegrityError
 import pandas as pd
 import paramiko
 from paramiko import SSHClient, ssh_exception, RSAKey, AutoAddPolicy
+from jsonschema import validate
+from jsonschema.exceptions import ValidationError as JSONSchemaValidationError
 
 from django.conf import settings
 from django.utils import timezone
@@ -31,7 +33,7 @@ from django.core.handlers.wsgi import WSGIRequest
 from django.core.files.storage import get_storage_class, Storage
 from django.core.serializers import serialize
 from django.core.validators import URLValidator
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import (
     Model,
     Manager,
@@ -634,6 +636,36 @@ class ComputeResource(Timestamped, UUIDModel):
 
 @reversion.register()
 class Job(Expires, Timestamped, UUIDModel):
+    JOB_PARAMS_SCHEMA = {
+        "type": "object",
+        "properties": {
+            "pipeline": {
+                "type": "string",
+                "description": "The name of the pipeline to run.",
+                # Basic slug-like pattern, no slashes or dots.
+                "pattern": "^[a-zA-Z0-9_-]+$"
+            },
+            "params": {
+                "type": "object",
+                "properties": {
+                    "pipeline_version": {
+                        "type": "string",
+                        "description": "The version of the pipeline.",
+                        # Allow dots and hyphens for version strings.
+                        "pattern": "^[a-zA-Z0-9_.-]+$"
+                    }
+                },
+                "additionalProperties": True
+            },
+            "job_template_overrides": {
+                "type": "array",
+                "items": {"type": "string"}
+            }
+        },
+        "required": ["pipeline"],
+        "additionalProperties": True
+    }
+
     class ExtraMeta:
         patchable_fields = ["params", "metadata"]
 
@@ -942,15 +974,30 @@ def job_status_changed_event_log(sender, instance, raw, using, update_fields, **
 
 @receiver(pre_save, sender=Job)
 def job_init_filesets(sender, instance: Job, raw, using, update_fields, **kwargs):
-    instance._init_filesets()
+    if instance.pk is None:
+        instance._init_filesets(save=False)
+
+
+@receiver(pre_save, sender=Job)
+def sanitize_job_params(sender, instance: Job, raw, using, update_fields, **kwargs):
+    """
+    Validates job parameters against a JSON schema to ensure structure and
+    prevent unsafe values that could be used in path construction.
+    """
+    if instance.params:
+        try:
+            validate(instance=instance.params, schema=Job.JOB_PARAMS_SCHEMA)
+        except JSONSchemaValidationError as e:
+            # Raising a Django ValidationError is more idiomatic here
+            # and will be handled nicely by serializers and forms.
+            raise DjangoValidationError(
+                {'params': f"Job.params failed validation: {e.message}"}
+            ) from e
 
 
 @receiver(post_save, sender=Job)
 def new_job_event_log(sender, instance, created, raw, using, update_fields, **kwargs):
-    """
-    Creates an event log entry every time a Job is created.
-    """
-    if created:
+    if created and not raw:
         EventLog.log(
             "JOB_STATUS_CHANGED",
             message="Job created.",

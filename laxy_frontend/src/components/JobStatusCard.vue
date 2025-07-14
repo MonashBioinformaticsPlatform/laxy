@@ -1,5 +1,5 @@
 <template>
-  <md-card class="fill-width" md-with-hover>
+  <md-card v-if="job" class="fill-width" md-with-hover>
     <md-card-header>
       <md-layout>
         <md-layout md-column>
@@ -30,7 +30,7 @@
             :rows="4"
             :width="48"
             :height="48"
-            :random-seed="hashCode(job.id)"
+            :random-seed="hashCode(job.id || '')"
           ></spinner-cube-grid>
         </md-layout>
         <!--
@@ -104,6 +104,17 @@
           <md-table-row>
             <md-table-cell>Job ID</md-table-cell>
             <md-table-cell>{{ job.id }}</md-table-cell>
+          </md-table-row>
+          <md-table-row
+            v-if="
+              job.params.job_template_overrides &&
+                job.params.job_template_overrides.length > 0
+            "
+          >
+            <md-table-cell>Job template overrides</md-table-cell>
+            <md-table-cell>
+              {{ job.params.job_template_overrides.join(", ") }}
+            </md-table-cell>
           </md-table-row>
         </md-table-body>
       </md-table>
