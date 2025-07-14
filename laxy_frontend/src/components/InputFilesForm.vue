@@ -137,7 +137,7 @@
               <div class="info-section">
               <md-icon class="info-icon">info</md-icon>
               Monash and affiliated users can use the Nextcloud instance at <a href="https://files.monash-bioinformatics-platform.cloud.edu.au" target="_blank">files.monash-bioinformatics-platform.cloud.edu.au</a>
-              - <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank">see this handy video guide</a>
+              - <a href="https://youtu.be/zy-vvP86SZA" target="_blank">see this handy video guide</a>
               </div>
             </p>
           </div>
