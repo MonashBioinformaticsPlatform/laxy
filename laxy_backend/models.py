@@ -19,7 +19,7 @@ from django.db.utils import IntegrityError
 import pandas as pd
 import paramiko
 from paramiko import SSHClient, ssh_exception, RSAKey, AutoAddPolicy
-from jsonschema import validate
+from jsonschema import validate as JSONSchemaValidate
 from jsonschema.exceptions import ValidationError as JSONSchemaValidationError
 
 from django.conf import settings
@@ -33,7 +33,7 @@ from django.core.handlers.wsgi import WSGIRequest
 from django.core.files.storage import get_storage_class, Storage
 from django.core.serializers import serialize
 from django.core.validators import URLValidator
-from django.core.exceptions import ValidationError as DjangoValidationError
+from django.core.exceptions import ValidationError as DjangoValidationError, ValidationError
 from django.db.models import (
     Model,
     Manager,
@@ -216,12 +216,12 @@ class ReadOnlyFlag(Model):
 
     def save(self, *args, **kwargs):
         if self.readonly:
-            raise RuntimeError(f"Attempting to save readonly model: {self.id}")
+            raise RuntimeError(f"Attempting to save readonly model: {self.pk}")
         super(ReadOnlyFlag, self).save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
         if self.readonly:
-            raise RuntimeError(f"Attempting to delete readonly model: {self.id}")
+            raise RuntimeError(f"Attempting to delete readonly model: {self.pk}")
         super(ReadOnlyFlag, self).delete(*args, **kwargs)
 
 
@@ -761,6 +761,16 @@ class Job(Expires, Timestamped, UUIDModel):
                 self.output_files.save()
 
     def save(self, *args, **kwargs):
+        if self._state.adding:
+            if not self.input_files:
+                self.input_files = FileSet.objects.create(
+                    name=f"Input for job {self.id}", owner=self.owner
+                )
+            if not self.output_files:
+                self.output_files = FileSet.objects.create(
+                    name=f"Output for job {self.id}", owner=self.owner
+                )
+
         super(Job, self).save(*args, **kwargs)
 
         # For a single-use ('disposable') ComputeResource associated with a
@@ -801,7 +811,9 @@ class Job(Expires, Timestamped, UUIDModel):
 
     def get_files(self) -> models.query.QuerySet:
         # Combine querysets
-        return self.input_files.get_files() | self.output_files.get_files()
+        input_files = self.input_files.get_files() if self.input_files else File.objects.none()
+        output_files = self.output_files.get_files() if self.output_files else File.objects.none()
+        return input_files | output_files
 
     @property
     def abs_path_on_compute(self):
@@ -985,8 +997,19 @@ def sanitize_job_params(sender, instance: Job, raw, using, update_fields, **kwar
     prevent unsafe values that could be used in path construction.
     """
     if instance.params:
+        params = instance.params
+        if isinstance(params, str):
+            try:
+                params = json.loads(params)
+            except json.JSONDecodeError as e:
+                raise DjangoValidationError(
+                    {'params': f"Job.params is not valid JSON: {e}"}
+                ) from e
+
         try:
-            validate(instance=instance.params, schema=Job.JOB_PARAMS_SCHEMA)
+            # We use our own renamed import to avoid confusion with Django's
+            # own ValidationError
+            JSONSchemaValidate(instance=params, schema=Job.JOB_PARAMS_SCHEMA)
         except JSONSchemaValidationError as e:
             # Raising a Django ValidationError is more idiomatic here
             # and will be handled nicely by serializers and forms.
@@ -996,15 +1019,31 @@ def sanitize_job_params(sender, instance: Job, raw, using, update_fields, **kwar
 
 
 @receiver(post_save, sender=Job)
+def job_init_filesets_on_create(sender, instance: Job, created, **kwargs):
+    """
+    Initialize input_files and output_files FileSet objects when a new Job is created.
+    This prevents AttributeError when trying to access these fields before they are set.
+    """
+    if created:
+        if not instance.input_files:
+            instance.input_files = FileSet.objects.create(
+                name=f"Input for job {instance.id}", owner=instance.owner
+            )
+        if not instance.output_files:
+            instance.output_files = FileSet.objects.create(
+                name=f"Output for job {instance.id}", owner=instance.owner
+            )
+        # Save the instance with the new FileSet objects
+        Job.objects.filter(id=instance.id).update(
+            input_files=instance.input_files,
+            output_files=instance.output_files
+        )
+
+
+@receiver(post_save, sender=Job)
 def new_job_event_log(sender, instance, created, raw, using, update_fields, **kwargs):
     if created and not raw:
-        EventLog.log(
-            "JOB_STATUS_CHANGED",
-            message="Job created.",
-            user=instance.owner,
-            obj=instance,
-            extra={"from": None, "to": instance.status},
-        )
+        instance.log_event("job_created", f"Job created: {instance.id}")
 
 
 @reversion.register()
@@ -2325,3 +2364,6 @@ class AccessToken(Timestamped, UUIDModel):
         if isinstance(target_obj, UUIDModel):
             ct = ContentType.objects.get_for_model(target_obj)
             return self.object_id == target_obj.id and self.content_type == ct
+
+
+
