@@ -662,7 +662,7 @@ class Job(Expires, Timestamped, UUIDModel):
                 "items": {"type": "string"}
             }
         },
-        "required": ["pipeline"],
+        "required": [],
         "additionalProperties": True
     }
 
