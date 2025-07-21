@@ -6,7 +6,7 @@ import logging
 import argparse
 import tarfile
 from typing import List
-import xmlrpc
+import xmlrpc.client
 import psutil
 import platform
 
@@ -67,6 +67,18 @@ def add_commandline_args(parser: argparse.ArgumentParser) -> argparse.ArgumentPa
         nargs="*",
         default=list(),
         help="URL(s) to remove from cache. --cache-age is ignored in this case.",
+    )
+    cache_parser.add_argument(
+        "--pipeline-config",
+        help="Path to a pipeline_config.json file from Laxy. URLs from fetch_files will be removed from cache.",
+        type=argparse.FileType("r"),
+    )
+    cache_parser.add_argument(
+        "--type-tags",
+        help="When using --pipeline-config, only remove files tagged with all these type_tags "
+        "('--type-tag=tag_one,tag_two' means must have both tag_one _and_ tag_two). ",
+        type=_split_comma_sep_args,
+        default=[],
     )
 
     killaria_parser = subparsers.add_parser(
@@ -507,15 +519,26 @@ def main():
                 f"and try again, AT YOUR OWN RISK."
             )
             sys.exit(1)
-        if args.urls:
-            for url in args.urls:
+        
+        urls_to_remove = set(args.urls)
+        
+        # Add URLs from pipeline config if provided
+        if args.pipeline_config:
+            config = parse_pipeline_config(args.pipeline_config)
+            url_filenames = get_urls_from_pipeline_config(
+                config, required_type_tags=args.type_tags
+            )
+            urls_to_remove.update(url_filenames.keys())
+        
+        if urls_to_remove:
+            for url in urls_to_remove:
                 filepath = get_url_cached_path(url, args.cache_path)
                 try:
                     if args.use_aria:
                         aria.stop_url_download(url)
                     if os.path.exists(filepath) and os.path.isfile(filepath):
                         os.remove(filepath)
-                        logger.info(f"Removed cached download: ")
+                        logger.info(f"Removed cached download: {filepath} ({url})")
                     else:
                         logger.info(
                             f"Not deleting - cached file does not exist: {filepath} ({url})"
