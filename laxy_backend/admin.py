@@ -1,4 +1,8 @@
 from typing import Union, Sequence
+import os
+import json
+from pathlib import Path
+from base64 import urlsafe_b64encode
 
 from datetime import datetime, timedelta
 
@@ -73,6 +77,60 @@ def truncate_middle(text: str, middle="…", length=77, end=8) -> str:
         return text[: (length - 8)] + middle + text[(-1 * end) :]
     else:
         return text
+
+
+def url_to_cache_key(url: str) -> str:
+    """
+    Generate a cache key for a URL using the same method as laxydl.
+    This replicates the url_to_cache_key function from laxy_downloader.
+    
+    :param url: The URL to generate a cache key for
+    :return: A cache key string
+    """
+    # Import mmh3 here to avoid circular imports
+    try:
+        from laxy_downloader.downloader import pymmh3 as mmh3
+    except ImportError:
+        # Fallback if laxy_downloader is not available
+        import hashlib
+        hash_obj = hashlib.md5(url.encode('utf-8'))
+        return urlsafe_b64encode(hash_obj.digest()).decode("ascii").rstrip("=")
+    
+    return (
+        urlsafe_b64encode(mmh3.hash128(url).to_bytes(16, byteorder="big", signed=False))
+        .decode("ascii")
+        .rstrip("=")
+    )
+
+
+def get_urls_from_job_params(job_params: dict) -> list:
+    """
+    Extract URLs from job parameters that were downloaded.
+    
+    :param job_params: The job's params field
+    :return: List of URLs that were downloaded
+    """
+    urls = []
+    
+    # Check if there's a fetch_files array in the params
+    if isinstance(job_params, dict):
+        # Direct fetch_files in params
+        fetch_files = job_params.get("fetch_files", [])
+        if fetch_files:
+            for file_info in fetch_files:
+                if isinstance(file_info, dict) and "location" in file_info:
+                    urls.append(file_info["location"])
+        
+        # Check nested params structure
+        nested_params = job_params.get("params", {})
+        if isinstance(nested_params, dict):
+            fetch_files = nested_params.get("fetch_files", [])
+            if fetch_files:
+                for file_info in fetch_files:
+                    if isinstance(file_info, dict) and "location" in file_info:
+                        urls.append(file_info["location"])
+    
+    return urls
 
 
 class Timestamped:
@@ -261,6 +319,7 @@ class JobAdmin(Timestamped, VersionAdmin):
         "move_job_files_to_archive",
         "bulk_rsync_job",
         "rerun_job",
+        "delete_cached_downloads",
     )
 
     color_mappings = {
@@ -477,6 +536,133 @@ class JobAdmin(Timestamped, VersionAdmin):
             )
 
     rerun_job.short_description = "Restart job in-place (blindly re-runs run_job.sh)"
+
+    @takes_instance_or_queryset
+    def delete_cached_downloads(self, request, queryset):
+        """
+        Delete cached downloads for selected jobs.
+        Finds the cache directory from the compute resource's extra settings,
+        generates cache keys for URLs in the job's fetch_files, and deletes
+        the cached files if they exist on the remote compute resource.
+        """
+        failed_jobs = []
+        deleted_files = []
+        not_found_files = []
+        total_deleted = 0
+        total_processed = 0
+        
+        for job in queryset:
+            total_processed += 1
+            try:
+                # Get the compute resource
+                compute_resource = job.compute_resource
+                if not compute_resource:
+                    failed_jobs.append(f"{job.id} (no compute resource)")
+                    continue
+                
+                # Check if compute resource is available
+                if not compute_resource.available:
+                    failed_jobs.append(f"{job.id} (compute resource not available: {compute_resource.status})")
+                    continue
+                
+                # Get cache directory from compute resource extra settings
+                cache_dir = compute_resource.extra.get("cache_dir")
+                if not cache_dir:
+                    failed_jobs.append(f"{job.id} (no cache_dir in compute resource extra settings)")
+                    continue
+                
+                # Construct the downloads cache path on the remote host
+                downloads_cache_path = f"{cache_dir}/downloads"
+                
+                # Get URLs from job parameters
+                urls = get_urls_from_job_params(job.params)
+                if not urls:
+                    failed_jobs.append(f"{job.id} (no fetch_files found in job parameters)")
+                    continue
+                
+                # Use SSH to delete cached files for each URL
+                job_deleted = 0
+                job_not_found = 0
+                with compute_resource.ssh_client() as ssh_client:
+                    for url in urls:
+                        cache_key = url_to_cache_key(url)
+                        remote_cached_file_path = f"{downloads_cache_path}/{cache_key}"
+                        
+                        # Check if file exists and delete it
+                        stdin, stdout, stderr = ssh_client.exec_command(f"test -f '{remote_cached_file_path}' && rm -f '{remote_cached_file_path}' && echo 'deleted' || echo 'not_found'")
+                        result = stdout.read().decode().strip()
+                        stderr_output = stderr.read().decode().strip()
+                        
+                        if result == "deleted":
+                            job_deleted += 1
+                            deleted_files.append(f"{job.id}: {url}")
+                            logger.info(f"Admin action - delete_cached_downloads: Deleted cached file {remote_cached_file_path} for job {job.id}")
+                        elif result == "not_found":
+                            job_not_found += 1
+                            not_found_files.append(f"{job.id}: {url}")
+                            logger.debug(f"Admin action - delete_cached_downloads: Cached file {remote_cached_file_path} not found for job {job.id}")
+                        else:
+                            error_msg = f"Failed to delete cached file {remote_cached_file_path}: {stderr_output}"
+                            logger.error(f"Admin action - delete_cached_downloads: {error_msg}")
+                            failed_jobs.append(f"{job.id} ({error_msg})")
+                
+                total_deleted += job_deleted
+                
+                if job_deleted > 0:
+                    logger.info(f"Admin action - delete_cached_downloads: Deleted {job_deleted} cached files for job {job.id}")
+                
+                # Show job-specific results
+                if job_deleted > 0:
+                    self.message_user(
+                        request,
+                        f"Job {job.id}: Deleted {job_deleted} cached files"
+                    )
+                
+                if job_not_found > 0:
+                    self.message_user(
+                        request,
+                        f"Job {job.id}: {job_not_found} cached files not found (may have been already deleted)",
+                        level="WARNING"
+                    )
+                
+            except Exception as e:
+                error_msg = f"Error processing job {job.id}: {str(e)}"
+                logger.error(f"Admin action - delete_cached_downloads: {error_msg}")
+                failed_jobs.append(f"{job.id} ({error_msg})")
+        
+        # Show summary results to user
+        if not_found_files:
+            self.message_user(
+                request,
+                f"Summary: {len(not_found_files)} cached files were not found (may have been already deleted).",
+                level="WARNING"
+            )
+        
+        if failed_jobs:
+            self.message_user(
+                request,
+                f"Summary: Failed to process {len(failed_jobs)} jobs due to configuration or connection issues: {', '.join(failed_jobs)}",
+                level="ERROR"
+            )
+        
+        if total_processed > 0 and total_deleted == 0 and len(failed_jobs) == 0:
+            # Get the first job's compute resource info for the message
+            first_job = queryset.first()
+            if first_job and first_job.compute_resource:
+                cache_dir = first_job.compute_resource.extra.get("cache_dir", "not configured")
+                downloads_cache_path = f"{cache_dir}/downloads"
+                compute_name = first_job.compute_resource.name or first_job.compute_resource.id
+                path_info = f"({compute_name}:{downloads_cache_path})"
+            else:
+                path_info = "(no compute resource)"
+            
+            self.message_user(
+                request,
+                f"No cached files were found to delete for {total_processed} jobs. This may indicate that the cache directory is not configured correctly or the files have already been deleted. Expected path: {path_info}",
+                level="WARNING"
+            )
+
+    delete_cached_downloads.short_description = "Delete cached downloads"
 
 
 def do_nothing_validator(value):
