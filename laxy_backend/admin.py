@@ -586,6 +586,14 @@ class JobAdmin(Timestamped, VersionAdmin):
                 with compute_resource.ssh_client() as ssh_client:
                     for url in urls:
                         cache_key = url_to_cache_key(url)
+                        
+                        # Validate cache key to prevent path traversal
+                        if not cache_key or '/' in cache_key or '..':
+                            error_msg = f"Invalid cache key generated for URL: {cache_key}"
+                            logger.error(f"Admin action - delete_cached_downloads: {error_msg}")
+                            failed_jobs.append(f"{job.id} ({error_msg})")
+                            continue
+                        
                         remote_cached_file_path = f"{downloads_cache_path}/{cache_key}"
                         
                         # Check if file exists and delete it
