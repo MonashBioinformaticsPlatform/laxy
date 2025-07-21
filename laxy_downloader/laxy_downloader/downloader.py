@@ -222,6 +222,7 @@ def download_url(
 
     lock_path = f"{filepath}.lock"
     lock = FileLock(lock_path, timeout=60 * 60 * 12)  # 12 hours timeout
+    tmpfile_path = None
 
     try:
         with lock:
@@ -254,6 +255,7 @@ def download_url(
                 with temporary_file(
                     mode="wb", dir=directory, prefix=f"{filename}.", suffix=".tmp"
                 ) as tmpfile:
+                    tmpfile_path = tmpfile.name
                     if partial_size is not None:
                         # Copy existing partial download
                         shutil.copy2(filepath, tmpfile.name)
@@ -309,7 +311,7 @@ def download_url(
 
     except Exception as e:
         handle_download_exception(
-            e, getattr(e, "status_code", None), url, cleanup_on_exception, None
+            e, getattr(e, "status_code", None), url, cleanup_on_exception, tmpfile_path
         )
         raise  # Re-raise the exception after cleanup
     finally:
