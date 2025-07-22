@@ -28,6 +28,7 @@ sentry-sdk==0.17.0
 humanize
 typing-extensions  # backport, not required after Python 3.8
 text-unidecode
+pymmh3
 git+https://github.com/pansapiens/webdav-client-python.git@master#egg=webdavclient
 ptvsd
 

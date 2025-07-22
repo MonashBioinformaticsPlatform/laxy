@@ -1,8 +1,11 @@
-from typing import Union, Sequence
+from typing import Union, Sequence, List
 import os
 import json
 from pathlib import Path
 from base64 import urlsafe_b64encode
+from urllib.parse import urlparse, urlsplit, urlunsplit
+
+import pymmh3 as mmh3
 
 from datetime import datetime, timedelta
 
@@ -79,23 +82,23 @@ def truncate_middle(text: str, middle="…", length=77, end=8) -> str:
         return text
 
 
-def url_to_cache_key(url: str) -> str:
+def url_to_cache_key(url: str, strip_fragment: bool = True) -> str:
     """
     Generate a cache key for a URL using the same method as laxydl.
-    This replicates the url_to_cache_key function from laxy_downloader.
-    
+
+    A URL hashed with Murmur3 and base64 encoded into a constant length (22 character)
+    string. We use Murmur3 since it is supposed to have very few collisions for short
+    strings.
+
     :param url: The URL to generate a cache key for
+    :param strip_fragment: Whether to remove URL fragments before hashing
     :return: A cache key string
     """
-    # Import mmh3 here to avoid circular imports
-    try:
-        from laxy_downloader.downloader import pymmh3 as mmh3
-    except ImportError:
-        # Fallback if laxy_downloader is not available
-        import hashlib
-        hash_obj = hashlib.md5(url.encode('utf-8'))
-        return urlsafe_b64encode(hash_obj.digest()).decode("ascii").rstrip("=")
-    
+    if strip_fragment:
+        urlparts = list(urlsplit(url))
+        urlparts[4] = ""  # remove hash fragment
+        url = urlunsplit(urlparts)
+
     return (
         urlsafe_b64encode(mmh3.hash128(url).to_bytes(16, byteorder="big", signed=False))
         .decode("ascii")
@@ -588,8 +591,10 @@ class JobAdmin(Timestamped, VersionAdmin):
                         cache_key = url_to_cache_key(url)
                         
                         # Validate cache key to prevent path traversal
-                        if not cache_key or '/' in cache_key or '..':
-                            error_msg = f"Invalid cache key generated for URL: {cache_key}"
+                        if (not cache_key 
+                            or '/' in cache_key 
+                            or '..' in cache_key):
+                            error_msg = f"Invalid cache key generated for URL: url={url}, cache_key={cache_key}"
                             logger.error(f"Admin action - delete_cached_downloads: {error_msg}")
                             failed_jobs.append(f"{job.id} ({error_msg})")
                             continue
