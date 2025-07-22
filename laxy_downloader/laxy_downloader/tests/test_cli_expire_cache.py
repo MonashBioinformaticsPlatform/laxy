@@ -86,15 +86,20 @@ def test_expire_cache_pipeline_config_with_type_tags(sample_pipeline_config):
     
     assert set(url_filenames.keys()) == expected_urls
     
-    # Test filtering by non-existent type tag
+    # Test filtering by non-existent type tag - this should return empty dict
     url_filenames = get_urls_from_pipeline_config(config, required_type_tags=["nonexistent"])
     
     assert len(url_filenames) == 0
 
 
-def test_expire_cache_cli_parser():
+def test_expire_cache_cli_parser(temp_dir):
     """Test that the CLI parser includes the new pipeline-config option for expire-cache."""
     import argparse
+    
+    # Create a temporary config file for testing
+    config_file = os.path.join(temp_dir, "test.json")
+    with open(config_file, 'w') as f:
+        json.dump({"test": "data"}, f)
     
     parser = argparse.ArgumentParser()
     parser = add_commandline_args(parser)
@@ -102,7 +107,7 @@ def test_expire_cache_cli_parser():
     # Test that we can parse expire-cache with pipeline-config
     args = parser.parse_args([
         "expire-cache",
-        "--pipeline-config", "test.json",
+        "--pipeline-config", config_file,
         "--type-tags", "fastq,input"
     ])
     
@@ -111,9 +116,14 @@ def test_expire_cache_cli_parser():
     assert args.type_tags == ["fastq", "input"]
 
 
-def test_expire_cache_cli_parser_urls_and_pipeline_config():
+def test_expire_cache_cli_parser_urls_and_pipeline_config(temp_dir):
     """Test that the CLI parser can handle both URLs and pipeline-config."""
     import argparse
+    
+    # Create a temporary config file for testing
+    config_file = os.path.join(temp_dir, "test.json")
+    with open(config_file, 'w') as f:
+        json.dump({"test": "data"}, f)
     
     parser = argparse.ArgumentParser()
     parser = add_commandline_args(parser)
@@ -123,7 +133,7 @@ def test_expire_cache_cli_parser_urls_and_pipeline_config():
         "expire-cache",
         "http://example.com/file1.txt",
         "http://example.com/file2.txt",
-        "--pipeline-config", "test.json",
+        "--pipeline-config", config_file,
         "--type-tags", "fastq"
     ])
     

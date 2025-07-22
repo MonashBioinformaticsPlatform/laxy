@@ -106,10 +106,13 @@ def test_download_url_incomplete_file(mock_request, temp_dir):
 
     file_path = os.path.join(temp_dir, "incomplete_file.txt")
 
-    with pytest.raises(
-        Exception, match="Downloaded file size .* does not match Content-Length"
-    ):
+    # The test should expect the original exception message, not the cleanup error
+    with pytest.raises(Exception) as exc_info:
         download_url(url, file_path)
+    
+    # Check that the exception message contains the expected content
+    assert "Downloaded file size" in str(exc_info.value)
+    assert "does not match Content-Length" in str(exc_info.value)
 
 
 @mock.patch("laxy_downloader.downloader.request_with_retries")
