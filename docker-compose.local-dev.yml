@@ -123,7 +123,7 @@ services:
       # We use a volume here since on OSX conda seems to have issues with host directory mounts
       - fake-cluster-scratch:/scratch
     ports:
-      - "2222:2222"
+      - "22222:22222"
     logging:
       driver: "json-file"
       options:

@@ -12,7 +12,7 @@ FROM ubuntu:18.04
 #   squeue
 #
 
-EXPOSE 22/tcp
+EXPOSE 22222/tcp
 VOLUME /scratch
 
 RUN apt-get -y update && \
@@ -20,7 +20,7 @@ RUN apt-get -y update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-RUN bash -c 'echo -e "\nPort 2222\nPermitRootLogin prohibit-password\n" >>/etc/ssh/sshd_config'
+RUN bash -c 'echo -e "\nPort 22222\nPermitRootLogin prohibit-password\n" >>/etc/ssh/sshd_config'
 ADD slurm.conf /etc/slurm-llnl/slurm.conf
 ADD id_rsa.pub /root/.ssh/authorized_keys
 

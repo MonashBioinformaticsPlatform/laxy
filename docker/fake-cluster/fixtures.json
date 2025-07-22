@@ -9,7 +9,7 @@
         "admin"
       ],
       "status": "online",
-      "host": "fake-cluster:2222",
+      "host": "fake-cluster:22222",
       "gateway_server": null,
       "disposable": false,
       "name": "fake-cluster",

@@ -91,7 +91,7 @@ services:
     volumes:
       - ./.fake-cluster-scratch:/scratch
     ports:
-      - "2222:2222"
+      - "22222:22222"
     logging:
       driver: "json-file"
       options:
