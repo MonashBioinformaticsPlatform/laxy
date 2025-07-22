@@ -270,9 +270,13 @@ function init_conda_env() {
     set +o nounset
 
     source "${CONDA_BASE}/bin/activate"
-
+    
     if [[ ! -d "${CONDA_BASE}/envs/${env_name}" ]]; then
         send_event "JOB_INFO" "Installing dependencies (conda environment ${env_name})"
+
+        # Accept the terms of service for the conda channels
+        conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main || return 1
+        conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r || return 1
 
         # First we update conda itself
         ${CONDA_BASE}/bin/conda update --yes -n base conda || return 1
