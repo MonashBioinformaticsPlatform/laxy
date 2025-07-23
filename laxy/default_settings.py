@@ -42,7 +42,11 @@ class PrefixedEnv(environ.Env):
 
     def __init__(self, prefix, **scheme):
         # Add prefix to dictionary keys
-        self.scheme = dict([("%s%s" % (prefix, k), v) for k, v in scheme.items()])
+        prefixed_scheme = dict([("%s%s" % (prefix, k), v) for k, v in scheme.items()])
+        # Call parent constructor with prefixed scheme
+        super().__init__(**prefixed_scheme)
+        # Store prefix for compatibility with newer django-environ versions
+        self.prefix = prefix
 
 
 def dictify_json_loads(text: str):
@@ -132,7 +136,7 @@ def env(env_key=None, default=environ.Env.NOTSET, transform=None):
     :return: The value of the environment variable.
     :rtype:
     """
-    value = default_env("%s%s" % (APP_ENV_PREFIX, env_key), default=default)
+    value = default_env(env_key, default=default)
     if transform is not None:
         value = transform(value)
     return value
@@ -436,8 +440,8 @@ INSTALLED_APPS = [
     "laxy_backend",
     "laxy_pipeline_apps.rnasik",
     "laxy_pipeline_apps.seqkit_stats",  # a pipeline plugin for Laxy
-    "laxy_pipeline_apps.nf-core-rnaseq",  # a pipeline plugin for Laxy
-    "laxy_pipeline_apps.nf-core-rnaseq-brbseq",  # a pipeline plugin for Laxy
+    "laxy_pipeline_apps.nf-core-rnaseq.apps.NfCoreRnaSeqLaxyPipelineAppConfig",  # a pipeline plugin for Laxy
+    "laxy_pipeline_apps.nf-core-rnaseq-brbseq.apps.NfCoreRnaSeqBrbSeqLaxyPipelineAppConfig",  # a pipeline plugin for Laxy
     "laxy_pipeline_apps.openfold",  # a pipeline plugin for Laxy
 ]
 
@@ -587,7 +591,7 @@ AUTHENTICATION_BACKENDS = (
     "guardian.backends.ObjectPermissionBackend",
 )
 
-GUARDIAN_MONKEY_PATCH = False
+GUARDIAN_MONKEY_PATCH_USER = False  # Updated for django-guardian compatibility
 GUARDIAN_RAISE_403 = True
 
 SOCIAL_AUTH_RAISE_EXCEPTIONS = DEBUG
