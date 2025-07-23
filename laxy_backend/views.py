@@ -43,7 +43,7 @@ from django.contrib.admin.views.decorators import user_passes_test
 from django.db import transaction
 from django.http import HttpResponse, StreamingHttpResponse, JsonResponse, FileResponse
 from django.urls import reverse
-from django.utils.encoding import force_text
+from django.utils.encoding import force_str
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import OrderingFilter
 from django.utils.decorators import method_decorator
@@ -338,10 +338,10 @@ class QueryParamFilterBackend(BaseFilterBackend):
                 required=qp.get("required", True),
                 type=qp.get("type", "string"),
                 schema=coreschema.String(
-                    title=force_text(
+                    title=force_str(
                         qp.get("title", (qp.get("name", False) or qp.get("name")))
                     ),
-                    description=force_text(qp.get("description", "")),
+                    description=force_str(qp.get("description", "")),
                 ),
             )
 
