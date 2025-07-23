@@ -30,7 +30,8 @@ from django.db.models.constraints import UniqueConstraint
 from django.db.models import Q
 from django.dispatch import receiver
 from django.core.handlers.wsgi import WSGIRequest
-from django.core.files.storage import get_storage_class, Storage
+from django.core.files.storage import Storage
+from django.utils.module_loading import import_string
 from django.core.serializers import serialize
 from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError as DjangoValidationError, ValidationError
@@ -496,9 +497,10 @@ class ComputeResource(Timestamped, UUIDModel):
                 else:
                     _storage_instance.sftp.close()
 
-        storage_class = get_storage_class(
-            SCHEME_STORAGE_CLASS_MAPPING.get("laxy+sftp", None)
-        )
+        storage_class_path = SCHEME_STORAGE_CLASS_MAPPING.get("laxy+sftp", None)
+        if storage_class_path is None:
+            raise ValueError("No storage class found for laxy+sftp scheme")
+        storage_class = import_string(storage_class_path)
 
         host = self.hostname
         port = self.port
@@ -1187,9 +1189,10 @@ def get_storage_class_for_location(
         # `base_dir` in the ComputeResource extra params. Setting location to something like
         # `/scratch/jobs/{job_id}/` per-job should mitigate some of the risk here (assuming Django's
         # FileSystemStorage doesn't allow relative/paths/like/../../../this/ outside the base location.
-        storage_class = get_storage_class(
-            SCHEME_STORAGE_CLASS_MAPPING.get(scheme, None)
-        )
+        storage_class_path = SCHEME_STORAGE_CLASS_MAPPING.get(scheme, None)
+        if storage_class_path is None:
+            raise ValueError(f"No storage class found for scheme: {scheme}")
+        storage_class = import_string(storage_class_path)
         return storage_class(location="/")
     else:
         raise NotImplementedError(
