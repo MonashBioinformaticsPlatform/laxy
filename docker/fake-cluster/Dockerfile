@@ -1,4 +1,4 @@
-FROM ubuntu:18.04
+FROM ubuntu:22.04
 
 # Build like:
 #   docker build -t fake-cluster:latest docker/fake-cluster
@@ -12,16 +12,28 @@ FROM ubuntu:18.04
 #   squeue
 #
 
+ARG APPTAINER_VERSION=1.4.1
+ARG DEBIAN_FRONTEND=noninteractive
+
 EXPOSE 22222/tcp
 VOLUME /scratch
 
 RUN apt-get -y update && \
-    apt-get -y install vim curl htop openssh-server slurm-wlm munge slurm-wlm-doc git build-essential && \
+    apt-get -y install vim curl wget htop openssh-server slurm-wlm munge slurm-wlm-doc git build-essential \
+                       squashfs-tools uidmap libfuse3-3 libc6 libzstd1 && \
+        apt-get install -y tzdata && \
+        rm -f /etc/localtime && \
+        cp /usr/share/zoneinfo/UTC /etc/localtime && \
+        apt-get remove -y tzdata && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+RUN cd /tmp && wget https://github.com/apptainer/apptainer/releases/download/v${APPTAINER_VERSION}/apptainer_${APPTAINER_VERSION}_amd64.deb && \
+    apt install -y ./apptainer_${APPTAINER_VERSION}_amd64.deb && \
+    rm apptainer_${APPTAINER_VERSION}_amd64.deb
+
 RUN bash -c 'echo -e "\nPort 22222\nPermitRootLogin prohibit-password\n" >>/etc/ssh/sshd_config'
-ADD slurm.conf /etc/slurm-llnl/slurm.conf
+ADD slurm.conf /etc/slurm/slurm.conf
 ADD id_rsa.pub /root/.ssh/authorized_keys
 
 RUN mkdir -p /var/log/slurm /var/run/slurmd /var/lib/slurmd && \
