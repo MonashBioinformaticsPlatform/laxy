@@ -25,7 +25,6 @@ export NFCORE_PIPELINE_NAME="rnaseq"
 export REFERENCE_GENOME_ID="{{ REFERENCE_GENOME }}"
 
 # run_job.sh specific variables or overrides
-export TMPDIR="$(realpath ${JOB_PATH}/../../tmp/${JOB_ID})"
 mkdir -p "${TMPDIR}" || true
 export INPUT_REFERENCE_PATH="${JOB_PATH}/input/reference"
 readonly REFERENCE_BASE="${JOB_PATH}/../references/iGenomes"
