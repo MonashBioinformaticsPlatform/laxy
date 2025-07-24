@@ -319,7 +319,7 @@ except ImproperlyConfigured:
 # https://docs.djangoproject.com/en/1.11/ref/settings/#databases
 DATABASES = {
     "default": default_env.db(
-        f"{APP_ENV_PREFIX}DATABASE_URL", default="postgres:///postgres:postgres@db:5432"
+        f"{APP_ENV_PREFIX}DATABASE_URL", default="postgres://postgres:postgres@db:5432/postgres"
     )
 }
 
@@ -462,7 +462,7 @@ ROOT_URLCONF = "laxy.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [app_root.path("templates")],
+        "DIRS": [str(app_root.path("templates"))],
         "APP_DIRS": True,
         "OPTIONS": {
             "debug": True,  # to disable template caching
@@ -524,12 +524,12 @@ CSRF_COOKIE_DOMAIN = env("CSRF_COOKIE_DOMAIN", "localhost")
 CORS_ORIGIN_WHITELIST = env(
     "CORS_ORIGIN_WHITELIST",
     default=[
-        "laxy.io",
-        "api.laxy.io",
-        "api.laxy.io:8001",
-        "dev.laxy.io:8002",
-        "dev.laxy.io",
-        "dev-api.laxy.io",
+        "https://laxy.io",
+        "https://api.laxy.io",
+        "https://api.laxy.io:8001",
+        "https://dev.laxy.io:8002",
+        "https://dev.laxy.io",
+        "https://dev-api.laxy.io",
     ],
     transform=_cleanup_env_list,
 )
@@ -538,8 +538,8 @@ CORS_ORIGIN_WHITELIST = env(
 CSRF_TRUSTED_ORIGINS = env(
     "CSRF_TRUSTED_ORIGINS",
     default=[
-        "laxy.io",
-        ".laxy.io",
+        "https://laxy.io",
+        "https://.laxy.io",
     ],
     transform=_cleanup_env_list,
 )
@@ -552,9 +552,9 @@ if DEBUG:
     # {Access-Control-Allow-Origin: *} is present.
     # CORS_ORIGIN_ALLOW_ALL = True
 
-    CORS_ORIGIN_WHITELIST += ["localhost:8002"]
-    # Applies to HTTPS only
-    CSRF_TRUSTED_ORIGINS += ["localhost"]
+    CORS_ORIGIN_WHITELIST += ["http://localhost:8002"]
+    # Applies to HTTPS only  
+    CSRF_TRUSTED_ORIGINS += ["http://localhost"]
 
 if USE_SSL:
     CORS_REPLACE_HTTPS_REFERER = True
