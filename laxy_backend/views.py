@@ -1,4 +1,3 @@
-import asyncio
 import sys
 from collections import OrderedDict
 
@@ -52,7 +51,7 @@ from fs.errors import DirectoryExpected
 from io import BufferedReader, BytesIO, StringIO
 from pathlib import Path
 import paramiko
-from robobrowser import RoboBrowser
+from robox import Robox
 from rest_framework import generics
 from rest_framework import status
 from rest_framework.settings import api_settings
@@ -2790,42 +2789,7 @@ class SendFileToDegust(JSONView):
 
     permission_classes = (IsOwner | IsSuperuser | FileHasAccessTokenForJob,)
 
-    # Non-async version
-    # @view_config(response_serializer=RedirectResponseSerializer)
-    # def post(self, request: Request, file_id: str, version=None):
-    #
-    #     counts_file: File = self.get_object()
-    #
-    #     if not counts_file:
-    #         return HttpResponse(status=status.HTTP_404_NOT_FOUND,
-    #                             reason="File ID does not exist, (or your are not"
-    #                                    "authorized to access it).")
-    #
-    #     url = 'http://degust.erc.monash.edu/upload'
-    #
-    #     browser = RoboBrowser(history=True, parser='lxml')
-    #     browser.open(url)
-    #
-    #     form = browser.get_form()
-    #
-    #     # filelike = BytesIO(counts_file.file.read())
-    #
-    #     form['filename'].value = counts_file.file  # filelike
-    #     browser.submit_form(form)
-    #     degust_url = browser.url
-    #
-    #     counts_file.metadata['degust_url'] = degust_url
-    #     counts_file.save()
-    # #
-    #     data = RedirectResponseSerializer(data={
-    #         'status': browser.response.status_code,
-    #         'redirect': degust_url})
-    #     if data.is_valid():
-    #         return Response(data=data.validated_data,
-    #                         status=status.HTTP_200_OK)
-    #     else:
-    #         return HttpResponse(status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-    #                             reason="Error contacting Degust.")
+
 
     @view_config(response_serializer=RedirectResponseSerializer)
     def post(self, request: Request, file_id: str, version=None):
@@ -2909,42 +2873,14 @@ class SendFileToDegust(JSONView):
             if data.is_valid():
                 return Response(data=data.validated_data, status=status.HTTP_200_OK)
 
-        # TODO: RoboBrowser is still required since while Degust no longer requires a CSRF token upon upload,
+        # TODO: Robox is still required since while Degust no longer requires a CSRF token upon upload,
         #       an 'upload_token' per-user is required:
         #       https://github.com/drpowell/degust/blob/master/FAQ.md#uploading-a-counts-file-from-the-command-line
         #       We either need an application level API token for Degust (to create anonymous uploads), or a
         #       trust relationship (eg proper OAuth2 provider or simple shared Google Account ID) that allows
         #       Laxy to retrieve the upload token for a user programmatically
         url = f"{degust_api_url}/upload"
-        browser = RoboBrowser(history=True, parser="lxml")
-        loop = asyncio.new_event_loop()
-
-        # This does the fetch of the form and the counts file simultaneously
-        async def get_form_and_file(url, fileish):
-            def get_upload_form(url):
-                browser.open(url)
-                return browser.get_form()
-
-            def get_counts_file_content(fh):
-                # filelike = BytesIO(fh.read())
-                # return filelike
-                return fh
-
-            future_form = loop.run_in_executor(None, get_upload_form, url)
-            future_file = loop.run_in_executor(None, get_counts_file_content, fileish)
-            form = await future_form
-            filelike = await future_file
-
-            return form, filelike
-
-        form, filelike = loop.run_until_complete(
-            get_form_and_file(url, counts_file.file)
-        )
-        loop.close()
-
-        # First POST the counts file, get a new Degust session ID
-        form["filename"].value = filelike
-
+        
         # TODO: This is to deal with SFTPStorage backend timeouts etc
         #       Ideally we would fork / subclass SFTPStorage and SFTPStorageFile
         #       and add some built-in backoff / retry functionality
@@ -2961,12 +2897,22 @@ class SendFileToDegust(JSONView):
             max_tries=3,
             jitter=backoff.full_jitter,
         )
-        def submit_form(form):
-            browser.submit_form(form)
-
-        submit_form(form)
-
-        degust_config_url = browser.url.replace("/compare.html?", "/config.html?", 1)
+        def upload_file_to_degust(url, counts_file):
+            with Robox() as robox:
+                # Open the upload page and get the form
+                page = robox.open(url)
+                form = page.get_form()
+                
+                # Attach the file to the form
+                form['filename'] = counts_file.file
+                
+                # Submit the form and get the response page
+                response_page = page.submit_form(form)
+                return response_page
+        
+        response_page = upload_file_to_degust(url, counts_file)
+        
+        degust_config_url = response_page.url.replace("/compare.html?", "/config.html?", 1)
         degust_id = (
             parse_qs(urlparse(degust_config_url).query).get("code", [None]).pop()
         )
@@ -3043,7 +2989,7 @@ class SendFileToDegust(JSONView):
         resp.raise_for_status()
 
         data = RedirectResponseSerializer(
-            data={"status": browser.response.status_code, "redirect": degust_config_url}
+            data={"status": response_page.status_code, "redirect": degust_config_url}
         )
         if data.is_valid():
             return Response(data=data.validated_data, status=status.HTTP_200_OK)

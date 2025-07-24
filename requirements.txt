@@ -19,7 +19,7 @@ lxml
 pandas
 enasearch
 attrdict
-robobrowser
+robox
 python-magic
 urllib3
 Jinja2
