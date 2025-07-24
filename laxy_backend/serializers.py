@@ -14,7 +14,7 @@ from rest_framework.exceptions import ValidationError, PermissionDenied
 from rest_framework.fields import CurrentUserDefault
 from typing import Sequence
 
-from drf_openapi.entities import VersionedSerializers
+# from drf_openapi.entities import VersionedSerializers  # Removed - no longer using drf_openapi
 from http.client import responses as response_code_messages
 
 from laxy_backend.models import SampleCart, PipelineRun, File, FileSet

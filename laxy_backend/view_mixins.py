@@ -22,7 +22,7 @@ from rest_framework.schemas import SchemaGenerator
 from rest_framework.renderers import JSONRenderer, SchemaJSRenderer, CoreJSONRenderer
 from rest_framework.parsers import JSONParser, BaseParser
 
-from drf_openapi.utils import view_config
+# from drf_openapi.utils import view_config  # Removed - no longer using drf_openapi
 
 import logging
 

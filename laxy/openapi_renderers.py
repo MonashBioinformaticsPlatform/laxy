@@ -1,12 +1,13 @@
 import yaml
 from http.client import responses as response_code_messages
 from rest_framework import status
-from rest_framework_swagger.renderers import OpenAPIRenderer as _OpenAPIRenderer
 from rest_framework.renderers import JSONRenderer
-from openapi_codec import OpenAPICodec as _OpenAPICodec
-from coreapi import Document
-from drf_openapi.codec import _generate_openapi_object, SwaggerUIRenderer
-from coreapi.compat import force_bytes
+# Temporarily removing drf_openapi dependencies - will be replaced with DRF built-in
+# from rest_framework_swagger.renderers import OpenAPIRenderer as _OpenAPIRenderer  
+# from openapi_codec import OpenAPICodec as _OpenAPICodec
+# from coreapi import Document
+# from drf_openapi.codec import _generate_openapi_object, SwaggerUIRenderer
+# from coreapi.compat import force_bytes
 from collections import OrderedDict
 
 
@@ -26,30 +27,45 @@ def ordered_dump(data, stream=None, Dumper=yaml.Dumper, **kwds):
     return yaml.dump(data, stream, OrderedDumper, **kwds)
 
 
-class OpenAPICodec(_OpenAPICodec):
-    def encode(self, document, extra=None, **options):
-        if not isinstance(document, Document):
-            raise TypeError('Expected a `coreapi.Document` instance')
+# Temporarily disabled - will be replaced with DRF built-in OpenAPI YAML support
+# class OpenAPICodec(_OpenAPICodec):
+#     def encode(self, document, extra=None, **options):
+#         if not isinstance(document, Document):
+#             raise TypeError('Expected a `coreapi.Document` instance')
+#
+#         data = _generate_openapi_object(document)
+#         if isinstance(extra, dict):
+#             data.update(extra)
+#
+#         # out = yaml.dump(data)
+#         out = ordered_dump(data, Dumper=yaml.SafeDumper)
+#         return force_bytes(out)
 
-        data = _generate_openapi_object(document)
-        if isinstance(extra, dict):
-            data.update(extra)
 
-        # out = yaml.dump(data)
-        out = ordered_dump(data, Dumper=yaml.SafeDumper)
-        return force_bytes(out)
+# Temporarily disabled - will be replaced with DRF built-in OpenAPI YAML support
+# class OpenAPIYamlRenderer(_OpenAPIRenderer):
+#     format = 'yaml-openapi'
+#     media_type = 'text/yaml'
+#
+#     def render(self, data, accepted_media_type=None, renderer_context=None):
+#         if renderer_context['response'].status_code != status.HTTP_200_OK:
+#             return JSONRenderer().render(data)
+#         extra = self.get_customizations()
+#
+#         return OpenAPICodec().encode(data, extra=extra)
 
 
-class OpenAPIYamlRenderer(_OpenAPIRenderer):
+# Simple YAML renderer that can be used with DRF built-in OpenAPI
+class OpenAPIYamlRenderer(JSONRenderer):
     format = 'yaml-openapi'
     media_type = 'text/yaml'
 
     def render(self, data, accepted_media_type=None, renderer_context=None):
-        if renderer_context['response'].status_code != status.HTTP_200_OK:
+        if renderer_context and renderer_context.get('response') and renderer_context['response'].status_code != status.HTTP_200_OK:
             return JSONRenderer().render(data)
-        extra = self.get_customizations()
-
-        return OpenAPICodec().encode(data, extra=extra)
+        
+        # Convert the data to YAML format
+        return yaml.safe_dump(data).encode('utf-8')
 
 
 # TODO: This was the beginnings of trying to allow custom success codes (eg

@@ -102,7 +102,8 @@ jwt_urls = [
 ]
 
 rest_social_auth_urls = [
-    re_path(r"", include("rest_social_auth.urls_jwt")),
+    # JWT URLs not available in newer rest_social_auth versions - removing temporarily
+    # re_path(r"", include("rest_social_auth.urls_jwt")),  # Not available in newer versions
     re_path(r"", include("rest_social_auth.urls_token")),
     # re_path(r'', include('rest_social_auth.urls_session')),
     re_path(

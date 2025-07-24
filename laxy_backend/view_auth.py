@@ -25,7 +25,7 @@ from rest_social_auth.views import BaseSocialAuthView
 from rest_social_auth.serializers import UserSerializer as RestSocialAuthUserSerializer
 from social_django.views import _do_login as social_auth_login
 
-from drf_openapi.utils import view_config
+# from drf_openapi.utils import view_config  # Removed - no longer using drf_openapi
 
 from laxy_backend.models import UserProfile
 from laxy_backend.views import _get_or_create_drf_token
@@ -132,7 +132,7 @@ class UserProfileView(APIView):
     renderer_classes = (JSONRenderer,)
     permission_classes = (IsAuthenticated,)
 
-    @view_config(response_serializer=UserProfileResponse)
+    # @view_config(response_serializer=UserProfileResponse)  # Removed - no longer using drf_openapi
     def get(self, request, version=None):
         """
         Returns the authenticated users profile information.
@@ -223,10 +223,10 @@ class CsrfCookieView(APIView):
 class PublicSocialSessionAuthView(SocialSessionAuthView):
     permission_classes = (AllowAny,)
 
-    @view_config(
-        request_serializer=SocialAuthLoginRequest,
-        response_serializer=SocialAuthLoginResponse,
-    )
+#    @view_config(
+#        request_serializer=SocialAuthLoginRequest,
+#        response_serializer=SocialAuthLoginResponse,
+#    )
     def post(self, request, *args, **kwargs):
         """
         This method takes authorization code returned by a social OAuth2 service (eg Google) and initiates the

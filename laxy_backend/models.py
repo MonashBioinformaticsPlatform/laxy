@@ -76,7 +76,7 @@ logger = logging.getLogger(__name__)
 if "postgres" not in settings.DATABASES["default"]["ENGINE"]:
     from jsonfield import JSONField
 else:
-    from django.contrib.postgres.fields import JSONField
+    from django.db.models import JSONField
 
 SCHEME_STORAGE_CLASS_MAPPING = {
     "file": "django.core.files.storage.FileSystemStorage",

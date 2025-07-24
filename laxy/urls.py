@@ -35,7 +35,7 @@ urlpatterns = [
 
     # re_path(r'^api/(?P<version>(v1|v2))/', include('drf_openapi.urls')),
     re_path(r'^swagger/(?P<version>(v1|v2))/',
-            LaxyOpenAPISchemaView.as_view(),
+            LaxyOpenAPISchemaView,
             name='api_schema'),
 
     re_path(r'^', include('laxy_backend.urls')),
