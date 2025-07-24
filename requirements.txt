@@ -89,12 +89,12 @@ django-filter
 # django-filter
 django-guardian
 coreapi
-djangorestframework-jwt
+djangorestframework-simplejwt
 
 # drf_openapi==1.3.0
 # git+https://github.com/limdauto/drf_openapi.git#egg=drf_openapi
 # https://github.com/limdauto/drf_openapi/issues/105
-git+https://github.com/maykinmedia/drf_openapi.git@105-proxy-label-cannot-be-decoded#egg=drf_openapi
+# git+https://github.com/maykinmedia/drf_openapi.git@105-proxy-label-cannot-be-decoded#egg=drf_openapi  # Removed
 
 git+https://github.com/pansapiens/json-merge-patch.git#egg=json_merge_patch
 jsonpatch

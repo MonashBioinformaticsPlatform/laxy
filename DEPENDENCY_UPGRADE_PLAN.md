@@ -334,10 +334,54 @@ This document outlines the plan to upgrade Laxy from Python 3.6 to Python 3.12 a
 **Status**: ✅ FIXED - Replaced `robobrowser` with `robox`.
 
 **Solution Applied**:
-1. Replaced `robobrowser` with `robox` in requirements.txt and requirements-thawed.txt
-2. Updated import from RoboBrowser to Robox in views.py (already completed)
-3. Removed commented-out RoboBrowser code
-4. Updated TODO comments to reference Robox instead of RoboBrowser
+1. Replaced `robobrowser` with `robox` in requirements.txt
+2. Updated import from `from robobrowser import RoboBrowser` to `from robox import Robox` in views.py
+3. Refactored `SendFileToDegust` view to use Robox context manager API:
+   - Replaced async `get_form_and_file()` function with synchronous Robox code
+   - Used `with Robox() as robox:` context manager pattern
+   - Updated form submission to use `page.submit_form(form)` 
+   - Updated URL access to use `response_page.url` and `response_page.status_code`
+4. Removed commented-out RoboBrowser code
+5. Updated TODO comments to reference Robox instead of RoboBrowser
+6. Removed `robobrowser` from requirements-thawed.txt (it was already removed)
+
+### Fixed: rest_framework_jwt Compatibility
+**Problem**: Build fails with `ImportError: cannot import name 'smart_text' from 'rest_framework.compat'` from the `rest_framework_jwt` package. The `smart_text` function was removed in newer Django REST Framework versions (replaced by `force_str` in Django 3.0+).
+
+**Status**: ✅ FIXED - Replaced `rest_framework_jwt` with `djangorestframework-simplejwt`.
+
+**Solution Applied**:
+1. Replaced `rest_framework_jwt` with `djangorestframework-simplejwt` in requirements.txt and requirements-thawed.txt
+2. Updated authentication settings in `laxy/default_settings.py`:
+   - Added `SIMPLE_JWT` configuration with proper token lifetimes and settings
+   - Updated REST_FRAMEWORK authentication classes to use `rest_framework_simplejwt.authentication.JWTAuthentication`
+   - Kept legacy `JWT_AUTH` settings for backward compatibility with helper functions
+3. Updated URL patterns in `laxy_backend/urls.py`:
+   - Replaced `obtain_jwt_token`, `refresh_jwt_token`, `verify_jwt_token` with Simple JWT views
+   - Updated imports to use `TokenObtainPairView`, `TokenRefreshView`, `TokenVerifyView`
+4. Refactored JWT helper functions in `laxy_backend/jwt_helpers.py`:
+   - Updated `create_jwt_user_token()` to use Simple JWT's `RefreshToken.for_user()` and `access_token`
+   - Replaced `api_settings` import with `RefreshToken` and `AccessToken` from Simple JWT
+   - Maintained backward compatibility by returning same tuple format (token_string, payload_dict)
+5. Removed unused `rest_framework_jwt` import from `laxy_backend/views.py`
+
+### Current Issue: drf_openapi Compatibility  
+**Problem**: Build fails with `ImportError: cannot import name 'force_text' from 'django.utils.encoding'` from the `drf_openapi` package. The same `force_text` deprecation affects this package.
+
+**Status**: 🔄 IN PROGRESS - Need to remove `drf_openapi` entirely and replace with DRF built-in OpenAPI.
+
+**Analysis**: 
+- `drf_openapi` is incompatible with Django 5.x due to `force_text` usage
+- Django REST Framework 3.15+ has built-in OpenAPI schema generation
+- Need to remove all `drf_openapi` imports and usage
+
+**Next Steps**:
+1. Remove `drf_openapi` dependency from requirements files
+2. Remove `drf_openapi` from INSTALLED_APPS in Django settings  
+3. Remove all `drf_openapi` imports from views, serializers, and other modules
+4. Remove `@view_config` decorators from API views
+5. Configure DRF's built-in OpenAPI schema generation
+6. Update API documentation URLs and generation
 
 ## Notes
 

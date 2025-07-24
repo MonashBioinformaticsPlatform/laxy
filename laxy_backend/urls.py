@@ -19,10 +19,10 @@ from django.contrib import admin
 from rest_framework import routers
 from rest_framework.urlpatterns import format_suffix_patterns
 
-from rest_framework_jwt.views import (
-    obtain_jwt_token,
-    refresh_jwt_token,
-    verify_jwt_token,
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+    TokenVerifyView,
 )
 
 from laxy_backend.views import (
@@ -95,10 +95,10 @@ register_converter(UUID62Converter, "uuid62")
 # - ?use_underscores=in_query_params
 
 jwt_urls = [
-    # https://getblimp.github.io/django-rest-framework-jwt/
-    re_path(r"^get/$", obtain_jwt_token, name="jwt-get-token"),
-    re_path(r"^refresh/$", refresh_jwt_token, name="jwt-refresh-token"),
-    re_path(r"^verify/$", verify_jwt_token, name="jwt-verify-token"),
+    # https://django-rest-framework-simplejwt.readthedocs.io/
+    re_path(r"^get/$", TokenObtainPairView.as_view(), name="jwt-get-token"),
+    re_path(r"^refresh/$", TokenRefreshView.as_view(), name="jwt-refresh-token"),
+    re_path(r"^verify/$", TokenVerifyView.as_view(), name="jwt-verify-token"),
 ]
 
 rest_social_auth_urls = [

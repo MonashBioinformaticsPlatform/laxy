@@ -32,7 +32,6 @@ from . import paramiko_monkeypatch
 
 from toolz import merge as merge_dicts
 import requests
-import rest_framework_jwt
 import celery
 from celery import shared_task
 from celery.result import AsyncResult
@@ -78,8 +77,6 @@ from typing import Dict, List, Union
 import urllib
 from urllib.parse import urlparse, parse_qs, unquote
 from wsgiref.util import FileWrapper
-
-from drf_openapi.utils import view_config
 
 from laxy_backend.storage.http_remote import (
     is_archive_link,

@@ -3,7 +3,7 @@ import logging
 from datetime import datetime
 import uuid
 import jwt
-from rest_framework_jwt.settings import api_settings
+from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 
@@ -28,22 +28,31 @@ def decode(encoded_token):
 
 
 def create_jwt_user_token(username):
-    jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
-    jwt_encode_handler = api_settings.JWT_ENCODE_HANDLER
-
-    class DummyUser:
-        pk = -1
-        username = ''
-        email = ''
-
-    user = DummyUser()
+    """
+    Create a JWT token for a user using Simple JWT.
+    
+    :param username: Username to create token for
+    :return: Tuple of (token_string, payload_dict)
+    """
+    # Create a dummy user if username is not provided
     if username:
         user = User.objects.get(username=username)
+    else:
+        # Create a minimal user object for Simple JWT
+        class DummyUser:
+            pk = -1
+            username = ''
+            email = ''
+        user = DummyUser()
 
-    payload = jwt_payload_handler(user)
-    token = jwt_encode_handler(payload)
+    # Create refresh token and get access token
+    refresh = RefreshToken.for_user(user)
+    access_token = refresh.access_token
+    
+    # Get the payload for backward compatibility
+    payload = access_token.payload
 
-    return token, payload
+    return str(access_token), payload
 
 
 def create_object_access_jwt(obj, ttl=None):
