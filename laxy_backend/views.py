@@ -1121,11 +1121,11 @@ class JobFileView(StreamFileMixin, GetMixin, JSONView):
             if serializer.is_valid():
                 serializer.save()
                 fileset.add(serializer.instance)
-                data = self.response_serializer(serializer.instance).data
+                data = self.get_response_serializer(instance=serializer.instance).data
                 return Response(data, status=status.HTTP_201_CREATED)
         else:
             # Update existing File
-            serializer = self.request_serializer(
+            serializer = self.get_request_serializer(
                 file_obj, data=request.data, context={"request": request}
             )
 
@@ -1191,7 +1191,7 @@ class JobFileBulkRegistration(JSONView):
 
         content_type = get_content_type(request)
         if content_type == "application/json":
-            serializer = self.request_serializer(data=request.data, many=True)
+            serializer = self.get_request_serializer(data=request.data, many=True)
             if serializer.is_valid():
                 # TODO: accept JSON for bulk file registration
                 # separate into input and output files, add files to
@@ -1980,6 +1980,7 @@ def _set_request_params_from_pipelinerun(request, pipelinerun_obj: PipelineRun):
 class JobCreate(JSONView):
     queryset = Job.objects.all()
     serializer_class = JobSerializerRequest
+    response_serializer = JobSerializerResponse
 
 #     @view_config(  # Removed - no longer using drf_openapi
 #        request_serializer=JobSerializerRequest,
@@ -2028,7 +2029,7 @@ class JobCreate(JSONView):
                 )
                 request.data["params"] = json.dumps(_params)
 
-        serializer = self.request_serializer(
+        serializer = self.get_request_serializer(
             data=request.data, context={"request": request}
         )
 
@@ -2118,7 +2119,7 @@ class JobCreate(JSONView):
                 #                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
             job = Job.objects.get(id=job_id)
-            serializer = self.response_serializer(job)
+            serializer = self.get_response_serializer(instance=job)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -2631,7 +2632,7 @@ class JobAccessTokenView(JSONView, GetMixin):
         """
         obj = self.get_queryset().first()
         if obj:
-            serializer = self.response_serializer(obj)
+            serializer = self.get_response_serializer(instance=obj)
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             return Response(status=status.HTTP_204_NO_CONTENT)
@@ -2669,13 +2670,13 @@ class JobAccessTokenView(JSONView, GetMixin):
         obj = self.get_queryset().first()
 
         if obj:
-            serializer = self.request_serializer(
+            serializer = self.get_request_serializer(
                 obj, data=request.data, context={"request": request}
             )
         else:
             data = dict(request.data)
             data.update(object_id=job_id, content_type="job")
-            serializer = self.request_serializer(
+            serializer = self.get_request_serializer(
                 data=data, context={"request": request}
             )
 
@@ -2683,7 +2684,7 @@ class JobAccessTokenView(JSONView, GetMixin):
             obj = serializer.save(created_by=request.user)
 
             return Response(
-                self.response_serializer(obj).data, status=status.HTTP_200_OK
+                self.get_response_serializer(instance=obj).data, status=status.HTTP_200_OK
             )
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

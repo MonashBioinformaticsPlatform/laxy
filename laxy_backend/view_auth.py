@@ -89,6 +89,7 @@ def get_profile_pic_url(user):
     return user.profile.image_url or gravatar_url(user.email)
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class Login(APIView):
     renderer_classes = (JSONRenderer,)
     permission_classes = (AllowAny,)
@@ -119,6 +120,7 @@ class Login(APIView):
             )
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class Logout(APIView):
     renderer_classes = (JSONRenderer,)
     permission_classes = (AllowAny,)

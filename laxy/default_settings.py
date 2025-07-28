@@ -553,8 +553,12 @@ if DEBUG:
     # CORS_ORIGIN_ALLOW_ALL = True
 
     CORS_ORIGIN_WHITELIST += ["http://localhost:8002"]
-    # Applies to HTTPS only  
-    CSRF_TRUSTED_ORIGINS += ["http://localhost"]
+    # CSRF_TRUSTED_ORIGINS applies to both HTTP and HTTPS in Django 4.0+
+    CSRF_TRUSTED_ORIGINS += [
+        "http://localhost:8002",  # Frontend URL
+        "http://localhost:8001",  # Backend URL
+        "http://localhost",       # Legacy compatibility
+    ]
 
 if USE_SSL:
     CORS_REPLACE_HTTPS_REFERER = True
