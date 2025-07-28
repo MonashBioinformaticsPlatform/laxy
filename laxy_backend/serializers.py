@@ -220,6 +220,12 @@ class FileSerializer(BaseModelSerializer):
 
 
 class FileSerializerPostRequest(FileSerializer):
+    name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    path = serializers.CharField(max_length=4096, required=False, allow_null=True, allow_blank=True)
+    fileset = serializers.PrimaryKeyRelatedField(
+        queryset=FileSet.objects.all(), required=False, allow_null=True
+    )
+
     class Meta(FileSerializer.Meta):
         fields = (
             "name",

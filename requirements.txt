@@ -110,3 +110,4 @@ setproctitle
 # Postgres packages
 # sudo apt-get install postgresql postgresql-server-dev-all
 psycopg2-binary
+inflection>=0.3.1

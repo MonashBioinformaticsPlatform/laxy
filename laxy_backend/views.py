@@ -535,6 +535,11 @@ class FileCreate(JSONView):
     queryset = File.objects.all()
     serializer_class = FileSerializer
 
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return FileSerializerPostRequest
+        return self.serializer_class
+
     # permission_classes = (DjangoObjectPermissions,)
 
 #     @view_config(  # Removed - no longer using drf_openapi
@@ -869,7 +874,7 @@ class FileView(
                 )
 
 #     @view_config(  # Removed - no longer using drf_openapi
-#         request_serializer=FileSerializer, response_serializer=PatchSerializerResponse  # Orphaned from removed @view_config decorator
+#        request_serializer=FileSerializer, response_serializer=PatchSerializerResponse  # Orphaned from removed @view_config decorator
 #     )
     def patch(self, request, uuid=None, version=None):
         """
@@ -921,7 +926,7 @@ class FileView(
         return super(FileView, self).patch(request, uuid)
 
 #     @view_config(  # Removed - no longer using drf_openapi
-#         request_serializer=FileSerializerPostRequest, response_serializer=FileSerializer  # Orphaned from removed @view_config decorator
+#        request_serializer=FileSerializerPostRequest, response_serializer=FileSerializer  # Orphaned from removed @view_config decorator
 #     )
     def put(self, request: Request, uuid: str, version=None):
         """
