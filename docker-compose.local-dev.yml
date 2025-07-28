@@ -47,37 +47,6 @@ services:
       python3 manage.py shell -c \"from os import environ as env; from django.contrib.auth import get_user_model; username = env.get('LAXY_ADMIN_USERNAME', 'admin'); User = get_user_model(); User.objects.filter(username=username).count() or User.objects.create_superuser(username, env.get('LAXY_ADMIN_EMAIL', None), env.get('LAXY_ADMIN_PASSWORD', None));\" &&
       python3 manage.py loaddata --app laxy_backend /app/docker/fake-cluster/fixtures.json &&
       LAXY_FRONTEND_API_URL=http://`hostname`:8001 python3 manage.py runserver 0.0.0.0:8001"
-  # Examine the logs to find the token to login to the Jupyter notebook
-  # (eg docker-compose logs -f docker-compose.yml -f docker-compose.dev.yml shell-notebook )
-  shell-notebook:
-    image: laxy:dev
-    build:
-      context: .
-      dockerfile: ./docker/laxy/Dockerfile
-    environment:
-      - LAXY_DEBUG=yes
-      - LAXY_SSL=no
-      - LAXY_DATABASE_URL=postgres://postgres:postgres@db:5432/postgres
-      - LAXY_BROKER_URL=amqp://guest@rabbitmq
-      - LAXY_ADMIN_EMAIL=admin@example.com
-      - LAXY_ADMIN_USERNAME=admin
-      - LAXY_ADMIN_PASSWORD=adminpass
-      - LAXY_SECRET_KEY=_do_please_change_this_in_production_
-      - LAXY_SENTRY_DSN=
-    volumes:
-      - .:/app
-    ports:
-      - "8999:8999"
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10k"
-        max-file: "1"
-    depends_on:
-      - db
-    command: bash -c "sleep 10 &&
-      pip3 install jupyter ipython ipykernel django-extensions &&
-      python3 manage.py shell_plus --notebook"
 
   # This is npm + webpack, automatically rebuilding upon changes and serving on port 8002.
   # The source code directory on your host is mounted inside the container, so changes

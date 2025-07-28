@@ -50,33 +50,6 @@ services:
                       # Insecure: This leaks the admin password (eg via ps -ef).
                       # python manage.py shell -c \"from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.filter(username='${LAXY_ADMIN_USERNAME}').count() or User.objects.create_superuser('${LAXY_ADMIN_USERNAME}', '${LAXY_ADMIN_EMAIL}', '${LAXY_ADMIN_PASSWORD}');\";"
 
-  # Examine the logs to find the token to login to the Jupyter notebook
-  # (eg docker compose -f docker-compose.yml -f docker-compose.dev.yml logs shell-notebook )
-  shell-notebook:
-    build:
-      context: .
-      dockerfile: ./docker/laxy/Dockerfile
-    environment:
-      - LAXY_DEBUG=yes
-      - LAXY_ADMIN_EMAIL=admin@example.com
-      - LAXY_ADMIN_USERNAME=admin
-      - LAXY_SENTRY_DSN=
-    volumes:
-      - .:/app
-      - ./laxy_frontend/dist:/usr/share/nginx/html
-    ports:
-       - "8999:8999"
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "100k"
-        max-file: "1"
-    depends_on:
-      - db
-    command: bash -c "sleep 10 &&
-                      pip3 install jupyter ipython ipykernel django-extensions &&
-                      python3 manage.py shell_plus --notebook"
-
   # NOTE: You may need to change the default Docker container memory to 4Gb when using
   #       this container, since `conda create` often exceeds 2Gb of RAM
   #       Running with the docker-compose --compatibility flag should allow the
