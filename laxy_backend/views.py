@@ -2,6 +2,7 @@ import sys
 from collections import OrderedDict
 
 import json
+import mimetypes
 import shlex
 
 import backoff
@@ -653,8 +654,13 @@ class StreamFileMixin(JSONView):
             response["Content-Disposition"] = f'attachment; filename="{obj.name}"'
         else:
             response["Content-Disposition"] = "inline"
-            # Make the browser guess the Content-Type
-            del response["Content-Type"]
+            # Set appropriate Content-Type based on file extension
+            content_type, _ = mimetypes.guess_type(obj.name)
+            if content_type:
+                response["Content-Type"] = content_type
+            else:
+                # Fallback to binary stream if we can't determine the type
+                response["Content-Type"] = "application/octet-stream"
 
         size = obj.metadata.get("size", None)
         if obj.file is not None and hasattr(obj.file, "size"):
