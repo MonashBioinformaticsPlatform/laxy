@@ -10,6 +10,7 @@ const initial_state: any = {
     save_reference_genome: true,
     save_genome_index: false,
     skip_trimming: false,
+    skip_alignment: false,
 };
 
 const getters: any = {

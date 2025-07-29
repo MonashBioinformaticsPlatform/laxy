@@ -374,9 +374,13 @@ function get_settings_from_pipeline_config() {
     fi
 
     local _skip_trimming=$(jq -e --raw-output '.params."nf-core-rnaseq".skip_trimming' "${PIPELINE_CONFIG}" || echo "false")
+    export SKIP_ALIGNMENT=$(jq -e --raw-output '.params."nf-core-rnaseq".skip_alignment' "${PIPELINE_CONFIG}" || echo "false")
     export EXTRA_FLAGS=""
     if [[ "${_skip_trimming}" == "true" ]]; then
         export EXTRA_FLAGS="${EXTRA_FLAGS} --skip_trimming "
+    fi
+    if [[ "${SKIP_ALIGNMENT}" == "true" ]]; then
+        export EXTRA_FLAGS="${EXTRA_FLAGS} --skip_alignment "
     fi
 
     local -i _min_mapped_reads=$(jq -e --raw-output '.params."nf-core-rnaseq".min_mapped_reads' "${PIPELINE_CONFIG}" || echo "5")
@@ -734,7 +738,11 @@ send_event "JOB_PIPELINE_STARTING" "Starting pipeline."
 
 run_nextflow
 
-post_nextflow_pipeline || true
+if [[ "${SKIP_ALIGNMENT}" != "true" ]]; then
+    post_nextflow_pipeline || true
+else
+    send_event "JOB_INFO" "Skipping post-nextflow featureCounts pipeline (alignment was skipped)."
+fi
 
 cd "${JOB_PATH}"
 
