@@ -43,6 +43,10 @@ RUN mkdir -p /scratch/laxy
 
 ADD sik.config /scratch/laxy/sik.config
 ADD sik.yeast.config /scratch/laxy/sik.yeast.config
+
+RUN mkdir -p /scratch/config
+ADD nextflow.config /scratch/config/nextflow.config
+
 RUN bash -c 'echo -e "export LC_ALL=C.UTF-8\nexport LANG=C.UTF-8" > /etc/profile.d/00-set-locale.sh'
 
 # CMD service slurmctld start && service slurmd start && tail -F /var/log/slurm/slurmctld.log
