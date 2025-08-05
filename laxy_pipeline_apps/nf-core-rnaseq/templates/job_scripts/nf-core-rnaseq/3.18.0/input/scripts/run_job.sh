@@ -578,7 +578,8 @@ function run_nextflow() {
        "${TRIMMER_ARGS[@]}" \
        --aligner star_salmon \
        --pseudo_aligner salmon \
-       --save_reference \
+       --save_reference=true \
+       --save_umi_intermeds=true \
        --monochrome_logs \
        -with-trace \
        -with-dag \
@@ -603,7 +604,8 @@ function run_nextflow() {
             "${TRIMMER_ARGS[@]}" \
             --aligner star_salmon \
             --pseudo_aligner salmon \
-            --save_reference \
+            --save_reference=true \
+            --save_umi_intermeds=true \
             --monochrome_logs \
             -with-trace \
             -with-dag \
@@ -660,11 +662,18 @@ function post_nextflow_pipeline() {
         paired_flag=" --paired=false "
     fi
 
+    # Determine the correct BAM pattern based on UMI processing
+    local _has_umi=$(jq -e --raw-output '.params."nf-core-rnaseq".has_umi' "${PIPELINE_CONFIG}" || echo "false")
+    local bam_pattern="*.bam"
+    if [[ "${_has_umi}" == "true" ]]; then
+        bam_pattern="*.umi_dedup.sorted.bam"
+    fi
+
     _nfjobname=$(echo laxy_"${JOB_ID}" | tr '[:upper:]' '[:lower:]')
 
     nextflow run "${INPUT_SCRIPTS_PATH}/featurecounts_postnfcore.nf" \
        --scripts_path="${INPUT_SCRIPTS_PATH}" \
-       --bams="${JOB_PATH}/output/results/star_salmon/"'*.bam' \
+       --bams="${JOB_PATH}/output/results/star_salmon/"''"${bam_pattern}" \
        --annotation="${ANNOTATION_FILE}" \
        --meta_info="${JOB_PATH}/output/results/star_salmon/"'*/aux_info/meta_info.json' \
        ${paired_flag} \
