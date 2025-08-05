@@ -374,6 +374,7 @@ function get_settings_from_pipeline_config() {
         export UMI_FLAGS=" --with_umi --skip_umi_extract --umitools_umi_separator : "
     fi
 
+
     local _skip_trimming=$(jq -e --raw-output '.params."nf-core-rnaseq".skip_trimming' "${PIPELINE_CONFIG}" || echo "false")
     export EXTRA_FLAGS=""
     if [[ "${_skip_trimming}" == "true" ]]; then
