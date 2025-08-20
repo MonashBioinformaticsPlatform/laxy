@@ -118,12 +118,14 @@ services:
     image: fake-cluster:latest
     build:
       context: ./docker/fake-cluster
+    # We need to run as privileged to use apptainer inside docker
+    privileged: true
     volumes:
       # - ./.fake-cluster-scratch:/scratch
       # We use a volume here since on OSX conda seems to have issues with host directory mounts
       - fake-cluster-scratch:/scratch
     ports:
-      - "2222:2222"
+      - "22222:22222"
     logging:
       driver: "json-file"
       options:

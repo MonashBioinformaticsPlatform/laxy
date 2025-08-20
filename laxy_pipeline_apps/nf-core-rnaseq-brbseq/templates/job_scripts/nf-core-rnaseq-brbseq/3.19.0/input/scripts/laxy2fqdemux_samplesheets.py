@@ -70,20 +70,40 @@ def main():
     if not barcode_entries:
         sys.stderr.write(f"WARNING: No 'barcode_samplesheet' found in {pipeline_params_key} params.\n")
     
+    # Determine which sample ID column is being used
+    sample_id_columns = ["*title", "title", "sample_id"]
+    sample_id_column = None
     for entry in barcode_entries:
-        sample_id_raw = ""
-        sample_id_columns = ["*title", "title", "sample_id"]
         for key in sample_id_columns:
-            sample_id_raw = entry.get(key, "")
-            if sample_id_raw:
+            if entry.get(key):
+                sample_id_column = key
                 break
+        if sample_id_column:
+            break
+    
+    if not sample_id_column:
+        sys.stderr.write(f"ERROR: No sample ID column found. Expected one of: {sample_id_columns}\n")
+        sys.exit(1)
+    
+    # Get the list of sample identifiers
+    sample_identifiers = [entry.get(sample_id_column, "") for entry in barcode_entries]
+    sample_identifiers = [id for id in sample_identifiers if id]  # Filter out empty strings
+    
+    # Check for duplicate IDs
+    if len(sample_identifiers) != len(set(sample_identifiers)):
+        duplicates = [x for x in set(sample_identifiers) if sample_identifiers.count(x) > 1]
+        sys.stderr.write(f"ERROR: Duplicate sample identifiers found in barcode samplesheet: {duplicates}\n")
+        sys.exit(1)
+    
+    for entry in barcode_entries:
+        sample_id_raw = entry.get(sample_id_column, "")
         barcode = entry.get("barcode", "")
         if sample_id_raw and barcode:
             # Sanitize sample_id, make it a valid identifier
             sample_id = sanitize_identifier(sample_id_raw)
             barcodes_data.append(f"{sample_id}\t{barcode}")
         else:
-            sys.stderr.write(f"WARNING: Skipping barcode entry due to missing '{'/'.join(sample_id_columns)}' or 'barcode': {entry}\n")
+            sys.stderr.write(f"WARNING: Skipping barcode entry due to missing '{sample_id_column}' or 'barcode': {entry}\n")
 
     with open(output_barcodes_tsv_path, "w") as fh:
         fh.write("sample_id\tbarcode\n")

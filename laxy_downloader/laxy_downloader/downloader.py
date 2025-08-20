@@ -357,8 +357,8 @@ def handle_download_exception(e, status_code, url, cleanup_on_exception, tmpfile
         try:
             os.remove(tmpfilepath)
         except (IOError, OSError) as ex:
-            logger.error(f"Failed to remove temporary file: {tmpfilepath}")
-            raise ex
+            logger.warning(f"Failed to remove temporary file: {tmpfilepath}")
+            # Don't re-raise the cleanup exception, just log it
     logger.error(str(e))
     raise e
 
@@ -519,28 +519,30 @@ def get_urls_from_pipeline_config_deprecated_sample_cart(
 
     for sample in samples:
         for f in sample["files"]:
+            # f is a dict like {"R1": ..., "type_tags": [...], ...}
+            # We want to check type_tags at the file level if present
+            type_tags = f.get("type_tags", [])
             for read_number, url_descriptor in f.items():
+                if read_number == "type_tags":
+                    continue
                 if isinstance(url_descriptor, str):
                     url = url_descriptor
                     sanitized_filename = None
+                    # Use file-level type_tags if present
+                    tags_to_check = type_tags
                 elif isinstance(url_descriptor, dict) and url_descriptor.get(
                     "location", False
                 ):
                     url = url_descriptor["location"]
                     sanitized_filename = url_descriptor.get("sanitized_filename", None)
+                    tags_to_check = url_descriptor.get("type_tags", type_tags)
                 else:
                     continue
 
                 if required_type_tags is None:
                     url_filename_mapping[url] = sanitized_filename
                 else:
-                    if isinstance(url_descriptor, dict) and set(
-                        required_type_tags
-                    ).issubset(set(url_descriptor.get("type_tags", []))):
-                        url_filename_mapping[url] = sanitized_filename
-                    elif isinstance(url_descriptor, str):
-                        # If url_descriptor is a string, we can't check type_tags
-                        # You might want to decide how to handle this case
+                    if set(required_type_tags).issubset(set(tags_to_check)):
                         url_filename_mapping[url] = sanitized_filename
 
     return url_filename_mapping
@@ -597,14 +599,13 @@ def get_urls_from_pipeline_config(
             else:
                 if set(required_type_tags).issubset(set(f.get("type_tags", []))):
                     url_filename_mapping[f["location"]] = fname
-
-    # TODO: Remove the deprecated sample_set and sample_cart alternatives in the future
+        # Only return URLs that matched the required_type_tags
+        return url_filename_mapping
     else:
-        url_filename_mapping = get_urls_from_pipeline_config_deprecated_sample_cart(
+        # Deprecated format
+        return get_urls_from_pipeline_config_deprecated_sample_cart(
             config, required_type_tags=required_type_tags
         )
-
-    return url_filename_mapping
 
 
 #

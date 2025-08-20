@@ -10,9 +10,9 @@ export JOB_INPUT_STAGED="{{ JOB_INPUT_STAGED }}"
 export PIPELINE_VERSION="{{ PIPELINE_VERSION }}"
 
 # Global variables used throughout the script
-export TMP="${PWD}/../tmp"
-export TMPDIR="${TMP}"
 export JOB_PATH=${PWD}
+export TMP="$(realpath ${JOB_PATH}/../../tmp/${JOB_ID})"
+export TMPDIR="${TMP}"
 export INPUT_READS_PATH="${JOB_PATH}/input/reads"
 export INPUT_SCRIPTS_PATH="${JOB_PATH}/input/scripts"
 export INPUT_CONFIG_PATH="${JOB_PATH}/input/config"
