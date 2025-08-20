@@ -119,7 +119,7 @@
         <csv-text-form 
           title-text="Paste your barcode samplesheet here (CSV or TSV)" 
           label-text="Barcode samplesheet" 
-          :show-columns="['*title', 'barcode']"
+          :show-columns="['*title', 'title', 'sample_id', 'barcode']"
           :placeholder-text="'*title,barcode\nsample1,TACGAGTACAGACA\n\n(other columns are ignored)'" 
           @data-modified="handleCsvDataModified"></csv-text-form>
       </md-whiteframe>
@@ -167,6 +167,9 @@
       </banner-notice>
       <banner-notice v-if="!isValid_barcode_samplesheet" type="error" :show-close-button="false">
         Barcode samplesheet must contain at least one row with required headers: 'barcode' and one of '*title', 'title', or 'sample_id'.
+      </banner-notice>
+      <banner-notice v-if="!isValid_barcode_samplesheet_unique_ids" type="error" :show-close-button="false">
+        Barcode samplesheet contains duplicate sample identifiers. All sample titles / IDs must be unique.
       </banner-notice>
 
 
@@ -513,6 +516,24 @@ export default class PipelineParams extends Vue {
     return hasBarcode && hasTitleHeader;
   }
 
+  get isValid_barcode_samplesheet_unique_ids() {
+    if (!this.barcodeSamplesheetData || this.barcodeSamplesheetData.length === 0) {
+      return true; // No data to check
+    }
+
+    const headers = this.barcodeSamplesheetHeaders;
+    const titleHeader = headers.find(h => ['*title', 'title', 'sample_id'].includes(h));
+    
+    if (!titleHeader) {
+      return true; // No title header to check
+    }
+
+    const identifiers = this.barcodeSamplesheetData.map(row => row[titleHeader]).filter(id => id && id.trim() !== '');
+    const uniqueIdentifiers = new Set(identifiers);
+    
+    return identifiers.length === uniqueIdentifiers.size;
+  }
+
   get isValid_params() {
     let is_valid = false;
     if (
@@ -521,7 +542,8 @@ export default class PipelineParams extends Vue {
       this.isValid_duplicate_samples &&
       this.isValid_strandedness_option &&
       this.isValid_min_mapped_reads &&
-      this.isValid_barcode_samplesheet
+      this.isValid_barcode_samplesheet &&
+      this.isValid_barcode_samplesheet_unique_ids
     ) {
       is_valid = true;
     }
