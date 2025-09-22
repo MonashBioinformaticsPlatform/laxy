@@ -1,23 +1,28 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.9"
+# dependencies = [
+#     "text-unidecode",
+# ]
+# ///
 
+import argparse
+import logging
 import subprocess
+import sys
+from pathlib import Path
 from typing import Sequence, Union
 
-import sys
-import os
-from pathlib import Path
 import json
+import os
 import re
-
 import string
 import unicodedata
 
 try:
     from text_unidecode import unidecode
 except ImportError:
-    sys.stderr.write(
-        "WARNING: text_unidecode not installed, skipping unicode to ascii conversion\n"
-    )
+    logging.warning("text_unidecode not installed, skipping unicode to ascii conversion")
 
     # Since this dependency may not be there, we monkey patch it to do
     # nothing when missing
@@ -222,7 +227,7 @@ def get_filelist_from_filesystem(path, strandedness="auto") -> Sequence[str]:
 
 def gzip_uncompressed(path):
     """[summary]
-    nf-core/rnaseq only takes gzipped read. Recursively walk path and
+    nf-core/rnaseq only takes gzipped reads. Recursively walk path and
     if we find any uncompressed fastqs, compress them before proceeding.
 
     Args:
@@ -243,17 +248,86 @@ def gzip_uncompressed(path):
     return gzipped_files
 
 
-if __name__ == "__main__":
+def main():
+    """Main function to generate nf-core/rnaseq samplesheet from Laxy pipeline config."""
+    parser = argparse.ArgumentParser(
+        description="Generate nf-core/rnaseq samplesheet from Laxy pipeline configuration JSON",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  %(prog)s pipeline_config.json /path/to/reads
+  %(prog)s pipeline_config.json /path/to/reads forward
+  %(prog)s pipeline_config.json /path/to/reads reverse --output samplesheet.csv
 
-    infn = sys.argv[1]
-    input_reads_path = sys.argv[2]
+This script processes a Laxy pipeline configuration JSON file and generates a samplesheet
+compatible with nf-core/rnaseq. It handles both individual FASTQ files and archive
+files (tar.gz, tar, zip) that have been pre-extracted.
+
+The script automatically detects paired-end reads and handles various naming conventions
+used by Illumina instruments, SRA/ENA, and other sequencing platforms.
+        """,
+    )
+    
+    parser.add_argument(
+        "config_file",
+        type=str,
+        help="Path to the Laxy pipeline configuration JSON file (pipeline_config.json)"
+    )
+    
+    parser.add_argument(
+        "reads_path",
+        type=str,
+        help="Path to the directory containing the input read files"
+    )
+    
+    parser.add_argument(
+        "strandedness",
+        nargs="?",
+        default="auto",
+        choices=["auto", "forward", "reverse", "unstranded"],
+        help="Strandedness setting for RNA-seq analysis (default: auto)"
+    )
+    
+    parser.add_argument(
+        "--output", "-o",
+        type=str,
+        help="Output file path. If not specified, prints to stdout. Use '-' for stdout."
+    )
+    
+    parser.add_argument(
+        "--verbose", "-v",
+        action="store_true",
+        help="Enable verbose logging"
+    )
+
+    args = parser.parse_args()
+
+    # Set up logging
+    log_level = logging.DEBUG if args.verbose else logging.INFO
+    logging.basicConfig(
+        level=log_level,
+        format="%(levelname)s: %(message)s",
+        stream=sys.stderr
+    )
+
+    # Validate input files
+    if not Path(args.config_file).exists():
+        logging.error(f"Configuration file not found: {args.config_file}")
+        sys.exit(1)
+    
+    if not Path(args.reads_path).exists():
+        logging.error(f"Reads path not found: {args.reads_path}")
+        sys.exit(1)
+
     try:
-        strandedness = sys.argv[3]
-    except IndexError:
-        strandedness = "auto"
-
-    with open(infn, "r") as fh:
-        jblob = json.load(fh)
+        with open(args.config_file, "r") as fh:
+            jblob = json.load(fh)
+    except json.JSONDecodeError as e:
+        logging.error(f"Invalid JSON in configuration file: {e}")
+        sys.exit(1)
+    except Exception as e:
+        logging.error(f"Error reading configuration file: {e}")
+        sys.exit(1)
 
     outlines = []
     outlines.append("sample,fastq_1,fastq_2,strandedness")
@@ -276,22 +350,40 @@ if __name__ == "__main__":
                 break
 
     if is_archive:
-        gzip_uncompressed(input_reads_path)
+        logging.info("Archive files detected, processing filesystem")
+        gzip_uncompressed(args.reads_path)
         sheetlines = get_filelist_from_filesystem(
-            input_reads_path, strandedness=strandedness
+            args.reads_path, strandedness=args.strandedness
         )
         outlines.extend(sheetlines)
     else:
+        logging.info("Processing individual files from configuration")
         for sample in jblob["sample_cart"].get("samples", []):
             name = sample.get("sanitized_name", sample["name"])
             for f in sample["files"]:
                 r1_fn = f.get("R1", {}).get("sanitized_filename", "")
                 r2_fn = f.get("R2", {}).get("sanitized_filename", "")
                 if r1_fn:
-                    r1_fn = Path(input_reads_path, r1_fn)
+                    r1_fn = Path(args.reads_path, r1_fn)
                 if r2_fn:
-                    r2_fn = Path(input_reads_path, r2_fn)
+                    r2_fn = Path(args.reads_path, r2_fn)
 
-                outlines.append(f"{name},{r1_fn},{r2_fn},{strandedness}")
+                outlines.append(f"{name},{r1_fn},{r2_fn},{args.strandedness}")
 
-    print("\n".join(outlines))
+    output_content = "\n".join(outlines)
+    
+    # Handle output
+    if args.output and args.output != "-":
+        try:
+            with open(args.output, "w") as fh:
+                fh.write(output_content)
+            logging.info(f"Samplesheet written to: {args.output}")
+        except Exception as e:
+            logging.error(f"Error writing output file: {e}")
+            sys.exit(1)
+    else:
+        print(output_content)
+
+
+if __name__ == "__main__":
+    main()
