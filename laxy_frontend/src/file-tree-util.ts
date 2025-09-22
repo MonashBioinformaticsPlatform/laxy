@@ -208,6 +208,23 @@ export function simplifyFastqName(filename: string): string {
 }
 
 /**
+ * Determine if a file is R1 based on its filename.
+ * Supports common R1 suffixes used by Illumina instruments and SRA/ENA.
+ */
+export function isR1File(filename: string): boolean {
+    const r1_patterns = [
+        /_R1_001\.(fastq|fq|fasta|fa)\.gz$/,  // Illumina instrument default
+        /_r1_001\.(fastq|fq|fasta|fa)\.gz$/,  // Synapse bulk downloader renames to lowercase
+        /_R1\.(fastq|fq|fasta|fa)\.gz$/,      // Generic R1
+        /_1\.(fastq|fq|fasta|fa)\.gz$/,       // ENA/SRA
+        /_R1\.(fastq|fq|fasta|fa)$/,          // Uncompressed variants
+        /_1\.(fastq|fq|fasta|fa)$/,
+    ];
+    
+    return r1_patterns.some(pattern => pattern.test(filename));
+}
+
+/**
  * Given a file object (eg _R1 or _R2) and a list of file objects (potential pair), 
  * return the corresponding R1 or R2 pair.
  * @param file A file with a ILaxyFile-like interface.

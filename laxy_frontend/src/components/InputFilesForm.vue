@@ -179,6 +179,7 @@ import {
   findPair,
   flattenTree,
   is_archive_url,
+  isR1File,
   objListToTree,
   simplifyFastqName,
   TreeNode,
@@ -303,6 +304,7 @@ export default class InputFilesForm extends Vue {
     );
   }
 
+
   addToCart(selectedFiles: FileListItem[]) {
     // console.log(this.selectedFiles);
     const cart_samples: Sample[] = [];
@@ -332,7 +334,16 @@ export default class InputFilesForm extends Vue {
       if (pair != null) {
         const _pair = Object.assign({}, pair) as FileListItem;
         delete _pair.type;
-        sfiles = [{ R1: _f as ILaxyFile, R2: _pair as ILaxyFile }];
+        
+        // Validate R1/R2 order based on actual filenames, not processing order
+        // This prevents misassignment when files are processed out of order
+        if (isR1File(_f.name)) {
+          // Current file is actually R1, pair is R2
+          sfiles = [{ R1: _f as ILaxyFile, R2: _pair as ILaxyFile }];
+        } else {
+          // Current file is actually R2, pair is R1
+          sfiles = [{ R1: _pair as ILaxyFile, R2: _f as ILaxyFile }];
+        }
       }
       cart_samples.push({
         name: sname,
