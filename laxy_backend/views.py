@@ -64,6 +64,7 @@ from rest_framework.decorators import (
 )
 from rest_framework.filters import BaseFilterBackend
 from rest_framework_guardian.filters import ObjectPermissionsFilter
+from drf_spectacular.utils import extend_schema
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
@@ -218,7 +219,7 @@ class PingView(APIView):
     renderer_classes = (JSONRenderer,)
     permission_classes = (AllowAny,)
 
-#     @view_config(response_serializer=PingResponseSerializer)  # Removed - no longer using drf_openapi
+    @extend_schema(responses=PingResponseSerializer)
     def get(self, request, version=None):
         """
         Used by clients to poll if the backend is online.
@@ -421,7 +422,7 @@ class ENAQueryView(APIView):
     filter_backends = (ENAQueryParams,)
     api_docs_visible_to = "public"
 
-#     @view_config(response_serializer=SchemalessJsonResponseSerializer)  # Removed - no longer using drf_openapi
+    @extend_schema(responses=SchemalessJsonResponseSerializer)
     def get(self, request, version=None):
         """
         Queries ENA metadata. Essentially a proxy for ENA REST API
@@ -459,7 +460,7 @@ class ENAFastqUrlQueryView(JSONView):
     filter_backends = (ENAQueryParams,)
     api_docs_visible_to = "public"
 
-#     @view_config(response_serializer=SchemalessJsonResponseSerializer)  # Removed - no longer using drf_openapi
+    @extend_schema(responses=SchemalessJsonResponseSerializer)
     def get(self, request, version=None):
         """
         Returns a JSON object contains study, experiment, run and sample
@@ -497,7 +498,7 @@ class ENASpeciesLookupView(APIView):
 
     # permission_classes = (AllowAny,)
 
-#     @view_config(response_serializer=SchemalessJsonResponseSerializer)  # Removed - no longer using drf_openapi
+    @extend_schema(responses=SchemalessJsonResponseSerializer)
     def get(self, request, accession: str, version=None):
         """
         Queries ENA with a sample accession and returns the species information.
@@ -543,9 +544,7 @@ class FileCreate(JSONView):
 
     # permission_classes = (DjangoObjectPermissions,)
 
-#     @view_config(  # Removed - no longer using drf_openapi
-#         request_serializer=FileSerializerPostRequest, response_serializer=FileSerializer  # Orphaned from removed @view_config decorator
-#     )
+    @extend_schema(request=FileSerializerPostRequest, responses=FileSerializer)
     def post(self, request: Request, version=None):
         """
         Create a new File. UUIDs are autoassigned.
@@ -686,7 +685,7 @@ class FileContentDownload(StreamFileMixin, GetMixin, JSONView):
 
     # permission_classes = (DjangoObjectPermissions,)
 
-#     @view_config(response_serializer=FileSerializer)  # Removed - no longer using drf_openapi
+    @extend_schema(responses=FileSerializer)
     def get(self, request: Request, uuid=None, filename=None, version=None):
         """
         Downloads the content of a File.
@@ -787,7 +786,7 @@ class FileView(
 
     # permission_classes = (DjangoObjectPermissions,)
 
-#     @view_config(response_serializer=FileSerializer)  # Removed - no longer using drf_openapi
+    @extend_schema(responses=FileSerializer)
     @etag_headers
     def get(self, request: Request, uuid=None, filename=None, version=None):
         """
@@ -879,9 +878,9 @@ class FileView(
                     reason="Error accessing file via SFTP storage backend",
                 )
 
-#     @view_config(  # Removed - no longer using drf_openapi
-#        request_serializer=FileSerializer, response_serializer=PatchSerializerResponse  # Orphaned from removed @view_config decorator
-#     )
+    @extend_schema(
+        request=FileSerializer, responses=PatchSerializerResponse
+    )
     def patch(self, request, uuid=None, version=None):
         """
         Partial update of fields on File.
@@ -931,9 +930,9 @@ class FileView(
 
         return super(FileView, self).patch(request, uuid)
 
-#     @view_config(  # Removed - no longer using drf_openapi
-#        request_serializer=FileSerializerPostRequest, response_serializer=FileSerializer  # Orphaned from removed @view_config decorator
-#     )
+    @extend_schema(
+        request=FileSerializerPostRequest, responses=FileSerializer
+    )
     def put(self, request: Request, uuid: str, version=None):
         """
         Replace the content of an existing File.
@@ -958,7 +957,7 @@ class JobFileView(StreamFileMixin, GetMixin, JSONView):
 
     permission_classes = (IsOwner | IsSuperuser | HasReadonlyObjectAccessToken,)
 
-#     @view_config(response_serializer=FileSerializer)  # Removed - no longer using drf_openapi
+    @extend_schema(responses=FileSerializer)
     @etag_headers
     def get(self, request: Request, uuid: str, file_path: str, version=None):
         """
@@ -1030,10 +1029,10 @@ class JobFileView(StreamFileMixin, GetMixin, JSONView):
         # return super(FileView, self).get(request, file_obj.id)
 
     @transaction.atomic()
-#     @view_config(  # Removed - no longer using drf_openapi
-#        request_serializer=JobFileSerializerCreateRequest,
-#        response_serializer=FileSerializer,
-#     )
+    @extend_schema(
+        request=JobFileSerializerCreateRequest,
+        responses=FileSerializer,
+    )
     def put(self, request: Request, uuid: str, file_path: str, version=None):
         """
         Create (or replace) a File record by job ID and path. This endpoint
@@ -1155,10 +1154,10 @@ class JobFileBulkRegistration(JSONView):
 
     permission_classes = (IsOwner | IsSuperuser,)
 
-#     @view_config(  # Removed - no longer using drf_openapi
-#        request_serializer=JobFileSerializerCreateRequest,
-#        response_serializer=JobSerializerResponse,
-#     )
+    @extend_schema(
+        request=JobFileSerializerCreateRequest,
+        responses=JobSerializerResponse,
+    )
     def post(self, request, uuid, version=None):
         """
         Bulk registration of Job files (input and output filesets).
@@ -1222,10 +1221,10 @@ class FileSetCreate(PostMixin, JSONView):
 
     # permission_classes = (DjangoObjectPermissions,)
 
-#     @view_config(  # Removed - no longer using drf_openapi
-#        request_serializer=FileSetSerializerPostRequest,
-#        response_serializer=FileSetSerializer,
-#     )
+    @extend_schema(
+        request=FileSetSerializerPostRequest,
+        responses=FileSetSerializer,
+    )
     def post(self, request: Request, version=None):
         """
         Create a new FileSet. UUIDs are autoassigned.
@@ -1250,7 +1249,7 @@ class FileSetView(GetMixin, DeleteMixin, PatchMixin, JSONView):
     # permission_classes = (DjangoObjectPermissions,)
 
     # @method_decorator(cache_page(60 * 60 * 1))
-#     @view_config(response_serializer=FileSetSerializer)  # Removed - no longer using drf_openapi
+    @extend_schema(responses=FileSetSerializer)
     @etag_headers
     def get(self, request: Request, uuid, version=None):
         """
@@ -1268,10 +1267,10 @@ class FileSetView(GetMixin, DeleteMixin, PatchMixin, JSONView):
 
         return super(FileSetView, self).get(request, uuid)
 
-#     @view_config(  # Removed - no longer using drf_openapi
-#        request_serializer=FileSetSerializer,
-#        response_serializer=PatchSerializerResponse,
-#     )
+    @extend_schema(
+        request=FileSetSerializer,
+        responses=PatchSerializerResponse,
+    )
     def patch(self, request, uuid, version=None):
         return super(FileSetView, self).patch(request, uuid)
 
@@ -1342,10 +1341,10 @@ class SampleCartCreate(SampleCartCreateUpdate):
 
     # permission_classes = (DjangoObjectPermissions,)
 
-#     @view_config(  # Removed - no longer using drf_openapi
-#        request_serializer=SampleCartSerializer,
-#        response_serializer=SampleCartSerializer,
-#     )
+    @extend_schema(
+        request=SampleCartSerializer,
+        responses=SampleCartSerializer,
+    )
     def post(self, request: Request, version=None):
         """
         Create a new SampleCart. UUIDs are autoassigned.
@@ -1443,7 +1442,7 @@ class SampleCartView(GetMixin, DeleteMixin, SampleCartCreateUpdate):
 
     # permission_classes = (DjangoObjectPermissions,)
 
-#     @view_config(response_serializer=SampleCartSerializer)  # Removed - no longer using drf_openapi
+    @extend_schema(responses=SampleCartSerializer)
     @etag_headers
     def get(self, request: Request, uuid, version=None):
         """
@@ -1460,10 +1459,10 @@ class SampleCartView(GetMixin, DeleteMixin, SampleCartCreateUpdate):
         """
         return super(SampleCartView, self).get(request, uuid)
 
-#     @view_config(  # Removed - no longer using drf_openapi
-#        request_serializer=SampleCartSerializer,
-#        response_serializer=PutSerializerResponse,
-#     )
+    @extend_schema(
+        request=SampleCartSerializer,
+        responses=PutSerializerResponse,
+    )
     def put(self, request, uuid, version=None):
         obj = self.get_object()
         if "id" in request.data:
@@ -1510,10 +1509,10 @@ class ComputeResourceView(GetMixin, DeleteMixin, JSONView):
         """
         return super(ComputeResourceView, self).get(request, uuid)
 
-#     @view_config(  # Removed - no longer using drf_openapi
-#        request_serializer=ComputeResourceSerializer,
-#        response_serializer=PatchSerializerResponse,
-#     )
+    @extend_schema(
+        request=ComputeResourceSerializer,
+        responses=PatchSerializerResponse,
+    )
     def patch(self, request: Request, uuid, version=None):
         """
         Updates a ComputeResource record. Since this is a PATCH request,
@@ -1561,10 +1560,10 @@ class ComputeResourceCreate(PostMixin, JSONView):
     serializer_class = ComputeResourceSerializer
     permission_classes = (IsAdminUser,)
 
-#     @view_config(  # Removed - no longer using drf_openapi
-#        request_serializer=ComputeResourceSerializer,
-#        response_serializer=ComputeResourceSerializer,
-#     )
+    @extend_schema(
+        request=ComputeResourceSerializer,
+        responses=ComputeResourceSerializer,
+    )
     def post(self, request: Request, version=None):
         """
         Create a new ComputeResource. UUIDs are autoassigned.
@@ -1601,10 +1600,10 @@ class PipelineRunCreate(PostMixin, JSONView):
 
     # permission_classes = (DjangoObjectPermissions,)
 
-#     @view_config(  # Removed - no longer using drf_openapi
-#        request_serializer=PipelineRunCreateSerializer,
-#        response_serializer=PipelineRunSerializer,
-#     )
+    @extend_schema(
+        request=PipelineRunCreateSerializer,
+        responses=PipelineRunSerializer,
+    )
     def post(self, request: Request, version=None):
         """
         Create a new PipelineRun. UUIDs are autoassigned.
@@ -1626,7 +1625,7 @@ class PipelineRunView(GetMixin, DeleteMixin, PutMixin, PatchMixin, JSONView):
 
     # permission_classes = (DjangoObjectPermissions,)
 
-#     @view_config(response_serializer=PipelineRunSerializer)  # Removed - no longer using drf_openapi
+    @extend_schema(responses=PipelineRunSerializer)
     @etag_headers
     def get(self, request: Request, uuid, version=None):
         """
@@ -1643,17 +1642,17 @@ class PipelineRunView(GetMixin, DeleteMixin, PutMixin, PatchMixin, JSONView):
         """
         return super(PipelineRunView, self).get(request, uuid)
 
-#     @view_config(  # Removed - no longer using drf_openapi
-#        request_serializer=PipelineRunSerializer,
-#        response_serializer=PipelineRunSerializer,
-#     )
+    @extend_schema(
+        request=PipelineRunSerializer,
+        responses=PipelineRunSerializer,
+    )
     def patch(self, request, uuid, version=None):
         return super(PipelineRunView, self).patch(request, uuid)
 
-#     @view_config(  # Removed - no longer using drf_openapi
-#        request_serializer=PipelineRunCreateSerializer,
-#        response_serializer=PipelineRunSerializer,
-#     )
+    @extend_schema(
+        request=PipelineRunCreateSerializer,
+        responses=PipelineRunSerializer,
+    )
     def put(self, request: Request, uuid: str, version=None):
         """
         Replace the content of an existing PipelineRun.
@@ -1684,7 +1683,7 @@ class JobView(JSONPatchMixin, JSONView):
 
     parser_classes = (JSONParser, JSONPatchRFC7386Parser, JSONPatchRFC6902Parser)
 
-#     @view_config(response_serializer=JobSerializerResponse)  # Removed - no longer using drf_openapi
+    @extend_schema(responses=JobSerializerResponse)
     @etag_headers
     def get(self, request: Request, uuid, version=None):
         """
@@ -1703,10 +1702,10 @@ class JobView(JSONPatchMixin, JSONView):
         serializer = self.get_serializer(instance=obj)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-#     @view_config(  # Removed - no longer using drf_openapi
-#        request_serializer=JobSerializerRequest,
-#        response_serializer=PatchSerializerResponse,
-#     )
+    @extend_schema(
+        request=JobSerializerRequest,
+        responses=PatchSerializerResponse,
+    )
     def patch(self, request: Request, uuid, version=None):
         """
 
@@ -1988,10 +1987,10 @@ class JobCreate(JSONView):
     serializer_class = JobSerializerRequest
     response_serializer = JobSerializerResponse
 
-#     @view_config(  # Removed - no longer using drf_openapi
-#        request_serializer=JobSerializerRequest,
-#        response_serializer=JobSerializerResponse,
-#     )
+    @extend_schema(
+        request=JobSerializerRequest,
+        responses=JobSerializerResponse,
+    )
     def post(self, request: Request, version=None):
         """
         Create a new Job. UUIDs are autoassigned.
@@ -2622,7 +2621,7 @@ class JobAccessTokenView(JSONView, GetMixin):
 
         return AccessToken.objects.none()
 
-#     @view_config(response_serializer=JobAccessTokenResponseSerializer)  # Removed - no longer using drf_openapi
+    @extend_schema(responses=JobAccessTokenResponseSerializer)
     def get(self, request: Request, job_id: str, version=None):
         """
         Returns the (first created, non-hidden) AccessToken for this job.
@@ -2643,10 +2642,10 @@ class JobAccessTokenView(JSONView, GetMixin):
         else:
             return Response(status=status.HTTP_204_NO_CONTENT)
 
-#     @view_config(  # Removed - no longer using drf_openapi
-#        request_serializer=JobAccessTokenRequestSerializer,
-#        response_serializer=JobAccessTokenResponseSerializer,
-#     )
+    @extend_schema(
+        request=JobAccessTokenRequestSerializer,
+        responses=JobAccessTokenResponseSerializer,
+    )
     def put(self, request: Request, job_id: str, version=None):
         """
         Create or update the access token for this Job.
@@ -2706,7 +2705,7 @@ class JobClone(JSONView):
 
     lookup_url_kwarg = "job_id"
 
-#     @view_config(response_serializer=JobSerializerResponse)  # Removed - no longer using drf_openapi
+    @extend_schema(responses=JobSerializerResponse)
     @etag_headers
     def post(self, request: Request, job_id, version=None):
         """
@@ -2800,7 +2799,7 @@ class SendFileToDegust(JSONView):
 
 
 
-#     @view_config(response_serializer=RedirectResponseSerializer)  # Removed - no longer using drf_openapi
+    @extend_schema(responses=RedirectResponseSerializer)
     def post(self, request: Request, file_id: str, version=None):
         """
         Sends the File specified by `file_id` to the Degust web app (http://degust.erc.monash.edu).
@@ -3016,7 +3015,7 @@ class RemoteBrowseView(JSONView):
     api_docs_visible_to = "public"
 
     # @method_decorator(cache_page(10 * 60))
-#     @view_config(response_serializer=FileListing)  # Removed - no longer using drf_openapi
+    @extend_schema(responses=FileListing)
     def post(self, request, version=None):
         """
         Returns a single level of a file/directory tree.

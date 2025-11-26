@@ -142,10 +142,12 @@ celery -A laxy worker -B -E -Ofair -l info -Q celery,low-priority \
 FLOWER_BASIC_AUTH=user:pass celery -A laxy flower --port=5555
 ```
 
-OpenAPI / Swagger API (via drf_openapi):
+OpenAPI / Swagger API (via drf-spectacular):
 
-- Docs: http://localhost:8000/swagger/v1/
-- JSON: http://localhost:8000/swagger/v1/?format=openapi
+- Docs: http://localhost:8000/api/v1/schema/swagger-ui/
+- Redoc: http://localhost:8000/api/v1/schema/redoc/
+- Schema (YAML): http://localhost:8000/api/v1/schema/?format=yaml
+- Schema (JSON): http://localhost:8000/api/v1/schema/?format=json
 
 DRF CoreAPI docs: http://localhost:8000/coreapi/
 

@@ -44,6 +44,9 @@ This document outlines the plan to upgrade Laxy from Python 3.6 to Python 3.12 a
   - [DRF Documentation](https://www.django-rest-framework.org/)
   - [PyPI Package](https://pypi.org/project/djangorestframework/)
 
+- **drf-spectacular OpenAPI schema generation**
+  - [drf-spectacular docs](https://drf-spectacular.readthedocs.io/en/latest/)
+
 - **Celery 5.5**
   - [Celery 5.5 Changelog](https://docs.celeryq.dev/en/latest/changelog.html)
   - [Celery Documentation](https://docs.celeryq.dev/en/latest/)
@@ -198,28 +201,32 @@ This document outlines the plan to upgrade Laxy from Python 3.6 to Python 3.12 a
   - [x] Update job creation and file operations
   - [x] Test API endpoint functionality
 
-  - [ ] Update to django-allauth 65.x
-  - [ ] Review breaking changes in changelogs
-  - [ ] Update authentication settings
-  - [ ] Test social authentication flows
-  - [ ] Update templates if needed
-  - [ ] Test email verification flows
-  - [ ] Test password reset functionality
+- [x] **Django REST Framework OpenAPI Integration (drf-spectacular)**
+  - [x] Use drf-spectacular for OpenAPI schema generation
+  - [x] Update `views.py` with proper schema decorators
+  - [x] Configure schema view and URL patterns
+  - [x] Configure settings to use redoc and swagger at different URLs
+  - [x] Add @extend_schema decorators to views
+  - [x] Test OpenAPI documentation generation
+  - [x] Update frontend API documentation consumption
+  - [x] Compare feature parity with previous drf_openapi setup
+  - [ ] Investigate using Scalar to render OpenAPI documentation: https://guides.scalar.com/scalar/scalar-api-references/integrations/django
+
+- [ ] **Async Support - REST API views and Django ORM calls**
+  - [ ] Investigate options with respect to what it would take to cleanly integrate with or replace existing packages. Critically assess if adding async only to views (and not the ORM) will have a meaningful impact on performance vs. the complexity trade-off. Assess project support (issue and PR handling), community, maturity and long term viability:
+  - [ ] In-built support for async views in Django 5.x: https://docs.djangoproject.com/en/5.2/topics/async/ and https://testdriven.io/blog/django-async-views/ 
+  - [ ] Django-Ninja: https://django-ninja.dev/ with async support https://django-ninja.dev/guides/async-support/ 
+  - [ ] Async support for Django REST framework: https://github.com/em1208/adrf
 
 - [ ] **OAuth System Update** (Deferred - not critical for core functionality)
   - [ ] Evaluate keeping `django-rest-framework-social-oauth2` vs migration
-  - [ ] Update `django-oauth-toolkit` to 3.x
+  - [ ] Update `django-oauth-toolkit` to 3.x, `django-allauth` to 65.x
+  - [ ] Review breaking changes in changelogs
+  - [ ] Update authentication settings
   - [ ] Test OAuth2 token generation and validation
   - [ ] Update API authentication middleware
   - [ ] Test social media login integrations
-
-- [ ] **Django REST Framework OpenAPI Integration**
-  - [ ] Configure DRF's built-in OpenAPI schema generation
-  - [ ] Update `views.py` with proper schema decorators
-  - [ ] Configure schema view and URL patterns
-  - [ ] Test OpenAPI documentation generation
-  - [ ] Update frontend API documentation consumption
-  - [ ] Compare feature parity with previous drf_openapi setup
+  - [ ] Update templates if needed
 
 ### [ ] Phase 4: Code Modernization
 - [ ] **Python Code Updates**

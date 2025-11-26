@@ -429,7 +429,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework.authtoken",
     "corsheaders",
-    # "drf_openapi",  # Removed - using DRF built-in OpenAPI
+    "drf_spectacular",
     "reversion",
     "storages",
     # for python-social-auth with DRF
@@ -654,7 +654,7 @@ SOCIAL_AUTH_PIPELINE = (
 )
 
 REST_FRAMEWORK = {
-    "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.URLPathVersioning",
+    # "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.URLPathVersioning",
     "DEFAULT_PERMISSION_CLASSES": (
         # 'rest_framework.permissions.AllowAny',
         # 'rest_framework.permissions.IsAdminUser',
@@ -677,9 +677,22 @@ REST_FRAMEWORK = {
     # 'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.CursorPagination',
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 10,
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
-# TODO: Apparently drf_openapi doesn't honor this setting.
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Laxy API',
+    'DESCRIPTION': 'REST API for Laxy',
+    'VERSION': None,
+    'SERVE_INCLUDE_SCHEMA': False,
+    # OTHER SETTINGS
+    "SWAGGER_UI_SETTINGS": {
+        "deepLinking": True,
+        "persistAuthorization": True,
+        "displayOperationId": True,
+    },
+    'COMPONENT_SPLIT_REQUEST': True
+}
 #       File an issue ? Query on gitter chat ?
 # SWAGGER_SETTINGS = {'SECURITY_DEFINITIONS': {
 #     'basic': {'type': 'basic'}},

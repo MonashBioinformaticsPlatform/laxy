@@ -90,6 +90,7 @@ django-filter
 django-guardian
 coreapi
 djangorestframework-simplejwt
+drf-spectacular
 
 # drf_openapi==1.3.0
 # git+https://github.com/limdauto/drf_openapi.git#egg=drf_openapi
