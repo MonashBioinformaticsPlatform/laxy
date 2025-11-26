@@ -59,6 +59,7 @@ services:
     environment:
       - LAXY_DEBUG=yes
       - LAXY_SSL=no
+      - LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID=${LAXY_SOCIAL_AUTH_GOOGLE_OAUTH2_KEY}
     volumes:
       - .:/app
     # Frontend webpack-dev-server publicly accessible on port 8002

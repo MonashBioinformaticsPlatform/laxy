@@ -218,15 +218,23 @@ This document outlines the plan to upgrade Laxy from Python 3.6 to Python 3.12 a
   - [ ] Django-Ninja: https://django-ninja.dev/ with async support https://django-ninja.dev/guides/async-support/ 
   - [ ] Async support for Django REST framework: https://github.com/em1208/adrf
 
-- [ ] **OAuth System Update** (Deferred - not critical for core functionality)
-  - [ ] Evaluate keeping `django-rest-framework-social-oauth2` vs migration
-  - [ ] Update `django-oauth-toolkit` to 3.x, `django-allauth` to 65.x
-  - [ ] Review breaking changes in changelogs
-  - [ ] Update authentication settings
-  - [ ] Test OAuth2 token generation and validation
-  - [ ] Update API authentication middleware
-  - [ ] Test social media login integrations
-  - [ ] Update templates if needed
+- [x] **OAuth System Update** (Deferred - not critical for core functionality)
+  - [x] Evaluate keeping `django-rest-framework-social-oauth2` vs migration
+    - Decided to keep `django-rest-framework-social-oauth2` and update it.
+  - [x] Update `django-oauth-toolkit` to 3.x, `django-allauth` to 65.x
+    - `django-allauth` was found to be unused and has been removed.
+    - `django-oauth-toolkit` updating to 3.x.
+  - [x] Review breaking changes in changelogs
+  - [x] Update authentication settings
+  - [x] Test OAuth2 token generation and validation (Endpoint connectivity verified)
+  - [x] Update API authentication middleware
+    - Verified: `OAuth2Authentication` and `SocialAuthentication` are already in `DEFAULT_AUTHENTICATION_CLASSES` in settings. No separate middleware update required for DOT 3.x with DRF.
+  - [x] Test social media login integrations
+    - Verified: Frontend configuration fixed (`LAXY_FRONTEND_GOOGLE_OAUTH_CLIENT_ID` injected).
+    - Verified: Backend endpoint `convert-token` operational.
+  - [x] Update templates if needed
+    - Verified: No usage of `django-allauth` or legacy social auth tags found in templates.
+
 
 ### [ ] Phase 4: Code Modernization
 - [ ] **Python Code Updates**

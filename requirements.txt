@@ -50,9 +50,10 @@ django-storages
 django-object-actions
 django-cache-memoize
 social-auth-core
-social-auth-app-django
+social-auth-app-django>=5.4.0
 rest-social-auth
-django-rest-framework-social-oauth2
+django-rest-framework-social-oauth2==1.2.0
+django-oauth-toolkit==3.1.0
 django-guardian
 djangorestframework-guardian
 djangorestframework-csv
@@ -78,7 +79,7 @@ django-environ==0.12.0
 
 # Authentication
 # Is django-allauth actually used ?
-django-allauth
+# django-allauth
 # django-auth-adfs
 # https://github.com/NIF-au/django-rapid-connect-demo
 
