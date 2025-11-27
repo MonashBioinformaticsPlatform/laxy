@@ -99,9 +99,8 @@ def create_object_access_jwt(obj, ttl=None):
 
 
 def make_jwt_header_dict(token) -> Dict:
-    return {u'Authorization': u'%s %s' % (
-        settings.JWT_AUTH.get('JWT_AUTH_HEADER_PREFIX', u'Bearer'),
-        token)}
+    prefix = settings.JWT_AUTH.get('JWT_AUTH_HEADER_PREFIX', u'Bearer')
+    return {u'Authorization': f'{prefix} {token}'}
 
 
 def get_jwt_user_header_dict(username) -> Dict:
@@ -120,5 +119,5 @@ def get_jwt_user_header_str(username) -> str:
     :rtype:
     """
     header = ': '.join(*get_jwt_user_header_dict(username).items())
-    logger.debug("get_jwt_user_header_str: %s", header)
+    logger.debug(f"get_jwt_user_header_str: {header}")
     return header

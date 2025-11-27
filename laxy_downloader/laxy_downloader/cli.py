@@ -354,7 +354,7 @@ def _run_download_cli(args, rpc_secret=None):
                 )
 
                 if args.queue_then_exit:
-                    logger.info("Download GIDs: %s" % (", ".join(gids)))
+                    logger.info(f"Download GIDs: {', '.join(gids)}")
                     logger.info("Queued downloads, exiting.")
                     sys.exit()
 

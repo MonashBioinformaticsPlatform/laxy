@@ -240,7 +240,7 @@ class PingView(APIView):
         except SystemStatus.DoesNotExist:
             pass
         except Exception as ex:
-            logger.warning("PingView: %s" % ex)
+            logger.warning(f"PingView: {ex}")
 
         return JsonResponse(
             PingResponseSerializer(
@@ -1302,7 +1302,7 @@ class SampleCartCreateUpdate(JSONView):
 
         if content_type == "multipart/form-data":
             if not obj.name:
-                obj.name = "CSV uploaded on %s" % datetime.isoformat(timezone.now())
+                obj.name = f"CSV uploaded on {datetime.isoformat(timezone.now())}"
             fh = request.data.get("file", None)
             csv_table = fh.read().decode(encoding)
             obj.from_csv(csv_table)
@@ -1313,7 +1313,7 @@ class SampleCartCreateUpdate(JSONView):
 
         elif content_type == "text/csv":
             if not obj.name:
-                obj.name = "CSV uploaded on %s" % datetime.isoformat(timezone.now())
+                obj.name = f"CSV uploaded on {datetime.isoformat(timezone.now())}"
             # CSVTextParser ensures request.data is already parsed as a list of lists
             csv_table = request.data
             obj.from_csv(csv_table)
@@ -1324,9 +1324,7 @@ class SampleCartCreateUpdate(JSONView):
 
         elif content_type == "application/json":
             if not obj.name:
-                obj.name = "Sample set created on %s" % datetime.isoformat(
-                    timezone.now()
-                )
+                obj.name = f"Sample set created on {datetime.isoformat(timezone.now())}"
             serializer = self.get_serializer(instance=obj, data=request.data)
             if serializer.is_valid():
                 obj = serializer.save(owner=request.user)
@@ -2018,7 +2016,7 @@ class JobCreate(JSONView):
 
             except PipelineRun.DoesNotExist:
                 return HttpResponse(
-                    reason="pipeline_run %s does not exist" % pipeline_run_id,
+                    reason=f"pipeline_run {pipeline_run_id} does not exist",
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
@@ -2043,8 +2041,8 @@ class JobCreate(JSONView):
             job_status = serializer.validated_data.get("status", "")
             if job_status != "" and job_status != Job.STATUS_HOLD:
                 return HttpResponse(
-                    reason='status can only be set to "%s" '
-                    "or left unset for job creation" % Job.STATUS_HOLD,
+                    reason=f'status can only be set to "{Job.STATUS_HOLD}" '
+                    "or left unset for job creation",
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
@@ -2085,8 +2083,7 @@ class JobCreate(JSONView):
                 request.user
             ):
                 return HttpResponse(
-                    reason='Sorry, you do not have permission to run the pipeline "%s"'
-                    % pipeline_name,
+                    reason=f'Sorry, you do not have permission to run the pipeline "{pipeline_name}"',
                     status=status.HTTP_403_FORBIDDEN,
                 )
             ####
@@ -2108,7 +2105,7 @@ class JobCreate(JSONView):
             callback_auth_header = get_jwt_user_header_str(request.user.username)
             # DRF API key
             # token, _ = Token.objects.get_or_create(user=request.user)
-            # callback_auth_header = 'Authorization: Token %s' % token.key
+            # callback_auth_header = f'Authorization: Token {token.key}'
 
             result = self.start_job(
                 job,

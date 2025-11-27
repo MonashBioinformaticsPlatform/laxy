@@ -322,7 +322,7 @@ def parse_nextcloud_webdav(text: Union[str, None] = None, url=None) -> List[dict
     share_id = list(os.path.split(urlparse(url).path)).pop()
     path = parse_qs(urlparse(url).query).get("path", ["/"])[0].strip("/")
     _pathparts = list(os.path.split(path))
-    last_dir_in_path = "%s/" % _pathparts[-1:][0].strip("/")
+    last_dir_in_path = f"{_pathparts[-1:][0].strip('/')}/"
     up_dir = "/".join(_pathparts[:-1])
 
     # webdav4 uses a different API - base_url and auth tuple

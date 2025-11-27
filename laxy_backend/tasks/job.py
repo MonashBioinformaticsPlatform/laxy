@@ -42,7 +42,6 @@ from celery.exceptions import (
 from guardian.utils import clean_orphan_obj_perms as guardian_clean_orphan_obj_perms
 
 import requests
-import cgi
 import backoff
 
 from fabric.api import settings as fabsettings
@@ -306,7 +305,7 @@ def start_job(self, task_data=None, **kwargs):
 
     config_json = BytesIO(json.dumps(job.params).encode("utf-8"))
     job_script_template_vars["JOB_AUTH_HEADER"] = job_auth_header
-    curl_headers = BytesIO(b"%s\n" % job_auth_header.encode("utf-8"))
+    curl_headers = BytesIO(f"{job_auth_header}\n".encode("utf-8"))
 
     job_script_path = "input/scripts/run_job.sh"
 

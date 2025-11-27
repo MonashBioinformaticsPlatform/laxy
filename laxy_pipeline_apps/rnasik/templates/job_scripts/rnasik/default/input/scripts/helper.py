@@ -101,7 +101,7 @@ def sanitize_filename(
     if valid_filename_chars is None:
         # valid_filename_chars = "-_.() %s%s" % (string.ascii_letters, string.digits)
         # Brackets often cause issue with improperly escaped shell commands, so we disallow those too ..
-        valid_filename_chars = "-_. %s%s" % (string.ascii_letters, string.digits)
+        valid_filename_chars = f"-_. {string.ascii_letters}{string.digits}"
 
     if replace is None:
         replace = {r"\s+": "_"}
@@ -226,7 +226,7 @@ def generate_samplesheet(
 
 
 def to_tsv_line(row):
-    return "%s\n" % "\t".join(row)
+    return f"{'\t'.join(row)}\n"
 
 
 if __name__ == "__main__":

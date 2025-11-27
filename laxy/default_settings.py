@@ -42,7 +42,7 @@ class PrefixedEnv(environ.Env):
 
     def __init__(self, prefix, **scheme):
         # Add prefix to dictionary keys
-        prefixed_scheme = dict([("%s%s" % (prefix, k), v) for k, v in scheme.items()])
+        prefixed_scheme = {f"{prefix}{k}": v for k, v in scheme.items()}
         # Call parent constructor with prefixed scheme
         super().__init__(**prefixed_scheme)
         # Store prefix for compatibility with newer django-environ versions

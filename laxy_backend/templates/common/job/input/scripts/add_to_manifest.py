@@ -20,7 +20,7 @@ python3 add_to_manifest.py /path/to/job/manifest.csv '*.html' 'html,report' '{"f
 
 
 def lstrip_dotslash(path):
-    return re.sub("^%s" % "./", "", path)
+    return re.sub("^./", "", path)
 
 
 def find(base_paths: List, f: Callable) -> Generator[str, None, None]:
@@ -65,7 +65,7 @@ def md5sum(file_path: str, md5sum_executable: str = "/usr/bin/md5sum"):
     if len(checksum) == 32:
         return checksum
     else:
-        raise ValueError("md5sum failed: %s" % out)
+        raise ValueError(f"md5sum failed: {out}")
 
 
 if __name__ == "__main__":
