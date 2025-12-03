@@ -246,8 +246,8 @@ This document outlines the plan to upgrade Laxy from Python 3.6 to Python 3.12 a
   - [ ] Update async/await patterns if used
 
 - [ ] **Django Code Updates**
-  - [ ] Update model `Meta` configurations
-  - [ ] Review and update signal handlers
+  - [x] Update model `Meta` configurations
+  - [x] Review and update signal handlers
   - [ ] Update middleware implementations
   - [ ] Review custom management commands
   - [ ] Update template tags and filters

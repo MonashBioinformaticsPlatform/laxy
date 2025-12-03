@@ -269,9 +269,21 @@ class UserProfile(models.Model):
 
 @receiver(post_save, sender=User)
 def create_or_update_user_profile(sender, instance, created, **kwargs):
-    if created or not UserProfile.objects.filter(user=instance).exists():
-        UserProfile.objects.create(user=instance)
-    instance.profile.save()
+    if created:
+        UserProfile.objects.get_or_create(user=instance)
+    else:
+        # Ensure profile exists, but avoid unnecessary saves
+        try:
+            # We access the reverse relation to check existence without a separate query if preloaded
+            # but usually it's not preloaded.
+            # Using getattr to avoid Error if it doesn't exist
+            if hasattr(instance, "profile"):
+                instance.profile.save()
+            else:
+                UserProfile.objects.create(user=instance)
+        except UserProfile.DoesNotExist:
+             # This should be caught by hasattr check if related_name is correct (it is "profile")
+             UserProfile.objects.create(user=instance)
 
 
 class JSONSerializable:
@@ -957,6 +969,9 @@ def update_job_completed_time(sender, instance, raw, using, update_fields, **kwa
     Takes actions every time a Job is saved, so changes to certain fields
     can have side effects (eg automatically setting completion time).
     """
+    if update_fields is not None and "done" not in update_fields:
+        return
+
     try:
         obj = sender.objects.get(pk=instance.pk)
     except sender.DoesNotExist:
@@ -971,6 +986,9 @@ def job_status_changed_event_log(sender, instance, raw, using, update_fields, **
     """
     Creates an event log entry every time a Job is saved with a changed status.
     """
+    if update_fields is not None and "status" not in update_fields:
+        return
+
     try:
         obj = sender.objects.get(pk=instance.pk)
     except sender.DoesNotExist:
@@ -998,6 +1016,9 @@ def sanitize_job_params(sender, instance: Job, raw, using, update_fields, **kwar
     Validates job parameters against a JSON schema to ensure structure and
     prevent unsafe values that could be used in path construction.
     """
+    if update_fields is not None and "params" not in update_fields:
+        return
+
     if instance.params:
         params = instance.params
         if isinstance(params, str):
@@ -1051,10 +1072,12 @@ def new_job_event_log(sender, instance, created, raw, using, update_fields, **kw
 @reversion.register()
 class FileLocation(UUIDModel):
     class Meta:
-        unique_together = (
-            "url",
-            "file",
-        )
+        constraints = [
+            UniqueConstraint(
+                fields=["url", "file"],
+                name="unique_filelocation_url_file",
+            ),
+        ]
 
         # indexes = [
         #     models.Index(fields=["file", "default"]),
