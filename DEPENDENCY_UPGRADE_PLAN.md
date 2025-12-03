@@ -245,13 +245,13 @@ This document outlines the plan to upgrade Laxy from Python 3.6 to Python 3.12 a
   - [x] Replace deprecated standard library functions
   - [ ] Update async/await patterns if used
 
-- [ ] **Django Code Updates**
+- [x] **Django Code Updates**
   - [x] Update model `Meta` configurations
   - [x] Review and update signal handlers
-  - [ ] Update middleware implementations
-  - [ ] Review custom management commands
-  - [ ] Update template tags and filters
-  - [ ] Review custom form implementations
+  - [x] Update middleware implementations
+  - [x] Review custom management commands
+  - [x] Update template tags and filters
+  - [x] Review custom form implementations
 
 ### [ ] Phase 5: Testing and Validation
 - [ ] **Unit Tests**
@@ -564,6 +564,18 @@ django.db.utils.OperationalError: connection to server on socket "/var/run/postg
 - ✅ API returns 200 OK with session cookies for valid credentials
 - ✅ No more 403 Forbidden errors in Django logs
 - ✅ Authentication flow fully operational
+
+#### Issue: Model Meta and Signal Handler Updates - ✅ **FIXED**
+**Problem**: Models using deprecated `unique_together` Meta option and signal handlers potentially causing unnecessary database queries or recursion.
+
+**Status**: ✅ **FIXED** - Updated `FileLocation` model and optimized signal handlers.
+
+**Solution Applied**:
+1. ✅ Replaced deprecated `unique_together` with `UniqueConstraint` in `FileLocation` model.
+2. ✅ Created and applied migration `0028_alter_filelocation_unique_together_and_more`.
+3. ✅ Optimized `pre_save` signal handlers (`update_job_completed_time`, `job_status_changed_event_log`, `sanitize_job_params`) to check `update_fields` argument and avoid unnecessary DB queries.
+4. ✅ Optimized `create_or_update_user_profile` signal handler to avoid redundant saves.
+5. ✅ Verified changes with test script ensuring constraints are enforced and signals fire correctly.
 
 ### **Current Priority Issues**
 
