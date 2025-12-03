@@ -560,7 +560,9 @@ class FileCreate(JSONView):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             obj = serializer.save(owner=request.user)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            # Use response serializer (FileSerializer) which includes the id field
+            response_serializer = FileSerializer(instance=obj, context={'request': request})
+            return Response(response_serializer.data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1126,12 +1128,12 @@ class JobFileView(StreamFileMixin, GetMixin, JSONView):
             if serializer.is_valid():
                 serializer.save()
                 fileset.add(serializer.instance)
-                data = self.get_response_serializer(instance=serializer.instance).data
-                return Response(data, status=status.HTTP_201_CREATED)
+                response_data = self.get_response_serializer(instance=serializer.instance).data
+                return Response(response_data, status=status.HTTP_201_CREATED)
         else:
-            # Update existing File
+            # Update existing File (partial update - only provided fields)
             serializer = self.get_request_serializer(
-                file_obj, data=request.data, context={"request": request}
+                file_obj, data=request.data, context={"request": request}, partial=True
             )
 
             if serializer.is_valid():

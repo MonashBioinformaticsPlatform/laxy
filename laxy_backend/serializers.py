@@ -220,10 +220,10 @@ class FileSerializer(BaseModelSerializer):
 
 
 class FileSerializerPostRequest(FileSerializer):
-    name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
-    path = serializers.CharField(max_length=4096, required=False, allow_null=True, allow_blank=True)
+    name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True, default=None)
+    path = serializers.CharField(max_length=4096, required=False, allow_null=True, allow_blank=True, default=None)
     fileset = serializers.PrimaryKeyRelatedField(
-        queryset=FileSet.objects.all(), required=False, allow_null=True
+        queryset=FileSet.objects.all(), required=False, allow_null=True, default=None
     )
 
     class Meta(FileSerializer.Meta):
@@ -236,6 +236,17 @@ class FileSerializerPostRequest(FileSerializer):
             "type_tags",
             "metadata",
         )
+
+    def to_internal_value(self, data):
+        # Auto-populate name and path from location if not provided
+        location = data.get("location")
+        if location:
+            parsed_path = Path(urlparse(location).path)
+            if not data.get("name"):
+                data["name"] = str(parsed_path.name) or None
+            if not data.get("path"):
+                data["path"] = str(parsed_path.parent) or None
+        return super().to_internal_value(data)
 
 
 class FileBulkRegisterSerializer(FileSerializer):

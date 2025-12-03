@@ -93,7 +93,7 @@ class JSONView(GenericAPIView):
         kwargs["context"] = self.get_serializer_context()
         return serializer_class(*args, **kwargs)
 
-    def permission_denied(self, request, message=None):
+    def permission_denied(self, request, message=None, code=None):
         """
         If request is not permitted, determine what kind of exception to raise.
 
