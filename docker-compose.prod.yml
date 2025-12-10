@@ -100,7 +100,6 @@ services:
         "-l",
         "info",
         "-Ofair",
-        "--broker=${LAXY_BROKER_URL}",
         "--concurrency=2"
       ]
     stop_grace_period: 5m
@@ -133,7 +132,6 @@ services:
         "-l",
         "info",
         "-Ofair",
-        "--broker=${LAXY_BROKER_URL}",
         "-Q",
         "low-priority",
         "--concurrency=8"
