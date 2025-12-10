@@ -1,36 +1,36 @@
-gunicorn
+gunicorn==23.0.0
 # gunicorn[gevent]
-gevent
-greenlet
-redis
-requests
-backoff
-boto3
-Fabric3
+gevent==25.9.1
+greenlet==3.2.4
+redis==7.1.0
+requests==2.32.5
+backoff==2.2.1
+boto3==1.41.4
+Fabric3==1.14.post1
 # executor
 # envoy
-BaseHash
-PyJWT
-pydash
-PyYAML>=5.4
-toolz
-xxhash
-lxml
-pandas
-enasearch
-attrdict
-robox
-python-magic
-urllib3
-Jinja2
-fs  # PyFilesystem
-sentry-sdk
-humanize
-typing-extensions  # backport, not required after Python 3.8
-text-unidecode
-pymmh3
-webdav4>=0.10.0
-ptvsd
+BaseHash==3.0.10
+PyJWT==2.10.1
+pydash==8.0.5
+PyYAML==6.0.3
+toolz==1.1.0
+xxhash==3.6.0
+lxml==6.0.2
+pandas==2.3.3
+enasearch==0.2.0
+attrdict==2.0.1
+robox==0.2.3
+python-magic==0.4.27
+urllib3==2.5.0
+Jinja2==3.1.6
+fs==2.4.16  # PyFilesystem
+sentry-sdk==2.46.0
+humanize==4.14.0
+typing-extensions==4.15.0  # backport, not required after Python 3.8
+text-unidecode==1.3
+pymmh3==0.0.5
+webdav4==0.10.0
+ptvsd==4.3.2
 
 # Temporary version of paramiko that merges PR (OpenSSH key format): https://github.com/paramiko/paramiko/pull/1343
 # Alternative workaround - generate PEM format keys like:
@@ -38,34 +38,34 @@ ptvsd
 # Install with PARAMIKO_REPLACE=1 environment variable set
 # https://github.com/ploxiln/paramiko-ng/archive/2.8.0.tar.gz#egg=paramiko-ng
 # cryptography>=2.5
-paramiko
+paramiko==2.12.0
 
 # Base Django packages
-django
-django-reversion
-django-cors-headers>=4.9.0,<5.0
-django-extensions
-ipython
-django-storages
-django-object-actions
-django-cache-memoize
-social-auth-core
-social-auth-app-django>=5.4.0
-rest-social-auth
+django==5.2.8
+django-reversion==6.0.0
+django-cors-headers==4.9.0
+django-extensions==4.1
+ipython==9.7.0
+django-storages==1.14.6
+django-object-actions==5.0.0
+django-cache-memoize==0.2.1
+social-auth-core==4.8.1
+social-auth-app-django==5.6.0
+rest-social-auth==9.0.0
 django-rest-framework-social-oauth2==1.2.0
 django-oauth-toolkit==3.1.0
-django-guardian
-djangorestframework-guardian
-djangorestframework-csv
+django-guardian==3.2.0
+djangorestframework-guardian==0.4.0
+djangorestframework-csv==3.0.2
 # whitenoise
 # whitenoise[brotli]
 
 # for Django django.contrib.auth.hashers
-bcrypt
-argon2-cffi
+bcrypt==5.0.0
+argon2-cffi==25.1.0
 
 # django-jsonfield, the schinckel one, now at https://github.com/adamchainz/django-jsonfield
-git+https://github.com/adamchainz/django-jsonfield#egg=django-jsonfield
+git+https://github.com/adamchainz/django-jsonfield@939c5a7b8c5414d2b63aa141899c9059b8ce79ec#egg=django-jsonfield
 
 # The 'other' json field library
 # jsonfield  # https://github.com/dmkoch/django-jsonfield
@@ -73,7 +73,7 @@ git+https://github.com/adamchainz/django-jsonfield#egg=django-jsonfield
 # django-jsonfield-compat  # broken ?
 
 # For LoginRequiredMixin, CsrfExemptMixin
-django-braces
+django-braces==1.17.0
 django-environ==0.12.0
 # django-tus
 
@@ -84,32 +84,32 @@ django-environ==0.12.0
 # https://github.com/NIF-au/django-rapid-connect-demo
 
 # Django REST Framework, and some optional extra packages
-djangorestframework
-markdown
-django-filter
+djangorestframework==3.16.1
+markdown==3.10
+django-filter==25.2
 # django-filter
-django-guardian
-coreapi
-djangorestframework-simplejwt
-drf-spectacular
+django-guardian==3.2.0
+coreapi==2.3.3
+djangorestframework-simplejwt==5.5.1
+drf-spectacular==0.29.0
 
 # drf_openapi==1.3.0
 # git+https://github.com/limdauto/drf_openapi.git#egg=drf_openapi
 # https://github.com/limdauto/drf_openapi/issues/105
 # git+https://github.com/maykinmedia/drf_openapi.git@105-proxy-label-cannot-be-decoded#egg=drf_openapi  # Removed
 
-git+https://github.com/pansapiens/json-merge-patch.git#egg=json_merge_patch
-jsonpatch
-jsonschema
+git+https://github.com/pansapiens/json-merge-patch.git@50b9ba6b82ac2cc3c7fb5510c3e36a2c86ef46c7#egg=json_merge_patch
+jsonpatch==1.33
+jsonschema==4.17.3
 
 # Celery task queue
-celery
-flower
-django-celery-results
-django-celery-beat
-setproctitle
+celery==5.5.3
+flower==2.0.1
+django-celery-results==2.6.0
+django-celery-beat==2.8.1
+setproctitle==1.3.7
 
 # Postgres packages
 # sudo apt-get install postgresql postgresql-server-dev-all
-psycopg2-binary
-inflection>=0.3.1
+psycopg2-binary==2.9.11
+inflection==0.5.1

@@ -21,15 +21,15 @@ enasearch
 attrdict
 robox
 python-magic
-urllib3<1.25,>=1.24.2
-Jinja2>=2.10.1
+urllib3
+Jinja2
 fs  # PyFilesystem
-sentry-sdk==0.17.0
+sentry-sdk
 humanize
 typing-extensions  # backport, not required after Python 3.8
 text-unidecode
 pymmh3
-git+https://github.com/pansapiens/webdav-client-python.git@master#egg=webdavclient
+webdav4>=0.10.0
 ptvsd
 
 # Temporary version of paramiko that merges PR (OpenSSH key format): https://github.com/paramiko/paramiko/pull/1343
@@ -38,21 +38,22 @@ ptvsd
 # Install with PARAMIKO_REPLACE=1 environment variable set
 # https://github.com/ploxiln/paramiko-ng/archive/2.8.0.tar.gz#egg=paramiko-ng
 # cryptography>=2.5
-paramiko>=2.12.0,<3
+paramiko
 
 # Base Django packages
-django==2.2.28
+django
 django-reversion
-django-cors-headers
+django-cors-headers>=4.9.0,<5.0
 django-extensions
 ipython
 django-storages
 django-object-actions
 django-cache-memoize
-social-auth-core>=3.0.0,<4.0.0
-social-auth-app-django>=3.0.0,<4.0.0
-rest-social-auth>=1.5.0
-django-rest-framework-social-oauth2
+social-auth-core
+social-auth-app-django>=5.4.0
+rest-social-auth
+django-rest-framework-social-oauth2==1.2.0
+django-oauth-toolkit==3.1.0
 django-guardian
 djangorestframework-guardian
 djangorestframework-csv
@@ -73,23 +74,24 @@ git+https://github.com/adamchainz/django-jsonfield#egg=django-jsonfield
 
 # For LoginRequiredMixin, CsrfExemptMixin
 django-braces
-django-environ
+django-environ==0.12.0
 # django-tus
 
 # Authentication
 # Is django-allauth actually used ?
-django-allauth
+# django-allauth
 # django-auth-adfs
 # https://github.com/NIF-au/django-rapid-connect-demo
 
 # Django REST Framework, and some optional extra packages
-djangorestframework==3.9.4
+djangorestframework
 markdown
-django-filter>=2,<3
+django-filter
 # django-filter
 django-guardian
 coreapi
 djangorestframework-simplejwt
+drf-spectacular
 
 # drf_openapi==1.3.0
 # git+https://github.com/limdauto/drf_openapi.git#egg=drf_openapi
@@ -101,7 +103,7 @@ jsonpatch
 jsonschema
 
 # Celery task queue
-celery<=4.4.7
+celery
 flower
 django-celery-results
 django-celery-beat
@@ -110,3 +112,4 @@ setproctitle
 # Postgres packages
 # sudo apt-get install postgresql postgresql-server-dev-all
 psycopg2-binary
+inflection>=0.3.1
