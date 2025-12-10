@@ -5,74 +5,98 @@
 default:
     @just --list
 
-# Start development environment (optionally specify service name)
-dev-up service='':
+# Start servers (optionally specify service name)
+up service='':
     #!/usr/bin/env bash
-    export LAXY_ENV=local-dev
+    export LAXY_ENV=${LAXY_ENV:-local-dev}
+    COMPOSE_FILE="docker-compose.${LAXY_ENV}.yml"
     if [ -z "{{service}}" ]; then
         echo "🚀 Starting Laxy development environment..."
-        docker compose -f docker-compose.yml -f docker-compose.local-dev.yml up -d
+        docker compose -f docker-compose.yml -f "${COMPOSE_FILE}" up -d
         echo "✅ Services starting... Check logs with 'just dev-logs'"
         echo "   Frontend: http://localhost:8002"
         echo "   Backend:  http://localhost:8001"
     else
         echo "🚀 Starting service: {{service}}..."
-        docker compose -f docker-compose.yml -f docker-compose.local-dev.yml up -d {{service}}
+        docker compose -f docker-compose.yml -f "${COMPOSE_FILE}" up -d {{service}}
     fi
 
-# Stop development environment (optionally specify service name)
-dev-down service='':
+# Stop servers (optionally specify service name)
+down service='':
     #!/usr/bin/env bash
+    export LAXY_ENV=${LAXY_ENV:-local-dev}
+    COMPOSE_FILE="docker-compose.${LAXY_ENV}.yml"
     if [ -z "{{service}}" ]; then
         echo "🛑 Stopping Laxy development environment..."
-        docker compose -f docker-compose.yml -f docker-compose.local-dev.yml down
+        docker compose -f docker-compose.yml -f "${COMPOSE_FILE}" down
     else
         echo "🛑 Stopping service: {{service}}..."
-        docker compose -f docker-compose.yml -f docker-compose.local-dev.yml stop {{service}}
+        docker compose -f docker-compose.yml -f "${COMPOSE_FILE}" stop {{service}}
     fi
 
-# Show development environment logs (optionally specify service name)
-dev-logs service='':
+# Show container logs. Optionally pass a service name.
+logs service='':
     #!/usr/bin/env bash
+    export LAXY_ENV=${LAXY_ENV:-local-dev}
+    COMPOSE_FILE="docker-compose.${LAXY_ENV}.yml"
     if [ -z "{{service}}" ]; then
-        docker compose -f docker-compose.yml -f docker-compose.local-dev.yml logs --tail 50 -f
+        docker compose -f docker-compose.yml -f "${COMPOSE_FILE}" logs --tail 50 -f
     else
-        docker compose -f docker-compose.yml -f docker-compose.local-dev.yml logs --tail 50 -f {{service}}
+        docker compose -f docker-compose.yml -f "${COMPOSE_FILE}" logs --tail 50 -f {{service}}
     fi
 
 # Build Docker images
 build:
     #!/usr/bin/env bash
     echo "🔨 Building Docker images..."
-    export LAXY_ENV=local-dev
-    docker compose -f docker-compose.yml -f docker-compose.local-dev.yml build
+    export LAXY_ENV=${LAXY_ENV:-local-dev}
+    COMPOSE_FILE="docker-compose.${LAXY_ENV}.yml"
+    docker compose -f docker-compose.yml -f "${COMPOSE_FILE}" build
 
 # Run unit tests (fast, isolated)
 test-unit:
-    @echo "🧪 Running unit tests..."
-    @docker compose -f docker-compose.yml -f docker-compose.local-dev.yml exec django python manage.py test --noinput
+    #!/usr/bin/env bash
+    echo "🧪 Running unit tests..."
+    export LAXY_ENV=${LAXY_ENV:-local-dev}
+    COMPOSE_FILE="docker-compose.${LAXY_ENV}.yml"
+    docker compose -f docker-compose.yml -f "${COMPOSE_FILE}" exec django python manage.py test --noinput
 
 # Run integration tests (requires running environment)
 test-integration:
-    @echo "🔗 Running integration tests..."
-    @docker compose -f docker-compose.yml -f docker-compose.local-dev.yml exec django python tests/integration/run_integration_tests.py
+    #!/usr/bin/env bash
+    echo "🔗 Running integration tests..."
+    export LAXY_ENV=${LAXY_ENV:-local-dev}
+    COMPOSE_FILE="docker-compose.${LAXY_ENV}.yml"
+    docker compose -f docker-compose.yml -f "${COMPOSE_FILE}" exec django python tests/integration/run_integration_tests.py
 
 # Run individual integration test suite
 test-jwt:
-    @echo "🔐 Testing JWT authentication..."
-    @docker compose -f docker-compose.yml -f docker-compose.local-dev.yml exec django python tests/integration/test_jwt_auth.py
+    #!/usr/bin/env bash
+    echo "🔐 Testing JWT authentication..."
+    export LAXY_ENV=${LAXY_ENV:-local-dev}
+    COMPOSE_FILE="docker-compose.${LAXY_ENV}.yml"
+    docker compose -f docker-compose.yml -f "${COMPOSE_FILE}" exec django python tests/integration/test_jwt_auth.py
 
 test-files:
-    @echo "📁 Testing file operations..."
-    @docker compose -f docker-compose.yml -f docker-compose.local-dev.yml exec django python tests/integration/test_file_operations.py
+    #!/usr/bin/env bash
+    echo "📁 Testing file operations..."
+    export LAXY_ENV=${LAXY_ENV:-local-dev}
+    COMPOSE_FILE="docker-compose.${LAXY_ENV}.yml"
+    docker compose -f docker-compose.yml -f "${COMPOSE_FILE}" exec django python tests/integration/test_file_operations.py
 
 test-celery:
-    @echo "⚙️ Testing Celery tasks..."
-    @docker compose -f docker-compose.yml -f docker-compose.local-dev.yml exec django python tests/integration/test_celery_tasks.py
+    #!/usr/bin/env bash
+    echo "⚙️ Testing Celery tasks..."
+    export LAXY_ENV=${LAXY_ENV:-local-dev}
+    COMPOSE_FILE="docker-compose.${LAXY_ENV}.yml"
+    docker compose -f docker-compose.yml -f "${COMPOSE_FILE}" exec django python tests/integration/test_celery_tasks.py
 
 test-external:
-    @echo "🔗 Testing external integrations..."
-    @docker compose -f docker-compose.yml -f docker-compose.local-dev.yml exec django python tests/integration/test_external_integrations.py
+    #!/usr/bin/env bash
+    echo "🔗 Testing external integrations..."
+    export LAXY_ENV=${LAXY_ENV:-local-dev}
+    COMPOSE_FILE="docker-compose.${LAXY_ENV}.yml"
+    docker compose -f docker-compose.yml -f "${COMPOSE_FILE}" exec django python tests/integration/test_external_integrations.py
 
 # Run all tests (unit + integration)
 test-all: test-unit test-integration
@@ -82,13 +106,19 @@ test: test-all
 
 # Run database migrations
 migrate:
-    @echo "🗃️  Running database migrations..."
-    @docker compose -f docker-compose.yml -f docker-compose.local-dev.yml exec django python manage.py migrate
+    #!/usr/bin/env bash
+    echo "🗃️  Running database migrations..."
+    export LAXY_ENV=${LAXY_ENV:-local-dev}
+    COMPOSE_FILE="docker-compose.${LAXY_ENV}.yml"
+    docker compose -f docker-compose.yml -f "${COMPOSE_FILE}" exec django python manage.py migrate
 
 # Create Django superuser
 superuser:
-    @echo "👤 Creating Django superuser..."
-    @docker compose -f docker-compose.yml -f docker-compose.local-dev.yml exec django python manage.py createsuperuser
+    #!/usr/bin/env bash
+    echo "👤 Creating Django superuser..."
+    export LAXY_ENV=${LAXY_ENV:-local-dev}
+    COMPOSE_FILE="docker-compose.${LAXY_ENV}.yml"
+    docker compose -f docker-compose.yml -f "${COMPOSE_FILE}" exec django python manage.py createsuperuser
 
 # 🔍 Code Quality Commands
 
@@ -170,8 +200,11 @@ check:
 
 # Show service status
 status:
-    @echo "📊 Service Status:"
-    @docker compose -f docker-compose.yml -f docker-compose.local-dev.yml ps
+    #!/usr/bin/env bash
+    echo "📊 Service Status:"
+    export LAXY_ENV=${LAXY_ENV:-local-dev}
+    COMPOSE_FILE="docker-compose.${LAXY_ENV}.yml"
+    docker compose -f docker-compose.yml -f "${COMPOSE_FILE}" ps
 
 # Open useful URLs
 open:
@@ -192,21 +225,19 @@ open:
         echo "   Swagger:  http://localhost:8001/swagger/v1/"
     fi
 
-# Show container logs. Optionally pass a service name.
-logs service='':
-    @if [ -n "{{service}}" ]; then \
-        docker compose -f docker-compose.yml -f docker-compose.local-dev.yml logs --tail 100 -f "{{service}}"; \
-    else \
-        docker compose -f docker-compose.yml -f docker-compose.local-dev.yml logs --tail 100 -f; \
-    fi
-
 # Execute shell in Django container
 django-shell:
-    @docker compose -f docker-compose.yml -f docker-compose.local-dev.yml exec django python manage.py shell
+    #!/usr/bin/env bash
+    export LAXY_ENV=${LAXY_ENV:-local-dev}
+    COMPOSE_FILE="docker-compose.${LAXY_ENV}.yml"
+    docker compose -f docker-compose.yml -f "${COMPOSE_FILE}" exec django python manage.py shell
 
 # Execute bash in Django container
 bash:
-    @docker compose -f docker-compose.yml -f docker-compose.local-dev.yml exec django bash
+    #!/usr/bin/env bash
+    export LAXY_ENV=${LAXY_ENV:-local-dev}
+    COMPOSE_FILE="docker-compose.${LAXY_ENV}.yml"
+    docker compose -f docker-compose.yml -f "${COMPOSE_FILE}" exec django bash
 
 # Full setup for new developers
 setup:
@@ -214,7 +245,7 @@ setup:
     just check
     just setup-venv-dev
     just build
-    just dev-up
+    just up
     @echo "⏳ Waiting for services to start..."
     @sleep 10
     just status
@@ -224,4 +255,4 @@ setup:
 # Complete test suite for CI/CD
 ci: check test-all
 
-restart: dev-down dev-up 
+restart: down up 
