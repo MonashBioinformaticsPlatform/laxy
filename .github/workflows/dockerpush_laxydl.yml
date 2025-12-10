@@ -17,6 +17,7 @@ on:
   pull_request:
 
 env:
+  REGISTRY: ghcr.io
   IMAGE_NAME: laxy-downloader
 
 jobs:
@@ -24,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Build image
         run: docker build --file docker/laxy_downloader/Dockerfile --tag $IMAGE_NAME .
@@ -38,14 +39,18 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
 
+    permissions:
+      contents: read
+      packages: write
+
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Build image
         run: docker build --file docker/laxy_downloader/Dockerfile --tag $IMAGE_NAME .
 
       - name: Log into registry
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u ${{ github.actor }} --password-stdin
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
 
       - name: Push image
         run: |
@@ -53,7 +58,7 @@ jobs:
             echo $1 | tr '[:upper:]' '[:lower:]'
           }
 
-          IMAGE_ID=$(to_lower "docker.pkg.github.com/${{ github.repository }}/${IMAGE_NAME}")
+          IMAGE_ID=$(to_lower "${{ env.REGISTRY }}/${{ github.repository }}/${IMAGE_NAME}")
 
           # Strip git ref prefix from version
           VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')

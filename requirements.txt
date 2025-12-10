@@ -1,146 +1,115 @@
-git+https://github.com/pansapiens/drf_openapi.git@105-proxy-label-cannot-be-decoded#egg=drf_openapi
-git+https://github.com/pansapiens/json-merge-patch.git#egg=json_merge_patch
+gunicorn
+# gunicorn[gevent]
+gevent
+greenlet
+redis
+requests
+backoff
+boto3
+Fabric3
+# executor
+# envoy
+BaseHash
+PyJWT
+pydash
+PyYAML>=5.4
+toolz
+xxhash
+lxml
+pandas
+enasearch
+attrdict
+robox
+python-magic
+urllib3
+Jinja2
+fs  # PyFilesystem
+sentry-sdk
+humanize
+typing-extensions  # backport, not required after Python 3.8
+text-unidecode
+pymmh3
+webdav4>=0.10.0
+ptvsd
+
+# Temporary version of paramiko that merges PR (OpenSSH key format): https://github.com/paramiko/paramiko/pull/1343
+# Alternative workaround - generate PEM format keys like:
+#   ssh-keygen -t rsa -b 4096 -f ~/.ssh/my-compute-key -m PEM
+# Install with PARAMIKO_REPLACE=1 environment variable set
+# https://github.com/ploxiln/paramiko-ng/archive/2.8.0.tar.gz#egg=paramiko-ng
+# cryptography>=2.5
+paramiko
+
+# Base Django packages
+django
+django-reversion
+django-cors-headers>=4.9.0,<5.0
+django-extensions
+ipython
+django-storages
+django-object-actions
+django-cache-memoize
+social-auth-core
+social-auth-app-django>=5.4.0
+rest-social-auth
+django-rest-framework-social-oauth2==1.2.0
+django-oauth-toolkit==3.1.0
+django-guardian
+djangorestframework-guardian
+djangorestframework-csv
+# whitenoise
+# whitenoise[brotli]
+
+# for Django django.contrib.auth.hashers
+bcrypt
+argon2-cffi
+
+# django-jsonfield, the schinckel one, now at https://github.com/adamchainz/django-jsonfield
 git+https://github.com/adamchainz/django-jsonfield#egg=django-jsonfield
 
-alabaster==0.7.10
-amqp
-appdirs==1.4.3
-asn1crypto==0.24.0
-attrdict==2.0.0
-attrs==22.2.0
-argon2-cffi
-Babel==2.5.3
-backoff==1.8.0
-BaseHash
-bcrypt
-beautifulsoup4==4.7.1
-biopython==1.70
-boto3==1.9.81
-botocore==1.12.140
-celery==4.4.7
-# We always want the latest certifi (Mozilla's Root Certificate bundle)
-certifi
-cffi==1.11.5
-chardet==3.0.4
-#codecov==2.1.13
-coreapi==2.3.3
-coreschema==0.0.4
-coverage==4.4.2
-defusedxml==0.5.0
-dicttoxml==1.7.4
-Django==2.2.28
-django-allauth==0.38.0
-django-braces==1.13.0
-django-cache-memoize==0.1.6
-django-celery-beat
-#django-celery-beat==1.4.0
+# The 'other' json field library
+# jsonfield  # https://github.com/dmkoch/django-jsonfield
+# compatibility layer for jsonfield<->Django native Postgres JSONField
+# django-jsonfield-compat  # broken ?
+
+# For LoginRequiredMixin, CsrfExemptMixin
+django-braces
+django-environ==0.12.0
+# django-tus
+
+# Authentication
+# Is django-allauth actually used ?
+# django-allauth
+# django-auth-adfs
+# https://github.com/NIF-au/django-rapid-connect-demo
+
+# Django REST Framework, and some optional extra packages
+djangorestframework
+markdown
+django-filter
+# django-filter
+django-guardian
+coreapi
+djangorestframework-simplejwt
+drf-spectacular
+
+# drf_openapi==1.3.0
+# git+https://github.com/limdauto/drf_openapi.git#egg=drf_openapi
+# https://github.com/limdauto/drf_openapi/issues/105
+# git+https://github.com/maykinmedia/drf_openapi.git@105-proxy-label-cannot-be-decoded#egg=drf_openapi  # Removed
+
+git+https://github.com/pansapiens/json-merge-patch.git#egg=json_merge_patch
+jsonpatch
+jsonschema
+
+# Celery task queue
+celery
+flower
 django-celery-results
-#django-celery-results==1.0.4
-django-cors-headers==2.4.0
-django-environ==0.4.5
-django-extensions==2.1.4
-ipython==7.16.1
-django-filter==2.0.0
-django-guardian==2.3.0
-djangorestframework-guardian==0.3.0
-django-oauth-toolkit==1.2.0
-django-object-actions==1.0.0
-django-rest-framework-social-oauth2==1.1.0
-django-rest-swagger==2.1.2
-django-reversion==3.0.2
-djangorestframework-csv==2.1.1
+django-celery-beat
+setproctitle
 
-# Using this commit of django-storages until >1.9.1 release, due to issue #835, and memory usage
-git+https://github.com/pansapiens/django-storages.git@sftp-streaming#egg=django-storages
-# django-storages==1.9.1
-
-django-timezone-field
-djangorestframework==3.9.4
-djangorestframework-jwt==1.11.0
-docutils==0.16
-enasearch==0.2.0
-ephem==3.7.6.0
-# Fabric3==1.14.post1  # deprecated, mainline fabric now supports Python 3
-fabric==1.15.0  # fabric3 fork merged into 1.x mainline
-# fabric==2.5.0  # significant api changes
-flake8==3.5.0
-flower==0.9.7
-fs==2.2.1
-gevent==1.4.0
-greenlet==0.4.15
-gunicorn==19.9.0
-humanize==2.2.0
-idna==2.6
-imagesize==0.7.1
-itypes==1.1.0
-Jinja2>=2.10.1
-jmespath==0.9.3
-jsonpatch==1.23
-jsonpointer==2.0
-# jsonschema v3.2.0 is the last version that supports Python 3.6
-# https://github.com/python-jsonschema/jsonschema/blob/main/CHANGELOG.rst#v320
-jsonschema==3.2.0
-lxml==4.6.3
-Markdown==3.0.1
-MarkupSafe==1.0
-mccabe==0.6.1
-numpy==1.15.1
-oauthlib==2.0.6
-openapi-codec==1.3.2
-pandas==0.23.4
-pymmh3==0.0.5
-
-# git+https://github.com/paramiko/paramiko/#egg=paramiko
-paramiko==2.12.0
-
-# cryptography can be changed to cryptography==3.1 once next paramiko release is out (2.7.2+).
-# Issue: https://github.com/paramiko/paramiko/commit/11ebdf5f6c091e07434017de2880fd82c4f40497
-# cryptography>=2.5
-
-psycopg2==2.8.4
-psycopg2-binary==2.7.6.1
-ptvsd==4.3.2
-py==1.5.2
-pyasn1==0.4.5
-pycodestyle==2.3.1
-pycparser==2.19
-pydash==4.7.6
-pyflakes==1.6.0
-Pygments==2.7.4
-PyJWT==1.7.1
-PyNaCl==1.3.0
-python-crontab==2.3.6
-python-dateutil==2.6.1
-python-magic==0.4.15
-python3-openid==3.1.0
-pytz==2018.5
-PyYAML==5.4
-redis==3.0.1
-requests==2.21.0
-requests-oauthlib==0.8.0
-rest-social-auth==2.0.2
-robobrowser==0.5.3
-s3transfer==0.1.12
-sentry-sdk==0.17.0
-setproctitle==1.2.2
-simplejson==3.13.2
-six==1.14.0
-snowballstemmer==1.2.1
-social-auth-app-django==3.1.0
-social-auth-core==3.0.0
-soupsieve==1.7.1
-Sphinx==1.6.6
-sphinx-rtd-theme==0.2.4
-sphinxcontrib-websupport==1.0.1
-text-unidecode==1.3
-toolz==0.12.0
-typing==3.6.6
-typing-extensions==3.7.4.2
-unicodecsv==0.14.1
-uritemplate==3.0.0
-urllib3<1.25,>=1.21.1
-vine
-webdavclient3==3.14.6
-Werkzeug==0.15.3
-xmltodict==0.11.0
-xxhash==1.3.0
+# Postgres packages
+# sudo apt-get install postgresql postgresql-server-dev-all
+psycopg2-binary
+inflection>=0.3.1

@@ -21,7 +21,7 @@ def generate_s3_download_urls(self, job_id,
     :rtype:
     """
     subpath = subpath.lstrip('/').rstrip('/')
-    path = '%s/%s/' % (job_id, subpath)
+    path = f'{job_id}/{subpath}/'
     args = (settings.S3_BUCKET,
             path,
             settings.PRESIGNED_S3_URL_TTL)

@@ -138,7 +138,7 @@ export default class UserProfile extends mixins(CopyToClipboard) {
   }
 
   public get openAPIUrl(): string {
-    return WebAPI.baseUrl + "/swagger/v1/";
+    return WebAPI.baseUrl + "/api/v1/schema/swagger-ui/";
   }
 
   public get api_auth_token(): string {

@@ -25,7 +25,7 @@ from rest_social_auth.views import BaseSocialAuthView
 from rest_social_auth.serializers import UserSerializer as RestSocialAuthUserSerializer
 from social_django.views import _do_login as social_auth_login
 
-from drf_openapi.utils import view_config
+from drf_spectacular.utils import extend_schema
 
 from laxy_backend.models import UserProfile
 from laxy_backend.views import _get_or_create_drf_token
@@ -89,6 +89,7 @@ def get_profile_pic_url(user):
     return user.profile.image_url or gravatar_url(user.email)
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class Login(APIView):
     renderer_classes = (JSONRenderer,)
     permission_classes = (AllowAny,)
@@ -119,6 +120,7 @@ class Login(APIView):
             )
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class Logout(APIView):
     renderer_classes = (JSONRenderer,)
     permission_classes = (AllowAny,)
@@ -132,7 +134,7 @@ class UserProfileView(APIView):
     renderer_classes = (JSONRenderer,)
     permission_classes = (IsAuthenticated,)
 
-    @view_config(response_serializer=UserProfileResponse)
+    @extend_schema(responses=UserProfileResponse)
     def get(self, request, version=None):
         """
         Returns the authenticated users profile information.
@@ -223,9 +225,9 @@ class CsrfCookieView(APIView):
 class PublicSocialSessionAuthView(SocialSessionAuthView):
     permission_classes = (AllowAny,)
 
-    @view_config(
-        request_serializer=SocialAuthLoginRequest,
-        response_serializer=SocialAuthLoginResponse,
+    @extend_schema(
+        request=SocialAuthLoginRequest,
+        responses=SocialAuthLoginResponse,
     )
     def post(self, request, *args, **kwargs):
         """

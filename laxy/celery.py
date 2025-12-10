@@ -63,4 +63,4 @@ if settings.DEBUG and not settings.CELERY_ALWAYS_EAGER:
 
 @app.task(bind=True)
 def debug_task(self):
-    print("Request: {0!r}".format(self.request))
+        print(f"Request: {self.request!r}")

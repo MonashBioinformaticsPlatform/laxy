@@ -175,10 +175,10 @@ def flatten_fastq_table(table: str, delimiter="\t", inner_sep=";") -> str:
         for r in fanned_out_rows:
             rows.append(list(zip(list(rec.keys()), r)))
 
-    out = "%s\n" % delimiter.join(rec.keys())
+    out = f"{delimiter.join(rec.keys())}\n"
     for r in rows:
         row_values = OrderedDict(r).values()
-        out += "%s\n" % delimiter.join(row_values)
+        out += f"{delimiter.join(row_values)}\n"
 
     return out
 
@@ -383,7 +383,7 @@ def get_run_table(
     for run, metadata in runs_dict.items():
         if metadata.get("fastq_ftp", False):
             metadata["fastq_ftp"] = [
-                {"R%s" % str(n + 1): url} for n, url in enumerate(metadata["fastq_ftp"])
+                {f"R{n + 1}": url} for n, url in enumerate(metadata["fastq_ftp"])
             ]
     return runs_dict
 

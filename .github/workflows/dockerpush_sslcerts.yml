@@ -15,16 +15,20 @@ on:
   pull_request:
 
 env:
+  REGISTRY: ghcr.io
   SSLCERTS_IMAGE_NAME: ssl-certs
 
 jobs:
-  # Push image to GitHub Package Registry.
-  # See also https://docs.docker.com/docker-hub/builds/
+  # Push image to GitHub Container Registry.
   push:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read
+      packages: write
+
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Build images
         run: |
@@ -32,11 +36,15 @@ jobs:
           docker build docker/ssl-certs/ --file docker/ssl-certs/Dockerfile --tag $SSLCERTS_IMAGE_NAME
 
       - name: Log into registry
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u ${{ github.actor }} --password-stdin
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
 
       - name: Push images
         run: |
-          IMAGE_ID=docker.pkg.github.com/${{ github.repository }}/$SSLCERTS_IMAGE_NAME
+          function to_lower() {
+            echo $1 | tr '[:upper:]' '[:lower:]'
+          }
+
+          IMAGE_ID=$(to_lower "${{ env.REGISTRY }}/${{ github.repository }}/$SSLCERTS_IMAGE_NAME")
 
           # Strip git ref prefix from version
           VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
@@ -53,11 +61,8 @@ jobs:
           echo IMAGE_ID=$IMAGE_ID
           echo VERSION=$VERSION
 
-          function to_lower() {
-            echo $1 | tr '[:upper:]' '[:lower:]'
-          }
-
-          # Tag and push Laxy image
+          # Tag and push image
           docker tag $SSLCERTS_IMAGE_NAME $(to_lower $IMAGE_ID:$VERSION)
           docker tag $SSLCERTS_IMAGE_NAME $(to_lower $IMAGE_ID:$GIT_SHORT_COMMIT)
           docker push $(to_lower $IMAGE_ID:$VERSION)
+          docker push $(to_lower $IMAGE_ID:$GIT_SHORT_COMMIT)

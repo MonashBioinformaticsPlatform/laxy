@@ -12,7 +12,6 @@ from contextlib import closing
 import yaml
 from basehash import base62
 import xxhash
-import cgi
 import backoff
 from toolz.dicttoolz import merge as merge_dicts
 from http.client import responses as response_codes
@@ -41,9 +40,7 @@ logger = get_task_logger(__name__)
 
 def _raise_request_exception(response):
     e = requests.exceptions.RequestException(response=response)
-    e.message = "Request failed (%s) %s : %s" % (response.status_code,
-                                                 response.reason,
-                                                 response.url)
+    e.message = f"Request failed ({response.status_code}) {response.reason} : {response.url}"
     raise e
 
 
@@ -89,10 +86,7 @@ def request_with_retries(*args, **kwargs):
 
     except requests.exceptions.RequestException as e:
         if hasattr(e, 'response') and e.response is not None:
-            logger.error("Request failed (%s) %s : %s",
-                         e.response.status_code,
-                         e.response.reason,
-                         e.response.url)
+            logger.error(f"Request failed ({e.response.status_code}) {e.response.reason} : {e.response.url}")
         else:
             logger.error("Request failed : an exception occurred and the web "
                          "request was not made.")
@@ -188,14 +182,12 @@ def download_url(url,
             if content_length and check_existing_size and \
                     os.path.exists(filepath):
                 if os.path.getsize(filepath) == content_length:
-                    logger.info("File of correct size %s (%s bytes) already "
-                                "exists, skipping download" % (filepath,
-                                                               content_length))
+                    logger.info(f"File of correct size {filepath} ({content_length} bytes) already "
+                                "exists, skipping download")
                     return filepath
                 elif remove_existing:
-                    logger.info("File exists %s but is incorrect size "
-                                "(%s bytes). Deleting existing file." %
-                                (filepath, content_length))
+                    logger.info(f"File exists {filepath} but is incorrect size "
+                                f"({content_length} bytes). Deleting existing file.")
                     os.remove(filepath)
 
             with tempfile.NamedTemporaryFile(mode='wb',
@@ -224,19 +216,17 @@ def download_url(url,
 
     except Exception as e:
         if status_code:
-            logger.error("Download failed (%s %s): %s" %
-                         (status_code, response_codes[status_code], url))
+            logger.error(f"Download failed ({status_code} {response_codes[status_code]}): {url}")
         else:
-            logger.error("Download failed: %s" % url)
+            logger.error(f"Download failed: {url}")
         if cleanup_on_exception and tmpfilepath:
             try:
                 os.remove(tmpfilepath)
             except (IOError, OSError) as ex:
-                logger.error("Failed to remove temporary file: %s" %
-                             tmpfilepath)
+                logger.error(f"Failed to remove temporary file: {tmpfilepath}")
                 raise ex
 
-        logger.error("%s" % str(e))
+        logger.error(f"{str(e)}")
         raise e
 
     shutil.move(tmpfilepath, filepath)

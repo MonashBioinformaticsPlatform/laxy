@@ -72,6 +72,9 @@
                 <md-switch v-model="skip_trimming" id="skip-trimming-toggle" name="skip-trimming-toggle"
                   class="md-primary">Skip trimming reads</md-switch>
 
+                <md-switch v-model="skip_alignment" id="skip-alignment-toggle" name="skip-alignment-toggle"
+                  class="md-primary">Salmon only (--skip_alignment; faster, less QC, no BAM files)</md-switch>
+
                 <md-layout v-if="trimmer_option_supported && !skip_trimming">
                   <md-layout>
                     <md-input-container>
@@ -332,6 +335,9 @@ export default class PipelineParams extends Vue {
 
   @Sync("pipelineParams@nf-core-rnaseq.skip_trimming")
   public skip_trimming: boolean;
+
+  @Sync("pipelineParams@nf-core-rnaseq.skip_alignment")
+  public skip_alignment: boolean;
 
   created() {
     this.$store.registerModule(

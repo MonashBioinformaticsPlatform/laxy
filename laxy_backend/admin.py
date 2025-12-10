@@ -148,7 +148,7 @@ class Timestamped:
     )
 
     def uuid(self, obj):
-        return "%s" % obj.uuid()
+        return f"{obj.uuid()}"
 
     def created(self, obj):
         return humanize.naturaltime(obj.created_time)
@@ -347,7 +347,7 @@ class JobAdmin(Timestamped, VersionAdmin):
     def _compute_resource(self, obj: Job):
         c = obj.compute_resource
         if c is not None:
-            return format_html("%s (%s)" % (c.name, c.id))
+            return format_html(f"{c.name} ({c.id})")
         else:
             return ""
 
@@ -368,7 +368,7 @@ class JobAdmin(Timestamped, VersionAdmin):
         if obj.owner:
             ct = ContentType.objects.get_for_model(obj.owner)
             user_url = reverse(
-                "admin:%s_%s_change" % (ct.app_label, ct.model), args=(obj.owner.id,)
+                f"admin:{ct.app_label}_{ct.model}_change", args=(obj.owner.id,)
             )
             return format_html(
                 '<a href="{}">{} ({})</a>', user_url, obj.owner.email, obj.owner.id
@@ -386,7 +386,7 @@ class JobAdmin(Timestamped, VersionAdmin):
         if not failed:
             self.message_user(request, "Indexing !")
         else:
-            self.message_user(request, "Errors trying to index %s" % ",".join(failed))
+            self.message_user(request, f"Errors trying to index {','.join(failed)}")
 
     index_remote_files.short_description = "Index job files"
 
@@ -403,7 +403,7 @@ class JobAdmin(Timestamped, VersionAdmin):
         else:
             self.message_user(
                 request,
-                "Errors trying to estimate tarball size for %s" % ",".join(failed),
+                f"Errors trying to estimate tarball size for {','.join(failed)}",
             )
 
     estimate_job_tarball_size.short_description = "Estimate tarball size"
@@ -421,7 +421,7 @@ class JobAdmin(Timestamped, VersionAdmin):
         if not failed:
             self.message_user(request, f"Expiring job: {obj.id}")
         else:
-            self.message_user(request, "Errors trying to expire %s" % ",".join(failed))
+            self.message_user(request, f"Errors trying to expire {','.join(failed)}")
 
     expire_job.short_description = "Expire job (delete large files)"
 
@@ -441,8 +441,7 @@ class JobAdmin(Timestamped, VersionAdmin):
         else:
             self.message_user(
                 request,
-                "Errors trying to launch verify tasks for %d file locations (%s)"
-                % (len(failed), ",".join(failed)),
+                f"Errors trying to launch verify tasks for {len(failed)} file locations ({','.join(failed)})",
             )
 
     verify.short_description = "Verify job files (all locations)"
@@ -468,7 +467,7 @@ class JobAdmin(Timestamped, VersionAdmin):
                 self.message_user(request, "Copying !")
             else:
                 self.message_user(
-                    request, "Errors trying to copy %s" % ",".join(failed)
+                    request, f"Errors trying to copy {','.join(failed)}"
                 )
 
     copy_to_archive.short_description = "Copy files to archive location"
@@ -488,7 +487,7 @@ class JobAdmin(Timestamped, VersionAdmin):
             self.message_user(request, "Bulk moving now !")
         else:
             self.message_user(
-                request, "Errors trying to initiate transfer of %s" % ",".join(failed)
+                request, f"Errors trying to initiate transfer of {','.join(failed)}"
             )
 
     move_job_files_to_archive.short_description = "Move job files to archive host"
@@ -506,7 +505,7 @@ class JobAdmin(Timestamped, VersionAdmin):
             self.message_user(request, "Moving jobs to archive (bulk rsync) !")
         else:
             self.message_user(
-                request, "Errors trying to initiate transfer of %s" % ",".join(failed)
+                request, f"Errors trying to initiate transfer of {','.join(failed)}"
             )
 
     bulk_rsync_job.short_description = "Bulk move (rsync) job(s) to archive location"
@@ -720,8 +719,7 @@ class FileLocationAdmin(admin.ModelAdmin):
         else:
             self.message_user(
                 request,
-                "Errors trying to verify %d files (%s)"
-                % (len(failed), ",".join(failed)),
+                f"Errors trying to verify {len(failed)} files ({','.join(failed)})",
             )
 
     verify.short_description = "Verify file checksum"
@@ -837,7 +835,7 @@ class FileAdmin(Timestamped, VersionAdmin):
             self.message_user(request, "Verifying !")
         else:
             self.message_user(
-                request, "Errors trying to run verify task for %s" % ",".join(failed)
+                request, f"Errors trying to run verify task for {','.join(failed)}"
             )
 
     verify.short_description = "Verify file (all locations)"
@@ -852,7 +850,7 @@ class FileAdmin(Timestamped, VersionAdmin):
         if not failed:
             self.message_user(request, "Copying !")
         else:
-            self.message_user(request, "Errors trying to ingest %s" % ",".join(failed))
+            self.message_user(request, f"Errors trying to ingest {','.join(failed)}")
 
     copy_to_archive.short_description = "Copy file to archive location"
 
@@ -868,7 +866,7 @@ class FileAdmin(Timestamped, VersionAdmin):
         if not failed:
             self.message_user(request, "Deleting !")
         else:
-            self.message_user(request, "Errors trying to delete %s" % ",".join(failed))
+            self.message_user(request, f"Errors trying to delete {','.join(failed)}")
 
     delete_real_file.short_description = "Delete real file at all locations"
 

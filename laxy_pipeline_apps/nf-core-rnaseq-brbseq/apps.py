@@ -14,3 +14,4 @@ LAXY_PIPELINE_NAME = "nf-core-rnaseq-brbseq"
 
 class NfCoreRnaSeqBrbSeqLaxyPipelineAppConfig(AppConfig):
     name = "laxy_pipeline_apps.nf-core-rnaseq-brbseq"
+    label = "nf_core_rnaseq_brbseq"  # Valid Python identifier for Django 5.x
