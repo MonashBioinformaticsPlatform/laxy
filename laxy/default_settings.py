@@ -559,7 +559,6 @@ if DEBUG:
     ]
 
 if USE_SSL:
-    CORS_REPLACE_HTTPS_REFERER = True
     HOST_SCHEME = "https://"
     # Required so that request.build_absolute_uri works correctly when Django
     # is behind a reverse proxy (eg nginx) providing HTTPS.
