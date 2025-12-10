@@ -226,8 +226,10 @@ class FileModelTest(TestCase):
 
     @unittest.skip("Test not implemented")
     def test_fileobj_from_laxysftp_url(self):
+        # TODO: Create a job instance before using it here
+        # job = Job.objects.create(...)
         f = File(
-            location=laxy_sftp_url(job, "output.txt"),
+            location=laxy_sftp_url(None, "output.txt"),  # job parameter not yet defined
             owner=User.objects.get(username="testuser"),
         )
         content = f.file.read().decode()

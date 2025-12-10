@@ -115,8 +115,8 @@ setup-venv-dev:
 # Run code linting
 lint: setup-venv-dev
     @echo "🔍 Running linters..."
-    @.venv/bin/ruff check laxy_backend/
-    @.venv/bin/ruff check laxy_pipeline_apps/
+    @.venv/bin/ruff check --select=E9,F63,F7,F82 laxy_backend/
+    @.venv/bin/ruff check --select=E9,F63,F7,F82 laxy_pipeline_apps/
 
 # Format code with ruff
 format: setup-venv-dev

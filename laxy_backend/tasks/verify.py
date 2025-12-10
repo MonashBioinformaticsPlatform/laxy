@@ -8,6 +8,7 @@ from io import BytesIO, StringIO, BufferedRandom, BufferedReader
 import hashlib
 import xxhash
 
+from django.utils import timezone
 from celery.utils.log import get_task_logger
 from celery import shared_task
 from celery import Celery, states, chain, group
@@ -256,7 +257,7 @@ def verify_task(self, task_data=None, **kwargs):
     except BaseException as e:
         task_succeeded = False
         message = get_traceback_message(e)
-        raise self.retry(exc=ex)
+        raise self.retry(exc=e)
 
     if not task_succeeded:
         self.update_state(state=states.FAILURE, meta=message)
