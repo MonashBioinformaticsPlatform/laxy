@@ -12,5 +12,8 @@ coverage>=7.4.0
 ruff>=0.4.0
 black>=24.0.0
 
+# Type checking
+mypy>=1.19.0
+
 # Debugging
 # pydevd-pycharm~=192.6262.63  # needs to match your PyCharm version exactly
