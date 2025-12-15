@@ -2391,7 +2391,7 @@ class EventLogListView(generics.ListAPIView):
     queryset = EventLog.objects.all()
     serializer_class = EventLogSerializer
     filter_backends = (DjangoFilterBackend,)
-    filter_fields = (
+    filterset_fields = (
         "user",
         "object_id",
         "event",
@@ -2401,19 +2401,27 @@ class EventLogListView(generics.ListAPIView):
     permission_classes = (IsAuthenticated | HasAccessTokenForEventLogSubject,)
 
     def get_queryset(self):
+        qs = EventLog.objects.all()
+        
         if self.request.user.is_superuser:
-            return EventLog.objects.order_by("-timestamp")
+            # Superusers can see all events, but still respect object_id filter if provided
+            obj_id = self.request.query_params.get("object_id", None)
+            if obj_id:
+                qs = qs.filter(object_id=obj_id)
+            return qs.order_by("-timestamp")
         else:
             # If access_token is provided in query string, check it is valid for the requested the Job (object_id)
             # and if so return Events for the Job
             token = self.request.query_params.get("access_token", None)
             obj_id = self.request.query_params.get("object_id", None)
             if token and obj_id and token_is_valid(token, obj_id):
-                return EventLog.objects.filter(object_id=obj_id).order_by("-timestamp")
+                return qs.filter(object_id=obj_id).order_by("-timestamp")
             else:
-                return EventLog.objects.filter(user=self.request.user).order_by(
-                    "-timestamp"
-                )
+                # For regular authenticated users, filter by user and optionally by object_id
+                qs = qs.filter(user=self.request.user)
+                if obj_id:
+                    qs = qs.filter(object_id=obj_id)
+                return qs.order_by("-timestamp")
 
 
 class EventLogCreate(JSONView):
@@ -2534,7 +2542,7 @@ class AccessTokenListView(generics.ListAPIView):
     queryset = AccessToken.objects.all()
     serializer_class = AccessTokenSerializer
     filter_backends = (DjangoFilterBackend,)
-    filter_fields = (
+    filterset_fields = (
         "created_by",
         "content_type",
         "object_id",
