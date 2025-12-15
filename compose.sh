@@ -1,4 +1,6 @@
 #!/bin/bash
+export COMPOSE_BAKE=true
+
 if [[ -z $LAXY_ENV ]]; then
 	echo "Please set LAXY_ENV to 'dev', 'prod' or 'local-dev'."
 	exit 1
