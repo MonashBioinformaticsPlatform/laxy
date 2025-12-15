@@ -22,7 +22,7 @@ services:
       docker-compose.local-dev.yml)"
 
   db:
-    image: postgres:10-alpine
+    image: postgres:15-alpine
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
@@ -67,8 +67,7 @@ services:
         "-E",
         "-l",
         "info",
-        "-Ofair",
-        "--broker=${LAXY_BROKER_URL}"
+        "-Ofair"
       ]
     stop_grace_period: 5m
     stop_signal: SIGTERM
@@ -95,7 +94,6 @@ services:
         "-l",
         "info",
         "-Ofair",
-        "--broker=${LAXY_BROKER_URL}",
         "-Q",
         "low-priority"
       ]
@@ -119,7 +117,6 @@ services:
         "celery",
         "-A",
         "laxy",
-        "--broker=${LAXY_BROKER_URL}",
         "-s",
         "/app/celerybeat-schedule",
         "beat"
@@ -142,15 +139,13 @@ services:
     ports:
       - "5556:5556"
     working_dir: /app
-    command: sh -c "sleep 30 && celery -A laxy flower --port=5556
-      --broker=${LAXY_BROKER_URL}"
+    command: sh -c "sleep 30 && celery -A laxy flower --port=5556"
     # entrypoint:
     #   - celery
     #   - -A
     #   - laxy
     #   - flower
     #   - --port=5556
-    #   - --broker="${LAXY_BROKER_URL}"
     depends_on:
       - db
       - rabbitmq

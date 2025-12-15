@@ -18,7 +18,7 @@ import asyncio
 import concurrent.futures
 import requests
 from bs4 import BeautifulSoup
-import webdav3.client
+from webdav4.client import Client as WebDAVClient
 
 from django.conf import settings
 
@@ -322,16 +322,12 @@ def parse_nextcloud_webdav(text: Union[str, None] = None, url=None) -> List[dict
     share_id = list(os.path.split(urlparse(url).path)).pop()
     path = parse_qs(urlparse(url).query).get("path", ["/"])[0].strip("/")
     _pathparts = list(os.path.split(path))
-    last_dir_in_path = "%s/" % _pathparts[-1:][0].strip("/")
+    last_dir_in_path = f"{_pathparts[-1:][0].strip('/')}/"
     up_dir = "/".join(_pathparts[:-1])
 
-    options = {
-        "webdav_hostname": webdav_server,
-        "webdav_login": share_id,
-        "webdav_password": "null",
-    }
-    client = webdav3.client.Client(options)
-    ls = client.list(remote_path=path)
+    # webdav4 uses a different API - base_url and auth tuple
+    client = WebDAVClient(webdav_server, auth=(share_id, "null"))
+    ls = client.ls(path, detail=False)
     is_top_level = path in ["/", ""] and "webdav/" in ls
 
     links = []

@@ -22,7 +22,7 @@ from rest_framework.schemas import SchemaGenerator
 from rest_framework.renderers import JSONRenderer, SchemaJSRenderer, CoreJSONRenderer
 from rest_framework.parsers import JSONParser, BaseParser
 
-from drf_openapi.utils import view_config
+# from drf_openapi.utils import view_config  # Removed - no longer using drf_openapi
 
 import logging
 
@@ -93,7 +93,7 @@ class JSONView(GenericAPIView):
         kwargs["context"] = self.get_serializer_context()
         return serializer_class(*args, **kwargs)
 
-    def permission_denied(self, request, message=None):
+    def permission_denied(self, request, message=None, code=None):
         """
         If request is not permitted, determine what kind of exception to raise.
 

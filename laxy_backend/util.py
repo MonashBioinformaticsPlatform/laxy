@@ -11,7 +11,7 @@ import json
 from basehash import base62
 import requests
 import urllib
-import cgi
+from email.message import EmailMessage as HTTPHeaders
 import os
 from operator import itemgetter
 from functools import cmp_to_key
@@ -134,10 +134,13 @@ def find_filename_and_size_from_url(url, sanitize_name=True, **kwargs):
     if scheme in ["http", "https"]:
         try:
             head = requests_head_with_retries(url, **kwargs)
-            filename_header = cgi.parse_header(
-                head.headers.get("content-disposition", "")
-            )[-1]
-            filename = filename_header.get("filename", None)
+            content_disposition = head.headers.get("content-disposition", "")
+            if content_disposition:
+                msg = HTTPHeaders()
+                msg['Content-Disposition'] = content_disposition
+                filename = msg.get_param('filename', header='Content-Disposition')
+            else:
+                filename = None
 
             file_size = head.headers.get("content-length", None)
             if file_size is not None:
@@ -164,7 +167,7 @@ def find_filename_and_size_from_url(url, sanitize_name=True, **kwargs):
         file_size = os.path.getsize(urlparse(url).path)
 
     if not filename:
-        raise ValueError("Could not find a filename for: %s" % url)
+        raise ValueError(f"Could not find a filename for: {url}")
 
     filename = filename.strip()
 
@@ -190,7 +193,7 @@ def reverse_querystring(
         view, urlconf=urlconf, args=args, kwargs=kwargs, current_app=current_app
     )
     if query_kwargs:
-        return "{}?{}".format(base_url, urlencode(query_kwargs))
+        return f"{base_url}?{urlencode(query_kwargs)}"
     return base_url
 
 
@@ -352,10 +355,7 @@ def get_traceback_message(ex: BaseException) -> Union[str]:
 
     if hasattr(ex, "__traceback__"):
         tb = ex.__traceback__
-        message = "%s - Traceback: %s" % (
-            message,
-            "".join(traceback.format_list(traceback.extract_tb(tb))),
-        )
+        message = f"{message} - Traceback: {''.join(traceback.format_list(traceback.extract_tb(tb)))}"
 
     return message
 
@@ -379,7 +379,7 @@ def sanitize_filename(
     if valid_filename_chars is None:
         # valid_filename_chars = "-_.() %s%s" % (string.ascii_letters, string.digits)
         # Brackets often cause issue with improperly escaped shell commands, so we disallow those too ..
-        valid_filename_chars = "-_. %s%s" % (string.ascii_letters, string.digits)
+        valid_filename_chars = f"-_. {string.ascii_letters}{string.digits}"
 
     if replace is None:
         replace = {r"\s+": "_"}
@@ -454,4 +454,4 @@ def generate_cluster_stack_name(job):
     :return: A cluster ID to use as the stack name.
     :rtype: str
     """
-    return "cluster-%s----%s" % (job.compute_resource.id, job.id)
+    return f"cluster-{job.compute_resource.id}----{job.id}"

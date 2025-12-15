@@ -1,4 +1,4 @@
-name: Docker test
+name: Docker build and test
 
 on:
   # Allow builds to be triggered from the web UI
@@ -17,6 +17,9 @@ on:
   # Run tests for any PRs.
   pull_request:
 
+env:
+  REGISTRY: ghcr.io
+
 jobs:
   # Run tests.
   # See also https://docs.docker.com/docker-hub/builds/automated-testing/
@@ -24,7 +27,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run linting
+        run: |
+          pip install ruff
+          ruff check laxy_backend/ --select=E9,F63,F7,F82 --output-format=github
 
       - name: Run tests
         run: |
@@ -36,8 +49,7 @@ jobs:
             docker build . --file docker/laxy/Dockerfile
           fi
 
-  # Push image to GitHub Package Registry.
-  # See also https://docs.docker.com/docker-hub/builds/
+  # Push image to GitHub Container Registry.
   push:
     # Ensure test job passes before pushing image.
     needs: test
@@ -45,8 +57,12 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
 
+    permissions:
+      contents: read
+      packages: write
+
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Set environment variables for all steps
         run: |
@@ -92,7 +108,7 @@ jobs:
                          --build-arg LAXY_FRONTEND_API_URL=$LAXY_FRONTEND_API_URL
 
       - name: Log into registry
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u ${{ github.actor }} --password-stdin
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
 
       - name: Push laxy image
         run: |
@@ -101,7 +117,7 @@ jobs:
           }
 
           export IMAGE_NAME=laxy
-          export IMAGE_ID=$(to_lower "docker.pkg.github.com/${{ github.repository }}/${IMAGE_NAME}")
+          export IMAGE_ID=$(to_lower "${{ env.REGISTRY }}/${{ github.repository }}/${IMAGE_NAME}")
           docker tag "${IMAGE_NAME}" "${IMAGE_ID}:${{ env.IMAGE_TAG }}"
           docker tag "${IMAGE_NAME}" "${IMAGE_ID}:${{ env.GIT_SHORT_COMMIT }}"
 
@@ -117,7 +133,7 @@ jobs:
           }
 
           export IMAGE_NAME=laxy-static-nginx
-          export IMAGE_ID=$(to_lower "docker.pkg.github.com/${{ github.repository }}/${IMAGE_NAME}")
+          export IMAGE_ID=$(to_lower "${{ env.REGISTRY }}/${{ github.repository }}/${IMAGE_NAME}")
           docker tag "${IMAGE_NAME}" "${IMAGE_ID}:${{ env.IMAGE_TAG }}"
           docker tag "${IMAGE_NAME}" "${IMAGE_ID}:${{ env.GIT_SHORT_COMMIT }}"
 

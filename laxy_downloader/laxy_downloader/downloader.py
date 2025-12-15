@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import cgi
+from email.message import EmailMessage as HTTPHeaders
 import json
 import ssl
 import urllib
@@ -92,11 +92,7 @@ def get_url_cached_path(url, cache_path):
 
 def _raise_request_exception(response):
     e = requests.exceptions.RequestException(response=response)
-    e.message = "Request failed (%s) %s : %s" % (
-        response.status_code,
-        response.reason,
-        response.url,
-    )
+    e.message = f"Request failed ({response.status_code}) {response.reason} : {response.url}"
     raise e
 
 
@@ -144,10 +140,7 @@ def request_with_retries(*args, **kwargs):
     except requests.exceptions.RequestException as e:
         if hasattr(e, "response") and e.response is not None:
             logger.error(
-                "Request failed (%s) %s : %s",
-                e.response.status_code,
-                e.response.reason,
-                e.response.url,
+                f"Request failed ({e.response.status_code}) {e.response.reason} : {e.response.url}"
             )
         else:
             logger.error(
@@ -455,7 +448,7 @@ def clean_cache(cache_path, cache_age: int = 30):
         "-print",
         "-delete",
     ]
-    logger.info("Cleaning cache - running: %s" % " ".join(cmd).replace("\.*", '"\.*"'))
+    logger.info(f"Cleaning cache - running: {' '.join(cmd).replace(r'\.*', r'\"\.*\"')}")
     return subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 
@@ -630,7 +623,7 @@ def sanitize_filename(
     if valid_filename_chars is None:
         # valid_filename_chars = "-_.() %s%s" % (string.ascii_letters, string.digits)
         # Brackets often cause issue with improperly escaped shell commands, so we disallow those too ..
-        valid_filename_chars = "-_. %s%s" % (string.ascii_letters, string.digits)
+        valid_filename_chars = f"-_. {string.ascii_letters}{string.digits}"
 
     if replace is None:
         replace = {r"\s+": "_"}
@@ -682,15 +675,19 @@ def find_filename_and_size_from_url(url, sanitize_name=True, **kwargs):
     filename = None
     if scheme in ["http", "https"]:
         head = requests.head(url, **kwargs)
-        filename_header = cgi.parse_header(head.headers.get("Content-Disposition", ""))[
-            -1
-        ]
+        content_disposition = head.headers.get("Content-Disposition", "")
+        if content_disposition:
+            msg = HTTPHeaders()
+            msg['Content-Disposition'] = content_disposition
+            filename = msg.get_param('filename', header='Content-Disposition')
+            if filename:
+                filename = filename.strip()
+        else:
+            filename = None
         file_size = head.headers.get("Content-Length", None)
         if file_size is not None:
             file_size = int(file_size)
-        if "filename" in filename_header:
-            filename = filename_header.get("filename").strip()
-        else:
+        if not filename:
             filename = os.path.basename(urlparse(url).path).strip()
     elif scheme == "file" or scheme == "ftp" or scheme == "sftp":
         filename = os.path.basename(urlparse(url).path).strip()
@@ -699,7 +696,7 @@ def find_filename_and_size_from_url(url, sanitize_name=True, **kwargs):
         file_size = os.path.getsize(urlparse(url).path)
 
     if not filename:
-        raise ValueError("Could not find a filename for: %s" % url)
+        raise ValueError(f"Could not find a filename for: {url}")
 
     filename = filename.strip()
 

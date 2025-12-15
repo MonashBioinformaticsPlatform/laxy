@@ -1,8 +1,8 @@
-import asyncio
 import sys
 from collections import OrderedDict
 
 import json
+import mimetypes
 import shlex
 
 import backoff
@@ -33,7 +33,6 @@ from . import paramiko_monkeypatch
 
 from toolz import merge as merge_dicts
 import requests
-import rest_framework_jwt
 import celery
 from celery import shared_task
 from celery.result import AsyncResult
@@ -43,7 +42,7 @@ from django.contrib.admin.views.decorators import user_passes_test
 from django.db import transaction
 from django.http import HttpResponse, StreamingHttpResponse, JsonResponse, FileResponse
 from django.urls import reverse
-from django.utils.encoding import force_text
+from django.utils.encoding import force_str
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import OrderingFilter
 from django.utils.decorators import method_decorator
@@ -52,7 +51,7 @@ from fs.errors import DirectoryExpected
 from io import BufferedReader, BytesIO, StringIO
 from pathlib import Path
 import paramiko
-from robobrowser import RoboBrowser
+from robox import Robox
 from rest_framework import generics
 from rest_framework import status
 from rest_framework.settings import api_settings
@@ -65,6 +64,7 @@ from rest_framework.decorators import (
 )
 from rest_framework.filters import BaseFilterBackend
 from rest_framework_guardian.filters import ObjectPermissionsFilter
+from drf_spectacular.utils import extend_schema
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
@@ -79,8 +79,6 @@ from typing import Dict, List, Union
 import urllib
 from urllib.parse import urlparse, parse_qs, unquote
 from wsgiref.util import FileWrapper
-
-from drf_openapi.utils import view_config
 
 from laxy_backend.storage.http_remote import (
     is_archive_link,
@@ -221,7 +219,7 @@ class PingView(APIView):
     renderer_classes = (JSONRenderer,)
     permission_classes = (AllowAny,)
 
-    @view_config(response_serializer=PingResponseSerializer)
+    @extend_schema(responses=PingResponseSerializer)
     def get(self, request, version=None):
         """
         Used by clients to poll if the backend is online.
@@ -242,7 +240,7 @@ class PingView(APIView):
         except SystemStatus.DoesNotExist:
             pass
         except Exception as ex:
-            logger.warning("PingView: %s" % ex)
+            logger.warning(f"PingView: {ex}")
 
         return JsonResponse(
             PingResponseSerializer(
@@ -338,10 +336,10 @@ class QueryParamFilterBackend(BaseFilterBackend):
                 required=qp.get("required", True),
                 type=qp.get("type", "string"),
                 schema=coreschema.String(
-                    title=force_text(
+                    title=force_str(
                         qp.get("title", (qp.get("name", False) or qp.get("name")))
                     ),
-                    description=force_text(qp.get("description", "")),
+                    description=force_str(qp.get("description", "")),
                 ),
             )
 
@@ -424,7 +422,7 @@ class ENAQueryView(APIView):
     filter_backends = (ENAQueryParams,)
     api_docs_visible_to = "public"
 
-    @view_config(response_serializer=SchemalessJsonResponseSerializer)
+    @extend_schema(responses=SchemalessJsonResponseSerializer)
     def get(self, request, version=None):
         """
         Queries ENA metadata. Essentially a proxy for ENA REST API
@@ -462,7 +460,7 @@ class ENAFastqUrlQueryView(JSONView):
     filter_backends = (ENAQueryParams,)
     api_docs_visible_to = "public"
 
-    @view_config(response_serializer=SchemalessJsonResponseSerializer)
+    @extend_schema(responses=SchemalessJsonResponseSerializer)
     def get(self, request, version=None):
         """
         Returns a JSON object contains study, experiment, run and sample
@@ -500,7 +498,7 @@ class ENASpeciesLookupView(APIView):
 
     # permission_classes = (AllowAny,)
 
-    @view_config(response_serializer=SchemalessJsonResponseSerializer)
+    @extend_schema(responses=SchemalessJsonResponseSerializer)
     def get(self, request, accession: str, version=None):
         """
         Queries ENA with a sample accession and returns the species information.
@@ -539,11 +537,14 @@ class FileCreate(JSONView):
     queryset = File.objects.all()
     serializer_class = FileSerializer
 
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return FileSerializerPostRequest
+        return self.serializer_class
+
     # permission_classes = (DjangoObjectPermissions,)
 
-    @view_config(
-        request_serializer=FileSerializerPostRequest, response_serializer=FileSerializer
-    )
+    @extend_schema(request=FileSerializerPostRequest, responses=FileSerializer)
     def post(self, request: Request, version=None):
         """
         Create a new File. UUIDs are autoassigned.
@@ -559,7 +560,9 @@ class FileCreate(JSONView):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             obj = serializer.save(owner=request.user)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            # Use response serializer (FileSerializer) which includes the id field
+            response_serializer = FileSerializer(instance=obj, context={'request': request})
+            return Response(response_serializer.data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -652,8 +655,13 @@ class StreamFileMixin(JSONView):
             response["Content-Disposition"] = f'attachment; filename="{obj.name}"'
         else:
             response["Content-Disposition"] = "inline"
-            # Make the browser guess the Content-Type
-            del response["Content-Type"]
+            # Set appropriate Content-Type based on file extension
+            content_type, _ = mimetypes.guess_type(obj.name)
+            if content_type:
+                response["Content-Type"] = content_type
+            else:
+                # Fallback to binary stream if we can't determine the type
+                response["Content-Type"] = "application/octet-stream"
 
         size = obj.metadata.get("size", None)
         if obj.file is not None and hasattr(obj.file, "size"):
@@ -679,7 +687,7 @@ class FileContentDownload(StreamFileMixin, GetMixin, JSONView):
 
     # permission_classes = (DjangoObjectPermissions,)
 
-    @view_config(response_serializer=FileSerializer)
+    @extend_schema(responses=FileSerializer)
     def get(self, request: Request, uuid=None, filename=None, version=None):
         """
         Downloads the content of a File.
@@ -780,7 +788,7 @@ class FileView(
 
     # permission_classes = (DjangoObjectPermissions,)
 
-    @view_config(response_serializer=FileSerializer)
+    @extend_schema(responses=FileSerializer)
     @etag_headers
     def get(self, request: Request, uuid=None, filename=None, version=None):
         """
@@ -872,8 +880,8 @@ class FileView(
                     reason="Error accessing file via SFTP storage backend",
                 )
 
-    @view_config(
-        request_serializer=FileSerializer, response_serializer=PatchSerializerResponse
+    @extend_schema(
+        request=FileSerializer, responses=PatchSerializerResponse
     )
     def patch(self, request, uuid=None, version=None):
         """
@@ -924,8 +932,8 @@ class FileView(
 
         return super(FileView, self).patch(request, uuid)
 
-    @view_config(
-        request_serializer=FileSerializerPostRequest, response_serializer=FileSerializer
+    @extend_schema(
+        request=FileSerializerPostRequest, responses=FileSerializer
     )
     def put(self, request: Request, uuid: str, version=None):
         """
@@ -951,7 +959,7 @@ class JobFileView(StreamFileMixin, GetMixin, JSONView):
 
     permission_classes = (IsOwner | IsSuperuser | HasReadonlyObjectAccessToken,)
 
-    @view_config(response_serializer=FileSerializer)
+    @extend_schema(responses=FileSerializer)
     @etag_headers
     def get(self, request: Request, uuid: str, file_path: str, version=None):
         """
@@ -1023,9 +1031,9 @@ class JobFileView(StreamFileMixin, GetMixin, JSONView):
         # return super(FileView, self).get(request, file_obj.id)
 
     @transaction.atomic()
-    @view_config(
-        request_serializer=JobFileSerializerCreateRequest,
-        response_serializer=FileSerializer,
+    @extend_schema(
+        request=JobFileSerializerCreateRequest,
+        responses=FileSerializer,
     )
     def put(self, request: Request, uuid: str, file_path: str, version=None):
         """
@@ -1120,12 +1128,12 @@ class JobFileView(StreamFileMixin, GetMixin, JSONView):
             if serializer.is_valid():
                 serializer.save()
                 fileset.add(serializer.instance)
-                data = self.response_serializer(serializer.instance).data
-                return Response(data, status=status.HTTP_201_CREATED)
+                response_data = self.get_response_serializer(instance=serializer.instance).data
+                return Response(response_data, status=status.HTTP_201_CREATED)
         else:
-            # Update existing File
-            serializer = self.request_serializer(
-                file_obj, data=request.data, context={"request": request}
+            # Update existing File (partial update - only provided fields)
+            serializer = self.get_request_serializer(
+                file_obj, data=request.data, context={"request": request}, partial=True
             )
 
             if serializer.is_valid():
@@ -1148,9 +1156,9 @@ class JobFileBulkRegistration(JSONView):
 
     permission_classes = (IsOwner | IsSuperuser,)
 
-    @view_config(
-        request_serializer=JobFileSerializerCreateRequest,
-        response_serializer=JobSerializerResponse,
+    @extend_schema(
+        request=JobFileSerializerCreateRequest,
+        responses=JobSerializerResponse,
     )
     def post(self, request, uuid, version=None):
         """
@@ -1190,7 +1198,7 @@ class JobFileBulkRegistration(JSONView):
 
         content_type = get_content_type(request)
         if content_type == "application/json":
-            serializer = self.request_serializer(data=request.data, many=True)
+            serializer = self.get_request_serializer(data=request.data, many=True)
             if serializer.is_valid():
                 # TODO: accept JSON for bulk file registration
                 # separate into input and output files, add files to
@@ -1215,9 +1223,9 @@ class FileSetCreate(PostMixin, JSONView):
 
     # permission_classes = (DjangoObjectPermissions,)
 
-    @view_config(
-        request_serializer=FileSetSerializerPostRequest,
-        response_serializer=FileSetSerializer,
+    @extend_schema(
+        request=FileSetSerializerPostRequest,
+        responses=FileSetSerializer,
     )
     def post(self, request: Request, version=None):
         """
@@ -1243,7 +1251,7 @@ class FileSetView(GetMixin, DeleteMixin, PatchMixin, JSONView):
     # permission_classes = (DjangoObjectPermissions,)
 
     # @method_decorator(cache_page(60 * 60 * 1))
-    @view_config(response_serializer=FileSetSerializer)
+    @extend_schema(responses=FileSetSerializer)
     @etag_headers
     def get(self, request: Request, uuid, version=None):
         """
@@ -1261,9 +1269,9 @@ class FileSetView(GetMixin, DeleteMixin, PatchMixin, JSONView):
 
         return super(FileSetView, self).get(request, uuid)
 
-    @view_config(
-        request_serializer=FileSetSerializer,
-        response_serializer=PatchSerializerResponse,
+    @extend_schema(
+        request=FileSetSerializer,
+        responses=PatchSerializerResponse,
     )
     def patch(self, request, uuid, version=None):
         return super(FileSetView, self).patch(request, uuid)
@@ -1296,7 +1304,7 @@ class SampleCartCreateUpdate(JSONView):
 
         if content_type == "multipart/form-data":
             if not obj.name:
-                obj.name = "CSV uploaded on %s" % datetime.isoformat(timezone.now())
+                obj.name = f"CSV uploaded on {datetime.isoformat(timezone.now())}"
             fh = request.data.get("file", None)
             csv_table = fh.read().decode(encoding)
             obj.from_csv(csv_table)
@@ -1307,7 +1315,7 @@ class SampleCartCreateUpdate(JSONView):
 
         elif content_type == "text/csv":
             if not obj.name:
-                obj.name = "CSV uploaded on %s" % datetime.isoformat(timezone.now())
+                obj.name = f"CSV uploaded on {datetime.isoformat(timezone.now())}"
             # CSVTextParser ensures request.data is already parsed as a list of lists
             csv_table = request.data
             obj.from_csv(csv_table)
@@ -1318,9 +1326,7 @@ class SampleCartCreateUpdate(JSONView):
 
         elif content_type == "application/json":
             if not obj.name:
-                obj.name = "Sample set created on %s" % datetime.isoformat(
-                    timezone.now()
-                )
+                obj.name = f"Sample set created on {datetime.isoformat(timezone.now())}"
             serializer = self.get_serializer(instance=obj, data=request.data)
             if serializer.is_valid():
                 obj = serializer.save(owner=request.user)
@@ -1335,9 +1341,9 @@ class SampleCartCreate(SampleCartCreateUpdate):
 
     # permission_classes = (DjangoObjectPermissions,)
 
-    @view_config(
-        request_serializer=SampleCartSerializer,
-        response_serializer=SampleCartSerializer,
+    @extend_schema(
+        request=SampleCartSerializer,
+        responses=SampleCartSerializer,
     )
     def post(self, request: Request, version=None):
         """
@@ -1436,7 +1442,7 @@ class SampleCartView(GetMixin, DeleteMixin, SampleCartCreateUpdate):
 
     # permission_classes = (DjangoObjectPermissions,)
 
-    @view_config(response_serializer=SampleCartSerializer)
+    @extend_schema(responses=SampleCartSerializer)
     @etag_headers
     def get(self, request: Request, uuid, version=None):
         """
@@ -1453,9 +1459,9 @@ class SampleCartView(GetMixin, DeleteMixin, SampleCartCreateUpdate):
         """
         return super(SampleCartView, self).get(request, uuid)
 
-    @view_config(
-        request_serializer=SampleCartSerializer,
-        response_serializer=PutSerializerResponse,
+    @extend_schema(
+        request=SampleCartSerializer,
+        responses=PutSerializerResponse,
     )
     def put(self, request, uuid, version=None):
         obj = self.get_object()
@@ -1503,9 +1509,9 @@ class ComputeResourceView(GetMixin, DeleteMixin, JSONView):
         """
         return super(ComputeResourceView, self).get(request, uuid)
 
-    @view_config(
-        request_serializer=ComputeResourceSerializer,
-        response_serializer=PatchSerializerResponse,
+    @extend_schema(
+        request=ComputeResourceSerializer,
+        responses=PatchSerializerResponse,
     )
     def patch(self, request: Request, uuid, version=None):
         """
@@ -1554,9 +1560,9 @@ class ComputeResourceCreate(PostMixin, JSONView):
     serializer_class = ComputeResourceSerializer
     permission_classes = (IsAdminUser,)
 
-    @view_config(
-        request_serializer=ComputeResourceSerializer,
-        response_serializer=ComputeResourceSerializer,
+    @extend_schema(
+        request=ComputeResourceSerializer,
+        responses=ComputeResourceSerializer,
     )
     def post(self, request: Request, version=None):
         """
@@ -1594,9 +1600,9 @@ class PipelineRunCreate(PostMixin, JSONView):
 
     # permission_classes = (DjangoObjectPermissions,)
 
-    @view_config(
-        request_serializer=PipelineRunCreateSerializer,
-        response_serializer=PipelineRunSerializer,
+    @extend_schema(
+        request=PipelineRunCreateSerializer,
+        responses=PipelineRunSerializer,
     )
     def post(self, request: Request, version=None):
         """
@@ -1619,7 +1625,7 @@ class PipelineRunView(GetMixin, DeleteMixin, PutMixin, PatchMixin, JSONView):
 
     # permission_classes = (DjangoObjectPermissions,)
 
-    @view_config(response_serializer=PipelineRunSerializer)
+    @extend_schema(responses=PipelineRunSerializer)
     @etag_headers
     def get(self, request: Request, uuid, version=None):
         """
@@ -1636,16 +1642,16 @@ class PipelineRunView(GetMixin, DeleteMixin, PutMixin, PatchMixin, JSONView):
         """
         return super(PipelineRunView, self).get(request, uuid)
 
-    @view_config(
-        request_serializer=PipelineRunSerializer,
-        response_serializer=PipelineRunSerializer,
+    @extend_schema(
+        request=PipelineRunSerializer,
+        responses=PipelineRunSerializer,
     )
     def patch(self, request, uuid, version=None):
         return super(PipelineRunView, self).patch(request, uuid)
 
-    @view_config(
-        request_serializer=PipelineRunCreateSerializer,
-        response_serializer=PipelineRunSerializer,
+    @extend_schema(
+        request=PipelineRunCreateSerializer,
+        responses=PipelineRunSerializer,
     )
     def put(self, request: Request, uuid: str, version=None):
         """
@@ -1677,7 +1683,7 @@ class JobView(JSONPatchMixin, JSONView):
 
     parser_classes = (JSONParser, JSONPatchRFC7386Parser, JSONPatchRFC6902Parser)
 
-    @view_config(response_serializer=JobSerializerResponse)
+    @extend_schema(responses=JobSerializerResponse)
     @etag_headers
     def get(self, request: Request, uuid, version=None):
         """
@@ -1696,9 +1702,9 @@ class JobView(JSONPatchMixin, JSONView):
         serializer = self.get_serializer(instance=obj)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @view_config(
-        request_serializer=JobSerializerRequest,
-        response_serializer=PatchSerializerResponse,
+    @extend_schema(
+        request=JobSerializerRequest,
+        responses=PatchSerializerResponse,
     )
     def patch(self, request: Request, uuid, version=None):
         """
@@ -1979,10 +1985,11 @@ def _set_request_params_from_pipelinerun(request, pipelinerun_obj: PipelineRun):
 class JobCreate(JSONView):
     queryset = Job.objects.all()
     serializer_class = JobSerializerRequest
+    response_serializer = JobSerializerResponse
 
-    @view_config(
-        request_serializer=JobSerializerRequest,
-        response_serializer=JobSerializerResponse,
+    @extend_schema(
+        request=JobSerializerRequest,
+        responses=JobSerializerResponse,
     )
     def post(self, request: Request, version=None):
         """
@@ -2011,7 +2018,7 @@ class JobCreate(JSONView):
 
             except PipelineRun.DoesNotExist:
                 return HttpResponse(
-                    reason="pipeline_run %s does not exist" % pipeline_run_id,
+                    reason=f"pipeline_run {pipeline_run_id} does not exist",
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
@@ -2027,7 +2034,7 @@ class JobCreate(JSONView):
                 )
                 request.data["params"] = json.dumps(_params)
 
-        serializer = self.request_serializer(
+        serializer = self.get_request_serializer(
             data=request.data, context={"request": request}
         )
 
@@ -2036,8 +2043,8 @@ class JobCreate(JSONView):
             job_status = serializer.validated_data.get("status", "")
             if job_status != "" and job_status != Job.STATUS_HOLD:
                 return HttpResponse(
-                    reason='status can only be set to "%s" '
-                    "or left unset for job creation" % Job.STATUS_HOLD,
+                    reason=f'status can only be set to "{Job.STATUS_HOLD}" '
+                    "or left unset for job creation",
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
@@ -2078,8 +2085,7 @@ class JobCreate(JSONView):
                 request.user
             ):
                 return HttpResponse(
-                    reason='Sorry, you do not have permission to run the pipeline "%s"'
-                    % pipeline_name,
+                    reason=f'Sorry, you do not have permission to run the pipeline "{pipeline_name}"',
                     status=status.HTTP_403_FORBIDDEN,
                 )
             ####
@@ -2101,7 +2107,7 @@ class JobCreate(JSONView):
             callback_auth_header = get_jwt_user_header_str(request.user.username)
             # DRF API key
             # token, _ = Token.objects.get_or_create(user=request.user)
-            # callback_auth_header = 'Authorization: Token %s' % token.key
+            # callback_auth_header = f'Authorization: Token {token.key}'
 
             result = self.start_job(
                 job,
@@ -2117,7 +2123,7 @@ class JobCreate(JSONView):
                 #                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
             job = Job.objects.get(id=job_id)
-            serializer = self.response_serializer(job)
+            serializer = self.get_response_serializer(instance=job)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -2614,7 +2620,7 @@ class JobAccessTokenView(JSONView, GetMixin):
 
         return AccessToken.objects.none()
 
-    @view_config(response_serializer=JobAccessTokenResponseSerializer)
+    @extend_schema(responses=JobAccessTokenResponseSerializer)
     def get(self, request: Request, job_id: str, version=None):
         """
         Returns the (first created, non-hidden) AccessToken for this job.
@@ -2630,14 +2636,14 @@ class JobAccessTokenView(JSONView, GetMixin):
         """
         obj = self.get_queryset().first()
         if obj:
-            serializer = self.response_serializer(obj)
+            serializer = self.get_response_serializer(instance=obj)
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @view_config(
-        request_serializer=JobAccessTokenRequestSerializer,
-        response_serializer=JobAccessTokenResponseSerializer,
+    @extend_schema(
+        request=JobAccessTokenRequestSerializer,
+        responses=JobAccessTokenResponseSerializer,
     )
     def put(self, request: Request, job_id: str, version=None):
         """
@@ -2668,13 +2674,13 @@ class JobAccessTokenView(JSONView, GetMixin):
         obj = self.get_queryset().first()
 
         if obj:
-            serializer = self.request_serializer(
+            serializer = self.get_request_serializer(
                 obj, data=request.data, context={"request": request}
             )
         else:
             data = dict(request.data)
             data.update(object_id=job_id, content_type="job")
-            serializer = self.request_serializer(
+            serializer = self.get_request_serializer(
                 data=data, context={"request": request}
             )
 
@@ -2682,7 +2688,7 @@ class JobAccessTokenView(JSONView, GetMixin):
             obj = serializer.save(created_by=request.user)
 
             return Response(
-                self.response_serializer(obj).data, status=status.HTTP_200_OK
+                self.get_response_serializer(instance=obj).data, status=status.HTTP_200_OK
             )
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -2698,7 +2704,7 @@ class JobClone(JSONView):
 
     lookup_url_kwarg = "job_id"
 
-    @view_config(response_serializer=JobSerializerResponse)
+    @extend_schema(responses=JobSerializerResponse)
     @etag_headers
     def post(self, request: Request, job_id, version=None):
         """
@@ -2790,44 +2796,9 @@ class SendFileToDegust(JSONView):
 
     permission_classes = (IsOwner | IsSuperuser | FileHasAccessTokenForJob,)
 
-    # Non-async version
-    # @view_config(response_serializer=RedirectResponseSerializer)
-    # def post(self, request: Request, file_id: str, version=None):
-    #
-    #     counts_file: File = self.get_object()
-    #
-    #     if not counts_file:
-    #         return HttpResponse(status=status.HTTP_404_NOT_FOUND,
-    #                             reason="File ID does not exist, (or your are not"
-    #                                    "authorized to access it).")
-    #
-    #     url = 'http://degust.erc.monash.edu/upload'
-    #
-    #     browser = RoboBrowser(history=True, parser='lxml')
-    #     browser.open(url)
-    #
-    #     form = browser.get_form()
-    #
-    #     # filelike = BytesIO(counts_file.file.read())
-    #
-    #     form['filename'].value = counts_file.file  # filelike
-    #     browser.submit_form(form)
-    #     degust_url = browser.url
-    #
-    #     counts_file.metadata['degust_url'] = degust_url
-    #     counts_file.save()
-    # #
-    #     data = RedirectResponseSerializer(data={
-    #         'status': browser.response.status_code,
-    #         'redirect': degust_url})
-    #     if data.is_valid():
-    #         return Response(data=data.validated_data,
-    #                         status=status.HTTP_200_OK)
-    #     else:
-    #         return HttpResponse(status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-    #                             reason="Error contacting Degust.")
 
-    @view_config(response_serializer=RedirectResponseSerializer)
+
+    @extend_schema(responses=RedirectResponseSerializer)
     def post(self, request: Request, file_id: str, version=None):
         """
         Sends the File specified by `file_id` to the Degust web app (http://degust.erc.monash.edu).
@@ -2909,42 +2880,14 @@ class SendFileToDegust(JSONView):
             if data.is_valid():
                 return Response(data=data.validated_data, status=status.HTTP_200_OK)
 
-        # TODO: RoboBrowser is still required since while Degust no longer requires a CSRF token upon upload,
+        # TODO: Robox is still required since while Degust no longer requires a CSRF token upon upload,
         #       an 'upload_token' per-user is required:
         #       https://github.com/drpowell/degust/blob/master/FAQ.md#uploading-a-counts-file-from-the-command-line
         #       We either need an application level API token for Degust (to create anonymous uploads), or a
         #       trust relationship (eg proper OAuth2 provider or simple shared Google Account ID) that allows
         #       Laxy to retrieve the upload token for a user programmatically
         url = f"{degust_api_url}/upload"
-        browser = RoboBrowser(history=True, parser="lxml")
-        loop = asyncio.new_event_loop()
-
-        # This does the fetch of the form and the counts file simultaneously
-        async def get_form_and_file(url, fileish):
-            def get_upload_form(url):
-                browser.open(url)
-                return browser.get_form()
-
-            def get_counts_file_content(fh):
-                # filelike = BytesIO(fh.read())
-                # return filelike
-                return fh
-
-            future_form = loop.run_in_executor(None, get_upload_form, url)
-            future_file = loop.run_in_executor(None, get_counts_file_content, fileish)
-            form = await future_form
-            filelike = await future_file
-
-            return form, filelike
-
-        form, filelike = loop.run_until_complete(
-            get_form_and_file(url, counts_file.file)
-        )
-        loop.close()
-
-        # First POST the counts file, get a new Degust session ID
-        form["filename"].value = filelike
-
+        
         # TODO: This is to deal with SFTPStorage backend timeouts etc
         #       Ideally we would fork / subclass SFTPStorage and SFTPStorageFile
         #       and add some built-in backoff / retry functionality
@@ -2961,12 +2904,22 @@ class SendFileToDegust(JSONView):
             max_tries=3,
             jitter=backoff.full_jitter,
         )
-        def submit_form(form):
-            browser.submit_form(form)
-
-        submit_form(form)
-
-        degust_config_url = browser.url.replace("/compare.html?", "/config.html?", 1)
+        def upload_file_to_degust(url, counts_file):
+            with Robox() as robox:
+                # Open the upload page and get the form
+                page = robox.open(url)
+                form = page.get_form()
+                
+                # Attach the file to the form
+                form['filename'] = counts_file.file
+                
+                # Submit the form and get the response page
+                response_page = page.submit_form(form)
+                return response_page
+        
+        response_page = upload_file_to_degust(url, counts_file)
+        
+        degust_config_url = response_page.url.replace("/compare.html?", "/config.html?", 1)
         degust_id = (
             parse_qs(urlparse(degust_config_url).query).get("code", [None]).pop()
         )
@@ -3043,7 +2996,7 @@ class SendFileToDegust(JSONView):
         resp.raise_for_status()
 
         data = RedirectResponseSerializer(
-            data={"status": browser.response.status_code, "redirect": degust_config_url}
+            data={"status": response_page.status_code, "redirect": degust_config_url}
         )
         if data.is_valid():
             return Response(data=data.validated_data, status=status.HTTP_200_OK)
@@ -3061,7 +3014,7 @@ class RemoteBrowseView(JSONView):
     api_docs_visible_to = "public"
 
     # @method_decorator(cache_page(10 * 60))
-    @view_config(response_serializer=FileListing)
+    @extend_schema(responses=FileListing)
     def post(self, request, version=None):
         """
         Returns a single level of a file/directory tree.

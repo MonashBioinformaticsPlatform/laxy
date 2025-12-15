@@ -1,3 +1,4 @@
+import unittest
 from unittest import TestCase
 from unittest.mock import patch, MagicMock
 import string
@@ -37,7 +38,7 @@ class UtilFunctionsTest(TestCase):
             "my_sample_She_Ying_AB_C_1.txt.gz",
         )
 
-        including_brackets = "-_.() %s%s" % (string.ascii_letters, string.digits)
+        including_brackets = f"-_.() {string.ascii_letters}{string.digits}"
         self.assertEqual(
             sanitize_filename(
                 funky_sample_name,

@@ -100,7 +100,7 @@ def sanitize_filename(
     if valid_filename_chars is None:
         # valid_filename_chars = "-_.() %s%s" % (string.ascii_letters, string.digits)
         # Brackets often cause issue with improperly escaped shell commands, so we disallow those too ..
-        valid_filename_chars = "-_. %s%s" % (string.ascii_letters, string.digits)
+        valid_filename_chars = f"-_. {string.ascii_letters}{string.digits}"
 
     if replace is None:
         replace = {r"\s+": "_"}

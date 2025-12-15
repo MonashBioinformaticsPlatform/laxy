@@ -1,11 +1,19 @@
-django-extensions==3.0.3  # apt: graphviz graphviz-dev
-docker-compose==1.26.2
-django-stubs==1.5.0
-pytest==6.0.1
-pytest-django==3.9.0
-# pydevd-pycharm~=192.6262.63  # needs to match your PyCharm version exactly
-# pip-chill  # nice idea that is broken ?
+# Development dependencies
+django-extensions>=3.2.0  # apt: graphviz graphviz-dev
+django-stubs>=4.2.0
 
-pylint==2.5.3
-pylint-django==2.2.0
-black==19.10b0
+# Testing
+pytest>=8.0.0
+pytest-django>=4.8.0
+pytest-cov>=4.1.0
+coverage>=7.4.0
+
+# Linting and formatting
+ruff>=0.4.0
+black>=24.0.0
+
+# Type checking
+mypy>=1.19.0
+
+# Debugging
+# pydevd-pycharm~=192.6262.63  # needs to match your PyCharm version exactly

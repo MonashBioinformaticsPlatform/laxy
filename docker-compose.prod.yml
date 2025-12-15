@@ -100,7 +100,6 @@ services:
         "-l",
         "info",
         "-Ofair",
-        "--broker=${LAXY_BROKER_URL}",
         "--concurrency=2"
       ]
     stop_grace_period: 5m
@@ -133,7 +132,6 @@ services:
         "-l",
         "info",
         "-Ofair",
-        "--broker=${LAXY_BROKER_URL}",
         "-Q",
         "low-priority",
         "--concurrency=8"
@@ -245,33 +243,3 @@ services:
   splash:
     networks:
       - private
-
-##
-##  shell-notebook is disabled by default on prod, but can be enabled here
-##  temporarily if required for specific debugging or manual data migration tasks
-##
-# Examine the logs to find the token to login to the Jupyter notebook
-# (eg docker-compose logs -f docker-compose.yml -f docker-compose.dev.yml shell-notebook )
-#  shell-notebook:
-#    build:
-#      context: .
-#      dockerfile: ./docker/laxy/Dockerfile
-#    environment:
-#      - LAXY_DEBUG=no
-#      - LAXY_SENTRY_DSN=
-#    env_file:
-#      - .env
-#    ports:
-#      - "8999:8999"
-#    logging:
-#      driver: "json-file"
-#      options:
-#        max-size: "100k"
-#        max-file: "1"
-#    depends_on:
-#      - db
-#    networks:
-#      - private
-#    command: bash -c "sleep 10 &&
-#      pip3 install jupyter ipython ipykernel django-extensions &&
-#      python3 manage.py shell_plus --notebook"

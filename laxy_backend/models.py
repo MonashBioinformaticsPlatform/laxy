@@ -30,7 +30,8 @@ from django.db.models.constraints import UniqueConstraint
 from django.db.models import Q
 from django.dispatch import receiver
 from django.core.handlers.wsgi import WSGIRequest
-from django.core.files.storage import get_storage_class, Storage
+from django.core.files.storage import Storage
+from django.utils.module_loading import import_string
 from django.core.serializers import serialize
 from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError as DjangoValidationError, ValidationError
@@ -75,7 +76,7 @@ logger = logging.getLogger(__name__)
 if "postgres" not in settings.DATABASES["default"]["ENGINE"]:
     from jsonfield import JSONField
 else:
-    from django.contrib.postgres.fields import JSONField
+    from django.db.models import JSONField
 
 SCHEME_STORAGE_CLASS_MAPPING = {
     "file": "django.core.files.storage.FileSystemStorage",
@@ -268,9 +269,21 @@ class UserProfile(models.Model):
 
 @receiver(post_save, sender=User)
 def create_or_update_user_profile(sender, instance, created, **kwargs):
-    if created or not UserProfile.objects.filter(user=instance).exists():
-        UserProfile.objects.create(user=instance)
-    instance.profile.save()
+    if created:
+        UserProfile.objects.get_or_create(user=instance)
+    else:
+        # Ensure profile exists, but avoid unnecessary saves
+        try:
+            # We access the reverse relation to check existence without a separate query if preloaded
+            # but usually it's not preloaded.
+            # Using getattr to avoid Error if it doesn't exist
+            if hasattr(instance, "profile"):
+                instance.profile.save()
+            else:
+                UserProfile.objects.create(user=instance)
+        except UserProfile.DoesNotExist:
+             # This should be caught by hasattr check if related_name is correct (it is "profile")
+             UserProfile.objects.create(user=instance)
 
 
 class JSONSerializable:
@@ -496,9 +509,10 @@ class ComputeResource(Timestamped, UUIDModel):
                 else:
                     _storage_instance.sftp.close()
 
-        storage_class = get_storage_class(
-            SCHEME_STORAGE_CLASS_MAPPING.get("laxy+sftp", None)
-        )
+        storage_class_path = SCHEME_STORAGE_CLASS_MAPPING.get("laxy+sftp", None)
+        if storage_class_path is None:
+            raise ValueError("No storage class found for laxy+sftp scheme")
+        storage_class = import_string(storage_class_path)
 
         host = self.hostname
         port = self.port
@@ -955,6 +969,9 @@ def update_job_completed_time(sender, instance, raw, using, update_fields, **kwa
     Takes actions every time a Job is saved, so changes to certain fields
     can have side effects (eg automatically setting completion time).
     """
+    if update_fields is not None and "done" not in update_fields:
+        return
+
     try:
         obj = sender.objects.get(pk=instance.pk)
     except sender.DoesNotExist:
@@ -969,6 +986,9 @@ def job_status_changed_event_log(sender, instance, raw, using, update_fields, **
     """
     Creates an event log entry every time a Job is saved with a changed status.
     """
+    if update_fields is not None and "status" not in update_fields:
+        return
+
     try:
         obj = sender.objects.get(pk=instance.pk)
     except sender.DoesNotExist:
@@ -996,6 +1016,9 @@ def sanitize_job_params(sender, instance: Job, raw, using, update_fields, **kwar
     Validates job parameters against a JSON schema to ensure structure and
     prevent unsafe values that could be used in path construction.
     """
+    if update_fields is not None and "params" not in update_fields:
+        return
+
     if instance.params:
         params = instance.params
         if isinstance(params, str):
@@ -1049,10 +1072,12 @@ def new_job_event_log(sender, instance, created, raw, using, update_fields, **kw
 @reversion.register()
 class FileLocation(UUIDModel):
     class Meta:
-        unique_together = (
-            "url",
-            "file",
-        )
+        constraints = [
+            UniqueConstraint(
+                fields=["url", "file"],
+                name="unique_filelocation_url_file",
+            ),
+        ]
 
         # indexes = [
         #     models.Index(fields=["file", "default"]),
@@ -1187,9 +1212,10 @@ def get_storage_class_for_location(
         # `base_dir` in the ComputeResource extra params. Setting location to something like
         # `/scratch/jobs/{job_id}/` per-job should mitigate some of the risk here (assuming Django's
         # FileSystemStorage doesn't allow relative/paths/like/../../../this/ outside the base location.
-        storage_class = get_storage_class(
-            SCHEME_STORAGE_CLASS_MAPPING.get(scheme, None)
-        )
+        storage_class_path = SCHEME_STORAGE_CLASS_MAPPING.get(scheme, None)
+        if storage_class_path is None:
+            raise ValueError(f"No storage class found for scheme: {scheme}")
+        storage_class = import_string(storage_class_path)
         return storage_class(location="/")
     else:
         raise NotImplementedError(

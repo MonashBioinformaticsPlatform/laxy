@@ -24,6 +24,7 @@ import numpy as np
 from django.db import transaction
 from django.conf import settings
 from django.db.models import QuerySet
+from storages.backends.sftpstorage import SFTPStorage
 
 from celery.result import AsyncResult
 from celery.utils.log import get_task_logger

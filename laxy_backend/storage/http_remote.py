@@ -129,7 +129,7 @@ def get_tar_file_manifest(
     """
     def _discover_manifest_url(tar_url):
         murl = urlparse(tar_url)
-        murl = murl._replace(path='%s.manifest-md5' % murl.path)
+        murl = murl._replace(path=f'{murl.path}.manifest-md5')
         murl = murl.geturl()
         return murl
 
