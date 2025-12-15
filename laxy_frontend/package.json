@@ -15,15 +15,6 @@
   },
   "author": "Andrew Perry <Andrew.Perry@monash.edu>",
   "license": "Apache",
-  "//comment": {
-    "vue-material": "git+https://github.com/pansapiens/vue-material.git#custom-0.8.1",
-    "@types/vue-material": "file:local_node_modules/vue-material-types",
-    "vue-authenticate": "git+https://github.com/pansapiens/vue-authenticate.git#master"
-  },
-  "//comment2": {
-    "vue-material": "^0.8.1",
-    "@types/vue-material": "git+https://github.com/pansapiens/vue-material-types.git#master"
-  },
   "devDependencies": {
     "@types/axios": "^0.14.0",
     "@types/clipboard": "^2.0.1",
@@ -44,10 +35,10 @@
     "extract-text-webpack-plugin": "^3.0.2",
     "file-loader": "^3.0.1",
     "html-webpack-plugin": "^3.2.0",
-    "node-sass": "^4.12.0",
     "npm": "^6.9.0",
     "nyan-progress-webpack-plugin": "^1.2.0",
-    "sass-loader": "^7.1.0",
+    "sass": "^1.32.13",
+    "sass-loader": "^10.1.1",
     "style-loader": "^0.23.1",
     "tar": ">=4.4.2",
     "ts-loader": "^8.4.0",
@@ -84,7 +75,7 @@
     "vue-axios": "^2.1.4",
     "vue-class-component": "^7.2.6",
     "vue-markdown": "^2.2.4",
-    "vue-material": "git+https://github.com/pansapiens/vue-material.git#custom-0.8.1",
+    "vue-material": "github:pansapiens/vue-material#custom-0.8.1",
     "vue-moment": "^2.2.0",
     "vue-property-decorator": "^6.1.0",
     "vue-router": "^3.0.6",
@@ -93,5 +84,8 @@
     "vuex": "^3.6.2",
     "vuex-class": "^0.3.2",
     "vuex-pathify": "^1.5.1"
+  },
+  "overrides": {
+    "node-sass": "$sass"
   }
 }

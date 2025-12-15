@@ -54,7 +54,7 @@ services:
   # If you prefer to run npm yourself outside a container, comment this out and run
   # "npm install && npm run server" manually.
   dev-frontend-server:
-    image: node:10-buster
+    image: node:24
     working_dir: /app
     environment:
       - LAXY_DEBUG=yes
@@ -72,7 +72,7 @@ services:
         max-file: "1"
     restart: "unless-stopped"
     command: bash -c "cd /app/laxy_frontend &&
-      npm install &&
+      npm install --legacy-peer-deps &&
       npm run server"
     depends_on:
       - django

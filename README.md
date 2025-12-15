@@ -38,7 +38,7 @@ The Laxy frontend is a Vue Single-Page Application that runs in the browser and 
 ```bash
 cp -n .env.example .env
 cd laxy_frontend
-npm install
+npm install  --legacy-peer-deps
 npm run build:dev
 npm run server
 open http://localhost:8002/
