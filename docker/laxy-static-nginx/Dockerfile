@@ -27,7 +27,7 @@ RUN rm -rf node_modules && \
     npm install && \
     npm run build:$LAXY_ENV
 
-FROM nginx:1.15-alpine
+FROM nginx:1.29-alpine
 LABEL git_commit=$GIT_COMMIT
 
 ADD docker/laxy-static-nginx/nginx.conf.template /etc/nginx/nginx.conf.template

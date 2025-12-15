@@ -134,7 +134,6 @@ http {
         # NOTE: This one should match the header specified by the Django SECURE_PROXY_SSL_HEADER setting
         proxy_set_header X-Forwarded-Proto $scheme;
 
-        proxy_redirect off;
         proxy_redirect http:// $scheme://;
 
         proxy_connect_timeout 30;
