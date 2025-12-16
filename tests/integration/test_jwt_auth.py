@@ -19,40 +19,28 @@ import requests
 from datetime import datetime
 from typing import Dict, Optional, Tuple
 
+# Add tests/integration to path for imports
+_test_dir = os.path.dirname(os.path.abspath(__file__))
+if _test_dir not in sys.path:
+    sys.path.insert(0, _test_dir)
+
+from test_user_manager import TestUserManager
+
 # Configuration
 API_BASE_URL = os.environ.get('API_BASE_URL', 'http://localhost:8001')
-TEST_USERNAME = 'test_user'
-TEST_PASSWORD = 'test_password_123'
-TEST_EMAIL = 'test@example.com'
 
 class JWTAuthTester:
-    def __init__(self, base_url: str):
+    def __init__(self, base_url: str, credentials):
         self.base_url = base_url
         self.session = requests.Session()
         self.access_token = None
         self.refresh_token = None
+        self.credentials = credentials
         
     def log(self, message: str, level: str = 'INFO'):
         """Log test messages with timestamp"""
         timestamp = datetime.now().strftime('%H:%M:%S')
         print(f"[{timestamp}] {level}: {message}")
-        
-    def create_test_user(self) -> bool:
-        """Create a test user for authentication testing"""
-        try:
-            # Check if we can create users via Django admin or direct DB
-            # For now, we'll assume a test user exists or create via Django shell
-            self.log("Attempting to create test user via Django shell...")
-            
-            # This would normally be done via Django management command
-            self.log("⚠️  Note: Test user creation requires Django shell access")
-            self.log("⚠️  Run: python manage.py shell")
-            self.log("⚠️  Then: from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.get_or_create(username='test_user', defaults={'email': 'test@example.com'}); user = User.objects.get(username='test_user'); user.set_password('test_password_123'); user.save()")
-            
-            return True
-        except Exception as e:
-            self.log(f"Failed to create test user: {e}", 'ERROR')
-            return False
     
     def test_csrf_token_endpoint(self) -> bool:
         """Test CSRF token endpoint"""
@@ -87,8 +75,8 @@ class JWTAuthTester:
             
             url = f"{self.base_url}/api/v1/auth/jwt/get/"
             data = {
-                'username': TEST_USERNAME,
-                'password': TEST_PASSWORD
+                'username': self.credentials.username,
+                'password': self.credentials.password
             }
             
             # Set headers for JWT request
@@ -221,7 +209,7 @@ class JWTAuthTester:
             if response.status_code == 200:
                 profile_data = response.json()
                 self.log("✅ Authenticated API access successful")
-                self.log(f"✅ User profile: {profile_data.get('username', 'Unknown')}")
+                self.log("✅ User profile retrieved successfully")
                 return True
             elif response.status_code == 401:
                 self.log("❌ API access denied - token invalid", 'ERROR')
@@ -328,9 +316,10 @@ def main():
         print(f"❌ Cannot connect to API: {e}")
         sys.exit(1)
     
-    # Run JWT tests
-    tester = JWTAuthTester(API_BASE_URL)
-    results = tester.run_all_tests()
+    # Run JWT tests with test user context manager
+    with TestUserManager() as user_creds:
+        tester = JWTAuthTester(API_BASE_URL, user_creds)
+        results = tester.run_all_tests()
     
     # Exit with appropriate code
     if all(results.values()):

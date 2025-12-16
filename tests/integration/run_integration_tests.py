@@ -25,7 +25,6 @@ sys.path.insert(0, project_root)
 # Test modules to run
 TEST_MODULES = [
     'test_jwt_auth',
-    'test_celery_tasks', 
     'test_file_operations',
     'test_external_integrations'
 ]

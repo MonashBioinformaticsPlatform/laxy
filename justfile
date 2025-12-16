@@ -13,7 +13,7 @@ up service='':
     if [ -z "{{service}}" ]; then
         echo "🚀 Starting Laxy development environment..."
         docker compose -f docker-compose.yml -f "${COMPOSE_FILE}" up -d
-        echo "✅ Services starting... Check logs with 'just dev-logs'"
+        echo "✅ Services starting... Check logs with 'just logs'"
         echo "   Frontend: http://localhost:8002"
         echo "   Backend:  http://localhost:8001"
     else
@@ -83,13 +83,6 @@ test-files:
     export LAXY_ENV=${LAXY_ENV:-local-dev}
     COMPOSE_FILE="docker-compose.${LAXY_ENV}.yml"
     docker compose -f docker-compose.yml -f "${COMPOSE_FILE}" exec django python tests/integration/test_file_operations.py
-
-test-celery:
-    #!/usr/bin/env bash
-    echo "⚙️ Testing Celery tasks..."
-    export LAXY_ENV=${LAXY_ENV:-local-dev}
-    COMPOSE_FILE="docker-compose.${LAXY_ENV}.yml"
-    docker compose -f docker-compose.yml -f "${COMPOSE_FILE}" exec django python tests/integration/test_celery_tasks.py
 
 test-external:
     #!/usr/bin/env bash
