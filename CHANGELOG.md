@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `--skip-alignment` option in nf-core-rnaseq v3.18.0 pipeline UI
 
 ### Changed
+- **Django 5.2.11** - Pinned to 5.2.11 release
 - **Python 3.6 to 3.12** - Major Python version upgrade
 - **Django 2.2 to 5.x** - Major Django version upgrade with all compatibility fixes
 - **PostgreSQL 10 to 15** - Database upgrade (requires data migration, see `POSTGRES_UPGRADE_PLAN.md`)
