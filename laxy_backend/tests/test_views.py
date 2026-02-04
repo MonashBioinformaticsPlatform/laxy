@@ -867,3 +867,147 @@ SampleC,ftp://ftp.example.com/pub/foo2_lane5_1.fastq.gz,ftp://ftp.example.com/pu
         self.assertEqual(response.status_code, 200)
         cart_id = response.data.get("id")
         self.assertEqual(response.data.get("samples"), self.sample_list)
+
+
+class JobAccessTokenViewTest(TestCase):
+    def setUp(self):
+        self.admin_user, self.admin_client = _create_user_and_login(
+            "admin", "adminpass", is_superuser=True
+        )
+        self.user, self.user_client = _create_user_and_login(
+            "user1", "userpass1", is_superuser=False
+        )
+        self.other_user, self.other_user_client = _create_user_and_login(
+            "user2", "userpass2", is_superuser=False
+        )
+
+        self.compute = ComputeResource(
+            owner=self.admin_user,
+            host="127.0.0.1",
+            disposable=False,
+            status=ComputeResource.STATUS_ONLINE,
+            name="default",
+            extra={"base_dir": get_tmp_dir()},
+        )
+        self.compute.save()
+
+        self.user_job = Job(owner=self.user, params='{"test":"data"}')
+        self.user_job.save()
+
+        self.admin_job = Job(owner=self.admin_user, params='{"admin":"job"}')
+        self.admin_job.save()
+
+    def tearDown(self):
+        self.user_job.delete()
+        self.admin_job.delete()
+        self.compute.delete()
+        self.user.delete()
+        self.other_user.delete()
+        self.admin_user.delete()
+
+    def test_create_access_token_for_owned_job(self):
+        """User can create an access token for a job they own."""
+        url = reverse("laxy_backend:job_accesstoken", args=[self.user_job.id])
+        response = self.user_client.put(
+            url,
+            data=json.dumps({"expiry_time": None}),
+            content_type="application/json",
+            secure=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("token", response.data)
+        self.assertIn("id", response.data)
+        self.assertEqual(response.data.get("object_id"), self.user_job.id)
+
+    def test_get_access_token_for_owned_job(self):
+        """User can retrieve an existing access token for their job."""
+        url = reverse("laxy_backend:job_accesstoken", args=[self.user_job.id])
+        self.user_client.put(
+            url,
+            data=json.dumps({"expiry_time": None}),
+            content_type="application/json",
+            secure=True,
+        )
+
+        response = self.user_client.get(
+            url, content_type="application/json", secure=True
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("token", response.data)
+        self.assertEqual(response.data.get("object_id"), self.user_job.id)
+
+    def test_get_nonexistent_access_token_returns_204(self):
+        """GET on a job with no access token returns 204 No Content."""
+        url = reverse("laxy_backend:job_accesstoken", args=[self.user_job.id])
+        response = self.user_client.get(
+            url, content_type="application/json", secure=True
+        )
+
+        self.assertEqual(response.status_code, 204)
+
+    def test_create_access_token_for_unowned_job_forbidden(self):
+        """User cannot create an access token for a job they don't own."""
+        url = reverse("laxy_backend:job_accesstoken", args=[self.admin_job.id])
+        response = self.user_client.put(
+            url,
+            data=json.dumps({"expiry_time": None}),
+            content_type="application/json",
+            secure=True,
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_unauthenticated_access_token_creation(self):
+        """Unauthenticated users cannot create access tokens."""
+        client = APIClient(HTTP_CONTENT_TYPE="application/json")
+        url = reverse("laxy_backend:job_accesstoken", args=[self.user_job.id])
+        response = client.put(
+            url,
+            data=json.dumps({"expiry_time": None}),
+            content_type="application/json",
+            secure=True,
+        )
+
+        # Returns 403 Forbidden (not 401) as the permission check runs first
+        self.assertEqual(response.status_code, 403)
+
+    def test_update_existing_access_token(self):
+        """PUT on existing token updates it rather than creating a new one."""
+        url = reverse("laxy_backend:job_accesstoken", args=[self.user_job.id])
+
+        response1 = self.user_client.put(
+            url,
+            data=json.dumps({"expiry_time": None}),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(response1.status_code, 200)
+        token_id_1 = response1.data.get("id")
+        token_1 = response1.data.get("token")
+
+        response2 = self.user_client.put(
+            url,
+            data=json.dumps({"expiry_time": "2030-01-01T00:00:00Z"}),
+            content_type="application/json",
+            secure=True,
+        )
+        self.assertEqual(response2.status_code, 200)
+        token_id_2 = response2.data.get("id")
+
+        self.assertEqual(token_id_1, token_id_2)
+        self.assertEqual(response2.data.get("token"), token_1)
+
+    def test_superuser_can_create_token_for_any_job(self):
+        """Superuser can create access tokens for jobs they don't own."""
+        url = reverse("laxy_backend:job_accesstoken", args=[self.user_job.id])
+        response = self.admin_client.put(
+            url,
+            data=json.dumps({"expiry_time": None}),
+            content_type="application/json",
+            secure=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("token", response.data)

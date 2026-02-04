@@ -2610,10 +2610,7 @@ class JobAccessTokenView(JSONView, GetMixin):
         return ContentType.objects.get(app_label="laxy_backend", model="job")
 
     def _owns_target_object(self, user, obj_id):
-        target_obj = ContentType.objects.get(
-            app_label="laxy_backend", model=self._job_ct
-        ).get_object_for_this_type(id=obj_id)
-
+        target_obj = self._job_ct.get_object_for_this_type(id=obj_id)
         return is_owner(user, target_obj) or self.request.user.is_superuser
 
     def get_queryset(self):
