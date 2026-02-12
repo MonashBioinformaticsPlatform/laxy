@@ -1,6 +1,6 @@
-# setuptools is required since Python 3.12 no longer bundles it, and
-# coreapi depends on pkg_resources from setuptools
-setuptools>=75.0.0
+# Required by fs (PyFilesystem2) which uses pkg_resources namespace packages;
+# no longer bundled in Python 3.12+, and removed from setuptools 82+
+setuptools>=75.0.0,<82
 
 gunicorn==23.0.0
 # gunicorn[gevent]
@@ -93,7 +93,6 @@ markdown==3.10
 django-filter==25.2
 # django-filter
 django-guardian==3.2.0
-coreapi==2.3.3
 djangorestframework-simplejwt==5.5.1
 drf-spectacular==0.29.0
 

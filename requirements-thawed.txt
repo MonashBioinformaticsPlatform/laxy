@@ -91,7 +91,6 @@ markdown
 django-filter
 # django-filter
 django-guardian
-coreapi
 djangorestframework-simplejwt
 drf-spectacular
 

@@ -14,8 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - OpenAPI documentation via drf-spectacular at `/api/v1/schema/`, `/api/v1/schema/swagger-ui/`, `/api/v1/schema/redoc/`
 - `--skip-alignment` option in nf-core-rnaseq v3.18.0 pipeline UI
 
+### Removed
+- Removed `coreapi` and `coreschema` dependencies (replaced with native DRF OpenAPI parameter support via `get_schema_operation_parameters`)
+
 ### Fixed
-- Added `setuptools` to requirements for Python 3.12 compatibility (`pkg_resources` needed by `coreapi`)
+- Added explicit `setuptools>=75,<82` dependency for Python 3.12+ compatibility (`fs`/PyFilesystem2 requires `pkg_resources`, which was removed in setuptools 82)
 - Nextcloud/ownCloud shared folder file downloads now use the new-style `/public.php/dav/files/{token}/` WebDAV endpoint (Nextcloud 29+), with automatic fallback to the legacy `/public.php/webdav/` endpoint for older instances
 
 ### Changed

@@ -15,10 +15,9 @@ RUN groupadd -r --gid 999 laxy && \
 
 ADD --chown=laxy:laxy . /app/
 
-# Fix: Use latest pip compatible with Python 3.12 instead of hardcoded old version
-RUN export PIP_DISABLE_PIP_VERSION_CHECK=1 && \
-    pip3 install -U pip && \
-    pip3 install -U -r requirements.txt
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
+RUN pip3 install --no-cache-dir -U pip "setuptools>=75,<82" && \
+    pip3 install --no-cache-dir -U -r requirements.txt
 
 # We collect Django admin staticfiles, to be shared with the nginx container
 # (via volume or COPY --from laxy:latest at container build time)

@@ -6,8 +6,6 @@ import mimetypes
 import shlex
 
 import backoff
-import coreapi
-import coreschema
 from django.utils.decorators import method_decorator
 from django.utils import timezone
 from django.views.decorators.cache import cache_page
@@ -42,7 +40,6 @@ from django.contrib.admin.views.decorators import user_passes_test
 from django.db import transaction
 from django.http import HttpResponse, StreamingHttpResponse, JsonResponse, FileResponse
 from django.urls import reverse
-from django.utils.encoding import force_str
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import OrderingFilter
 from django.utils.decorators import method_decorator
@@ -296,13 +293,10 @@ class JobDirectTarDownload(JSONView):
         return FileResponse(stdout, filename=output_fn, as_attachment=True)
 
 
-# TODO: Strangley, Swagger/CoreAPI only show the 'name' for the query parameter
-#       if name='query'. Any other value doesn't seem to appear in the
-#       auto-generated docs when applying this as a filter backend as intended
 class QueryParamFilterBackend(BaseFilterBackend):
     """
     This class largely exists so that query parameters can appear in the
-    automatic documentation.
+    automatic documentation (via drf-spectacular / OpenAPI).
 
     A subclass is used in a DRF view like:
 
@@ -323,33 +317,19 @@ class QueryParamFilterBackend(BaseFilterBackend):
     """
 
     def __init__(self, query_params: List[Dict[str, any]] = None):
+        self._query_params = query_params or []
 
-        if query_params is None:
-            query_params = []
-
-        for qp in query_params:
-            field = coreapi.Field(
-                name=qp.get("name"),
-                location=qp.get("location", qp.get("name")),
-                description=qp.get("description", None),
-                example=qp.get("example", None),
-                required=qp.get("required", True),
-                type=qp.get("type", "string"),
-                schema=coreschema.String(
-                    title=force_str(
-                        qp.get("title", (qp.get("name", False) or qp.get("name")))
-                    ),
-                    description=force_str(qp.get("description", "")),
-                ),
-            )
-
-            if hasattr(self, "schema_fields"):
-                self.schema_fields.append(field)
-            else:
-                self.schema_fields = [field]
-
-    def get_schema_fields(self, view):
-        return self.schema_fields
+    def get_schema_operation_parameters(self, view):
+        return [
+            {
+                "name": qp.get("name"),
+                "required": qp.get("required", True),
+                "in": "query",
+                "description": qp.get("description", ""),
+                "schema": {"type": qp.get("type", "string")},
+            }
+            for qp in self._query_params
+        ]
 
 
 class StreamingFileDownloadRenderer(BaseRenderer):

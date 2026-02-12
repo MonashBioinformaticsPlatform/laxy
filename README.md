@@ -149,8 +149,6 @@ OpenAPI / Swagger API (via drf-spectacular):
 - Schema (YAML): http://localhost:8000/api/v1/schema/?format=yaml
 - Schema (JSON): http://localhost:8000/api/v1/schema/?format=json
 
-DRF CoreAPI docs: http://localhost:8000/coreapi/
-
 ### Docker
 
 See notes on [running under Docker Compose](docs/docker.md)
