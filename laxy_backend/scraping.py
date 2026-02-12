@@ -301,38 +301,39 @@ def parse_nextcloud_links(text: str, url=None) -> List[dict]:
     return links
 
 
-def parse_nextcloud_webdav(text: Union[str, None] = None, url=None) -> List[dict]:
+def _parse_nextcloud_share_url(url: str) -> tuple:
     """
-    Return the file and directory listing for a ownCloud/Nextcloud WebDAV shared link,
-    via WebDAV. `text` is ignored but included for link parser plugin compatibility.
+    Extract base_url, share_id, path and navigation info from a Nextcloud/ownCloud
+    public share URL.
 
-    :param text: Usused, included for link parser plugin compatibility.
-    :type text: str
-    :param url: The public share URL (eg https://somenextcloud.net/s/lnSmyyug1fexY8l)
-    :type url: str
-    :return: A list of dicts describing the files and directories
-    :rtype: List[dict]
+    :return: (base_url, share_id, path, last_dir_in_path, up_dir)
     """
-
     _base_url = urlparse(url)
     base_url = urlunparse((_base_url.scheme, _base_url.netloc, "", "", "", ""))
-
-    webdav_server = f"{base_url}/public.php/webdav/"
-    # eg, for the URL "https://somenextcloud.net/s/lnSmyyug1fexY8l", share_id = 'lnSmyyug1fexY8l'
+    # eg, for "https://somenextcloud.net/s/lnSmyyug1fexY8l", share_id = 'lnSmyyug1fexY8l'
     share_id = list(os.path.split(urlparse(url).path)).pop()
     path = parse_qs(urlparse(url).query).get("path", ["/"])[0].strip("/")
     _pathparts = list(os.path.split(path))
     last_dir_in_path = f"{_pathparts[-1:][0].strip('/')}/"
     up_dir = "/".join(_pathparts[:-1])
+    return base_url, share_id, path, last_dir_in_path, up_dir
 
-    # webdav4 uses a different API - base_url and auth tuple
+
+def _parse_nextcloud_webdav_legacy(text: Union[str, None] = None, url=None) -> List[dict]:
+    """
+    Listing via the old-style /public.php/webdav/ endpoint (pre-Nextcloud 29).
+    Uses the share token as Basic auth username. Download URLs use the
+    /s/{token}/download?path=&files= format.
+    """
+    base_url, share_id, path, last_dir_in_path, up_dir = _parse_nextcloud_share_url(url)
+
+    webdav_server = f"{base_url}/public.php/webdav/"
     client = WebDAVClient(webdav_server, auth=(share_id, "null"))
     ls = client.ls(path, detail=False)
     is_top_level = path in ["/", ""] and "webdav/" in ls
 
     links = []
 
-    # Add a '..' if we aren't in the top-level directory
     if not is_top_level:
         links.append(
             dict(
@@ -344,12 +345,9 @@ def parse_nextcloud_webdav(text: Union[str, None] = None, url=None) -> List[dict
         )
     for name in ls:
         if is_top_level and name == "webdav/":
-            # Don't add the root 'webdav/' directory
             continue
 
         if name == last_dir_in_path:
-            # The final directory in remote_path is listed by name (equivalent to '.' from ls),
-            # be we don't want to see it
             continue
 
         if name.endswith("/"):
@@ -369,6 +367,75 @@ def parse_nextcloud_webdav(text: Union[str, None] = None, url=None) -> List[dict
                     type="file",
                     name=name,
                     location=f"{base_url}/s/{share_id}/download?path=/{quote(path)}&files={quote(name)}",
+                    tags=["archive"] if is_archive_link(name) else [],
+                )
+            )
+
+    return links
+
+
+def parse_nextcloud_webdav(text: Union[str, None] = None, url=None) -> List[dict]:
+    """
+    Return the file and directory listing for a ownCloud/Nextcloud WebDAV shared link.
+    `text` is ignored but included for link parser plugin compatibility.
+
+    Uses the new-style /public.php/dav/files/{token}/ endpoint (Nextcloud 29+),
+    falling back to the legacy /public.php/webdav/ endpoint for older instances.
+
+    :param text: Unused, included for link parser plugin compatibility.
+    :type text: str
+    :param url: The public share URL (eg https://somenextcloud.net/s/lnSmyyug1fexY8l)
+    :type url: str
+    :return: A list of dicts describing the files and directories
+    :rtype: List[dict]
+    """
+    base_url, share_id, path, last_dir_in_path, up_dir = _parse_nextcloud_share_url(url)
+
+    try:
+        webdav_server = f"{base_url}/public.php/dav/files/{share_id}/"
+        client = WebDAVClient(webdav_server)
+        ls = client.ls(path, detail=False)
+    except Exception as e:
+        logger.info(
+            f"New-style Nextcloud WebDAV endpoint failed for {url}, "
+            f"falling back to old-style: {e}"
+        )
+        return _parse_nextcloud_webdav_legacy(text, url)
+
+    is_top_level = path in ["/", ""]
+    links = []
+
+    if not is_top_level:
+        links.append(
+            dict(
+                type="directory",
+                name="..",
+                location=f"{base_url}/s/{share_id}?path=/{quote(up_dir)}",
+                tags=[],
+            )
+        )
+    for name in ls:
+        if name == last_dir_in_path:
+            continue
+
+        if name.endswith("/"):
+            name = name.rstrip("/")
+            full_path = os.path.join(path, name)
+            links.append(
+                dict(
+                    type="directory",
+                    name=name,
+                    location=f"{base_url}/s/{share_id}?path=/{quote(full_path)}",
+                    tags=[],
+                )
+            )
+        else:
+            full_path = f"{path}/{name}" if path else name
+            links.append(
+                dict(
+                    type="file",
+                    name=name,
+                    location=f"{base_url}/public.php/dav/files/{share_id}/{quote(full_path, safe='/')}",
                     tags=["archive"] if is_archive_link(name) else [],
                 )
             )
