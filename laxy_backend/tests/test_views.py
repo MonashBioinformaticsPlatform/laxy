@@ -1,5 +1,6 @@
 # from __future__ import absolute_import
 from collections import OrderedDict
+from datetime import timedelta
 from io import BytesIO, StringIO
 import unittest
 import os
@@ -23,7 +24,7 @@ from rest_framework.test import APIClient, RequestsClient
 from laxy_backend import util
 from ..util import ordereddicts_to_dicts, laxy_sftp_url
 from ..util import reverse_querystring
-from ..models import Job, File, FileSet, SampleCart, ComputeResource
+from ..models import Job, File, FileSet, SampleCart, ComputeResource, AccessToken
 from ..jwt_helpers import (
     get_jwt_user_header_dict,
     make_jwt_header_dict,
@@ -1011,3 +1012,100 @@ class JobAccessTokenViewTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("token", response.data)
+
+
+class AccessTokenUsageTest(TestCase):
+    def setUp(self):
+        self.owner, self.owner_client = _create_user_and_login(
+            "owner", "ownerpass", is_superuser=False
+        )
+        self.other_user, self.other_client = _create_user_and_login(
+            "other", "otherpass", is_superuser=False
+        )
+
+        self.compute = ComputeResource(
+            owner=self.owner,
+            host="127.0.0.1",
+            disposable=False,
+            status=ComputeResource.STATUS_ONLINE,
+            name="default",
+            extra={"base_dir": get_tmp_dir()},
+        )
+        self.compute.save()
+
+        # Create a Job with associated FileSets so FileSetHasAccessTokenForJob can find it.
+        self.job = Job(owner=self.owner, params='{"test":"data"}')
+        self.job.save()
+        self.job._init_filesets(save=True)
+
+        self.input_fileset = self.job.input_files
+
+    def tearDown(self):
+        # Order matters due to foreign key constraints.
+        self.job.delete()
+        if self.input_fileset:
+            self.input_fileset.delete()
+        self.compute.delete()
+        self.owner.delete()
+        self.other_user.delete()
+
+    def _create_access_token_for_job(self, expiry_time=None) -> AccessToken:
+        token = AccessToken.objects.create(
+            object_id=self.job.id,
+            expiry_time=expiry_time,
+        )
+        return token
+
+    def test_job_view_unauthenticated_with_valid_access_token(self):
+        token = self._create_access_token_for_job().token
+
+        client = APIClient(HTTP_CONTENT_TYPE="application/json")
+        url = reverse("laxy_backend:job", args=[self.job.uuid()])
+        response = client.get(f"{url}?access_token={token}")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data.get("id"), self.job.id)
+
+    def test_job_view_unauthenticated_with_expired_access_token(self):
+        expired_at = timezone.now() - timedelta(days=1)
+        token = self._create_access_token_for_job(expiry_time=expired_at).token
+
+        client = APIClient(HTTP_CONTENT_TYPE="application/json")
+        url = reverse("laxy_backend:job", args=[self.job.uuid()])
+        response = client.get(f"{url}?access_token={token}")
+
+        self.assertEqual(response.status_code, 401)
+
+    def test_job_view_authenticated_owner_without_access_token(self):
+        url = reverse("laxy_backend:job", args=[self.job.uuid()])
+        response = self.owner_client.get(url, format="json")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data.get("id"), self.job.id)
+
+    def test_fileset_view_unauthenticated_with_valid_access_token(self):
+        token = self._create_access_token_for_job().token
+
+        client = APIClient(HTTP_CONTENT_TYPE="application/json")
+        url = reverse("laxy_backend:fileset", args=[self.input_fileset.uuid()])
+        response = client.get(f"{url}?access_token={token}")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data.get("id"), self.input_fileset.id)
+
+    def test_fileset_view_unauthenticated_with_expired_access_token(self):
+        expired_at = timezone.now() - timedelta(days=1)
+        token = self._create_access_token_for_job(expiry_time=expired_at).token
+
+        client = APIClient(HTTP_CONTENT_TYPE="application/json")
+        url = reverse("laxy_backend:fileset", args=[self.input_fileset.uuid()])
+        response = client.get(f"{url}?access_token={token}")
+
+        self.assertEqual(response.status_code, 401)
+
+    def test_fileset_view_authenticated_owner_without_access_token(self):
+        url = reverse("laxy_backend:fileset", args=[self.input_fileset.uuid()])
+        response = self.owner_client.get(url, format="json")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data.get("id"), self.input_fileset.id)

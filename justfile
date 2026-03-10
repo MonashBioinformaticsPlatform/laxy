@@ -53,43 +53,58 @@ build:
     COMPOSE_FILE="docker-compose.${LAXY_ENV}.yml"
     docker compose -f docker-compose.yml -f "${COMPOSE_FILE}" build
 
-# Run unit tests (fast, isolated)
+# Run unit tests inside docker-compose.test.yml (pytest against laxy_backend)
 test-unit:
     #!/usr/bin/env bash
-    echo "🧪 Running unit tests..."
-    export LAXY_ENV=${LAXY_ENV:-local-dev}
-    COMPOSE_FILE="docker-compose.${LAXY_ENV}.yml"
-    docker compose -f docker-compose.yml -f "${COMPOSE_FILE}" exec django python manage.py test --noinput
+    echo "🧪 Running unit tests with docker-compose.test.yml (pytest, sut)..."
+    docker compose -f docker-compose.test.yml up -d db
+    docker compose -f docker-compose.test.yml run --rm sut bash -c "pip install -U -r requirements-dev.txt && pytest -vvv --showlocals --tb=auto laxy_backend"
+    status=$?
+    echo "🧹 Cleaning up test containers..."
+    docker compose -f docker-compose.test.yml down -v
+    exit $status
 
-# Run integration tests (requires running environment)
+# Run integration tests inside docker-compose.test.yml (pytest against tests/integration)
 test-integration:
     #!/usr/bin/env bash
-    echo "🔗 Running integration tests..."
-    export LAXY_ENV=${LAXY_ENV:-local-dev}
-    COMPOSE_FILE="docker-compose.${LAXY_ENV}.yml"
-    docker compose -f docker-compose.yml -f "${COMPOSE_FILE}" exec django python tests/integration/run_integration_tests.py
+    echo "🔗 Running integration tests with docker-compose.test.yml (pytest, sut)..."
+    docker compose -f docker-compose.test.yml up -d db
+    docker compose -f docker-compose.test.yml run --rm sut bash -c "pip install -U -r requirements-dev.txt && pytest -vvv --showlocals --tb=auto tests/integration"
+    status=$?
+    echo "🧹 Cleaning up test containers..."
+    docker compose -f docker-compose.test.yml down -v
+    exit $status
 
-# Run individual integration test suite
+# Run individual integration test suites via docker-compose.test.yml (pytest, sut)
 test-jwt:
     #!/usr/bin/env bash
-    echo "🔐 Testing JWT authentication..."
-    export LAXY_ENV=${LAXY_ENV:-local-dev}
-    COMPOSE_FILE="docker-compose.${LAXY_ENV}.yml"
-    docker compose -f docker-compose.yml -f "${COMPOSE_FILE}" exec django python tests/integration/test_jwt_auth.py
+    echo "🔐 Testing JWT authentication with docker-compose.test.yml (pytest, sut)..."
+    docker compose -f docker-compose.test.yml up -d db
+    docker compose -f docker-compose.test.yml run --rm sut bash -c "pip install -U -r requirements-dev.txt && pytest -vvv --showlocals --tb=auto tests/integration/test_jwt_auth.py"
+    status=$?
+    echo "🧹 Cleaning up test containers..."
+    docker compose -f docker-compose.test.yml down -v
+    exit $status
 
 test-files:
     #!/usr/bin/env bash
-    echo "📁 Testing file operations..."
-    export LAXY_ENV=${LAXY_ENV:-local-dev}
-    COMPOSE_FILE="docker-compose.${LAXY_ENV}.yml"
-    docker compose -f docker-compose.yml -f "${COMPOSE_FILE}" exec django python tests/integration/test_file_operations.py
+    echo "📁 Testing file operations with docker-compose.test.yml (pytest, sut)..."
+    docker compose -f docker-compose.test.yml up -d db
+    docker compose -f docker-compose.test.yml run --rm sut bash -c "pip install -U -r requirements-dev.txt && pytest -vvv --showlocals --tb=auto tests/integration/test_file_operations.py"
+    status=$?
+    echo "🧹 Cleaning up test containers..."
+    docker compose -f docker-compose.test.yml down -v
+    exit $status
 
 test-external:
     #!/usr/bin/env bash
-    echo "🔗 Testing external integrations..."
-    export LAXY_ENV=${LAXY_ENV:-local-dev}
-    COMPOSE_FILE="docker-compose.${LAXY_ENV}.yml"
-    docker compose -f docker-compose.yml -f "${COMPOSE_FILE}" exec django python tests/integration/test_external_integrations.py
+    echo "🔗 Testing external integrations with docker-compose.test.yml (pytest, sut)..."
+    docker compose -f docker-compose.test.yml up -d db
+    docker compose -f docker-compose.test.yml run --rm sut bash -c "pip install -U -r requirements-dev.txt && pytest -vvv --showlocals --tb=auto tests/integration/test_external_integrations.py"
+    status=$?
+    echo "🧹 Cleaning up test containers..."
+    docker compose -f docker-compose.test.yml down -v
+    exit $status
 
 # Run all tests (unit + integration)
 test-all: test-unit test-integration
