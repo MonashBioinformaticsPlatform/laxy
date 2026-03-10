@@ -9,7 +9,7 @@ Usage:
     
 Environment Requirements:
     - Laxy development environment must be running
-    - API accessible at http://localhost:8001 (or API_BASE_URL)
+    - API accessible at http://localhost:8001 (or LAXY_API_BASE_URL)
 """
 
 import os
@@ -38,7 +38,7 @@ def check_api_connectivity():
     """Check if API is accessible"""
     try:
         import requests
-        api_url = os.environ.get('API_BASE_URL', 'http://localhost:8001')
+        api_url = os.environ.get('LAXY_API_BASE_URL', 'http://localhost:8001')
         response = requests.get(f"{api_url}/api/v1/ping/", timeout=5)
         if response.status_code == 200:
             log(f"✅ API accessible: {api_url}")

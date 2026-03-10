@@ -9,7 +9,7 @@ Usage:
     python test_external_integrations.py
 
 Environment:
-    Set API_BASE_URL environment variable or it defaults to http://localhost:8001
+    Set LAXY_API_BASE_URL environment variable or it defaults to http://localhost:8001
 """
 
 import os
@@ -28,7 +28,7 @@ if _test_dir not in sys.path:
 from test_user_manager import TestUserManager
 
 # Configuration
-API_BASE_URL = os.environ.get('API_BASE_URL', 'http://localhost:8001')
+API_BASE_URL = os.environ.get('LAXY_API_BASE_URL', 'http://localhost:8001')
 
 class ExternalIntegrationsTester:
     def __init__(self, base_url: str, credentials):
