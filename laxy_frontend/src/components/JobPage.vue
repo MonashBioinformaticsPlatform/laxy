@@ -918,7 +918,12 @@ export default class JobPage extends Vue {
         const fetches = [];
         for (let fsid of [this.input_fileset_id, this.output_fileset_id]) {
           if (fsid) {
-            fetches.push(this.$store.dispatch(FETCH_FILESET, fsid));
+            fetches.push(
+              this.$store.dispatch(FETCH_FILESET, {
+                fileset_id: fsid,
+                job_id: this.jobId
+              })
+            );
           }
         }
         await Promise.all(fetches);

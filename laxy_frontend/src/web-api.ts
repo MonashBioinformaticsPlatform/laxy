@@ -239,10 +239,13 @@ export class WebAPI {
         }
     }
 
-    public static async getFileSet(fileset_id: string): Promise<AxiosResponse> {
+    public static async getFileSet(fileset_id: string, access_token?: string): Promise<AxiosResponse> {
         try {
-            return await this.fetcher.get(
-                `/api/v1/fileset/${fileset_id}/`) as AxiosResponse;
+            let url = `/api/v1/fileset/${fileset_id}/`;
+            if (access_token) {
+                url += `?access_token=${access_token}`;
+            }
+            return await this.fetcher.get(url) as AxiosResponse;
         } catch (error) {
             throw error;
         }

@@ -367,9 +367,13 @@ const actions: any = {
             throw error;
         }
     },
-    async [FETCH_FILESET]({ commit, state }: any, fileset_id: string) {
+    async [FETCH_FILESET]({ commit, state, getters }: any, payload: any) {
+        const { fileset_id, job_id } = typeof payload === 'string'
+            ? { fileset_id: payload, job_id: state.currentViewedJob && state.currentViewedJob.id }
+            : payload;
+        const access_token = job_id ? getters.jobAccessToken(job_id) : null;
         try {
-            const response = await WebAPI.getFileSet(fileset_id);
+            const response = await WebAPI.getFileSet(fileset_id, access_token || undefined);
             commit(SET_FILESET, response.data);
         } catch (error) {
             throw error;
