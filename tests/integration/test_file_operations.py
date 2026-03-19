@@ -8,18 +8,20 @@ Usage:
     python test_file_operations.py
 
 Environment:
-    Set API_BASE_URL environment variable or it defaults to http://localhost:8001
+    Set LAXY_API_BASE_URL environment variable or it defaults to http://localhost:8001
 """
 
 import os
 import sys
 import json
-import requests
 import tempfile
 import hashlib
 from datetime import datetime
-from typing import Dict, Optional, List
 from pathlib import Path
+from typing import Dict, Optional, List
+
+import pytest
+import requests
 
 # Add tests/integration to path for imports
 _test_dir = os.path.dirname(os.path.abspath(__file__))
@@ -29,7 +31,7 @@ if _test_dir not in sys.path:
 from test_user_manager import TestUserManager
 
 # Configuration
-API_BASE_URL = os.environ.get('API_BASE_URL', 'http://localhost:8001')
+API_BASE_URL = os.environ.get('LAXY_API_BASE_URL', 'http://localhost:8001')
 
 class FileOperationsTester:
     def __init__(self, base_url: str, credentials):
@@ -499,4 +501,55 @@ def main():
         sys.exit(1)
 
 if __name__ == '__main__':
-    main() 
+    main()
+
+
+def test_file_operations_end_to_end() -> None:
+    """
+    Pytest wrapper around main() so this script is reported as a test.
+    Requires a running Laxy API at LAXY_API_BASE_URL.
+    """
+    with pytest.raises(SystemExit) as exc:
+        main()
+    assert exc.value.code == 0
+
+
+@pytest.fixture(scope="module")
+def file_ops_tester() -> FileOperationsTester:
+    """Shared FileOperationsTester instance with authenticated user."""
+    with TestUserManager() as user_creds:
+        tester = FileOperationsTester(API_BASE_URL, user_creds)
+        assert tester.authenticate()
+        yield tester
+
+
+@pytest.fixture(scope="module")
+def created_file_id(file_ops_tester: FileOperationsTester) -> str:
+    """Create a test file and return its ID."""
+    file_id = file_ops_tester.test_file_metadata_api()
+    assert file_id
+    return file_id
+
+
+def test_file_metadata_retrieve(file_ops_tester: FileOperationsTester, created_file_id: str) -> None:
+    assert file_ops_tester.test_file_retrieve_api(created_file_id)
+
+
+def test_file_content_download(file_ops_tester: FileOperationsTester, created_file_id: str) -> None:
+    assert file_ops_tester.test_file_content_download(created_file_id)
+
+
+def test_file_permissions(file_ops_tester: FileOperationsTester, created_file_id: str) -> None:
+    assert file_ops_tester.test_file_permissions(created_file_id)
+
+
+def test_fileset_operations(file_ops_tester: FileOperationsTester) -> None:
+    assert file_ops_tester.test_fileset_operations()
+
+
+def test_file_list_api(file_ops_tester: FileOperationsTester) -> None:
+    assert file_ops_tester.test_file_list_api()
+
+
+def test_large_file_handling(file_ops_tester: FileOperationsTester) -> None:
+    assert file_ops_tester.test_large_file_handling()

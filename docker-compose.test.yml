@@ -1,5 +1,5 @@
 services:
-  db:
+  db-test:
     image: postgres:15-alpine
     environment:
       - POSTGRES_USER=postgres
@@ -9,42 +9,19 @@ services:
     volumes:
       - test-dbdata:/var/lib/postgresql/data/pgdata
     networks:
-      - test-net
+      test-net:
+        aliases:
+          - db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
     # ports:
     #   # postgres accessible on the host at 5433 for debugging
     #   - "5433:5432"
 
-  sut:
-    image: laxy:dev
-    build:
-      context: .
-      dockerfile: ./docker/laxy/Dockerfile
-    environment:
-      - LAXY_DEBUG=yes
-      - LAXY_SSL=no
-      - LAXY_DATABASE_URL=postgres://postgres:postgres@db:5432/postgres
-      - LAXY_BROKER_URL=amqp://guest@rabbitmq
-      - LAXY_ADMIN_EMAIL=admin@example.com
-      - LAXY_ADMIN_USERNAME=admin
-      - LAXY_ADMIN_PASSWORD=adminpass
-      - LAXY_SECRET_KEY=_do_please_change_this_in_production_
-      - LAXY_USE_SSL=no
-      - LAXY_JOB_TEMPLATE_PATHS=/app/laxy_backend/tests/test_data/templates
-      # For pytest
-      - DJANGO_SETTINGS_MODULE=laxy.settings
-    # volumes:
-    #   - .:/app
-    # Django app is publicly accessible without reverse proxy
-    # ports:
-    #   - "8001:8001"
-    networks:
-      - test-net
-    depends_on:
-      - db
-    # command: python3 ./manage.py test
-    command: bash -c "pip install -U -r requirements-dev.txt && pytest"
-
-  test-dev:
+  unit-tests:
     image: laxy:test
     build:
       context: .
@@ -70,11 +47,12 @@ services:
     networks:
       - test-net
     depends_on:
-      - db
+      db-test:
+        condition: service_healthy
     # command: python3 ./manage.py test
     # There are various ways we can run pytest, eg if we want to run just a subset of tests,
     # or drop into the PDB debugger when an uncaught exception is raised
-    command: pytest -vvv --showlocals --tb=auto
+    command: pytest -vvv --showlocals --tb=auto laxy_backend/tests
     # command: pytest -ra
     # command: pytest -vvv --pdb
     # command: pytest -vvv --pdb laxy_backend/tests/test_tasks.py
@@ -84,51 +62,6 @@ services:
     # command: pytest -vvv laxy_backend/tests/test_util.py
     # Not working for me
     # command: python -m ptvsd --host 0.0.0.0 --port 21001 --wait -m pytest -vvv
-
-    ##
-    # Disabled services not required for simple local dev, overridden from base docker-compose.yml
-    ##
-
-    # For simple local development, we run in Django debug mode (LAXY_DEBUG=yes) with CELERY_ALWAYS_EAGER=True
-    # so that celery tasks run non-async in the Django process. We don't need the celery daemon in this case.
-  queue-high:
-    image: alpine
-    entrypoint:
-      - /bin/echo
-    command: "Service disabled"
-    restart: "no"
-
-  queue-low:
-    image: alpine
-    entrypoint:
-      - /bin/echo
-    command: "Service disabled"
-    restart: "no"
-
-  celery-beat:
-    image: alpine
-    entrypoint:
-      - /bin/echo
-    command: "Service disabled"
-    restart: "no"
-
-  # We don't need flower if we aren't using celeryd
-  flower:
-    image: alpine
-    entrypoint:
-      - /bin/echo
-    command: "Service disabled"
-    restart: "no"
-
-  nginx:
-    image: alpine
-    entrypoint:
-      - /bin/echo
-    command: "Service disabled"
-    restart: "no"
-    ports:
-      # dev
-      - "9999:80"
 
 volumes:
   test-dbdata:

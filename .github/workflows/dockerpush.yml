@@ -42,11 +42,26 @@ jobs:
       - name: Run tests
         run: |
           if [ -f docker-compose.test.yml ]; then
-            docker compose --file docker-compose.yml --file docker-compose.test.yml build \
-                           --build-arg GIT_COMMIT=${{ github.sha }} sut
-            docker compose --file docker-compose.yml --file docker-compose.test.yml run sut
+            # Build the base Laxy image locally so docker/laxy-test/Dockerfile
+            # can use `FROM laxy:dev` without pulling from a remote registry.
+            docker build . --file docker/laxy/Dockerfile --tag laxy:dev
+
+            docker compose --file docker-compose.test.yml build \
+                           --build-arg GIT_COMMIT=${{ github.sha }} unit-tests
+
+            # Use `up --exit-code-from` rather than `run` so that all services
+            # (including db-test) are started with proper network attachment.
+            docker compose --file docker-compose.test.yml up \
+                           --exit-code-from unit-tests --abort-on-container-exit
           else
             docker build . --file docker/laxy/Dockerfile
+          fi
+
+      - name: Cleanup test containers
+        if: always()
+        run: |
+          if [ -f docker-compose.test.yml ]; then
+            docker compose --file docker-compose.test.yml down -v
           fi
 
   # Push image to GitHub Container Registry.

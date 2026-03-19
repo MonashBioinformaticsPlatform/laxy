@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Added explicit `setuptools>=75,<82` dependency for Python 3.12+ compatibility (`fs`/PyFilesystem2 requires `pkg_resources`, which was removed in setuptools 82)
 - Nextcloud/ownCloud shared folder file downloads now use the new-style `/public.php/dav/files/{token}/` WebDAV endpoint (Nextcloud 29+), with automatic fallback to the legacy `/public.php/webdav/` endpoint for older instances
+- CI/unit test Docker Compose stack now uses a healthchecked, isolated `db-test` Postgres and cleans up containers/volumes on failure to prevent stale test DB state
 
 ### Changed
 - **Django 5.2.11** - Pinned to 5.2.11 release

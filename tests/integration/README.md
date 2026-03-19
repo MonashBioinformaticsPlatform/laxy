@@ -16,6 +16,7 @@ These tests require a **running Laxy environment** - the are run inside the cont
 
 ```bash
 # Start the development environment
+cd ../..
 export LAXY_ENV=local-dev
 just up
 
@@ -30,8 +31,11 @@ just test-files        # File operations
 just test-external     # External integrations
 ```
 
+Note: integration tests are guarded by the root pytest configuration and require `--integration` to be set.
+The `just test-integration` and `just test-{jwt,files,external}` recipes already pass this flag.
+
 ## Configuration
 
 Tests use environment variables:
-- `API_BASE_URL` - Laxy API base URL (default: http://localhost:8001)
+- `LAXY_API_BASE_URL` - Laxy API base URL (default: http://localhost:8001)
 - Test credentials are defined in each test file

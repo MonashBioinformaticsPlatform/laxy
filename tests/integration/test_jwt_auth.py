@@ -9,15 +9,17 @@ Usage:
     python test_jwt_auth.py
 
 Environment:
-    Set API_BASE_URL environment variable or it defaults to http://localhost:8001
+    Set LAXY_API_BASE_URL environment variable or it defaults to http://localhost:8001
 """
 
 import os
 import sys
 import json
-import requests
 from datetime import datetime
 from typing import Dict, Optional, Tuple
+
+import pytest
+import requests
 
 # Add tests/integration to path for imports
 _test_dir = os.path.dirname(os.path.abspath(__file__))
@@ -27,7 +29,7 @@ if _test_dir not in sys.path:
 from test_user_manager import TestUserManager
 
 # Configuration
-API_BASE_URL = os.environ.get('API_BASE_URL', 'http://localhost:8001')
+API_BASE_URL = os.environ.get('LAXY_API_BASE_URL', 'http://localhost:8001')
 
 class JWTAuthTester:
     def __init__(self, base_url: str, credentials):
@@ -328,4 +330,50 @@ def main():
         sys.exit(1)
 
 if __name__ == '__main__':
-    main() 
+    main()
+
+
+def test_jwt_auth_end_to_end() -> None:
+    """
+    Pytest wrapper around main() so this script is reported as a test.
+    Requires a running Laxy API at LAXY_API_BASE_URL.
+    """
+    with pytest.raises(SystemExit) as exc:
+        main()
+    assert exc.value.code == 0
+
+
+@pytest.fixture(scope="module")
+def jwt_tester() -> JWTAuthTester:
+    """Shared JWTAuthTester instance with valid credentials."""
+    with TestUserManager() as user_creds:
+        tester = JWTAuthTester(API_BASE_URL, user_creds)
+        yield tester
+
+
+def test_csrf_token_endpoint(jwt_tester: JWTAuthTester) -> None:
+    assert jwt_tester.test_csrf_token_endpoint()
+
+
+@pytest.fixture(scope="module")
+def jwt_tester_with_tokens(jwt_tester: JWTAuthTester) -> JWTAuthTester:
+    """JWTAuthTester after obtaining initial access/refresh tokens."""
+    ok, _ = jwt_tester.test_jwt_token_obtain()
+    assert ok
+    return jwt_tester
+
+
+def test_jwt_token_verify(jwt_tester_with_tokens: JWTAuthTester) -> None:
+    assert jwt_tester_with_tokens.test_jwt_token_verify()
+
+
+def test_jwt_token_refresh(jwt_tester_with_tokens: JWTAuthTester) -> None:
+    assert jwt_tester_with_tokens.test_jwt_token_refresh()
+
+
+def test_authenticated_api_access(jwt_tester_with_tokens: JWTAuthTester) -> None:
+    assert jwt_tester_with_tokens.test_authenticated_api_access()
+
+
+def test_jobs_api_with_auth(jwt_tester_with_tokens: JWTAuthTester) -> None:
+    assert jwt_tester_with_tokens.test_jobs_api_with_auth()

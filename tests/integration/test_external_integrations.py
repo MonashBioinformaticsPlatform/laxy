@@ -9,16 +9,18 @@ Usage:
     python test_external_integrations.py
 
 Environment:
-    Set API_BASE_URL environment variable or it defaults to http://localhost:8001
+    Set LAXY_API_BASE_URL environment variable or it defaults to http://localhost:8001
 """
 
 import os
 import sys
 import json
-import requests
 import tempfile
 from datetime import datetime
 from typing import Dict, Optional, List
+
+import pytest
+import requests
 
 # Add tests/integration to path for imports
 _test_dir = os.path.dirname(os.path.abspath(__file__))
@@ -28,7 +30,7 @@ if _test_dir not in sys.path:
 from test_user_manager import TestUserManager
 
 # Configuration
-API_BASE_URL = os.environ.get('API_BASE_URL', 'http://localhost:8001')
+API_BASE_URL = os.environ.get('LAXY_API_BASE_URL', 'http://localhost:8001')
 
 class ExternalIntegrationsTester:
     def __init__(self, base_url: str, credentials):
@@ -398,4 +400,51 @@ def main():
         sys.exit(1)
 
 if __name__ == '__main__':
-    main() 
+    main()
+
+
+def test_external_integrations_end_to_end() -> None:
+    """
+    Pytest wrapper around main() so this script is reported as a test.
+    Requires a running Laxy API at LAXY_API_BASE_URL.
+    """
+    with pytest.raises(SystemExit) as exc:
+        main()
+    assert exc.value.code == 0
+
+
+@pytest.fixture(scope="module")
+def ext_tester() -> ExternalIntegrationsTester:
+    """Shared ExternalIntegrationsTester instance with authenticated user."""
+    with TestUserManager() as user_creds:
+        tester = ExternalIntegrationsTester(API_BASE_URL, user_creds)
+        assert tester.authenticate()
+        yield tester
+
+
+def test_degust_integration_dependencies(ext_tester: ExternalIntegrationsTester) -> None:
+    assert ext_tester.test_degust_integration_dependencies()
+
+
+def test_webdav_dependencies(ext_tester: ExternalIntegrationsTester) -> None:
+    assert ext_tester.test_webdav_dependencies()
+
+
+def test_social_auth_endpoints(ext_tester: ExternalIntegrationsTester) -> None:
+    assert ext_tester.test_social_auth_endpoints()
+
+
+def test_social_auth_dependencies(ext_tester: ExternalIntegrationsTester) -> None:
+    assert ext_tester.test_social_auth_dependencies()
+
+
+def test_external_service_connectivity(ext_tester: ExternalIntegrationsTester) -> None:
+    assert ext_tester.test_external_service_connectivity()
+
+
+def test_ena_integration(ext_tester: ExternalIntegrationsTester) -> None:
+    assert ext_tester.test_ena_integration()
+
+
+def test_pipeline_integrations(ext_tester: ExternalIntegrationsTester) -> None:
+    assert ext_tester.test_pipeline_integrations()
