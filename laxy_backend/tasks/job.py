@@ -121,7 +121,6 @@ def get_app_job_template_paths() -> Mapping[str, str]:
 
     job_template_paths = {}
     for app in apps.get_app_configs():
-
         app_settings = None
         try:
             # app_settings = importlib.import_module(f"{app.module.__name__}.settings")
@@ -364,7 +363,9 @@ def start_job(self, task_data=None, **kwargs):
                 from toolz.dicttoolz import merge as merge_dicts
 
                 # In the future we may make this a completely different (non-relative) path
-                config_base_path = (Path(job.compute_resource.jobs_dir) / "..").resolve()
+                config_base_path = (
+                    Path(job.compute_resource.jobs_dir) / ".."
+                ).resolve()
                 remote_templates_base = config_base_path / "job_templates"
 
                 remote_common_path = remote_templates_base / "common"
@@ -702,7 +703,6 @@ def index_remote_files(self, task_data=None, **kwargs) -> dict:
             ("input", job.input_files),
             ("output", job.output_files),
         ]:
-
             job_abs_path = job_path_on_compute(job, compute_resource)
             fileset_abspath = str(Path(job_abs_path, fileset_relpath))
 
@@ -1515,12 +1515,35 @@ def bulk_move_job_rsync(self, task_data=None, optional=False, **kwargs):
                 task_result["exit_code"] = result.return_code
 
                 rsync_succeeded = result.succeeded
+                if not rsync_succeeded and result.return_code != 0:
+                    rsync_succeeded = False
+                stderr_lower = result.stderr.lower()
+                rsync_error_patterns = [
+                    "rsync error",
+                    "disk quota exceeded",
+                    "broken pipe",
+                    "no space left on device",
+                    "input/output error",
+                    "transport endpoint",
+                    "connection reset by peer",
+                    "operation not permitted",
+                    "permission denied",
+                    "error in file io",
+                    "error in socket io",
+                    "write error",
+                    "read error",
+                ]
+                for pattern in rsync_error_patterns:
+                    if pattern in stderr_lower:
+                        rsync_succeeded = False
+                        if result.return_code == 0:
+                            task_result["exit_code"] = 1
+                        break
 
         src_prefix = f"laxy+sftp://{src_compute.id}/"
         dst_prefix = f"laxy+sftp://{dst_compute.id}/"
         if rsync_succeeded:
             for file in job.get_files():
-
                 from_location = str(file.location)
                 to_location = str(file.location).replace(src_prefix, dst_prefix, 1)
 
