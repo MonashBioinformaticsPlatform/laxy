@@ -3,6 +3,7 @@
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/5.1/topics/http/urls/
 """
+
 from django.urls import re_path, path, include, register_converter
 from django.contrib import admin
 
@@ -49,7 +50,11 @@ from laxy_backend.views import (
     JobAccessTokenView,
     PingView,
     JobDirectTarDownload,
+    JobInputTarDownload,
+    JobOutputTarDownload,
+    FileSetTarDownload,
     JobClone,
+    ReferenceGenomesView,
 )
 
 from laxy_backend.view_auth import (
@@ -62,6 +67,7 @@ from laxy_backend.view_auth import (
 )
 
 app_name = "laxy_backend"
+
 
 # See: https://docs.djangoproject.com/en/2.0/topics/http/urls/#registering-custom-path-converters
 class UUID62Converter:
@@ -121,6 +127,7 @@ api_urls = [
     #     ComputeResourceCreate.as_view(),
     #     name='compute_resource'),
     re_path(r"ping/$", PingView.as_view(), name="ping"),
+    re_path(r"genomes/$", ReferenceGenomesView.as_view(), name="genomes"),
     # This seems to fail with 405 error if it is included too low in the list - some route pattern clash ?
     re_path(r"user/profile/$", UserProfileView.as_view(), name="user-profile"),
     re_path(r"auth/jwt/", include(jwt_urls)),
@@ -175,6 +182,26 @@ api_urls = [
         JobDirectTarDownload.as_view(),
         name="job_tarball_download",
     ),
+    re_path(
+        r"job/(?P<job_id>[a-zA-Z0-9\-_]+)/download/input/$",
+        JobInputTarDownload.as_view(),
+        name="job_input_tarball_download",
+    ),
+    re_path(
+        r"job/(?P<job_id>[a-zA-Z0-9\-_]+)_input.tar.gz$",
+        JobInputTarDownload.as_view(),
+        name="job_input_tarball_download",
+    ),
+    re_path(
+        r"job/(?P<job_id>[a-zA-Z0-9\-_]+)/download/output/$",
+        JobOutputTarDownload.as_view(),
+        name="job_output_tarball_download",
+    ),
+    re_path(
+        r"job/(?P<job_id>[a-zA-Z0-9\-_]+)_output.tar.gz$",
+        JobOutputTarDownload.as_view(),
+        name="job_output_tarball_download",
+    ),
     re_path(r"job/(?P<uuid>[a-zA-Z0-9\-_]+)/$", JobView.as_view(), name="job"),
     re_path(r"file/$", FileCreate.as_view(), name="create_file"),
     re_path(
@@ -185,6 +212,16 @@ api_urls = [
     re_path(r"file/(?P<uuid>[a-zA-Z0-9\-_]+)/$", FileView.as_view(), name="file"),
     re_path(
         r"fileset/(?P<uuid>[a-zA-Z0-9\-_]+)/$", FileSetView.as_view(), name="fileset"
+    ),
+    re_path(
+        r"fileset/(?P<uuid>[a-zA-Z0-9\-_]+)/download/$",
+        FileSetTarDownload.as_view(),
+        name="fileset_tarball_download",
+    ),
+    re_path(
+        r"fileset/(?P<uuid>[a-zA-Z0-9\-_]+).tar.gz$",
+        FileSetTarDownload.as_view(),
+        name="fileset_tarball_download",
     ),
     re_path(r"fileset/$", FileSetCreate.as_view(), name="create_fileset"),
     re_path(

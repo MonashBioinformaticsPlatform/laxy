@@ -168,6 +168,15 @@ export class WebAPI {
         }
     }
 
+    public static async getAvailableGenomes(): Promise<AxiosResponse> {
+        try {
+            return await this.fetcher.get(
+                `/api/v1/genomes/`) as AxiosResponse;
+        } catch (error) {
+            throw error;
+        }
+    }
+
     public static async enaSearch(accession_list: string[]): Promise<AxiosResponse> {
         const accessions = accession_list.join(',');
         const url = `/api/v1/ena/fastqs/?accessions=${accessions}`;
@@ -315,6 +324,33 @@ export class WebAPI {
     public static downloadJobTarballUrl(job_id: string,
         access_token?: string) {
         let url = `${this.baseUrl}/api/v1/job/${job_id}.tar.gz`;
+        if (access_token) {
+            url = `${url}?access_token=${access_token}`;
+        }
+        return url;
+    }
+
+    public static downloadJobInputTarballUrl(job_id: string,
+        access_token?: string) {
+        let url = `${this.baseUrl}/api/v1/job/${job_id}_input.tar.gz`;
+        if (access_token) {
+            url = `${url}?access_token=${access_token}`;
+        }
+        return url;
+    }
+
+    public static downloadJobOutputTarballUrl(job_id: string,
+        access_token?: string) {
+        let url = `${this.baseUrl}/api/v1/job/${job_id}_output.tar.gz`;
+        if (access_token) {
+            url = `${url}?access_token=${access_token}`;
+        }
+        return url;
+    }
+
+    public static downloadFileSetTarballUrl(fileset_id: string,
+        access_token?: string) {
+        let url = `${this.baseUrl}/api/v1/fileset/${fileset_id}.tar.gz`;
         if (access_token) {
             url = `${url}?access_token=${access_token}`;
         }

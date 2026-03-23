@@ -1109,3 +1109,245 @@ class AccessTokenUsageTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data.get("id"), self.input_fileset.id)
+
+
+class JobInputOutputTarballDownloadTest(TestCase):
+    def setUp(self):
+        self.owner, self.owner_client = _create_user_and_login(
+            "owner", "ownerpass", is_superuser=False
+        )
+        self.other_user, self.other_client = _create_user_and_login(
+            "other", "otherpass", is_superuser=False
+        )
+        self.admin_user, self.admin_client = _create_user_and_login(
+            "admin", "adminpass", is_superuser=True
+        )
+
+        self.compute = ComputeResource(
+            owner=self.owner,
+            host="127.0.0.1",
+            disposable=False,
+            status=ComputeResource.STATUS_ONLINE,
+            name="default",
+            extra={"base_dir": get_tmp_dir()},
+        )
+        self.compute.save()
+
+        self.job = Job(
+            owner=self.owner,
+            params='{"test":"data"}',
+            compute_resource=self.compute,
+        )
+        self.job.save()
+        self.job._init_filesets(save=True)
+
+    def tearDown(self):
+        self.job.delete()
+        self.compute.delete()
+        self.owner.delete()
+        self.other_user.delete()
+        self.admin_user.delete()
+
+    def test_download_input_tarball_returns_503_without_ssh(self):
+        """Input tarball download returns 503 when SSH is unavailable."""
+        url = reverse("laxy_backend:job_input_tarball_download", args=[self.job.id])
+        response = self.owner_client.get(url)
+        self.assertEqual(response.status_code, 503)
+
+    def test_download_output_tarball_returns_503_without_ssh(self):
+        """Output tarball download returns 503 when SSH is unavailable."""
+        url = reverse("laxy_backend:job_output_tarball_download", args=[self.job.id])
+        response = self.owner_client.get(url)
+        self.assertEqual(response.status_code, 503)
+
+    def test_download_input_tarball_unauthenticated(self):
+        """Unauthenticated users cannot download input tarball."""
+        client = APIClient(HTTP_CONTENT_TYPE="application/json")
+        url = reverse("laxy_backend:job_input_tarball_download", args=[self.job.id])
+        response = client.get(url)
+        self.assertEqual(response.status_code, 401)
+
+    def test_download_output_tarball_unauthenticated(self):
+        """Unauthenticated users cannot download output tarball."""
+        client = APIClient(HTTP_CONTENT_TYPE="application/json")
+        url = reverse("laxy_backend:job_output_tarball_download", args=[self.job.id])
+        response = client.get(url)
+        self.assertEqual(response.status_code, 401)
+
+    def test_download_input_tarball_forbidden_for_non_owner(self):
+        """Non-owners cannot download input tarball."""
+        url = reverse("laxy_backend:job_input_tarball_download", args=[self.job.id])
+        response = self.other_client.get(url)
+        self.assertEqual(response.status_code, 403)
+
+    def test_download_output_tarball_forbidden_for_non_owner(self):
+        """Non-owners cannot download output tarball."""
+        url = reverse("laxy_backend:job_output_tarball_download", args=[self.job.id])
+        response = self.other_client.get(url)
+        self.assertEqual(response.status_code, 403)
+
+    def test_download_input_tarball_allowed_for_superuser(self):
+        """Superusers can download input tarball."""
+        url = reverse("laxy_backend:job_input_tarball_download", args=[self.job.id])
+        response = self.admin_client.get(url)
+        self.assertEqual(response.status_code, 503)
+
+    def test_download_output_tarball_allowed_for_superuser(self):
+        """Superusers can download output tarball."""
+        url = reverse("laxy_backend:job_output_tarball_download", args=[self.job.id])
+        response = self.admin_client.get(url)
+        self.assertEqual(response.status_code, 503)
+
+    def test_download_input_tarball_direct_url(self):
+        """Input tarball can be downloaded via direct .tar.gz URL."""
+        url = reverse("laxy_backend:job_input_tarball_download", args=[self.job.id])
+        self.assertIn("/download/input/", url)
+
+    def test_download_output_tarball_direct_url(self):
+        """Output tarball can be downloaded via direct .tar.gz URL."""
+        url = reverse("laxy_backend:job_output_tarball_download", args=[self.job.id])
+        self.assertIn("/download/output/", url)
+
+
+class FileSetTarballDownloadTest(TestCase):
+    def setUp(self):
+        self.owner, self.owner_client = _create_user_and_login(
+            "owner", "ownerpass", is_superuser=False
+        )
+        self.other_user, self.other_client = _create_user_and_login(
+            "other", "otherpass", is_superuser=False
+        )
+
+        self.compute = ComputeResource(
+            owner=self.owner,
+            host="127.0.0.1",
+            disposable=False,
+            status=ComputeResource.STATUS_ONLINE,
+            name="default",
+            extra={"base_dir": get_tmp_dir()},
+        )
+        self.compute.save()
+
+        self.job = Job(
+            owner=self.owner,
+            params='{"test":"data"}',
+            compute_resource=self.compute,
+        )
+        self.job.save()
+        self.job._init_filesets(save=True)
+
+        self.input_fileset = self.job.input_files
+        self.output_fileset = self.job.output_files
+
+    def tearDown(self):
+        self.job.delete()
+        self.compute.delete()
+        self.owner.delete()
+        self.other_user.delete()
+
+    def test_download_fileset_tarball_returns_503_without_ssh(self):
+        """FileSet tarball download returns 503 when SSH is unavailable."""
+        url = reverse(
+            "laxy_backend:fileset_tarball_download", args=[self.input_fileset.uuid()]
+        )
+        response = self.owner_client.get(url)
+        self.assertEqual(response.status_code, 503)
+
+    def test_download_fileset_tarball_unauthenticated(self):
+        """Unauthenticated users cannot download FileSet tarball."""
+        client = APIClient(HTTP_CONTENT_TYPE="application/json")
+        url = reverse(
+            "laxy_backend:fileset_tarball_download", args=[self.input_fileset.uuid()]
+        )
+        response = client.get(url)
+        self.assertEqual(response.status_code, 401)
+
+    def test_download_fileset_tarball_forbidden_for_non_owner(self):
+        """Non-owners cannot download FileSet tarball."""
+        url = reverse(
+            "laxy_backend:fileset_tarball_download", args=[self.output_fileset.uuid()]
+        )
+        response = self.other_client.get(url)
+        self.assertEqual(response.status_code, 403)
+
+    def test_download_fileset_tarball_direct_url(self):
+        """FileSet tarball can be downloaded via direct .tar.gz URL."""
+        url = reverse(
+            "laxy_backend:fileset_tarball_download", args=[self.input_fileset.uuid()]
+        )
+        self.assertIn("/download/", url)
+
+
+class JobInputOutputTarballAccessTokenTest(TestCase):
+    def setUp(self):
+        self.owner, self.owner_client = _create_user_and_login(
+            "owner", "ownerpass", is_superuser=False
+        )
+
+        self.compute = ComputeResource(
+            owner=self.owner,
+            host="127.0.0.1",
+            disposable=False,
+            status=ComputeResource.STATUS_ONLINE,
+            name="default",
+            extra={"base_dir": get_tmp_dir()},
+        )
+        self.compute.save()
+
+        self.job = Job(
+            owner=self.owner,
+            params='{"test":"data"}',
+            compute_resource=self.compute,
+        )
+        self.job.save()
+        self.job._init_filesets(save=True)
+
+    def tearDown(self):
+        self.job.delete()
+        self.compute.delete()
+        self.owner.delete()
+
+    def _create_access_token_for_job(self, expiry_time=None) -> AccessToken:
+        token = AccessToken.objects.create(
+            object_id=self.job.id,
+            expiry_time=expiry_time,
+        )
+        return token
+
+    def test_input_tarball_with_valid_access_token(self):
+        """Input tarball download works with valid access token."""
+        token = self._create_access_token_for_job().token
+        client = APIClient(HTTP_CONTENT_TYPE="application/json")
+        url = reverse("laxy_backend:job_input_tarball_download", args=[self.job.uuid()])
+        response = client.get(f"{url}?access_token={token}")
+        self.assertEqual(response.status_code, 503)
+
+    def test_output_tarball_with_valid_access_token(self):
+        """Output tarball download works with valid access token."""
+        token = self._create_access_token_for_job().token
+        client = APIClient(HTTP_CONTENT_TYPE="application/json")
+        url = reverse(
+            "laxy_backend:job_output_tarball_download", args=[self.job.uuid()]
+        )
+        response = client.get(f"{url}?access_token={token}")
+        self.assertEqual(response.status_code, 503)
+
+    def test_input_tarball_with_expired_access_token(self):
+        """Input tarball download fails with expired access token."""
+        expired_at = timezone.now() - timedelta(days=1)
+        token = self._create_access_token_for_job(expiry_time=expired_at).token
+        client = APIClient(HTTP_CONTENT_TYPE="application/json")
+        url = reverse("laxy_backend:job_input_tarball_download", args=[self.job.uuid()])
+        response = client.get(f"{url}?access_token={token}")
+        self.assertEqual(response.status_code, 401)
+
+    def test_output_tarball_with_expired_access_token(self):
+        """Output tarball download fails with expired access token."""
+        expired_at = timezone.now() - timedelta(days=1)
+        token = self._create_access_token_for_job(expiry_time=expired_at).token
+        client = APIClient(HTTP_CONTENT_TYPE="application/json")
+        url = reverse(
+            "laxy_backend:job_output_tarball_download", args=[self.job.uuid()]
+        )
+        response = client.get(f"{url}?access_token={token}")
+        self.assertEqual(response.status_code, 401)
