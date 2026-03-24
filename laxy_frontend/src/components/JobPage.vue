@@ -240,6 +240,21 @@
           <transition name="fade">
             <md-layout v-show="showTab === 'input'" md-column-medium>
               <md-progress v-if="refreshing" md-indeterminate></md-progress>
+              <md-layout v-if="job" md-flex="100">
+                <md-whiteframe class="pad-32 fill-width">
+                  <div>
+                    <h3 style="display: inline; float: left; margin-top:-8px;">
+                      Downloads
+                    </h3>
+                    <md-button id="inputHelpButton" @click="openDialog('downloadHelpDialog')"
+                      class="push-right md-icon-button md-raised md-dense" style="display: inline;">
+                      <md-icon style="color: #bdbdbd;">help</md-icon>
+                    </md-button>
+                  </div>
+                  <DownloadJobFilesTable :links="inputDownloadLinks"
+                    @flash-message="flashSnackBarEvent"></DownloadJobFilesTable>
+                </md-whiteframe>
+              </md-layout>
               <md-layout id="input-files-panel">
                 <nested-file-list v-if="job && inputFilesetTree.children.length" id="input-files-card" class="fill-width"
                   ref="input" title="Input files" root-path-name="input" :fileTree="inputFilesetTree" :job-id="jobId"
@@ -255,7 +270,7 @@
                 <md-whiteframe class="pad-32 fill-width">
                   <div>
                     <h3 style="display: inline; float: left; margin-top:-8px;">
-                      Download all job files
+                      Downloads
                       <span v-if="job && job.params && job.params.tarball_size">(~
                         {{ job.params.tarball_size | humanize_bytes }})</span>
                     </h3>
@@ -264,7 +279,7 @@
                       <md-icon style="color: #bdbdbd;">help</md-icon>
                     </md-button>
                   </div>
-                  <DownloadJobFilesTable :url="tarballUrl" :filename="jobId + '.tar.gz'"
+                  <DownloadJobFilesTable :links="outputDownloadLinks"
                     @flash-message="flashSnackBarEvent"></DownloadJobFilesTable>
                 </md-whiteframe>
               </md-layout>
@@ -388,7 +403,9 @@ import SharingLinkList from "./SharingLinkList.vue";
 import { Snackbar } from "../snackbar";
 import ExpiryDialog from "./Dialogs/ExpiryDialog.vue";
 import GenericPip from "./GenericPip.vue";
-import DownloadJobFilesTable from "./DownloadJobFilesTable.vue";
+import DownloadJobFilesTable, {
+  DownloadLinkRow
+} from "./DownloadJobFilesTable.vue";
 import DownloadHelpDialog from "./Dialogs/DownloadHelpDialog.vue";
 import PopupBlockerBanner from "./PopupBlockerBanner.vue";
 import BannerNotice from "./BannerNotice.vue";
@@ -867,12 +884,97 @@ export default class JobPage extends Vue {
     return undefined;
   }
 
-  get tarballUrl(): string {
+  get effectiveDownloadAccessToken(): string | undefined {
     let access_token = this.access_token;
     if (this.bannerSharingLink) {
       access_token = this.bannerSharingLink.token;
     }
-    return WebAPI.downloadJobTarballUrl(this.jobId, access_token);
+    return access_token;
+  }
+
+  get tarballUrl(): string {
+    return WebAPI.downloadJobTarballUrl(
+      this.jobId,
+      this.effectiveDownloadAccessToken
+    );
+  }
+
+  get inputTarballUrl(): string {
+    return WebAPI.downloadJobInputTarballUrl(
+      this.jobId,
+      this.effectiveDownloadAccessToken
+    );
+  }
+
+  get outputTarballUrl(): string {
+    return WebAPI.downloadJobOutputTarballUrl(
+      this.jobId,
+      this.effectiveDownloadAccessToken
+    );
+  }
+
+  sumApproxFilesetBytes(files: LaxyFile[] | null): number | null {
+    if (!files || !files.length) {
+      return null;
+    }
+    let total = 0;
+    let counted = 0;
+    for (const f of files) {
+      if (f.deleted) {
+        continue;
+      }
+      const raw =
+        f.metadata && typeof (f.metadata as { size?: unknown }).size === "number"
+          ? (f.metadata as { size: number }).size
+          : null;
+      if (raw != null && raw >= 0) {
+        total += raw;
+        counted++;
+      }
+    }
+    return counted > 0 ? total : null;
+  }
+
+  get jobTarballSizeBytes(): number | null {
+    const p = this.job && this.job.params;
+    if (p && typeof p.tarball_size === "number" && p.tarball_size > 0) {
+      return p.tarball_size;
+    }
+    return null;
+  }
+
+  get outputDownloadLinks(): DownloadLinkRow[] {
+    return [
+      {
+        label: "All files",
+        url: this.tarballUrl,
+        downloadScope: "all",
+        approxBytes: this.jobTarballSizeBytes
+      },
+      {
+        label: "Output files",
+        url: this.outputTarballUrl,
+        downloadScope: "output",
+        approxBytes: this.sumApproxFilesetBytes(this.outputFiles)
+      }
+    ];
+  }
+
+  get inputDownloadLinks(): DownloadLinkRow[] {
+    return [
+      {
+        label: "All files",
+        url: this.tarballUrl,
+        downloadScope: "all",
+        approxBytes: this.jobTarballSizeBytes
+      },
+      {
+        label: "Input files",
+        url: this.inputTarballUrl,
+        downloadScope: "input",
+        approxBytes: this.sumApproxFilesetBytes(this.inputFiles)
+      }
+    ];
   }
 
   filesByTag(tag: string): LaxyFile[] {
