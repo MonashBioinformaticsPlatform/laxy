@@ -173,11 +173,9 @@ See `laxy_frontend/src/web-api.ts` for examples of frontend API usage.
 
 ### Adding a new reference genome
 
-Reference genomes follow the iGenomes naming and path layout, e.g. `Homo_sapiens/Ensembl/GRCh38`.
-This serves as both the internal genome ID and the relative storage path.
+Reference genomes use an iGenomes-style id (e.g. `Homo_sapiens/Ensembl/GRCh38`) as the API/job key. The on-disk or remote layout is set explicitly per entry.
 
-- Add the genome to the frontend in `laxy_frontend/src/config/genomics/genomes.ts`
-- Add the genome to the backend in `laxy_backend/data/genomics/genomes.py`
+- Add the genome to `REFERENCE_GENOMES` in `laxy_genomes/data/genomes.py` with at least `"location"` (relative path under references, or later a URL) and any optional API metadata. The web UI loads the list from `GET /api/v1/genomes/`.
 - (Optional) Add on-demand downloading to the appropriate `run_job.sh` script
   (via the `download_ref_urls` bash function), or pre-install at the correct path
 

@@ -220,8 +220,12 @@ class FileSerializer(BaseModelSerializer):
 
 
 class FileSerializerPostRequest(FileSerializer):
-    name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True, default=None)
-    path = serializers.CharField(max_length=4096, required=False, allow_null=True, allow_blank=True, default=None)
+    name = serializers.CharField(
+        max_length=255, required=False, allow_null=True, allow_blank=True, default=None
+    )
+    path = serializers.CharField(
+        max_length=4096, required=False, allow_null=True, allow_blank=True, default=None
+    )
     fileset = serializers.PrimaryKeyRelatedField(
         queryset=FileSet.objects.all(), required=False, allow_null=True, default=None
     )
@@ -290,7 +294,6 @@ class JobFileSerializerCreateRequest(FileSerializer):
 
 
 class FileSetSerializer(BaseModelSerializer):
-
     files = FileSerializer(many=True, required=False, allow_null=True)
 
     # This lists only only IDs
@@ -410,7 +413,6 @@ class ComputeResourceSerializer(BaseModelSerializer):
 
 
 class PipelineSerializer(BaseModelSerializer):
-
     metadata = SchemalessJsonResponseSerializer(required=False)
 
     class Meta:
@@ -689,7 +691,6 @@ class JobSerializerRequest(JobSerializerBase):
 
 
 class PipelineRunSerializer(BaseModelSerializer):
-
     owner = serializers.PrimaryKeyRelatedField(
         read_only=True,
         # default=serializers.CurrentUserDefault()

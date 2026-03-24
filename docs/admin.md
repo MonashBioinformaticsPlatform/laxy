@@ -82,7 +82,7 @@ The built-in job scripts (eg `run_job.sh`) can be overridding on a specific remo
 
 `jobs/references` is for storing genome references that are shared across jobs (and other large reference datasets required by pipelines).
 
-Maybe pipelines are configured to discover references based on the iGenomes directory structure (but additional non-iGenomes references can and should be added there). See `laxy_backend/data/genomics/genomes.py` and `laxy_frontend/src/config/genomics/genomes.ts` for how there are currently configured.
+Pipelines are typically configured to discover references using an iGenomes-style directory layout (additional non-iGenomes references can and should be added there). On disk that looks like:
 
 ```bash
 jobs/references/
@@ -96,6 +96,8 @@ jobs/references/
         ├── NCBI
         └── UCSC
 ```
+
+**Catalog exposed to the web UI:** the list of reference genomes is defined in `laxy_genomes/data/genomes.py` as `REFERENCE_GENOMES` (each id maps to a dict that must include `location`: the iGenomes-style relative path under references, or in future a URL; plus optional API fields such as `recommended`, `files`, `tags`, `source`, `identifiers`). The public API `GET /api/v1/genomes/` returns those records (excluding `location`). The Vue app loads that endpoint into Vuex on startup; there is no separate static genome list in the frontend.
 
 > NOTE: `references` should be moved out of `jobs` in the future.
 

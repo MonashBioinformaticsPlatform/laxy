@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 #
-# Retrieves the file list from https://github.com/ewels/AWS-iGenomes and formats it as a
-# Javascript object suitable for use  in the Laxy UI (eg PipelineParams.vue).
+# Retrieves the file list from https://github.com/ewels/AWS-iGenomes and prints example records.
+# Canonical genome configuration: REFERENCE_GENOMES in laxy_genomes/data/genomes.py.
+# The UI loads the list from GET /api/v1/genomes/.
 
 import requests
 import json
@@ -40,17 +41,17 @@ print("];")
 
 prev_species = ""
 print("# For Python backend, validation")
-print("REFERENCE_GENOME_MAPPINGS = {")
+print("# Paste into REFERENCE_GENOMES as new keys (set location to the iGenomes path, often same as id).")
+print("REFERENCE_GENOMES.update({")
 for genome_id in sorted(list(ids)):
     species = genome_id.split("/")[0].replace("_", " ")
     if prev_species != species:
         print()
     prev_species = species
 
-    # genomes.append(record)
-    print(f'    "{genome_id}": "{genome_id}",')
+    print(f'    "{genome_id}": {{"location": "{genome_id}"}},')
 
-print("}")
+print("})")
 
 ####
 

@@ -1,5 +1,7 @@
 import map from 'lodash-es/map';
 
+import { ReferenceGenome } from './types';
+
 /**
  * Truncates a string for display, including `frontLen` and `backLen` number
  * of characters from the start and end.
@@ -92,4 +94,18 @@ export function isValidUrl(str: string, schemes: string[] = []) {
     }
 
     return true;
+}
+
+/** Recommended genomes first, then stable order by id (for default selection and dropdown order). */
+export function sortReferenceGenomesByPreference(
+    genomes: ReferenceGenome[]
+): ReferenceGenome[] {
+    return [...genomes].sort((a, b) => {
+        const ar = a.recommended ? 0 : 1;
+        const br = b.recommended ? 0 : 1;
+        if (ar !== br) {
+            return ar - br;
+        }
+        return a.id.localeCompare(b.id);
+    });
 }

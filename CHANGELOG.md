@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - PostgreSQL upgrade documentation in `POSTGRES_UPGRADE_PLAN.md`
 - OpenAPI documentation via drf-spectacular at `/api/v1/schema/`, `/api/v1/schema/swagger-ui/`, `/api/v1/schema/redoc/`
 - `--skip-alignment` option in nf-core-rnaseq v3.18.0 pipeline UI
+- Added input and output tarball download endpoints: `/job/<id>_input.tar.gz` and `/job/<id>_output.tar.gz`
 
 ### Removed
 - Removed `coreapi` and `coreschema` dependencies (replaced with native DRF OpenAPI parameter support via `get_schema_operation_parameters`)
@@ -46,6 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - f-strings used instead of `%s` formatting in many files
 - GitHub Actions workflows updated to use `actions/checkout@v4` and GHCR (`ghcr.io`)
 - Development dependencies modernised (pytest 8.x, ruff, black 24.x)
+- New Django app `laxy_genomes` for reference genome configuration (`laxy_genomes/data/genomes.py`); public list endpoint is `GET /api/v1/genomes/`
 
 ### Fixed
 - **API Compatibility**:

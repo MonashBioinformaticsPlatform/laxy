@@ -97,7 +97,7 @@
 // import "vue-material/dist/vue-material.css";
 
 import get from "lodash-es/get";
-import find from "lodash-es/find";
+import filter from "lodash-es/filter";
 import last from "lodash-es/last";
 import uniq from "lodash-es/uniq";
 import compact from "lodash-es/compact";
@@ -125,12 +125,10 @@ import { Sample } from "../../model";
 import { ADD_SAMPLES, SET_PIPELINE_GENOME } from "../../store";
 import { WebAPI } from "../../web-api";
 
-import AVAILABLE_GENOMES from "../../config/genomics/genomes";
-
 import { ENADummySampleList as _dummysampleList } from "../../test-data";
 import { Snackbar } from "../../snackbar";
-import { filenameFromUrl } from "../../util";
-import { ILaxyFile, ENASample, PairedEndFiles } from "../../types";
+import { filenameFromUrl, sortReferenceGenomesByPreference } from "../../util";
+import { ILaxyFile, ENASample, PairedEndFiles, ReferenceGenome } from "../../types";
 
 interface DbAccession {
   accession: string;
@@ -280,12 +278,15 @@ export default class ENAFileSelect extends Vue {
       if (last_sample && last_sample_accession) {
         const species_resp = await WebAPI.enaSpeciesInfo(last_sample_accession);
         const organism = get(species_resp.data, "scientific_name");
-        const genome_id = get(
-          find(AVAILABLE_GENOMES, { organism: organism }),
-          "id",
-          AVAILABLE_GENOMES[0].id
-        );
-        this.$store.commit(SET_PIPELINE_GENOME, genome_id);
+        const availableGenomes: ReferenceGenome[] =
+          this.$store.state.availableGenomes || [];
+        if (availableGenomes.length > 0) {
+          const matches = filter(availableGenomes, { organism: organism });
+          const ordered = sortReferenceGenomesByPreference(matches);
+          const genome_id =
+            ordered.length > 0 ? ordered[0].id : availableGenomes[0].id;
+          this.$store.commit(SET_PIPELINE_GENOME, genome_id);
+        }
       }
 
       this.$store.commit(ADD_SAMPLES, cart_samples);

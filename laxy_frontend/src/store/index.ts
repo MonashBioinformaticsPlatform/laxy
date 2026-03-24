@@ -19,8 +19,7 @@ import { ComputeJob, LaxyFile, Sample, SampleCartItems } from '../model';
 import { WebAPI } from '../web-api';
 import { vueAuth, AuthOptions } from '../auth';
 
-import AVAILABLE_GENOMES from "../config/genomics/genomes";
-import { ILaxyFile, LaxyFileSet, ISample } from '../types';
+import { ILaxyFile, LaxyFileSet, ISample, ReferenceGenome } from '../types';
 import { addPipelineRoutes } from '../routes';
 
 import pipelineParams from './modules/pipelineParams';
@@ -48,8 +47,10 @@ export const SET_API_URL = 'set_api_url';
 export const SET_JOB_ACCESS_TOKEN = 'set_job_access_token';
 export const SET_GLOBAL_SNACKBAR = 'set_global_snackbar';
 export const SET_PIPELINES = 'set_pipelines';
+export const SET_GENOMES = 'set_genomes';
 
 export const PING_BACKEND = 'ping_backend';
+export const FETCH_GENOMES = 'fetch_genomes';
 export const FETCH_USER_PROFILE = 'fetch_user_profile';
 export const FETCH_JOBS = 'fetch_jobs';
 export const FETCH_FILESET = 'fetch_fileset';
@@ -76,6 +77,7 @@ const initial_state: any = {
     user_profile: null as any,
     samples: new SampleCartItems(),
     availablePipelines: {},
+    availableGenomes: [] as ReferenceGenome[],
     pipelineParams: {
         // a list of files the backend will fetch as input
         fetch_files: [] as ILaxyFile[],
@@ -255,6 +257,9 @@ const mutations: any = {
         addPipelineRoutes(pipelines);
         Vue.set(state, 'availablePipelines', keyBy(pipelines, p => p.name));
     },
+    [SET_GENOMES](state: any, genomes: ReferenceGenome[]) {
+        Vue.set(state, 'availableGenomes', genomes);
+    },
     ...make.mutations(initial_state),
 };
 
@@ -398,6 +403,15 @@ const actions: any = {
             commit(SET_PIPELINES, response.data.results);
         } catch (error) {
             throw error;
+        }
+    },
+    async [FETCH_GENOMES]({ commit, state }: any) {
+        try {
+            const response = await WebAPI.getAvailableGenomes();
+            commit(SET_GENOMES, response.data);
+        } catch (error) {
+            console.warn("Failed to fetch genomes from API", error);
+            commit(SET_GENOMES, []);
         }
     },
 };

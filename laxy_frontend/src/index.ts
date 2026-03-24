@@ -69,6 +69,7 @@ import {
     AUTHENTICATE_USER,
     FETCH_USER_PROFILE,
     FETCH_PIPELINES,
+    FETCH_GENOMES,
     PING_BACKEND,
     SET_GLOBAL_SNACKBAR,
     SET_USER_PROFILE,
@@ -180,6 +181,11 @@ const App = new Vue({
         }
         try {
             await this.$store.dispatch(FETCH_PIPELINES);
+        } catch (e) {
+            console.warn(e)
+        }
+        try {
+            await this.$store.dispatch(FETCH_GENOMES);
         } catch (e) {
             console.warn(e)
         }

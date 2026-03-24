@@ -181,7 +181,7 @@ from .view_mixins import (
 # from .models import User
 from django.contrib.auth import get_user_model
 
-from .data.genomics.genomes import REFERENCE_GENOME_MAPPINGS
+from laxy_genomes.data.genomes import REFERENCE_GENOMES
 from contextlib import closing
 
 User = get_user_model()
@@ -290,6 +290,110 @@ class JobDirectTarDownload(JSONView):
             output_fn = f"{job.id}.tar.gz"
         else:
             output_fn = f"laxy_job_{job.id}.tar.gz"
+        return FileResponse(stdout, filename=output_fn, as_attachment=True)
+
+
+class JobInputTarDownload(JSONView):
+    lookup_url_kwarg = "job_id"
+    queryset = Job.objects.all()
+    permission_classes = (IsOwner | IsSuperuser | HasReadonlyObjectAccessToken,)
+
+    def get(self, request, job_id, version=None):
+        job = self.get_object()
+
+        if not job.input_files:
+            return HttpResponse(
+                status=status.HTTP_404_NOT_FOUND,
+                reason="No input files for this job.",
+            )
+
+        files = job.input_files.get_files()
+        stored_at = get_primary_compute_location_for_files(files)
+        if stored_at is None:
+            return HttpResponse(
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                reason="Files are currently unavailable for tarball download, try again later.",
+            )
+
+        job_path = job_path_on_compute(job, stored_at)
+
+        client = stored_at.ssh_client()
+        stdin, stdout, stderr = client.exec_command(
+            f'tar -chzf - --directory "{stored_at.jobs_dir}" -C "{job_path}" "input"'
+        )
+
+        output_fn = f"{job.id}_input.tar.gz"
+        return FileResponse(stdout, filename=output_fn, as_attachment=True)
+
+
+class JobOutputTarDownload(JSONView):
+    lookup_url_kwarg = "job_id"
+    queryset = Job.objects.all()
+    permission_classes = (IsOwner | IsSuperuser | HasReadonlyObjectAccessToken,)
+
+    def get(self, request, job_id, version=None):
+        job = self.get_object()
+
+        if not job.output_files:
+            return HttpResponse(
+                status=status.HTTP_404_NOT_FOUND,
+                reason="No output files for this job.",
+            )
+
+        files = job.output_files.get_files()
+        stored_at = get_primary_compute_location_for_files(files)
+        if stored_at is None:
+            return HttpResponse(
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                reason="Files are currently unavailable for tarball download, try again later.",
+            )
+
+        job_path = job_path_on_compute(job, stored_at)
+
+        client = stored_at.ssh_client()
+        stdin, stdout, stderr = client.exec_command(
+            f'tar -chzf - --directory "{stored_at.jobs_dir}" -C "{job_path}" "output"'
+        )
+
+        output_fn = f"{job.id}_output.tar.gz"
+        return FileResponse(stdout, filename=output_fn, as_attachment=True)
+
+
+class FileSetTarDownload(JSONView):
+    queryset = FileSet.objects.all()
+    permission_classes = (IsOwner | IsSuperuser | FileSetHasAccessTokenForJob,)
+
+    def get(self, request, uuid, version=None):
+        fileset = self.get_object()
+
+        if fileset is None:
+            return HttpResponse(
+                status=status.HTTP_404_NOT_FOUND,
+                reason="FileSet not found.",
+            )
+
+        files = fileset.get_files()
+        stored_at = get_primary_compute_location_for_files(files)
+        if stored_at is None:
+            return HttpResponse(
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                reason="Files are currently unavailable for tarball download, try again later.",
+            )
+
+        fileset_path = fileset.path or ""
+
+        client = stored_at.ssh_client()
+        if fileset_path:
+            stdin, stdout, stderr = client.exec_command(
+                f'tar -chzf - --directory "{stored_at.jobs_dir}" -C "{fileset_path}" "."'
+            )
+            output_fn = f"{fileset.id}.tar.gz"
+        else:
+            stdin, stdout, stderr = client.exec_command(
+                f'tar -chzf - --directory "{stored_at.base}" "."'
+            )
+            output_fn = f"{fileset.id}.tar.gz"
+
         return FileResponse(stdout, filename=output_fn, as_attachment=True)
 
 
@@ -518,7 +622,7 @@ class FileCreate(JSONView):
     serializer_class = FileSerializer
 
     def get_serializer_class(self):
-        if self.request.method == 'POST':
+        if self.request.method == "POST":
             return FileSerializerPostRequest
         return self.serializer_class
 
@@ -541,7 +645,9 @@ class FileCreate(JSONView):
         if serializer.is_valid():
             obj = serializer.save(owner=request.user)
             # Use response serializer (FileSerializer) which includes the id field
-            response_serializer = FileSerializer(instance=obj, context={'request': request})
+            response_serializer = FileSerializer(
+                instance=obj, context={"request": request}
+            )
             return Response(response_serializer.data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -860,9 +966,7 @@ class FileView(
                     reason="Error accessing file via SFTP storage backend",
                 )
 
-    @extend_schema(
-        request=FileSerializer, responses=PatchSerializerResponse
-    )
+    @extend_schema(request=FileSerializer, responses=PatchSerializerResponse)
     def patch(self, request, uuid=None, version=None):
         """
         Partial update of fields on File.
@@ -912,9 +1016,7 @@ class FileView(
 
         return super(FileView, self).patch(request, uuid)
 
-    @extend_schema(
-        request=FileSerializerPostRequest, responses=FileSerializer
-    )
+    @extend_schema(request=FileSerializerPostRequest, responses=FileSerializer)
     def put(self, request: Request, uuid: str, version=None):
         """
         Replace the content of an existing File.
@@ -1084,7 +1186,7 @@ class JobFileView(StreamFileMixin, GetMixin, JSONView):
         if urlparse(location).scheme == "file":
             return HttpResponse(
                 status=status.HTTP_400_BAD_REQUEST,
-                reason="file:// locations are not allowed " "using this API endpoint.",
+                reason="file:// locations are not allowed using this API endpoint.",
             )
 
             # # we make the path relative, even if there is a leading /
@@ -1108,7 +1210,9 @@ class JobFileView(StreamFileMixin, GetMixin, JSONView):
             if serializer.is_valid():
                 serializer.save()
                 fileset.add(serializer.instance)
-                response_data = self.get_response_serializer(instance=serializer.instance).data
+                response_data = self.get_response_serializer(
+                    instance=serializer.instance
+                ).data
                 return Response(response_data, status=status.HTTP_201_CREATED)
         else:
             # Update existing File (partial update - only provided fields)
@@ -1318,7 +1422,6 @@ class SampleCartCreateUpdate(JSONView):
 
 
 class SampleCartCreate(SampleCartCreateUpdate):
-
     # permission_classes = (DjangoObjectPermissions,)
 
     @extend_schema(
@@ -1419,7 +1522,6 @@ class SampleCartCreate(SampleCartCreateUpdate):
 
 
 class SampleCartView(GetMixin, DeleteMixin, SampleCartCreateUpdate):
-
     # permission_classes = (DjangoObjectPermissions,)
 
     @extend_schema(responses=SampleCartSerializer)
@@ -1739,7 +1841,6 @@ class JobView(JSONPatchMixin, JSONView):
 
         serializer = self.get_serializer(instance=job, data=request.data, partial=True)
         if serializer.is_valid():
-
             # Don't allow cancelled jobs to be updated to any other
             # status via the API
             if original_status == Job.STATUS_CANCELLED:
@@ -1805,7 +1906,9 @@ class JobView(JSONPatchMixin, JSONView):
                             ),
                         ]
                     )
-                    result = celery.chain(task_list).apply_async(
+                    result = celery.chain(
+                        task_list
+                    ).apply_async(
                         countdown=ingestion_delay_time,  # we give a short delay for the run_job.sh script to finish before ingestion begins
                         link_error=_finalize_job_task_err_handler.s(job_id=job.id),
                     )
@@ -2019,7 +2122,6 @@ class JobCreate(JSONView):
         )
 
         if serializer.is_valid():
-
             job_status = serializer.validated_data.get("status", "")
             if job_status != "" and job_status != Job.STATUS_HOLD:
                 return HttpResponse(
@@ -2152,7 +2254,7 @@ class JobCreate(JSONView):
         #       We really need a consistent way / pattern to do this server-side 'form validation'
         #       maybe with a DRF Serializer.
         #       (probably the frontend should request valid values from the backend to populate forms,
-        #        and then use the same data to validate serverside, as per REFERENCE_GENOME_MAPPINGS)
+        #        and then use the same data to validate serverside, as per REFERENCE_GENOMES)
         default_pipeline_version = "default"  # "1.5.4"  # '1.5.1+c53adf6'  # '1.5.1'
         pipeline_version = job.params.get("params").get(
             "pipeline_version", default_pipeline_version
@@ -2180,7 +2282,7 @@ class JobCreate(JSONView):
                 reference_genome_id
                 or (reference_genome_fasta_url and reference_genome_annotation_url)
             )
-            and reference_genome_id not in REFERENCE_GENOME_MAPPINGS
+            and reference_genome_id not in REFERENCE_GENOMES
             and not reference_genome_fasta_url
             and not reference_genome_annotation_url
             # TODO: Check URLS are valid with http/https/ftp scheme
@@ -2233,7 +2335,7 @@ class JobCreate(JSONView):
 
         # TESTING: Start cluster, run job, (pre-existing data), stop cluster
         # tasks.run_job_chain(task_data)
-        
+
         # Ensure the Job record is saved before starting, since the task may read it
         job.save()
 
@@ -2382,7 +2484,7 @@ class EventLogListView(generics.ListAPIView):
 
     def get_queryset(self):
         qs = EventLog.objects.all()
-        
+
         if self.request.user.is_superuser:
             # Superusers can see all events, but still respect object_id filter if provided
             obj_id = self.request.query_params.get("object_id", None)
@@ -2673,7 +2775,8 @@ class JobAccessTokenView(JSONView, GetMixin):
             obj = serializer.save(created_by=request.user)
 
             return Response(
-                self.get_response_serializer(instance=obj).data, status=status.HTTP_200_OK
+                self.get_response_serializer(instance=obj).data,
+                status=status.HTTP_200_OK,
             )
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -2781,8 +2884,6 @@ class SendFileToDegust(JSONView):
 
     permission_classes = (IsOwner | IsSuperuser | FileHasAccessTokenForJob,)
 
-
-
     @extend_schema(responses=RedirectResponseSerializer)
     def post(self, request: Request, file_id: str, version=None):
         """
@@ -2872,7 +2973,7 @@ class SendFileToDegust(JSONView):
         #       trust relationship (eg proper OAuth2 provider or simple shared Google Account ID) that allows
         #       Laxy to retrieve the upload token for a user programmatically
         url = f"{degust_api_url}/upload"
-        
+
         # TODO: This is to deal with SFTPStorage backend timeouts etc
         #       Ideally we would fork / subclass SFTPStorage and SFTPStorageFile
         #       and add some built-in backoff / retry functionality
@@ -2894,17 +2995,19 @@ class SendFileToDegust(JSONView):
                 # Open the upload page and get the form
                 page = robox.open(url)
                 form = page.get_form()
-                
+
                 # Attach the file to the form
-                form['filename'] = counts_file.file
-                
+                form["filename"] = counts_file.file
+
                 # Submit the form and get the response page
                 response_page = page.submit_form(form)
                 return response_page
-        
+
         response_page = upload_file_to_degust(url, counts_file)
-        
-        degust_config_url = response_page.url.replace("/compare.html?", "/config.html?", 1)
+
+        degust_config_url = response_page.url.replace(
+            "/compare.html?", "/config.html?", 1
+        )
         degust_id = (
             parse_qs(urlparse(degust_config_url).query).get("code", [None]).pop()
         )
@@ -3198,7 +3301,7 @@ class RemoteBrowseView(JSONView):
                             dict(
                                 type="directory",
                                 name=i.name,
-                                location=f'{url.rstrip("/")}/{i.name}',
+                                location=f"{url.rstrip('/')}/{i.name}",
                                 tags=[],
                             )
                             for i in step.dirs
@@ -3209,7 +3312,7 @@ class RemoteBrowseView(JSONView):
                             dict(
                                 type="file",
                                 name=i.name,
-                                location=f'{url.rstrip("/")}/{i.name}',
+                                location=f"{url.rstrip('/')}/{i.name}",
                                 tags=["archive"] if is_archive_link(i.name) else [],
                             )
                             for i in step.files

@@ -118,8 +118,6 @@ import find from "lodash-es/find";
 import map from "lodash-es/map";
 import some from "lodash-es/some";
 import every from "lodash-es/every";
-import { Memoize } from "lodash-decorators";
-
 import "es6-promise";
 
 import axios, { AxiosResponse } from "axios";
@@ -136,15 +134,13 @@ import {
 import { FileListItem } from "../file-tree-util";
 import { Sync } from "vuex-pathify";
 
-import AVAILABLE_GENOMES from "../config/genomics/genomes";
-
 import RemoteFilesSelect from "./RemoteSelect/RemoteFilesSelect.vue";
 import RemoteFileSelectAboutBox from "./RemoteSelect/RemoteFileSelectAboutBox.vue";
 
 import BannerNotice from "./BannerNotice.vue";
 
 import { ReferenceGenome } from "../types";
-import { isValidUrl } from "../util";
+import { isValidUrl, sortReferenceGenomesByPreference } from "../util";
 
 @Component({
   components: { RemoteFilesSelect, BannerNotice },
@@ -165,8 +161,8 @@ export default class SelectGenome extends Vue {
 
   public custom_genome_fileselect_url: string = "";
 
-  @Prop({ default: () => AVAILABLE_GENOMES, type: Array })
-  public genomes: Array<ReferenceGenome>;
+  @Prop({ default: () => null, type: Array })
+  public genomes: Array<ReferenceGenome> | null;
 
   @Prop({ default: null, type: String })
   public initialGenomeId: string | null;
@@ -213,6 +209,20 @@ export default class SelectGenome extends Vue {
     }
   }
 
+  get effectiveGenomes(): Array<ReferenceGenome> {
+    const fromProp = this.genomes;
+    if (fromProp && fromProp.length > 0) {
+      return fromProp;
+    }
+    const fromStore = this.$store.state.availableGenomes as
+      | ReferenceGenome[]
+      | undefined;
+    if (fromStore && fromStore.length > 0) {
+      return fromStore;
+    }
+    return [];
+  }
+
   get selected_genome_organism(): string {
     return (
       this.get_organism_from_genome_id(
@@ -224,40 +234,37 @@ export default class SelectGenome extends Vue {
   set selected_genome_organism(organism: string) {
     const id =
       this.get_first_genome_id_for_organism(organism) ||
-      this.genomes[0].id;
+      this.effectiveGenomes[0].id;
     this.$store.set("pipelineParams@genome", id);
   }
 
   get genome_organism_list(): string[] {
     let organisms = new Set<string>();
-    for (let g of this.genomes) {
+    for (let g of this.effectiveGenomes) {
       organisms.add(g.organism);
     }
     return Array.from(organisms.values());
   }
 
-  @Memoize
   genomes_for_organism(organism: string): ReferenceGenome[] {
     const organism_genomes: ReferenceGenome[] = [];
-    for (let g of this.genomes) {
+    for (let g of this.effectiveGenomes) {
       if (g.organism === organism) {
         organism_genomes.push(g);
       }
     }
-    return organism_genomes;
+    return sortReferenceGenomesByPreference(organism_genomes);
   }
 
-  @Memoize
   get_organism_from_genome_id(genome_id: string): string | undefined {
-    return get(find(this.genomes, { id: genome_id }), "organism");
+    return get(find(this.effectiveGenomes, { id: genome_id }), "organism");
   }
 
-  @Memoize
   get_first_genome_id_for_organism(organism: string): string | undefined {
-    return get(find(this.genomes, { organism: organism }), "id");
+    const ordered = this.genomes_for_organism(organism);
+    return ordered.length > 0 ? ordered[0].id : undefined;
   }
 
-  @Memoize
   get_genome_description(reference: ReferenceGenome): string {
     const [org, centre, build] = reference.id.split("/");
     // return `${build} [${centre}] (${reference.organism})`;

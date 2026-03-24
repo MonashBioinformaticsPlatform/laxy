@@ -94,8 +94,6 @@ import storeModule from "../store/module";
 import { Sample, SampleCartItems } from "../../../../model";
 import { WebAPI } from "../../../../web-api";
 
-import AVAILABLE_GENOMES from "../../../../config/genomics/genomes";
-
 import { Snackbar } from "../../../../snackbar";
 import BannerNotice from "../../../BannerNotice.vue";
 import InputFilesForm from "../../../InputFilesForm.vue";

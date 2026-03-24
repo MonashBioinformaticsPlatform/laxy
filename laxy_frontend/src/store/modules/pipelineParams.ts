@@ -6,8 +6,6 @@ import { make } from 'vuex-pathify';
 import { ILaxyFile, LaxyFileSet, ISample } from '../../types';
 import { filenameFromUrl } from '../../util';
 
-import AVAILABLE_GENOMES from "../../config/genomics/genomes";
-
 const initial_state: any = {
     // a list of files the backend will fetch as input
     fetch_files: [] as ILaxyFile[],
@@ -15,7 +13,6 @@ const initial_state: any = {
 
     // params: {},
 
-    // genome: AVAILABLE_GENOMES[0].id,
     genome: null,
     // user_genome: {
     //     fasta_url: '',
@@ -29,8 +26,9 @@ const getters: any = {
     ...make.getters(initial_state),
 
     isValidReferenceGenome: (state: any, getters: any, rootState: any, rootGetters: any) => {
+        const knownIds = map(rootState.availableGenomes || [], "id");
         const isSet: boolean =
-            map(AVAILABLE_GENOMES, "id").includes(state.genome) ||
+            knownIds.includes(state.genome) ||
             (state.genome == null &&
                 state.user_genome &&
                 state.user_genome.fasta_url &&

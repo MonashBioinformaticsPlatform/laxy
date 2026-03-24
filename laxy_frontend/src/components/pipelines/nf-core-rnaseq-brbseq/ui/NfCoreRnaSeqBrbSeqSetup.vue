@@ -254,7 +254,6 @@ import InputFilesForm from "../../../InputFilesForm.vue";
 import CsvTextForm from "../../../CsvTextForm.vue";
 import SelectGenome from "../../../SelectGenome.vue";
 import { ReferenceGenome } from "../../../../types";
-import AVAILABLE_GENOMES from "../config/genomes";
 
 @Component({
   components: {
@@ -271,7 +270,7 @@ import AVAILABLE_GENOMES from "../config/genomes";
 })
 export default class PipelineParams extends Vue {
   public pipeline_name: string = "nf-core-rnaseq-brbseq";
-  public available_genomes: Array<ReferenceGenome> = AVAILABLE_GENOMES;
+  public available_genomes: Array<ReferenceGenome> | null = null;
   public initial_genome_id: string = "Mus_musculus/Ensembl/GRCm39.release-109";
 
   @Prop({ default: true, type: Boolean })

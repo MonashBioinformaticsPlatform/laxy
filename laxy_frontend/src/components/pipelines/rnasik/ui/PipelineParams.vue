@@ -161,8 +161,6 @@ import { SET_SAMPLES, CLEAR_SAMPLE_CART } from "../../../../store";
 import { Sample, SampleCartItems } from "../../../../model";
 import { WebAPI } from "../../../../web-api";
 
-import AVAILABLE_GENOMES from "../../../../config/genomics/genomes";
-
 //import { DummySampleList as _dummySampleList } from "../../../../test-data";
 //import { DummyPipelineConfig as _dummyPipelineConfig } from "../../../../test-data";
 import { Snackbar } from "../../../../snackbar";
@@ -199,7 +197,7 @@ export default class PipelineParams extends Vue {
   public selectedSamples: Array<Sample> = [];
 
   public reference_genome_valid: boolean = true;
-  public available_genomes: Array<ReferenceGenome> = AVAILABLE_GENOMES;
+  public available_genomes: Array<ReferenceGenome> | null = null;
 
   get pipeline_versions() {
     // const versions = = ["1.5.3", "1.5.2", "1.5.3-laxydev", "1.5.4"];

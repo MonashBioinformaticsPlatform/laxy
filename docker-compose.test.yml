@@ -52,7 +52,7 @@ services:
     # command: python3 ./manage.py test
     # There are various ways we can run pytest, eg if we want to run just a subset of tests,
     # or drop into the PDB debugger when an uncaught exception is raised
-    command: pytest -vvv --showlocals --tb=auto laxy_backend/tests
+    command: pytest -vvv --showlocals --tb=auto laxy_backend/tests laxy_genomes/tests
     # command: pytest -ra
     # command: pytest -vvv --pdb
     # command: pytest -vvv --pdb laxy_backend/tests/test_tasks.py

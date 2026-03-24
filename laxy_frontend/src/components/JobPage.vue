@@ -329,7 +329,6 @@
 import "es6-promise";
 
 import filter from "lodash-es/filter";
-import find from "lodash-es/find";
 import get from "lodash-es/get";
 import head from "lodash-es/head";
 import { Memoize } from "lodash-decorators";
@@ -388,7 +387,6 @@ import { EMPTY_TREE_ROOT, fileListToTree, TreeNode } from "../file-tree-util";
 import SharingLinkList from "./SharingLinkList.vue";
 import { Snackbar } from "../snackbar";
 import ExpiryDialog from "./Dialogs/ExpiryDialog.vue";
-import AVAILABLE_GENOMES from "../config/genomics/genomes";
 import GenericPip from "./GenericPip.vue";
 import DownloadJobFilesTable from "./DownloadJobFilesTable.vue";
 import DownloadHelpDialog from "./Dialogs/DownloadHelpDialog.vue";
@@ -698,14 +696,16 @@ export default class JobPage extends Vue {
   // the generic JobStatusCard
   get genomeDescription(): string | null {
     const genome_id = this.genomeID;
-    find(AVAILABLE_GENOMES, { id: genome_id });
-    const genome = find(AVAILABLE_GENOMES, { id: genome_id });
-    if (genome_id && genome) {
-      let [organism, centre, build] = genome_id.split("/");
-      organism = organism.replace("_", " ");
-      return `${build} (${organism})`;
+    if (!genome_id) {
+      return null;
     }
-    return null;
+    const parts = genome_id.split("/");
+    if (parts.length < 3) {
+      return null;
+    }
+    const organism = parts[0].replace(/_/g, " ");
+    const build = parts[2];
+    return `${build} (${organism})`;
   }
 
   get externalGenomeDescription(): any | null {
