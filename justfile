@@ -56,6 +56,10 @@ build:
 # Run unit tests inside docker-compose.test.yml (pytest against laxy_backend)
 test-unit:
     #!/usr/bin/env bash
+    if ! docker image inspect laxy:dev >/dev/null 2>&1; then
+        echo "🔨 laxy:dev not found locally; building base image (docker/laxy-test/Dockerfile depends on it)..."
+        docker compose -f docker-compose.yml -f docker-compose.local-dev.yml build
+    fi
     echo "🧪 Running unit tests with docker-compose.test.yml (pytest, unit-tests service)..."
     docker compose -f docker-compose.test.yml up --exit-code-from unit-tests --abort-on-container-exit
     status=$?
