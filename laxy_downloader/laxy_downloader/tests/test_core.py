@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 import requests
 
-from ..downloader import download_url, get_content_length
+from ..core import download_url, get_content_length
 
 
 # Helper function to create a mock response with custom content
@@ -37,7 +37,7 @@ def temp_dir():
         yield tmpdirname
 
 
-@mock.patch("laxy_downloader.downloader.request_with_retries")
+@mock.patch("laxy_downloader.core.request_with_retries")
 def test_download_url_small_file(mock_request, temp_dir):
     url = "http://example.com/small_file.txt"
     content = b"This is a small file for testing."
@@ -55,7 +55,7 @@ def test_download_url_small_file(mock_request, temp_dir):
         assert f.read() == content
 
 
-@mock.patch("laxy_downloader.downloader.request_with_retries")
+@mock.patch("laxy_downloader.core.request_with_retries")
 def test_download_url_large_file(mock_request, temp_dir):
     url = "http://example.com/large_file.bin"
     content = os.urandom(1024 * 1024 * 5)  # 5 MB random content
@@ -73,7 +73,7 @@ def test_download_url_large_file(mock_request, temp_dir):
     assert calculate_md5(file_path) == hashlib.md5(content).hexdigest()
 
 
-@mock.patch("laxy_downloader.downloader.request_with_retries")
+@mock.patch("laxy_downloader.core.request_with_retries")
 def test_download_url_with_auth(mock_request, temp_dir):
     url = "http://example.com/auth_file.txt"
     content = b"This file requires authentication."
@@ -95,7 +95,7 @@ def test_download_url_with_auth(mock_request, temp_dir):
     assert isinstance(mock_request.call_args[1]["auth"], requests.auth.HTTPBasicAuth)
 
 
-@mock.patch("laxy_downloader.downloader.request_with_retries")
+@mock.patch("laxy_downloader.core.request_with_retries")
 def test_download_url_incomplete_file(mock_request, temp_dir):
     url = "http://example.com/incomplete_file.txt"
     content = b"This file will be incomplete."
@@ -115,7 +115,7 @@ def test_download_url_incomplete_file(mock_request, temp_dir):
     assert "does not match Content-Length" in str(exc_info.value)
 
 
-@mock.patch("laxy_downloader.downloader.request_with_retries")
+@mock.patch("laxy_downloader.core.request_with_retries")
 def test_download_url_existing_file(mock_request, temp_dir):
     url = "http://example.com/existing_file.txt"
     content = b"This file already exists."
@@ -141,7 +141,7 @@ def test_download_url_existing_file(mock_request, temp_dir):
     mock_request.assert_called_once_with("HEAD", url, headers={}, auth=None)
 
 
-@mock.patch("laxy_downloader.downloader.request_with_retries")
+@mock.patch("laxy_downloader.core.request_with_retries")
 def test_download_url_resume_partial_download(mock_request, temp_dir):
     url = "http://example.com/partial_file.txt"
     content = b"This is a complete file that will be downloaded in parts."
@@ -189,7 +189,7 @@ def test_download_url_resume_partial_download(mock_request, temp_dir):
     assert calls[2][1]["headers"]["Range"] == "bytes=20-"  # Check range header
 
 
-@mock.patch("laxy_downloader.downloader.request_with_retries")
+@mock.patch("laxy_downloader.core.request_with_retries")
 def test_download_url_multiple_resume_attempts(mock_request, temp_dir):
     url = "http://example.com/partial_file.txt"
     content = b"This is a file that will need multiple resume attempts to complete."
@@ -231,7 +231,7 @@ def test_download_url_multiple_resume_attempts(mock_request, temp_dir):
     mock_request.side_effect = responses
 
 
-@mock.patch("laxy_downloader.downloader.request_with_retries")
+@mock.patch("laxy_downloader.core.request_with_retries")
 def test_download_url_server_ignores_range(mock_request, temp_dir):
     """Test behavior when server ignores range requests and sends full file"""
     url = "http://example.com/partial_file.txt"
@@ -287,7 +287,7 @@ def test_download_url_server_ignores_range(mock_request, temp_dir):
         assert "Range" in calls[3][1]["headers"]
 
 
-@mock.patch("laxy_downloader.downloader.request_with_retries")
+@mock.patch("laxy_downloader.core.request_with_retries")
 def test_download_url_no_content_length(mock_request, temp_dir):
     url = "http://example.com/no_length.txt"
     content = b"This file has no Content-Length header."
@@ -314,7 +314,7 @@ def test_download_url_no_content_length(mock_request, temp_dir):
         assert f.read() == content
 
 
-@mock.patch("laxy_downloader.downloader.request_with_retries")
+@mock.patch("laxy_downloader.core.request_with_retries")
 def test_download_url_lock_file_cleanup(mock_request, temp_dir):
     """Test that lock files are properly cleaned up after download completion or failure."""
     url = "http://example.com/test_file.txt"

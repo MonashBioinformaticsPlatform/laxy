@@ -2,7 +2,7 @@ import os
 from io import StringIO
 from unittest import TestCase
 
-from ..downloader import parse_pipeline_config, get_urls_from_pipeline_config
+from ..core import parse_pipeline_config, get_urls_from_pipeline_config
 
 
 class PipelineConfigTest(TestCase):

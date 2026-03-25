@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from ..cli import add_commandline_args
-from ..downloader import parse_pipeline_config, get_urls_from_pipeline_config
+from ..core import parse_pipeline_config, get_urls_from_pipeline_config
 
 
 @pytest.fixture

@@ -24,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI/unit test Docker Compose stack now uses a healthchecked, isolated `db-test` Postgres and cleans up containers/volumes on failure to prevent stale test DB state
 
 ### Changed
+- **laxy_downloader**: packaging moved from `setup.py` to `pyproject.toml` (PEP 621, setuptools); `requires-python` is `>=3.10`; optional `[dev]` extra includes pytest
+- **laxy_downloader**: renamed internal module `laxy_downloader.downloader` to `laxy_downloader.core` to avoid a generic `downloader` package name ([issue #60](https://github.com/MonashBioinformaticsPlatform/laxy/issues/60))
 - Job page **Input** and **Output** tabs: download section titled **Downloads** with separate links for the full job archive, input-only archive, and output-only archive (using existing `_input.tar.gz` / `_output.tar.gz` endpoints); tarball cloud-download asks for confirmation with an approximate total size when known, and shows a yellow warning icon when that estimate exceeds 100 MB
 - **Django 5.2.11** - Pinned to 5.2.11 release
 - **Python 3.6 to 3.12** - Major Python version upgrade

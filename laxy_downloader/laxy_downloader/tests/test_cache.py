@@ -8,7 +8,7 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-from ..downloader import (
+from ..core import (
     get_url_cached_path,
     url_to_cache_key,
     get_urls_from_pipeline_config,

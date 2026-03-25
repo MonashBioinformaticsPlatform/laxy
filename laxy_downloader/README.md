@@ -44,13 +44,9 @@ mkdir -p ~/.virtualenvs
 virtualenv -p python3 ~/.virtualenvs/laxydl
 source ~/.virtualenvs/laxydl/bin/activate
 
-# We need to pip install first, rather than `python setup.py install`, 
-# since one of the dependencies (pyaria) fails otherwise
-pip install .
-# Running this symlinks the library installed in the virtualenv to your working copy
-python setup.py develop
+# Editable install (PEP 660); use a virtualenv — direct URL deps (e.g. pyaria2) need network.
+pip install -e ".[dev]"
 
 # Run tests
-pip install pytest
 pytest
 ```

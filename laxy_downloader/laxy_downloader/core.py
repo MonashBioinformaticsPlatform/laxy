@@ -444,11 +444,11 @@ def clean_cache(cache_path, cache_age: int = 30):
         f"+{cache_age}",
         "-not",  # this part ignores .hidden files and dirs
         "-name",
-        "\.*",
+        ".*",
         "-print",
         "-delete",
     ]
-    logger.info(f"Cleaning cache - running: {' '.join(cmd).replace(r'\.*', r'\"\.*\"')}")
+    logger.info("Cleaning cache - running: %s", " ".join(cmd))
     return subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 

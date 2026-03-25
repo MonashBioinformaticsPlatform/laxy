@@ -4,7 +4,7 @@ import backoff
 import xmlrpc
 from pyaria2 import PyAria2, AriaServerSettings
 
-from .downloader import logger, url_to_cache_key
+from .core import logger, url_to_cache_key
 
 __aria2daemon__ = None
 

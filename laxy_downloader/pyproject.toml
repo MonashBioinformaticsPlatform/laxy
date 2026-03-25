@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "laxy_downloader"
+description = "Laxy clientside downloader"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+authors = [
+    { name = "Andrew Perry", email = "Andrew.Perry@monash.edu" },
+]
+keywords = ["laxy", "download", "bioinformatics", "clientside"]
+classifiers = [
+    "Development Status :: 3 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: System Administrators",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "asks",
+    "requests",
+    "toolz",
+    "backoff",
+    "attrdict @ git+https://github.com/caotians1/AttrDict.git@master",
+    "trio",
+    "psutil",
+    "python-magic",
+    "text-unidecode",
+    "typing-extensions",
+    "filelock",
+    "pyaria2 @ git+https://github.com/pansapiens/pyaria2.git",
+]
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://github.com/MonashBioinformaticsPlatform/laxy"
+Documentation = "https://github.com/MonashBioinformaticsPlatform/laxy/tree/master/laxy_downloader"
+
+[project.scripts]
+laxydl = "laxy_downloader.cli:main"
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.setuptools.dynamic]
+version = { attr = "laxy_downloader.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["laxy_downloader*"]

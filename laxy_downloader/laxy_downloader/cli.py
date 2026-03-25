@@ -13,7 +13,7 @@ import platform
 import trio
 
 from .secrets import get_secret_key
-from .downloader import (
+from .core import (
     get_default_cache_path,
     sanitize_filename,
     trio_wait_with_progress,
