@@ -304,6 +304,11 @@ found in laxy_backend.scraping eg
 ```
 """
 
+# Dotted import paths for extra RemoteBrowseView site plugins, appended after built-ins
+# (see laxy_backend.scraping.plugins). Each callable:
+#   (original_url: str, resolved_url: str) -> Optional[RemoteBrowseSitePluginResult]
+REMOTE_BROWSE_SITE_PLUGINS = []
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.11/howto/deployment/checklist/
 

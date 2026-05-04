@@ -22,7 +22,7 @@ from webdav4.client import Client as WebDAVClient
 
 from django.conf import settings
 
-from .storage.http_remote import is_archive_link
+from ..storage.http_remote import is_archive_link
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ def render_page(url: str, backend=None) -> str:
 
 
 def render_simple(url: str, max_size: int = 10 * 1024 * 1024):
-    from .tasks.download import request_with_retries
+    from ..tasks.download import request_with_retries
 
     try:
         with closing(request_with_retries("GET", url, allow_redirects=True)) as resp:
@@ -441,19 +441,3 @@ def parse_nextcloud_webdav(text: Union[str, None] = None, url=None) -> List[dict
             )
 
     return links
-
-
-if __name__ == "__main__":
-    # eg:
-    # python -m laxy_backend.scraping "https://cloudstor.aarnet.edu.au/plus/s/lnSmyyug1fexY8l" pyppeteer
-
-    import sys
-
-    url = sys.argv[1]
-    if len(sys.argv) >= 3:
-        BACKEND = sys.argv[2]
-
-    html = render_page(url)
-    # html = render_with_splash(url)
-    # html = render_with_pyppeteer(url)
-    print(html)

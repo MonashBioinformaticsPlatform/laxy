@@ -27,6 +27,7 @@ from laxy_backend.scraping import (
     is_apache_index_page,
     parse_nextcloud_webdav,
 )
+from laxy_backend.scraping.plugins import run_remote_browse_site_plugins
 from . import paramiko_monkeypatch
 
 from toolz import merge as merge_dicts
@@ -3332,31 +3333,37 @@ class RemoteBrowseView(JSONView):
         elif scheme == "http" or scheme == "https":
             _url = _check_content_size_and_resolve_redirects(url)
 
-            try:
-                text = render_page(_url)
-            except MemoryError as ex:
-                return HttpResponse(
-                    status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, reason=str(ex)
-                )
-            except ValueError as ex:
-                return HttpResponse(status=status.HTTP_400_BAD_REQUEST, reason=str(ex))
+            site_listing, site_error = run_remote_browse_site_plugins(url, _url)
+            if site_error is not None:
+                return site_error
+            if site_listing is not None:
+                listing = site_listing
+            else:
+                try:
+                    text = render_page(_url)
+                except MemoryError as ex:
+                    return HttpResponse(
+                        status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, reason=str(ex)
+                    )
+                except ValueError as ex:
+                    return HttpResponse(status=status.HTTP_400_BAD_REQUEST, reason=str(ex))
 
-            _matched = False
-            for matcher, link_parser_fn in LINK_SCRAPER_MAPPINGS:
-                if isinstance(matcher, str) and matcher in _url:
-                    _matched = True
-                elif callable(matcher) and matcher(_url, text):
-                    _matched = True
+                _matched = False
+                for matcher, link_parser_fn in LINK_SCRAPER_MAPPINGS:
+                    if isinstance(matcher, str) and matcher in _url:
+                        _matched = True
+                    elif callable(matcher) and matcher(_url, text):
+                        _matched = True
 
-                if _matched:
-                    listing = link_parser_fn(text, _url)
-                    break
+                    if _matched:
+                        listing = link_parser_fn(text, _url)
+                        break
 
-            if not _matched:
-                return HttpResponse(
-                    status=status.HTTP_400_BAD_REQUEST,
-                    reason=f"No parser for this url: {_url}",
-                )
+                if not _matched:
+                    return HttpResponse(
+                        status=status.HTTP_400_BAD_REQUEST,
+                        reason=f"No parser for this url: {_url}",
+                    )
 
         # listing = pydash.sort_by(listing, ['type', 'name'])
         listing = multikeysort(listing, ["type", "name"])

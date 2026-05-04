@@ -11,6 +11,9 @@
     **Examples:**
     ```
     ```
+    `https://zenodo.org/records/14366711` (a Zenodo dataset landing page) lists all depositor files for that record using the Zenodo API (download links use `?download=1`).
+    ```
+    ```
     `https://bioinformatics.erc.monash.edu/home/andrewperry/test/sample_data/` will list the files found on the page (eg a default Apache directory index page).
     ```
     ```

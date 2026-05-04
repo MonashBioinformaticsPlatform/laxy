@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Remote URL browse (`/api/v1/remote-browse/`): Zenodo record URLs such as `https://zenodo.org/records/{id}` are resolved via the Zenodo REST API to list depositor files with public `.../files/{name}?download=1` locations; site-specific handlers live in `laxy_backend.scraping.plugins` with optional extra plugins via `REMOTE_BROWSE_SITE_PLUGINS`
 - Integration test suite in `tests/integration/` for JWT auth, file operations, Celery tasks, and external integrations
 - `justfile` for common development commands (`just dev-up`, `just test`, etc.)
 - PostgreSQL upgrade documentation in `POSTGRES_UPGRADE_PLAN.md`
@@ -24,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI/unit test Docker Compose stack now uses a healthchecked, isolated `db-test` Postgres and cleans up containers/volumes on failure to prevent stale test DB state
 
 ### Changed
+- Remote-browse site plugins moved from `laxy_backend.remote_browse_site_plugins` to `laxy_backend.scraping.plugins`; `laxy_backend.scraping` is now a package (was `scraping.py`)
 - **laxy_downloader**: packaging moved from `setup.py` to `pyproject.toml` (PEP 621, setuptools); `requires-python` is `>=3.10`; optional `[dev]` extra includes pytest
 - **laxy_downloader**: renamed internal module `laxy_downloader.downloader` to `laxy_downloader.core` to avoid a generic `downloader` package name ([issue #60](https://github.com/MonashBioinformaticsPlatform/laxy/issues/60))
 - Job page **Input** and **Output** tabs: download section titled **Downloads** with separate links for the full job archive, input-only archive, and output-only archive (using existing `_input.tar.gz` / `_output.tar.gz` endpoints); tarball cloud-download asks for confirmation with an approximate total size when known, and shows a yellow warning icon when that estimate exceeds 100 MB
