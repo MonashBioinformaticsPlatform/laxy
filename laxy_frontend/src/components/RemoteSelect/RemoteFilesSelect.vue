@@ -290,6 +290,7 @@ export default class RemoteFileSelect extends Vue {
       this.submitting = false;
       this.previousUrl = `${this.navigatedUrl}`;
       this.navigatedUrl = url;
+      this.url = url;
       this.populateSelectionList(response.data);
     } catch (error) {
       console.log(error);
