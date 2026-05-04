@@ -27,13 +27,13 @@ git clone --recurse-submodules https://github.com/MonashBioinformaticsPlatform/l
 cd laxy
 
 docker compose -f docker-compose.yml -f docker-compose.local-dev.yml build
-docker compose --compatibility -f docker-compose.yml -f docker-compose.local-dev.yml up -d
+docker compose -f docker-compose.yml -f docker-compose.local-dev.yml up -d
 ```
 
 The frontend can take a few minutes to build on first startup. Monitor progress with:
 
 ```bash
-docker compose --compatibility -f docker-compose.yml -f docker-compose.local-dev.yml logs -f dev-frontend-server
+docker compose -f docker-compose.yml -f docker-compose.local-dev.yml logs -f dev-frontend-server
 ```
 
 Once running:
@@ -44,7 +44,7 @@ Once running:
 - **OpenAPI docs**: http://localhost:8001/api/v1/schema/swagger-ui/
 
 There is a convenience wrapper script `./compose.sh` that can be used in place of
-`docker compose --compatibility -f docker-compose.yml -f docker-compose.local-dev.yml`.
+`docker compose -f docker-compose.yml -f docker-compose.local-dev.yml`.
 It requires the `LAXY_ENV` environment variable to be set (e.g. `export LAXY_ENV=local-dev`).
 
 ## Development
@@ -75,22 +75,22 @@ docker compose -f docker-compose.yml -f docker-compose.local-dev.yml build
 
 ```bash
 # Start
-docker compose --compatibility -f docker-compose.yml -f docker-compose.local-dev.yml up -d
+docker compose -f docker-compose.yml -f docker-compose.local-dev.yml up -d
 
 # Stop
-docker compose --compatibility -f docker-compose.yml -f docker-compose.local-dev.yml down
+docker compose -f docker-compose.yml -f docker-compose.local-dev.yml down
 ```
 
 ### Viewing logs
 
 ```bash
 # All services
-docker compose --compatibility -f docker-compose.yml -f docker-compose.local-dev.yml logs --tail 100
+docker compose -f docker-compose.yml -f docker-compose.local-dev.yml logs --tail 100
 
 # Specific service
-docker compose --compatibility -f docker-compose.yml -f docker-compose.local-dev.yml logs --tail 100 django
-docker compose --compatibility -f docker-compose.yml -f docker-compose.local-dev.yml logs --tail 100 dev-frontend-server
-docker compose --compatibility -f docker-compose.yml -f docker-compose.local-dev.yml logs --tail 100 fake-cluster
+docker compose -f docker-compose.yml -f docker-compose.local-dev.yml logs --tail 100 django
+docker compose -f docker-compose.yml -f docker-compose.local-dev.yml logs --tail 100 dev-frontend-server
+docker compose -f docker-compose.yml -f docker-compose.local-dev.yml logs --tail 100 fake-cluster
 ```
 
 ### Services
@@ -120,13 +120,13 @@ docker compose -f docker-compose.test.yml down
 
 ```bash
 # Django shell
-docker compose --compatibility -f docker-compose.yml -f docker-compose.local-dev.yml exec django python3 manage.py shell
+docker compose -f docker-compose.yml -f docker-compose.local-dev.yml exec django python3 manage.py shell
 
 # Bash in Django container
-docker compose --compatibility -f docker-compose.yml -f docker-compose.local-dev.yml exec django bash
+docker compose -f docker-compose.yml -f docker-compose.local-dev.yml exec django bash
 
 # PostgreSQL shell
-docker compose --compatibility -f docker-compose.yml -f docker-compose.local-dev.yml exec db psql -U postgres
+docker compose -f docker-compose.yml -f docker-compose.local-dev.yml exec db psql -U postgres
 ```
 
 ## Configuration
@@ -150,7 +150,7 @@ and metadata. Often you'll need to debug the outcome of a job, initially launche
 In `local-dev` mode, jobs are executed inside the `fake-cluster` container. To inspect job output log:
 
 ```bash
-docker compose --compatibility -f docker-compose.yml -f docker-compose.local-dev.yml \
+docker compose -f docker-compose.yml -f docker-compose.local-dev.yml \
   exec fake-cluster cat /scratch/laxy/{job_id}/output/run_job.out
 ```
 

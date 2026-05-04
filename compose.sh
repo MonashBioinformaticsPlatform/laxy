@@ -16,6 +16,12 @@ fi
 # Because accidentally typing up without -d is annoying ...
 if [[ "${@}" == "up" ]]; then
     eval ${cmd} up -d
+elif [[ "${1}" == "build" && -z "${2}" ]]; then
+    # Build django first since nginx depends on laxy:latest image
+    # (COPY --from=laxy:latest in nginx Dockerfile)
+    echo "Building django first (nginx depends on laxy:latest)..."
+    eval ${cmd} build django
+    eval ${cmd} build
 else
     eval ${cmd} "${@}"
 fi

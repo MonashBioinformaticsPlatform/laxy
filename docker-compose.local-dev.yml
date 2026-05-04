@@ -78,9 +78,9 @@ services:
       - django
 
   # NOTE: You may need to change the default Docker container memory to 4Gb when using
-  #       this container, since `conda create` often exceeds 2Gb of RAM
-  #       Running with the docker-compose --compatibility flag should allow the
-  #       'deploy.resources.limits.memory' setting in this service to be honoured.
+  #       this container, since `conda create` often exceeds 2Gb of RAM.
+  #       In local `docker compose up`, `deploy.resources.limits` may not be applied;
+  #       raise Docker Desktop/engine memory if the container is OOM-killed.
   #
   # We use port 2222 for OpenSSH so we can easily expose it to the host for debugging
   # without a port clash with the host SSH server.

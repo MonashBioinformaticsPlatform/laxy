@@ -51,9 +51,9 @@ services:
                       # python manage.py shell -c \"from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.filter(username='${LAXY_ADMIN_USERNAME}').count() or User.objects.create_superuser('${LAXY_ADMIN_USERNAME}', '${LAXY_ADMIN_EMAIL}', '${LAXY_ADMIN_PASSWORD}');\";"
 
   # NOTE: You may need to change the default Docker container memory to 4Gb when using
-  #       this container, since `conda create` often exceeds 2Gb of RAM
-  #       Running with the docker-compose --compatibility flag should allow the
-  #       'deploy.resources.limits.memory' setting in this service to be honoured.
+  #       this container, since `conda create` often exceeds 2Gb of RAM.
+  #       In local `docker compose up`, `deploy.resources.limits` may not be applied;
+  #       raise Docker Desktop/engine memory if the container is OOM-killed.
   #
   # We use port 2222 for OpenSSH so we can easily expose it to the host for debugging
   # without a port clash with the host SSH server.
