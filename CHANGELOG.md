@@ -15,14 +15,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - OpenAPI documentation via drf-spectacular at `/api/v1/schema/`, `/api/v1/schema/swagger-ui/`, `/api/v1/schema/redoc/`
 - `--skip-alignment` option in nf-core-rnaseq v3.18.0 pipeline UI
 - Added input and output tarball download endpoints: `/job/<id>_input.tar.gz` and `/job/<id>_output.tar.gz`
+- `detect_annotation_style.py` for nf-core-rnaseq / nf-core-rnaseq-brbseq job templates and `tests/test_detect_annotation_style.py` smoke tests; infers `--featurecounts_feature_type`, `--gtf_group_features`, `--gtf_extra_attributes`, `--featurecounts_group_type`, and conditional `--skip_*` flags from the user GTF/GFF3
+- Auto-skip `--skip_rseqc`, `--skip_qualimap`, `--skip_bigwig`, `--skip_dupradar` for CDS-only/prokaryotic annotations (no introns / no exon rows)
 
 ### Removed
 - Removed `coreapi` and `coreschema` dependencies (replaced with native DRF OpenAPI parameter support via `get_schema_operation_parameters`)
+- AGAT-based custom annotation rewriting in nf-core-rnaseq and nf-core-rnaseq-brbseq `run_job.sh`; AGAT preprocessing removed from `featurecounts_postnfcore.nf` (replaced with decompression-only `PREPARE_ANNOTATION` step)
 
 ### Fixed
 - Added explicit `setuptools>=75,<82` dependency for Python 3.12+ compatibility (`fs`/PyFilesystem2 requires `pkg_resources`, which was removed in setuptools 82)
 - Nextcloud/ownCloud shared folder file downloads now use the new-style `/public.php/dav/files/{token}/` WebDAV endpoint (Nextcloud 29+), with automatic fallback to the legacy `/public.php/webdav/` endpoint for older instances
 - CI/unit test Docker Compose stack now uses a healthchecked, isolated `db-test` Postgres and cleans up containers/volumes on failure to prevent stale test DB state
+- Custom reference annotations for nf-core-rnaseq: bacterial/non-standard GTF/GFF3 handling now uses the inferred annotation flags (above); annotation filenames are normalised (`.gff3.gz` → `.gff.gz`, plain `.gff`/`.gtf` re-gzipped) for nf-core schema compliance, and `--gtf` vs `--gff` is chosen from the file's content rather than its extension. Post-run featureCounts and Salmon `.biotypes.tsv` merging tolerate missing `gene_biotype` and varying gene-info column counts (`merge_biotypes.py` / `merge_featurecounts.py`)
+- Annotation gzip detection now uses file magic bytes, so files misnamed `.gz` (or gzipped without the `.gz` suffix) are handled correctly
 
 ### Changed
 - Remote-browse site plugins moved from `laxy_backend.remote_browse_site_plugins` to `laxy_backend.scraping.plugins`; `laxy_backend.scraping` is now a package (was `scraping.py`)

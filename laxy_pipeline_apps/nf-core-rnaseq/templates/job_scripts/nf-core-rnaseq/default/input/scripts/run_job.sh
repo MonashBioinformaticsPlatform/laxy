@@ -319,94 +319,88 @@ function set_genome_args() {
 
     if [[ ${USING_CUSTOM_REFERENCE} == "yes" ]]; then
         GENOME_ARGS=" --fasta ${GENOME_FASTA} "
-        
-        if [[ ${_annot_fn} == *.gtf ]] || [[ ${_annot_fn} == *.gtf.gz ]]; then
-            export GENOME_ARGS=" ${GENOME_ARGS} --gtf ${ANNOTATION_FILE} "
-        elif [[ ${_annot_fn} == *.gff ]] || [[ ${_annot_fn} == *.gff.gz ]]; then
-            export GENOME_ARGS=" ${GENOME_ARGS} --gff ${ANNOTATION_FILE} "
-        elif [[ ${_annot_fn} == *.gff3 ]] || [[ ${_annot_fn} == *.gff3.gz ]]; then
-            ln -s ${ANNOTATION_FILE} ${INPUT_REFERENCE_PATH}/genes.gff.gz
-            export ANNOTATION_FILE="${INPUT_REFERENCE_PATH}/genes.gff.gz"
-            export GENOME_ARGS=" ${GENOME_ARGS} --gff ${ANNOTATION_FILE} "
-        else
-            send_event "JOB_INFO" "This isn't going so well. Unable to detemine type of annotation file."
-            send_job_finished 1
-            exit 1
+        # --gtf vs --gff is chosen in normalize_annotations() from ANN_FORMAT.
+    fi
+}
+
+function normalize_annotation_filename_for_nfcore() {
+    [[ ${USING_CUSTOM_REFERENCE} == "yes" ]] || return 0
+    [[ -n "${ANNOTATION_FILE:-}" ]] || return 0
+    [[ -f "${ANNOTATION_FILE}" ]] || return 0
+
+    local _dir _base _newpath
+    _dir="$(dirname "${ANNOTATION_FILE}")"
+    _base="$(basename "${ANNOTATION_FILE}")"
+
+    if [[ "${_base}" == *.gff3.gz ]]; then
+        _newpath="${_dir}/${_base%.gff3.gz}.gff.gz"
+        if [[ "${ANNOTATION_FILE}" != "${_newpath}" ]]; then
+            send_event "JOB_INFO" "Renaming ${_base} to $(basename "${_newpath}") for nf-core/rnaseq (paths must end in .gff.gz)" || true
+            mv -f "${ANNOTATION_FILE}" "${_newpath}" || fail_job 'normalize_annotation_rename_gff3_gz' '' $?
+            export ANNOTATION_FILE="${_newpath}"
         fi
+        return 0
+    fi
+
+    if [[ "${_base}" == *.gff3 ]]; then
+        _newpath="${_dir}/${_base%.gff3}.gff.gz"
+        send_event "JOB_INFO" "Compressing ${_base} to $(basename "${_newpath}") for nf-core/rnaseq" || true
+        gzip -cn "${ANNOTATION_FILE}" > "${_newpath}" || fail_job 'normalize_annotation_gzip_gff3' '' $?
+        rm -f "${ANNOTATION_FILE}"
+        export ANNOTATION_FILE="${_newpath}"
+        return 0
+    fi
+
+    if [[ "${_base}" == *.gff ]] && [[ "${_base}" != *.gff.gz ]]; then
+        _newpath="${_dir}/${_base%.gff}.gff.gz"
+        send_event "JOB_INFO" "Compressing ${_base} to $(basename "${_newpath}") for nf-core/rnaseq" || true
+        gzip -cn "${ANNOTATION_FILE}" > "${_newpath}" || fail_job 'normalize_annotation_gzip_gff' '' $?
+        rm -f "${ANNOTATION_FILE}"
+        export ANNOTATION_FILE="${_newpath}"
+        return 0
+    fi
+
+    if [[ "${_base}" == *.gtf ]] && [[ "${_base}" != *.gtf.gz ]]; then
+        _newpath="${_dir}/${_base%.gtf}.gtf.gz"
+        send_event "JOB_INFO" "Compressing ${_base} to $(basename "${_newpath}") for nf-core/rnaseq" || true
+        gzip -cn "${ANNOTATION_FILE}" > "${_newpath}" || fail_job 'normalize_annotation_gzip_gtf' '' $?
+        rm -f "${ANNOTATION_FILE}"
+        export ANNOTATION_FILE="${_newpath}"
     fi
 }
 
 function normalize_annotations() {
-    # We run custom GFF/GTFs through AGAT in an attempt to ensure they are somewhat uniform and contain the 
-    # expected features (exons) and attribute fields (gene_id).
-    #
-    # The alternative would be to set the nf-core --gtf_group_features and --featurecounts_feature_type to an 
-    # appropriate identifier (eg ID, gene, or Name, and CDS vs. exon). 
-    
-    # TODO: These Prokka GTFs also don't have gene_biotype. It's unlikely we can automatically add this
-    #       field reliably (eg can't easily guess protein_coding vs tRNA).
-    #       In this case, maybe detect the lack of gene_biotype fields, add --skip_biotype_qc and/or
-    #       change --featurecounts_group_type, and ensure post_nextflow_jobs doesn't expect gene_biotype in this case
+    export ANNOTATION_FLAGS=""
+    export ANN_FEATURE_TYPE="exon"
+    export ANN_GROUP_FEATURES="gene_id"
+    export ANN_EXTRA_ATTRIBUTES="gene_name"
+    export ANN_BIOTYPE_ATTR="gene_biotype"
 
-    # TODO: DuRadar (NFCORE_RNASEQ:RNASEQ:DUPRADAR) seems to fail on these 'cleaned' annotations ?
-    #       We could simply add --skip_dupradar when using custom annotations, or get more sophisicated
-    #       with a custom nextflow.config that adds:
-    # process {
-    #    withName: 'NFCORE_RNASEQ:RNASEQ:DUPRADAR' {
-    #        errorStrategy 'ignore'
-    #    }
-    #}
+    [[ ${USING_CUSTOM_REFERENCE} == "yes" ]] || return 0
 
-    export AGAT_CONTAINER="https://depot.galaxyproject.org/singularity/agat%3A1.4.1--pl5321hdfd78af_0"
-    if [[ ${USING_CUSTOM_REFERENCE} == "yes" && 
-          $(zgrep -Pc "\texon\t.*gene_id*" "${ANNOTATION_FILE}") == 0 ]]; then
+    normalize_annotation_filename_for_nfcore
 
-        send_event "JOB_INFO" "Standardising annotation file using AGAT" || true
+    send_event "JOB_INFO" "Detecting annotation style for nf-core/rnaseq" || true
 
-        #module unload singularity || true
-        #module load singularity || true
+    python "${INPUT_SCRIPTS_PATH}/detect_annotation_style.py"         "${ANNOTATION_FILE}"         --output "${INPUT_CONFIG_PATH}/annotation_style.env"       || fail_job 'detect_annotation_style' '' $?
 
-        # We need a copy with a real name accessible to Singularity
-        # (cached copies with hashed names don't end in .gtf/.gff etc)
-        local _tmp=$(mktemp -d)
-        local _tmp_annotation_path="${_tmp}/$(basename ${ANNOTATION_FILE})"
-        cp $(realpath "${ANNOTATION_FILE}") "${_tmp_annotation_path}"
+    source "${INPUT_CONFIG_PATH}/annotation_style.env"
 
-        local _out_dir=$(dirname "${ANNOTATION_FILE}")
-        local _pathbinds=" -B ${_out_dir} -B ${_tmp} "
-
-        # Formatting for WebApollo (!) seems to work well in making a GFF/GTF
-        # subread/featureCounts compatible (generates exons features when missing 
-        # and adds gene_id attributes, fixes/removes some attributes that seem to break featureCounts).
-        # dupRadar QC uses subread featureCounts, among other parts of the pipeline.
-        (cd "${JOB_PATH}/output" && \
-         apptainer run ${_pathbinds} ${AGAT_CONTAINER} \
-            agat_sp_webApollo_compliant.pl \
-            -g "${_tmp_annotation_path}" \
-            -o "${_tmp_annotation_path}.agat_webapollo.gff" \
-          >>"${JOB_PATH}/output/agat.log" 2>&1)
-
-        # TODO: Run agat_sp_fix_features_locations_duplicated.pl since rsem-prepare-reference for Salmon *hates*
-        #       genes/exons split across chromosomes. May have implications for drafty fragmented assmeblies ?
-
-        # We then convert GFF to GTF
-        (cd "${JOB_PATH}/output" && \
-         apptainer run ${_pathbinds} ${AGAT_CONTAINER} \
-            agat_convert_sp_gff2gtf.pl \
-            -i "${_tmp_annotation_path}.agat_webapollo.gff" \
-            --gtf_version relax \
-            -o "${_out_dir}/annotation.agat.gtf" \
-          >>"${JOB_PATH}/output/agat.log" 2>&1)
-            
-            # --gtf_version 3 \
-            #2>"${_out_dir}/annotation.agat_relax.err"
-
-        gzip "${_out_dir}/annotation.agat.gtf"
-        export ANNOTATION_FILE="${_out_dir}/annotation.agat.gtf.gz"
-        export GENOME_ARGS=" --fasta ${GENOME_FASTA} --gtf ${ANNOTATION_FILE} "
-
-        rm -f "${_tmp_annotation_path}" "${_tmp_annotation_path}.agat_webapollo.gff"
+    if [[ -n "${ANNOTATION_FILE:-}" ]] && [[ -f "${ANNOTATION_FILE}" ]]; then
+        if [[ "${ANN_FORMAT}" == "gtf" ]]; then
+            GENOME_ARGS+=" --gtf ${ANNOTATION_FILE} "
+        else
+            GENOME_ARGS+=" --gff ${ANNOTATION_FILE} "
+        fi
+        export GENOME_ARGS
     fi
+
+    ANNOTATION_FLAGS=" --featurecounts_feature_type ${ANN_FEATURE_TYPE}"
+    ANNOTATION_FLAGS+=" --gtf_group_features ${ANN_GROUP_FEATURES}"
+    [[ -n "${ANN_EXTRA_ATTRIBUTES}" ]] &&         ANNOTATION_FLAGS+=" --gtf_extra_attributes ${ANN_EXTRA_ATTRIBUTES}"
+    [[ -n "${ANN_BIOTYPE_ATTR}" ]] &&         ANNOTATION_FLAGS+=" --featurecounts_group_type ${ANN_BIOTYPE_ATTR}"
+    [[ -n "${ANN_SKIP_FLAGS}" ]] && ANNOTATION_FLAGS+=" ${ANN_SKIP_FLAGS}"
+    export ANNOTATION_FLAGS
 }
 
 function get_settings_from_pipeline_config() {
@@ -624,6 +618,7 @@ function run_nextflow() {
        ${UMI_FLAGS} \
        ${MIN_MAPPED_READS_ARG} \
        ${EXTRA_FLAGS} \
+       ${ANNOTATION_FLAGS} \
        "${TRIMMER_ARGS[@]}" \
        --aligner star_salmon \
        --pseudo_aligner salmon \
@@ -648,6 +643,7 @@ function run_nextflow() {
             ${UMI_FLAGS} \
             ${MIN_MAPPED_READS_ARG} \
             ${EXTRA_FLAGS} \
+            ${ANNOTATION_FLAGS} \
             "${TRIMMER_ARGS[@]}" \
             --aligner star_salmon \
             --pseudo_aligner salmon \
@@ -714,6 +710,10 @@ function post_nextflow_pipeline() {
        --scripts_path="${INPUT_SCRIPTS_PATH}" \
        --bams="${JOB_PATH}/output/results/star_salmon/"'*.bam' \
        --annotation="${ANNOTATION_FILE}" \
+       --feature_type="${ANN_FEATURE_TYPE}" \
+       --group_features="${ANN_GROUP_FEATURES}" \
+       --extra_attributes="${ANN_EXTRA_ATTRIBUTES}" \
+       --biotype_attr="${ANN_BIOTYPE_ATTR}" \
        --meta_info="${JOB_PATH}/output/results/star_salmon/"'*/aux_info/meta_info.json' \
        ${paired_flag} \
        --outdir ${JOB_PATH}/output/results \
