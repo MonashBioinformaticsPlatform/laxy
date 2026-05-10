@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Remote URL browse (`/api/v1/remote-browse/`): Zenodo record URLs such as `https://zenodo.org/records/{id}` are resolved via the Zenodo REST API to list depositor files with public `.../files/{name}?download=1` locations; site-specific handlers live in `laxy_backend.scraping.plugins` with optional extra plugins via `REMOTE_BROWSE_SITE_PLUGINS`
+- Remote URL browse (`/api/v1/remote-browse/`): Zenodo record URLs such as `https://zenodo.org/records/{id}` are resolved via the Zenodo REST API to list depositor files with public `.../files/{name}?download=1` locations; site-specific handlers live in `laxy_backend.scraping.plugins` with optional extra plugins via `REMOTE_BROWSE_SITE_PLUGINS`. ownCloud/Nextcloud public folder shares (`/s/{token}`, optional `index.php/` prefix) are auto-detected via HTML markers or a PROPFIND probe on public WebDAV and listed before generic HTML scraping.
 - Integration test suite in `tests/integration/` for JWT auth, file operations, Celery tasks, and external integrations
 - `justfile` for common development commands (`just dev-up`, `just test`, etc.)
 - PostgreSQL upgrade documentation in `POSTGRES_UPGRADE_PLAN.md`

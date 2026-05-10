@@ -2,7 +2,7 @@ import logging
 import os
 import re
 from fnmatch import fnmatch
-from typing import List, Union, Pattern
+from typing import List, Optional, Pattern, Union
 from contextlib import closing
 from urllib.parse import (
     urljoin,
@@ -25,6 +25,103 @@ from django.conf import settings
 from ..storage.http_remote import is_archive_link
 
 logger = logging.getLogger(__name__)
+
+_NEXTCLOUD_PUBLIC_SHARE_PATH_RE = re.compile(
+    r"/(?:index\.php/)?s/([A-Za-z0-9_-]{8,})(?:/|$|\?)"
+)
+
+_NEXTCLOUD_PUBLIC_HTML_MARKERS = (
+    "_oc_config",
+    'id="body-public"',
+    "files_sharing",
+    "sharingToken",
+)
+
+_PROPFIND_BODY = """<?xml version="1.0" encoding="UTF-8"?>
+<d:propfind xmlns:d="DAV:">
+  <d:prop><d:resourcetype/></d:prop>
+</d:propfind>"""
+
+
+def extract_nextcloud_public_share_token(url: str) -> Optional[str]:
+    """
+    Return the share token if the URL path looks like an ownCloud/Nextcloud
+    public share link (/s/{token} or .../index.php/s/{token}).
+    """
+    path = urlparse(url).path
+    m = _NEXTCLOUD_PUBLIC_SHARE_PATH_RE.search(path)
+    return m.group(1) if m else None
+
+
+def canonical_nextcloud_public_share_url(url: str) -> str:
+    """
+    Strip a trailing slash on public-folder share URLs. Many Nextcloud setups
+    return 404 on ``/s/{token}/`` while ``/s/{token}`` works; trailing slashes
+    also break ``share_id`` extraction via ``os.path.split``.
+    """
+    url = url.strip()
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        return url
+    if extract_nextcloud_public_share_token(url) is None:
+        return url
+    if not parsed.path.endswith("/"):
+        return url
+    trimmed = parsed.path.rstrip("/")
+    if trimmed == parsed.path:
+        return url
+    return urlunparse((parsed.scheme, parsed.netloc, trimmed, "", parsed.query, parsed.fragment))
+
+
+def _propfind_nextcloud_public_share(base_url: str, token: str) -> bool:
+    headers = {"Depth": "1", "Content-Type": "application/xml"}
+    new_style = f"{base_url.rstrip('/')}/public.php/dav/files/{token}/"
+    try:
+        r = requests.request(
+            "PROPFIND",
+            new_style,
+            headers=headers,
+            data=_PROPFIND_BODY.encode("utf-8"),
+            timeout=(5, 15),
+        )
+        if r.status_code == 207:
+            return True
+    except requests.RequestException as ex:
+        logger.debug("PROPFIND new-style Nextcloud DAV failed: %s", ex)
+
+    legacy = f"{base_url.rstrip('/')}/public.php/webdav/"
+    try:
+        r = requests.request(
+            "PROPFIND",
+            legacy,
+            headers=headers,
+            data=_PROPFIND_BODY.encode("utf-8"),
+            auth=(token, "null"),
+            timeout=(5, 15),
+        )
+        return r.status_code == 207
+    except requests.RequestException as ex:
+        logger.debug("PROPFIND legacy Nextcloud DAV failed: %s", ex)
+        return False
+
+
+def is_nextcloud_or_owncloud_public_share(url: str, text: str) -> bool:
+    """
+    True when ``url`` looks like a public share link and the instance responds
+    like Nextcloud/ownCloud (HTML shell markers or successful public DAV).
+    Used by RemoteBrowseView before generic HTML link scraping.
+    """
+    token = extract_nextcloud_public_share_token(url)
+    if not token:
+        return False
+
+    parsed = urlparse(url)
+    base_url = urlunparse((parsed.scheme, parsed.netloc, "", "", "", ""))
+
+    if text and any(marker in text for marker in _NEXTCLOUD_PUBLIC_HTML_MARKERS):
+        return True
+
+    return _propfind_nextcloud_public_share(base_url, token)
 
 # BACKEND = 'splash'
 # BACKEND = 'simple'
