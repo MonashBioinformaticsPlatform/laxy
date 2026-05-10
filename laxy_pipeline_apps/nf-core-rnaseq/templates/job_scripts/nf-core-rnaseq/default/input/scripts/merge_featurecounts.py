@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 from typing import List, Tuple
-import sys
-import os
+
 import argparse
 import json
+import os
+import sys
+
 import pandas as pd
 
 
@@ -84,10 +86,6 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    # Groovy list as string to Python list
-    # file_paths = "${counts_files}"[1:-1].replace(' ', '').split(',')
-
-    # (we just pass in a JSON string prepared in Nextflow/Groovy via JsonOutput.toJson)
     if args.json:
         sample_names, file_paths = parse_json_input(args.json)
     elif args.file_paths:
@@ -101,9 +99,9 @@ if __name__ == "__main__":
     df = merge_dataframes(sample_names, file_paths)
     df = cleanup_featurecounts(df, check_chr_boundries=args.check_chr_boundries)
 
-    gene_info_cols = df.columns[:8]
-    sorted_count_cols = sorted(df.columns[8:])
-    new_col_order = list(gene_info_cols) + sorted_count_cols
+    sample_cols_sorted = sorted(sample_names)
+    meta_cols = [c for c in df.columns if c not in sample_cols_sorted]
+    new_col_order = meta_cols + sample_cols_sorted
     df = df[new_col_order]
 
     df.to_csv(sys.stdout, sep="\t", index=False)

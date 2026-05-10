@@ -1,0 +1,1 @@
+../../../../../common/input/scripts/detect_annotation_style.py
