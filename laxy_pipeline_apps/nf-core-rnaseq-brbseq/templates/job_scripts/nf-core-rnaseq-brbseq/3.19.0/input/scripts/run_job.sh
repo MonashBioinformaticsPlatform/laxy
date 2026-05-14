@@ -62,6 +62,8 @@ export QUEUE_TYPE="local" # Override QUEUE_TYPE from env.sh
 
 source "${INPUT_SCRIPTS_PATH}/laxy.lib.sh" || exit 1
 
+source "${INPUT_SCRIPTS_PATH}/agat_normalize_annotation.sh" || exit 1
+
 send_event "JOB_INFO" "Getting ready to run nf-core/rnaseq"
 
 # We exit on any uncaught error signal. The 'trap finalize_job EXIT' 
@@ -332,11 +334,18 @@ function normalize_annotations() {
 
     normalize_annotation_filename_for_nfcore
 
+    # TEMPORARY: AGAT normalisation off (testing with original annotation + detect_annotation_style only).
+    # agat_normalize_annotation
+
+    check_fasta_annotation_seqids
+
     send_event "JOB_INFO" "Detecting annotation style for nf-core/rnaseq" || true
 
     python "${INPUT_SCRIPTS_PATH}/detect_annotation_style.py"         "${ANNOTATION_FILE}"         --output "${INPUT_CONFIG_PATH}/annotation_style.env"       || fail_job 'detect_annotation_style' '' $?
 
     source "${INPUT_CONFIG_PATH}/annotation_style.env"
+
+    filter_annotation_features
 
     if [[ -n "${ANNOTATION_FILE:-}" ]] && [[ -f "${ANNOTATION_FILE}" ]]; then
         if [[ "${ANN_FORMAT}" == "gtf" ]]; then

@@ -44,6 +44,7 @@ export IGNORE_SELF_SIGNED_CERTIFICATE="{{ IGNORE_SELF_SIGNED_CERTIFICATE }}"
 export LAXYDL_BRANCH=${LAXYDL_BRANCH:-master}
 export LAXYDL_USE_ARIA2C=${LAXYDL_USE_ARIA2C:-yes}
 export LAXYDL_PARALLEL_DOWNLOADS=${LAXYDL_PARALLEL_DOWNLOADS:-8}
+export AGAT_CONTAINER_IMAGE="quay.io/biocontainers/agat:1.6.1--pl5321hdfd78af_1"
 
 declare -a TRIMMER_ARGS=()
 
@@ -93,6 +94,8 @@ fi
 # source "${INPUT_SCRIPTS_PATH}/env.sh" || exit 1
 
 source "${INPUT_SCRIPTS_PATH}/laxy.lib.sh" || exit 1
+
+source "${INPUT_SCRIPTS_PATH}/agat_normalize_annotation.sh" || exit 1
 
 send_event "JOB_INFO" "Getting ready to run nf-core/rnaseq"
 
@@ -380,11 +383,18 @@ function normalize_annotations() {
 
     normalize_annotation_filename_for_nfcore
 
+    # TEMPORARY: AGAT normalisation off (testing with original annotation + detect_annotation_style only).
+    # agat_normalize_annotation
+
+    check_fasta_annotation_seqids
+
     send_event "JOB_INFO" "Detecting annotation style for nf-core/rnaseq" || true
 
     python "${INPUT_SCRIPTS_PATH}/detect_annotation_style.py"         "${ANNOTATION_FILE}"         --output "${INPUT_CONFIG_PATH}/annotation_style.env"       || fail_job 'detect_annotation_style' '' $?
 
     source "${INPUT_CONFIG_PATH}/annotation_style.env"
+
+    filter_annotation_features
 
     if [[ -n "${ANNOTATION_FILE:-}" ]] && [[ -f "${ANNOTATION_FILE}" ]]; then
         if [[ "${ANN_FORMAT}" == "gtf" ]]; then
