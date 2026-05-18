@@ -30,6 +30,7 @@ export IGNORE_SELF_SIGNED_CERTIFICATE="{{ IGNORE_SELF_SIGNED_CERTIFICATE }}"
 export LAXYDL_BRANCH=${LAXYDL_BRANCH:-master}
 export LAXYDL_USE_ARIA2C=${LAXYDL_USE_ARIA2C:-yes}
 export LAXYDL_PARALLEL_DOWNLOADS=${LAXYDL_PARALLEL_DOWNLOADS:-8}
+export AGAT_CONTAINER_IMAGE="quay.io/biocontainers/agat:1.6.1--pl5321hdfd78af_1"
 
 # These are applied via chmod to all files and directories in the run, upon completion
 export JOB_FILE_PERMS='ug+rw-s,o='

@@ -19,21 +19,21 @@ def cleanup_featurecounts(df, check_chr_boundries=True):
     over chromosomes (eg drafty genome assembly).
 
     """
+    # Single-block features (e.g. prokaryotic 1-exon transcripts) make pandas
+    # infer numeric dtypes for Start/End and the .str accessor would fail.
+    # Cast to str so the splits are idempotent in both cases.
+    for col in ("Chr", "Start", "End", "Strand"):
+        if col in df.columns:
+            df[col] = df[col].astype(str)
+
     all_same_chr = df["Chr"].apply(lambda x: len(set(x.split(";"))) == 1)
 
     if check_chr_boundries and not all(all_same_chr):
         return df
 
-    # Split the "Chr" column by ';' and keep only the first value
     df["Chr"] = df["Chr"].str.split(";").str[0]
-
-    # Split the "Start" column by ';' and keep only the first value
     df["Start"] = df["Start"].str.split(";").str[0]
-
-    # Split the "End" column by ';' and keep only the last value
     df["End"] = df["End"].str.split(";").str[-1]
-
-    # Split the "Strand" column by ';' and keep only the first value
     df["Strand"] = df["Strand"].str.split(";").str[0]
 
     return df

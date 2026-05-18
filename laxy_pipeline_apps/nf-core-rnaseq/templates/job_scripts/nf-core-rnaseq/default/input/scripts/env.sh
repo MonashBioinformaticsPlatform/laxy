@@ -34,6 +34,7 @@ export LAXYDL_USE_ARIA2C="no"
 export LAXYDL_PARALLEL_DOWNLOADS=${LAXYDL_PARALLEL_DOWNLOADS:-8}
 export LAXYDL_CONTAINER_IMAGE="ghcr.io/monashbioinformaticsplatform/laxy/laxy-downloader:0b5f608"
 export LAXYDL_APPTAINER_PREFIX="apptainer exec -B ${JOB_PATH} -B ${DOWNLOAD_CACHE_PATH} docker://${LAXYDL_CONTAINER_IMAGE}"
+export AGAT_CONTAINER_IMAGE="quay.io/biocontainers/agat:1.6.1--pl5321hdfd78af_1"
 
 # These are applied via chmod to all files and directories in the run, upon completion
 export JOB_FILE_PERMS='ug+rw-s,o='

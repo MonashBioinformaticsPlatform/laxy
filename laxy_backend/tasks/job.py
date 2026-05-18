@@ -168,16 +168,35 @@ def get_job_template_files(pipeline_name, pipeline_version):
     from glob import glob
     from toolz.dicttoolz import merge as merge_dicts
 
+    # Local-dev artifacts that should never be pushed to the compute node as
+    # part of a job skeleton. Python bytecode in particular trips up
+    # render_to_string() because Django reads templates as UTF-8 text and .pyc
+    # files start with a non-UTF-8 magic number.
+    _JOB_TEMPLATE_EXCLUDE_SUFFIXES = (".pyc", ".pyo")
+    _JOB_TEMPLATE_EXCLUDE_NAMES = frozenset({".DS_Store"})
+    _JOB_TEMPLATE_EXCLUDE_DIR_PARTS = frozenset({"__pycache__"})
+
+    def _is_excluded_job_template(p: Path) -> bool:
+        if p.suffix in _JOB_TEMPLATE_EXCLUDE_SUFFIXES:
+            return True
+        if p.name in _JOB_TEMPLATE_EXCLUDE_NAMES:
+            return True
+        if any(part in _JOB_TEMPLATE_EXCLUDE_DIR_PARTS for part in p.parts):
+            return True
+        return False
+
     def rglobdict(pathspec: str, relative_to: str = "") -> Mapping[str, str]:
         """
         >>> rglobdict('/tmp/bla/foo/*.txt', relative_to='/tmp/bla')
         {'foo/bar.txt': '/tmp/bla/foo/bar.txt'}
         """
-        return {
-            os.path.relpath(p, relative_to): p
-            for p in set(glob(pathspec, recursive=True))
-            if not Path(p).is_dir()
-        }
+        out = {}
+        for p in set(glob(pathspec, recursive=True)):
+            pp = Path(p)
+            if pp.is_dir() or _is_excluded_job_template(pp):
+                continue
+            out[os.path.relpath(p, relative_to)] = p
+        return out
 
     # baseline templates to always be included for every job,
     # unless overridden by a pipeline specific default or version-level template
