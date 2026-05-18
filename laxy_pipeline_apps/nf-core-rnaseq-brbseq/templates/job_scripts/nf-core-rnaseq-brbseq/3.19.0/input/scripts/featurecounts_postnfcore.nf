@@ -6,54 +6,34 @@ params.bams = file('results/star_salmon/*.bam')
 params.annotation = file('reference/genes.gtf.gz')
 params.meta_info = file('results/star_salmon/*/aux_info/meta_info.json')
 params.paired = true
-params.clean_annotation = false
 params.outdir = file('results')
+params.feature_type = 'exon'
+params.group_features = 'gene_id'
+params.extra_attributes = 'gene_name'
+params.biotype_attr = 'gene_biotype'
 //params.scripts_path = workflow.scriptFile.getParent()
 
 
-process PREPROCESS_ANNOTATION {
-    // executor = 'local'
-    container = 'quay.io/biocontainers/agat:1.2.0--pl5321hdfd78af_0'
+process PREPARE_ANNOTATION {
+    container = 'quay.io/biocontainers/subread:2.0.1--hed695b0_0'
     cpus = 1
-    // 10.GB is not enough for Ensembl GRCh38 release 109
-    memory = 24.GB
-    time = '3h'
+    memory = 8.GB
+    time = '2h'
 
     input:
         path annotation
     output:
-        path 'annotation.gxf'
-    shell:
-    // We are using Groovy dollar slashy string syntax here
-    $/
-    if [[ !{annotation} =~ \.gz$ ]]; then
-        gunzip -c !{annotation} >annotation.gxf
-    else
-        ln -s !{annotation} annotation.gxf
-    fi
+        path 'annotation_for_fc'
 
-    # We always convert GFF to GTF
-    if [[ !{annotation} =~ \.(gff|gff3|gff\.gz|gff3\.gz)$ ]]; then
-        mv annotation.gxf annotation.gff
-
-        agat_convert_sp_gff2gtf.pl \
-          --gff annotation.gff \
-          -o annotation.gxf
-    fi
-
-    if [[ !{params.clean_annotation} == "true" ]]; then
-        mv annotation.gxf annotation.pre-agat.gxf
-
-        # This removes gene_biotype and gene_name from exon features, but
-        # leaves it on gene features. The result is no gene_biotype,gene_name columns
-        # in the featureCounts output. But it often fixes problematic annotation 
-        # files so that featureCounts doesnt complain. There may be a better AGAT
-        # option here that fixes things but is less agressive.
-        agat_sp_webApollo_compliant.pl \
-          -g annotation.pre-agat.gxf \
-          -o annotation.gxf
-    fi
-    /$
+    script:
+        """
+        set -euo pipefail
+        if [[ '${annotation}' =~ \\.gz\$ ]]; then
+          gunzip -c '${annotation}' > annotation_for_fc
+        else
+          cp '${annotation}' annotation_for_fc
+        fi
+        """
 }
 
 process GET_SALMON_INFERRED_STRANDEDNESS {
@@ -111,20 +91,42 @@ process FEATURECOUNTS {
         paired_flag = ' '
         }
 
+        def extras = []
+        def ea = params.extra_attributes?.toString()?.trim()
+        def bt = params.biotype_attr?.toString()?.trim()
+        if (ea) {
+            ea.split(',').each { part ->
+                def p = part.trim()
+                if (p) extras.add(p)
+            }
+        }
+        if (bt) {
+            extras.add(bt)
+        }
+        def uniq = []
+        extras.each { e ->
+            if (!uniq.contains(e)) {
+                uniq.add(e)
+            }
+        }
+        def extraArg = uniq.isEmpty() ? '' : '--extraAttributes ' + uniq.join(',')
+
         """
         mkdir tmp
 
-        featureCounts \
-            -a "${annotation}" \
-            -o "${sample_name}.counts.star_featureCounts.txt" \
-            -T ${task.cpus} \
-            ${paired_flag} \
-            -B \
-            -C \
-            -Q 10 \
-            --tmpDir ./tmp \
-            --extraAttributes gene_name,gene_biotype \
-            -s ${strandedness.replace('\n', '')} \
+        featureCounts \\
+            -a "${annotation}" \\
+            -t ${params.feature_type} \\
+            -g ${params.group_features} \\
+            ${extraArg} \\
+            -o "${sample_name}.counts.star_featureCounts.txt" \\
+            -T ${task.cpus} \\
+            ${paired_flag} \\
+            -B \\
+            -C \\
+            -Q 10 \\
+            --tmpDir ./tmp \\
+            -s ${strandedness.replace('\n', '')} \\
             ${bam}
 
         rm -rf tmp || true
@@ -133,7 +135,7 @@ process FEATURECOUNTS {
 
 
 process FEATURECOUNTS_MERGE {
-    
+
     container = 'https://depot.galaxyproject.org/singularity/pandas%3A1.5.2'
     cpus = 1
     memory = 1.GB
@@ -173,9 +175,6 @@ process SALMON_COUNTS_ADD_BIOTYPES {
         path("*.biotypes.tsv"), emit: counts
 
     script:
-        //// TODO: Alternatively, use a script in scripts/templates/merge_biotypes.py
-        ////       or just put the script verbatim in here as #!/usr/bin/env python
-        // template 'merge_biotypes.py'
         """
         # Merge the biotypes from featureCounts into the Salmon counts tables.
         ${params.scripts_path}/merge_biotypes.py \
@@ -200,8 +199,8 @@ workflow {
     strandedness.view { "\nInferred strandedness from Salmon meta_info.json: $it" }
 
 
-    PREPROCESS_ANNOTATION(params.annotation)
-    annotation = PREPROCESS_ANNOTATION.out.first()
+    PREPARE_ANNOTATION(params.annotation)
+    annotation = PREPARE_ANNOTATION.out.first()
 
     FEATURECOUNTS(bams, annotation, params.paired, strandedness)
 
@@ -214,23 +213,6 @@ workflow {
 
     FEATURECOUNTS_MERGE(counts)
 
-    // Common input file with biotypes:
-    //   counts.star_featureCounts.tsv
-    //
-    // Generate biotype versions of:
-    //   results/star_salmon/salmon.merged.gene_counts.tsv
-    //   results/salmon/salmon.merged.gene_counts.tsv
-    //   results/star_salmon/salmon.merged.gene_counts_length_scaled.tsv
-    //   results/salmon/salmon.merged.gene_counts_length_scaled.tsv
-    //
-    // Output filenames - replace .tsv with .biotypes.tsv
-    // Put in results/${dir}/
-
-    // Two synchronized channels:
-    // - salmon_counts: path to counts output by nf-core/rnaseq
-    // - merged_biotypes_publish_dirs: directory in publish dir to put result in (eg 'salmon' or 'star_salmon')
-
-    // TODO: These should probably be a commandline param
     Channel.fromPath(
             [
                 "${workflow.launchDir}/results/star_salmon/salmon.merged.gene_counts.tsv",
@@ -247,11 +229,8 @@ workflow {
     .tap { merged_biotypes_publish_dirs }
     .view { "Biotypes merged output folder: $it" }
 
-    //merged_biotypes_publish_dirs = Channel.fromList(['star_salmon', 'salmon', 'star_salmon', 'salmon'])
-
-    // nf-core/rnaseq Salmon output does not contain biotypes, so we merge the featureCounts biotypes by gene
     SALMON_COUNTS_ADD_BIOTYPES(
-        FEATURECOUNTS_MERGE.out.counts.first(), 
-        salmon_counts, 
+        FEATURECOUNTS_MERGE.out.counts.first(),
+        salmon_counts,
         merged_biotypes_publish_dirs)
 }
