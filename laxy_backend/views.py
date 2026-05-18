@@ -26,6 +26,8 @@ from laxy_backend.scraping import (
     parse_simple_index_links,
     is_apache_index_page,
     parse_nextcloud_webdav,
+    is_nextcloud_or_owncloud_public_share,
+    canonical_nextcloud_public_share_url,
 )
 from laxy_backend.scraping.plugins import run_remote_browse_site_plugins
 from . import paramiko_monkeypatch
@@ -210,7 +212,9 @@ _link_scrapers = [
     (url, globals().get(fn, _log_missing_link_scraper_fn))
     for url, fn in getattr(settings, "LINK_SCRAPER_MAPPINGS", {}).items()
 ]
-LINK_SCRAPER_MAPPINGS = _link_scrapers + LINK_SCRAPER_MAPPINGS
+LINK_SCRAPER_MAPPINGS = _link_scrapers + [
+    (is_nextcloud_or_owncloud_public_share, parse_nextcloud_webdav),
+] + LINK_SCRAPER_MAPPINGS
 
 
 class PingView(APIView):
@@ -3154,11 +3158,13 @@ class RemoteBrowseView(JSONView):
         url = request.data.get("url", "")
         fileglob = request.data.get("fileglob", "*")
 
-        if url == "":
+        if url.strip() == "":
             return HttpResponse(
                 status=status.HTTP_400_BAD_REQUEST,
                 reason="url query parameter is required.",
             )
+
+        url = canonical_nextcloud_public_share_url(url)
 
         # def _looks_like_archive(fn):
         #     archive_extensions = ['.tar']
