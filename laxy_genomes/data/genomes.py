@@ -204,7 +204,7 @@ REFERENCE_GENOMES = {
     'PhiX/NCBI/1993-04-28': {'location': 'PhiX/NCBI/1993-04-28'},
     'Plasmodium_falciparum/PlasmoDB/3D7-release-39': {'location': 'Plasmodium_falciparum/PlasmoDB/3D7-release-39'},
     'Pseudomonas_aeruginosa_PAO1/NCBI/2000-09-13': {'location': 'Pseudomonas_aeruginosa_PAO1/NCBI/2000-09-13'},
-    'Rattus_norvegicus/Ensembl/RGSC3.4': {'location': 'Rattus_norvegicus/Ensembl/RGSC3.4'},
+    #'Rattus_norvegicus/Ensembl/RGSC3.4': {'location': 'Rattus_norvegicus/Ensembl/RGSC3.4'},
     'Rattus_norvegicus/Ensembl/Rnor_5.0': {'location': 'Rattus_norvegicus/Ensembl/Rnor_5.0'},
     'Rattus_norvegicus/Ensembl/Rnor_6.0': {'location': 'Rattus_norvegicus/Ensembl/Rnor_6.0'},
     'Rattus_norvegicus/NCBI/RGSC_v3.4': {'location': 'Rattus_norvegicus/NCBI/RGSC_v3.4'},
