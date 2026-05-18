@@ -15,7 +15,6 @@ function agat_normalize_annotation() {
 
     mkdir -p "${JOB_PATH}/output"
 
-    send_event "JOB_INFO" "Normalising annotation with AGAT (agat_convert_sp_gxf2gxf.pl, preserves prokaryotic CDS-only structure)" || true
 
     local _in="${ANNOTATION_FILE}"
     local _dir
@@ -149,7 +148,6 @@ function filter_annotation_features() {
     _dir="$(dirname "${_in}")"
     _out_gz="${_dir}/annotation.filtered.gtf.gz"
 
-    send_event "JOB_INFO" "Filtering ${ANN_FEATURE_TYPE} rows and synthesising transcript/exon hierarchy (ids from ${ANN_GROUP_FEATURES:-auto})" || true
 
     mkdir -p "${JOB_PATH}/output"
 

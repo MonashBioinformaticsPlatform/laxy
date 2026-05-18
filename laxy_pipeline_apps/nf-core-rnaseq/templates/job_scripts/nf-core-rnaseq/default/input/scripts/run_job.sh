@@ -339,25 +339,23 @@ function normalize_annotation_filename_for_nfcore() {
     if [[ "${_base}" == *.gff3.gz ]]; then
         _newpath="${_dir}/${_base%.gff3.gz}.gff.gz"
         if [[ "${ANNOTATION_FILE}" != "${_newpath}" ]]; then
-            send_event "JOB_INFO" "Renaming ${_base} to $(basename "${_newpath}") for nf-core/rnaseq (paths must end in .gff.gz)" || true
-            mv -f "${ANNOTATION_FILE}" "${_newpath}" || fail_job 'normalize_annotation_rename_gff3_gz' '' $?
+            rm -f "${_newpath}"
+            ln -sf "${_base}" "${_newpath}" || fail_job 'normalize_annotation_symlink_gff3_gz' '' $?
             export ANNOTATION_FILE="${_newpath}"
         fi
         return 0
     fi
 
     if [[ "${_base}" == *.gff3 ]]; then
-        _newpath="${_dir}/${_base%.gff3}.gff.gz"
-        send_event "JOB_INFO" "Compressing ${_base} to $(basename "${_newpath}") for nf-core/rnaseq" || true
-        gzip -cn "${ANNOTATION_FILE}" > "${_newpath}" || fail_job 'normalize_annotation_gzip_gff3' '' $?
-        rm -f "${ANNOTATION_FILE}"
+        _newpath="${_dir}/${_base%.gff3}.gff"
+        rm -f "${_newpath}"
+        ln -sf "${_base}" "${_newpath}" || fail_job 'normalize_annotation_symlink_gff3' '' $?
         export ANNOTATION_FILE="${_newpath}"
         return 0
     fi
 
     if [[ "${_base}" == *.gff ]] && [[ "${_base}" != *.gff.gz ]]; then
         _newpath="${_dir}/${_base%.gff}.gff.gz"
-        send_event "JOB_INFO" "Compressing ${_base} to $(basename "${_newpath}") for nf-core/rnaseq" || true
         gzip -cn "${ANNOTATION_FILE}" > "${_newpath}" || fail_job 'normalize_annotation_gzip_gff' '' $?
         rm -f "${ANNOTATION_FILE}"
         export ANNOTATION_FILE="${_newpath}"
@@ -366,7 +364,6 @@ function normalize_annotation_filename_for_nfcore() {
 
     if [[ "${_base}" == *.gtf ]] && [[ "${_base}" != *.gtf.gz ]]; then
         _newpath="${_dir}/${_base%.gtf}.gtf.gz"
-        send_event "JOB_INFO" "Compressing ${_base} to $(basename "${_newpath}") for nf-core/rnaseq" || true
         gzip -cn "${ANNOTATION_FILE}" > "${_newpath}" || fail_job 'normalize_annotation_gzip_gtf' '' $?
         rm -f "${ANNOTATION_FILE}"
         export ANNOTATION_FILE="${_newpath}"
@@ -389,7 +386,6 @@ function normalize_annotations() {
 
     check_fasta_annotation_seqids
 
-    send_event "JOB_INFO" "Detecting annotation style for nf-core/rnaseq" || true
 
     python "${INPUT_SCRIPTS_PATH}/detect_annotation_style.py"         "${ANNOTATION_FILE}"         --output "${INPUT_CONFIG_PATH}/annotation_style.env"       || fail_job 'detect_annotation_style' '' $?
 
