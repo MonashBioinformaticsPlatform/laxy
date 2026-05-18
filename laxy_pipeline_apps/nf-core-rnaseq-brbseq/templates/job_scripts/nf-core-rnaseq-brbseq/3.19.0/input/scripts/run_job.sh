@@ -48,6 +48,7 @@ export NXF_VER=24.10.6
 #  Using a fresh .nextflow for each run works around this issue.)
 export NXF_HOME="${INPUT_SCRIPTS_PATH}/pipeline/.nextflow"
 mkdir -p "${INPUT_SCRIPTS_PATH}/pipeline"
+export AWS_EC2_METADATA_DISABLED=true
 # export NXF_DEBUG=1  # 2 # 3
 
 # nextflow itself will run on ComputeResource login node, but
@@ -670,10 +671,24 @@ function post_nextflow_pipeline() {
 
     _nfjobname=$(echo laxy_"${JOB_ID}" | tr '[:upper:]' '[:lower:]')
 
+    local _fc_annotation=""
+    if [[ -n "${ANNOTATION_FILE:-}" && -f "${ANNOTATION_FILE}" ]]; then
+        _fc_annotation="${ANNOTATION_FILE}"
+    elif [[ -d "${JOB_PATH}/output/results/genome" ]]; then
+        _fc_annotation=$(find "${JOB_PATH}/output/results/genome" -type f \( -name '*.filtered.gtf' -o -name '*.filtered.gtf.gz' \) 2>/dev/null | head -n 1)
+    fi
+    if [[ -z "${_fc_annotation}" || ! -f "${_fc_annotation}" ]]; then
+        _fc_annotation=$(find "${JOB_PATH}/output/work" -type f \( -name '*.filtered.gtf' -o -name '*.filtered.gtf.gz' \) 2>/dev/null | head -n 1)
+    fi
+    if [[ -z "${_fc_annotation}" || ! -f "${_fc_annotation}" ]]; then
+        send_event "JOB_INFO" "Skipping featureCounts post-processing: no annotation file (set save_reference so nf-core publishes results/genome/*.filtered.gtf, use a local iGenomes cache with genes.gtf, or upload a custom annotation)." || true
+        return 0
+    fi
+
     nextflow run "${INPUT_SCRIPTS_PATH}/featurecounts_postnfcore.nf" \
        --scripts_path="${INPUT_SCRIPTS_PATH}" \
        --bams="${JOB_PATH}/output/results/star_salmon/"'*.umi_dedup.sorted.bam' \
-       --annotation="${ANNOTATION_FILE}" \
+       --annotation="${_fc_annotation}" \
        --feature_type="${ANN_FEATURE_TYPE}" \
        --group_features="${ANN_GROUP_FEATURES}" \
        --extra_attributes="${ANN_EXTRA_ATTRIBUTES}" \

@@ -53,7 +53,8 @@ function send_event() {
     if [[ "${DEBUG}" == "yes" ]]; then
         # NOTE: verbose mode should NOT be used in production since it prints
         # full headers to stdout/stderr, including Authorization tokens.
-        VERBOSITY="-vvv"
+        # Use -v only: -vv/-vvv on modern curl floods logs with per-byte [WRITE] trace lines.
+        VERBOSITY="-v"
     fi
 
     curl -X POST \

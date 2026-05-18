@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - AGAT preprocessing is not applied inside `featurecounts_postnfcore.nf` (`PREPARE_ANNOTATION` decompresses/unlinks only); custom-reference AGAT rewriting lives in pipeline `run_job.sh` ahead of nf-core/rnaseq instead.
 
 ### Fixed
+- nf-core-rnaseq / nf-core-rnaseq-brbseq jobs: `laxy_nextflow.config` sets `params.igenomes_base` without a trailing slash so iGenomes S3 paths are not built as `igenomes//species/...` (invalid object keys / missing reference). Added `aws.client.anonymous` and `eu-west-1` for the public `ngi-igenomes` bucket; `run_job.sh` exports `AWS_EC2_METADATA_DISABLED=true` so the AWS SDK does not attempt EC2 instance metadata from inside Docker (noisy `NoRouteToHost` to `169.254.169.254`).
 - Added explicit `setuptools>=75,<82` dependency for Python 3.12+ compatibility (`fs`/PyFilesystem2 requires `pkg_resources`, which was removed in setuptools 82)
 - AGAT `apptainer exec`: set `TMPDIR`/`TMP`/`TEMP` via `--env` and `--pwd` to a subdirectory of the bind-mounted staging dir so Parallel::ForkManager and AGAT's `agat_log_<input>/` directory don't try to write under unmounted (read-only) job paths.
 - Nextcloud/ownCloud shared folder file downloads now use the new-style `/public.php/dav/files/{token}/` WebDAV endpoint (Nextcloud 29+), with automatic fallback to the legacy `/public.php/webdav/` endpoint for older instances
@@ -34,8 +35,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Annotation gzip detection now uses file magic bytes, so files misnamed `.gz` (or gzipped without the `.gz` suffix) are handled correctly
 - `merge_featurecounts.py`: `cleanup_featurecounts()` now casts `Chr`/`Start`/`End`/`Strand` to strings before splitting, so the merge step works for single-block (prokaryotic) annotations where pandas would otherwise infer numeric dtypes and fail with `Can only use .str accessor with string values!`
 - `get_job_template_files()` (`laxy_backend.tasks.job`) now skips `__pycache__/` directories, `*.pyc`/`*.pyo` and `.DS_Store` so local-dev artifacts (created by running tests or `py_compile` on pipeline scripts under `templates/`) can no longer leak into the job skeleton and crash `start_job` with `'utf-8' codec can't decode byte 0xa7` from `render_to_string` trying to read Python bytecode as a template.
+- nf-core-rnaseq / nf-core-rnaseq-brbseq `post_nextflow_pipeline` (`run_job.sh`): internal iGenomes runs (`--genome` only, no `ANNOTATION_FILE`) no longer expand an unset `ANNOTATION_FILE` under `set -u`. The post-nf-core featureCounts step now resolves `*.filtered.gtf` from `output/results/genome/` (when `save_reference` published it) or from `output/work/`, otherwise skips with a clear `JOB_INFO` message.
 
 ### Changed
+- Job `send_event` curl when `DEBUG=yes`: use `-v` instead of `-vvv` so logs stay at HTTP header level without per-byte transfer trace noise from recent curl.
 - AGAT normalisation for custom references leaves the original uploaded annotation file in `input/reference`; only `ANNOTATION_FILE` is switched to `annotation.agat.gff.gz` for the pipeline.
 - **laxy_downloader**: packaging moved from `setup.py` to `pyproject.toml` (PEP 621, setuptools); `requires-python` is `>=3.10`; optional `[dev]` extra includes pytest
 - **laxy_downloader**: renamed internal module `laxy_downloader.downloader` to `laxy_downloader.core` to avoid a generic `downloader` package name ([issue #60](https://github.com/MonashBioinformaticsPlatform/laxy/issues/60))
