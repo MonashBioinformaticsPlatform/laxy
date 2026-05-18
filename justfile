@@ -56,12 +56,15 @@ build:
 # Run unit tests inside docker-compose.test.yml (pytest against laxy_backend)
 test-unit:
     #!/usr/bin/env bash
+    # Non-default buildx builders (e.g. docker-container drivers) cannot see locally tagged
+    # images; FROM laxy:dev would try docker.io/library/laxy:dev. Force the default builder.
     if ! docker image inspect laxy:dev >/dev/null 2>&1; then
         echo "🔨 laxy:dev not found locally; building base image (docker/laxy-test/Dockerfile depends on it)..."
-        docker compose -f docker-compose.yml -f docker-compose.local-dev.yml build
+        docker compose -f docker-compose.yml -f docker-compose.local-dev.yml build --builder default django
     fi
     echo "🧪 Running unit tests with docker-compose.test.yml (pytest, unit-tests service)..."
-    docker compose -f docker-compose.test.yml up --exit-code-from unit-tests --abort-on-container-exit
+    docker compose -f docker-compose.test.yml build --builder default unit-tests
+    docker compose -f docker-compose.test.yml up --exit-code-from unit-tests --abort-on-container-exit --no-build
     status=$?
     echo "🧹 Cleaning up test containers..."
     docker compose -f docker-compose.test.yml down -v
