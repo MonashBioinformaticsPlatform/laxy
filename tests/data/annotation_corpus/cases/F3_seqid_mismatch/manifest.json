@@ -1,0 +1,39 @@
+{
+  "id": "F3_seqid_mismatch",
+  "description": "Prokaryote GFF3 whose seqids share no overlap with the FASTA",
+  "annotation": "annotation.gff3",
+  "class": "prok",
+  "tier": "failfast",
+  "xfail_reason": null,
+  "expected": {
+    "detect": {
+      "exit": 0,
+      "env": {
+        "ANN_FORMAT": "gff3",
+        "ANN_FEATURE_TYPE": "CDS",
+        "ANN_GROUP_FEATURES": "Parent",
+        "ANN_EXTRA_ATTRIBUTES": "gene,Name,product,protein_id,locus_tag",
+        "ANN_BIOTYPE_ATTR": "",
+        "ANN_PROKARYOTIC": "yes",
+        "ANN_PROFILE": "ncbi_genbank",
+        "ANN_SKIP_FLAGS": "--skip_dupradar --skip_rseqc --skip_qualimap --skip_bigwig --skip_biotype_qc"
+      }
+    },
+    "filter": null,
+    "seqid": {
+      "fasta_ids_sample": [
+        "chr1",
+        "chr2"
+      ],
+      "ann_ids_sample": [
+        "TEST_CHR1",
+        "TEST_CHR2"
+      ],
+      "expect_overlap": false
+    },
+    "e2e": {
+      "run": false
+    }
+  },
+  "reads": null
+}

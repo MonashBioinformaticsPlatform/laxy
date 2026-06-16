@@ -1,0 +1,55 @@
+{
+  "id": "F9_mixed_chromosomes",
+  "description": "Multi-contig eukaryotic GTF (chr1 + chr2 genes)",
+  "annotation": "annotation.gtf",
+  "class": "euk",
+  "tier": "happy",
+  "xfail_reason": null,
+  "expected": {
+    "detect": {
+      "exit": 0,
+      "env": {
+        "ANN_FORMAT": "gtf",
+        "ANN_FEATURE_TYPE": "exon",
+        "ANN_GROUP_FEATURES": "gene_id",
+        "ANN_EXTRA_ATTRIBUTES": "gene_name",
+        "ANN_BIOTYPE_ATTR": "gene_biotype",
+        "ANN_PROKARYOTIC": "no",
+        "ANN_PROFILE": "refseq_gtf",
+        "ANN_SKIP_FLAGS": ""
+      }
+    },
+    "filter": {
+      "exit": 0,
+      "counts": {
+        "input_rows_kept": 13,
+        "output_rows": 13,
+        "dropped": 0
+      }
+    },
+    "seqid": {
+      "fasta_ids_sample": [
+        "chr1",
+        "chr2"
+      ],
+      "ann_ids_sample": [
+        "chr1",
+        "chr2"
+      ],
+      "expect_overlap": true
+    },
+    "e2e": {
+      "run": true,
+      "aligner": "star_salmon",
+      "extra_flags": [],
+      "expect_success": true
+    }
+  },
+  "reads": {
+    "mode": "paired",
+    "count": 2000,
+    "read_length": 75,
+    "fragment_size": 200,
+    "seed": 42
+  }
+}

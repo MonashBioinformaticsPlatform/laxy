@@ -1,0 +1,5 @@
+##gff-version 3
+chr1	Prokka	CDS	100	1200	.	+	0	ID=LAXY_00001;gene=dnaA;product=chromosomal_replication_initiator_protein;eC_number=2.7.7.-;inference=ab initio
+chr1	Prokka	CDS	1300	2400	.	+	0	ID=LAXY_00002;gene=dnaN;product=DNA_polymerase_III_subunit_beta;eC_number=2.7.7.-;inference=ab initio
+chr1	Prokka	CDS	2500	3000	.	-	0	ID=LAXY_00003;gene=recF;product=DNA_replication_protein_RecF;eC_number=2.7.7.-;inference=ab initio
+chr2	Prokka	CDS	100	900	.	+	0	ID=LAXY_00004;gene=gyrA;product=DNA_gyrase_subunit_A;eC_number=5.99.1.3;inference=ab initio

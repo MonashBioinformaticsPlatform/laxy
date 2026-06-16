@@ -1,0 +1,29 @@
+{
+  "id": "F5_eight_columns",
+  "description": "GFF3 with only 8-column rows (no attributes column)",
+  "annotation": "annotation.gff3",
+  "class": null,
+  "tier": "failfast",
+  "xfail_reason": null,
+  "expected": {
+    "detect": {
+      "exit": 1,
+      "stderr_contains": "No valid annotation feature rows found (empty file?)"
+    },
+    "filter": null,
+    "seqid": {
+      "fasta_ids_sample": [
+        "chr1",
+        "chr2"
+      ],
+      "ann_ids_sample": [
+        "chr1"
+      ],
+      "expect_overlap": true
+    },
+    "e2e": {
+      "run": false
+    }
+  },
+  "reads": null
+}

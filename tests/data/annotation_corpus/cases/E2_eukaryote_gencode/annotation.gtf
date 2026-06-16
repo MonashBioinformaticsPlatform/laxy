@@ -1,0 +1,11 @@
+chr1	laxy_test	exon	1000	1250	.	+	.	gene_id "ENSGTEST00000000001"; transcript_id "ENSMTEST00000000001"; gene_name "GENE_A"; gene_type "protein_coding";
+chr1	laxy_test	exon	1500	2000	.	+	.	gene_id "ENSGTEST00000000001"; transcript_id "ENSMTEST00000000001"; gene_name "GENE_A"; gene_type "protein_coding";
+chr1	laxy_test	exon	3000	4500	.	+	.	gene_id "ENSGTEST00000000002"; transcript_id "ENSMTEST00000000002"; gene_name "GENE_B"; gene_type "protein_coding";
+chr1	laxy_test	exon	4600	5200	.	+	.	gene_id "ENSGTEST00000000002"; transcript_id "ENSMTEST00000000002"; gene_name "GENE_B"; gene_type "protein_coding";
+chr1	laxy_test	exon	5300	6800	.	-	.	gene_id "ENSGTEST00000000003"; transcript_id "ENSMTEST00000000003"; gene_name "GENE_C"; gene_type "lncRNA";
+chr1	laxy_test	exon	7000	8000	.	-	.	gene_id "ENSGTEST00000000003"; transcript_id "ENSMTEST00000000003"; gene_name "GENE_C"; gene_type "lncRNA";
+chr1	laxy_test	exon	8200	9000	.	+	.	gene_id "ENSGTEST00000000004"; transcript_id "ENSMTEST00000000004"; gene_name "GENE_D"; gene_type "protein_coding";
+chr2	laxy_test	exon	5000	6000	.	+	.	gene_id "ENSGTEST00000000005"; transcript_id "ENSMTEST00000000005"; gene_name "GENE_E"; gene_type "protein_coding";
+chr2	laxy_test	exon	6500	8000	.	+	.	gene_id "ENSGTEST00000000005"; transcript_id "ENSMTEST00000000005"; gene_name "GENE_E"; gene_type "protein_coding";
+chr2	laxy_test	exon	8500	9200	.	-	.	gene_id "ENSGTEST00000000006"; transcript_id "ENSMTEST00000000006"; gene_name "GENE_F"; gene_type "protein_coding";
+chr2	laxy_test	exon	9300	9800	.	-	.	gene_id "ENSGTEST00000000006"; transcript_id "ENSMTEST00000000006"; gene_name "GENE_F"; gene_type "protein_coding";

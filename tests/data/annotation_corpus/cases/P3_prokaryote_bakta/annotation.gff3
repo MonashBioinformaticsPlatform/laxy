@@ -1,0 +1,5 @@
+##gff-version 3
+chr1	Bakta	CDS	100	1200	.	+	0	ID=LAXYTEST_00001;locus_tag=LAXYTEST_00001;gene=dnaA;product=DNA replication initiator DnaA
+chr1	Bakta	CDS	1300	2400	.	+	0	ID=LAXYTEST_00002;locus_tag=LAXYTEST_00002;gene=dnaN;product=DNA pol III subunit beta DnaN
+chr1	Bakta	CDS	2500	3000	.	-	0	ID=LAXYTEST_00003;locus_tag=LAXYTEST_00003;gene=recF;product=DNA replication protein RecF
+chr2	Bakta	CDS	100	900	.	+	0	ID=LAXYTEST_00004;locus_tag=LAXYTEST_00004;gene=gyrA;product=DNA gyrase subunit A GyrA

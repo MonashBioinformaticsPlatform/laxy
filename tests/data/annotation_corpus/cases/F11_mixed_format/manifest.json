@@ -1,0 +1,45 @@
+{
+  "id": "F11_mixed_format",
+  "description": "Eukaryotic GTF with format edge (no biotype)",
+  "annotation": "annotation.gtf",
+  "class": "euk",
+  "tier": "detect_only",
+  "xfail_reason": null,
+  "expected": {
+    "detect": {
+      "exit": 0,
+      "env": {
+        "ANN_FORMAT": "gtf",
+        "ANN_FEATURE_TYPE": "exon",
+        "ANN_GROUP_FEATURES": "gene_id",
+        "ANN_EXTRA_ATTRIBUTES": "gene_name",
+        "ANN_BIOTYPE_ATTR": "",
+        "ANN_PROKARYOTIC": "no",
+        "ANN_PROFILE": "generic_eukaryote",
+        "ANN_SKIP_FLAGS": "--skip_biotype_qc"
+      }
+    },
+    "filter": {
+      "exit": 0,
+      "counts": {
+        "input_rows_kept": 3,
+        "output_rows": 3,
+        "dropped": 0
+      }
+    },
+    "seqid": {
+      "fasta_ids_sample": [
+        "chr1",
+        "chr2"
+      ],
+      "ann_ids_sample": [
+        "chr1"
+      ],
+      "expect_overlap": true
+    },
+    "e2e": {
+      "run": false
+    }
+  },
+  "reads": null
+}

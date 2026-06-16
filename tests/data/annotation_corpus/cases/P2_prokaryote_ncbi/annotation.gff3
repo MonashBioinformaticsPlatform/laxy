@@ -1,0 +1,9 @@
+##gff-version 3
+chr1	RefSeq	gene	100	1200	.	+	.	ID=gene-dnaA;Name=dnaA;gbkey=Gene;gene=dnaA;locus_tag=LAXYTEST_0001
+chr1	RefSeq	CDS	100	1200	.	+	0	ID=cds-dnaA;Parent=gene-dnaA;Name=dnaA;gbkey=CDS;gene=dnaA;locus_tag=LAXYTEST_0001;product=DNA replication initiator DnaA;protein_id=WP_TEST001;Dbxref=PFAM:PF00000
+chr1	RefSeq	gene	1300	2400	.	+	.	ID=gene-dnaN;Name=dnaN;gbkey=Gene;gene=dnaN;locus_tag=LAXYTEST_0002
+chr1	RefSeq	CDS	1300	2400	.	+	0	ID=cds-dnaN;Parent=gene-dnaN;Name=dnaN;gbkey=CDS;gene=dnaN;locus_tag=LAXYTEST_0002;product=DNA pol III subunit beta DnaN;protein_id=WP_TEST002;Dbxref=PFAM:PF00000
+chr1	RefSeq	gene	2500	3000	.	-	.	ID=gene-recF;Name=recF;gbkey=Gene;gene=recF;locus_tag=LAXYTEST_0003
+chr1	RefSeq	CDS	2500	3000	.	-	0	ID=cds-recF;Parent=gene-recF;Name=recF;gbkey=CDS;gene=recF;locus_tag=LAXYTEST_0003;product=DNA replication protein RecF;protein_id=WP_TEST003;Dbxref=PFAM:PF00000
+chr2	RefSeq	gene	100	900	.	+	.	ID=gene-gyrA;Name=gyrA;gbkey=Gene;gene=gyrA;locus_tag=LAXYTEST_0004
+chr2	RefSeq	CDS	100	900	.	+	0	ID=cds-gyrA;Parent=gene-gyrA;Name=gyrA;gbkey=CDS;gene=gyrA;locus_tag=LAXYTEST_0004;product=DNA gyrase subunit A GyrA;protein_id=WP_TEST004;Dbxref=PFAM:PF00000

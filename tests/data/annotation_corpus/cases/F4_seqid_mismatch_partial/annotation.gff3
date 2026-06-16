@@ -1,0 +1,5 @@
+##gff-version 3
+chr1	RefSeq	gene	100	1200	.	+	.	ID=gene-dnaA;Name=dnaA;gbkey=Gene;gene=dnaA;locus_tag=LAXYTEST_0001
+chr1	RefSeq	CDS	100	1200	.	+	0	ID=cds-dnaA;Parent=gene-dnaA;Name=dnaA;gbkey=CDS;gene=dnaA;locus_tag=LAXYTEST_0001;product=DnaA;protein_id=WP_TEST001;Dbxref=PFAM:PF00000
+chr3	RefSeq	gene	100	900	.	+	.	ID=gene-gyrA;Name=gyrA;gbkey=Gene;gene=gyrA;locus_tag=LAXYTEST_0004
+chr3	RefSeq	CDS	100	900	.	+	0	ID=cds-gyrA;Parent=gene-gyrA;Name=gyrA;gbkey=CDS;gene=gyrA;locus_tag=LAXYTEST_0004;product=GyrA;protein_id=WP_TEST004;Dbxref=PFAM:PF00000

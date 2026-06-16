@@ -1,0 +1,55 @@
+{
+  "id": "E3_eukaryote_refseq",
+  "description": "Eukaryote, RefSeq GFF3 (gene/mRNA/exon/CDS hierarchy)",
+  "annotation": "annotation.gff3",
+  "class": "euk",
+  "tier": "happy",
+  "xfail_reason": null,
+  "expected": {
+    "detect": {
+      "exit": 0,
+      "env": {
+        "ANN_FORMAT": "gff3",
+        "ANN_FEATURE_TYPE": "exon",
+        "ANN_GROUP_FEATURES": "Parent",
+        "ANN_EXTRA_ATTRIBUTES": "Name,gene_id,gene",
+        "ANN_BIOTYPE_ATTR": "gene_biotype",
+        "ANN_PROKARYOTIC": "no",
+        "ANN_PROFILE": "refseq_gff3",
+        "ANN_SKIP_FLAGS": ""
+      }
+    },
+    "filter": {
+      "exit": 0,
+      "counts": {
+        "input_rows_kept": 12,
+        "output_rows": 24,
+        "dropped": 20
+      }
+    },
+    "seqid": {
+      "fasta_ids_sample": [
+        "chr1",
+        "chr2"
+      ],
+      "ann_ids_sample": [
+        "chr1",
+        "chr2"
+      ],
+      "expect_overlap": true
+    },
+    "e2e": {
+      "run": true,
+      "aligner": "star_salmon",
+      "extra_flags": [],
+      "expect_success": true
+    }
+  },
+  "reads": {
+    "mode": "paired",
+    "count": 2000,
+    "read_length": 75,
+    "fragment_size": 200,
+    "seed": 42
+  }
+}

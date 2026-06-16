@@ -106,6 +106,39 @@ test-all: test-unit test-integration
 # Default test target: unit tests only
 test: test-unit
 
+# --- Synthetic annotation corpus -------------------------------------------
+# Fast tiers (detect + filter + seqid). No Django, no containers. ~1s.
+test-annotation-corpus:
+    @echo "🧬 Running annotation corpus (detect + filter + seqid)..."
+    pytest tests/data/annotation_corpus/ -m "corpus and not e2e"
+
+# Tier 4 read-generation sanity (generates + counts reads; no nextflow).
+test-annotation-corpus-reads:
+    @echo "🧬 Annotation corpus: generating reads + sanity checks..."
+    pytest tests/data/annotation_corpus/test_annotation_e2e.py::test_e2e_reads_sanity
+
+# Full nf-core/rnaseq e2e (needs nextflow + fake-cluster stack up).
+test-annotation-corpus-e2e:
+    @echo "🧬 Annotation corpus: full nf-core/rnaseq e2e (slow)..."
+    pytest tests/data/annotation_corpus/ -m e2e
+
+# Regenerate the shared synthetic genome from its fixed seed.
+annotation-genome:
+    @echo "🧬 Regenerating shared/genome.fa (fixed seed)..."
+    python3 tests/data/annotation_corpus/shared/generate_genome.py -o tests/data/annotation_corpus/shared/genome.fa
+    gzip -kf tests/data/annotation_corpus/shared/genome.fa
+
+# Re-seed cases/*/annotation.* from the doc catalogue (one-off bootstrap).
+annotation-fixtures:
+    @echo "🧬 (Re)writing case annotation fixtures..."
+    python3 tests/data/annotation_corpus/shared/make_annotation_fixtures.py
+    @just annotation-manifests
+
+# Snapshot current detector/filter behaviour into cases/*/manifest.json.
+annotation-manifests:
+    @echo "🧬 Regenerating manifests from actual behaviour..."
+    python3 tests/data/annotation_corpus/shared/make_manifests.py
+
 # Run database migrations
 migrate:
     #!/usr/bin/env bash

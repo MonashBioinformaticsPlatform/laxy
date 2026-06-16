@@ -1,0 +1,46 @@
+{
+  "id": "F4_seqid_mismatch_partial",
+  "description": "GFF3 with partial seqid overlap (some contigs match, some don't)",
+  "annotation": "annotation.gff3",
+  "class": "prok",
+  "tier": "detect_only",
+  "xfail_reason": null,
+  "expected": {
+    "detect": {
+      "exit": 0,
+      "env": {
+        "ANN_FORMAT": "gff3",
+        "ANN_FEATURE_TYPE": "CDS",
+        "ANN_GROUP_FEATURES": "Parent",
+        "ANN_EXTRA_ATTRIBUTES": "gene,Name,product,protein_id,locus_tag",
+        "ANN_BIOTYPE_ATTR": "",
+        "ANN_PROKARYOTIC": "yes",
+        "ANN_PROFILE": "ncbi_genbank",
+        "ANN_SKIP_FLAGS": "--skip_dupradar --skip_rseqc --skip_qualimap --skip_bigwig --skip_biotype_qc"
+      }
+    },
+    "filter": {
+      "exit": 0,
+      "counts": {
+        "input_rows_kept": 2,
+        "output_rows": 6,
+        "dropped": 2
+      }
+    },
+    "seqid": {
+      "fasta_ids_sample": [
+        "chr1",
+        "chr2"
+      ],
+      "ann_ids_sample": [
+        "chr1",
+        "chr3"
+      ],
+      "expect_overlap": true
+    },
+    "e2e": {
+      "run": false
+    }
+  },
+  "reads": null
+}

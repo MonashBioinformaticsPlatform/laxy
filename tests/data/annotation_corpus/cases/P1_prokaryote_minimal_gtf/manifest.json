@@ -1,0 +1,57 @@
+{
+  "id": "P1_prokaryote_minimal_gtf",
+  "description": "Prokaryote, minimal CDS-only GTF (self-contained gene_id)",
+  "annotation": "annotation.gtf",
+  "class": "prok",
+  "tier": "happy",
+  "xfail_reason": null,
+  "expected": {
+    "detect": {
+      "exit": 0,
+      "env": {
+        "ANN_FORMAT": "gtf",
+        "ANN_FEATURE_TYPE": "CDS",
+        "ANN_GROUP_FEATURES": "gene_id",
+        "ANN_EXTRA_ATTRIBUTES": "gene_name",
+        "ANN_BIOTYPE_ATTR": "gene_biotype",
+        "ANN_PROKARYOTIC": "yes",
+        "ANN_PROFILE": "generic_prokaryote",
+        "ANN_SKIP_FLAGS": "--skip_dupradar --skip_rseqc --skip_qualimap --skip_bigwig"
+      }
+    },
+    "filter": {
+      "exit": 0,
+      "counts": {
+        "input_rows_kept": 4,
+        "output_rows": 4,
+        "dropped": 0
+      }
+    },
+    "seqid": {
+      "fasta_ids_sample": [
+        "chr1",
+        "chr2"
+      ],
+      "ann_ids_sample": [
+        "chr1",
+        "chr2"
+      ],
+      "expect_overlap": true
+    },
+    "e2e": {
+      "run": true,
+      "aligner": "star_salmon",
+      "extra_flags": [
+        "--skip_rsem"
+      ],
+      "expect_success": true
+    }
+  },
+  "reads": {
+    "mode": "paired",
+    "count": 2000,
+    "read_length": 75,
+    "fragment_size": 200,
+    "seed": 42
+  }
+}

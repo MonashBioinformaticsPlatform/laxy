@@ -1,0 +1,27 @@
+{
+  "id": "F10_empty",
+  "description": "Empty annotation file",
+  "annotation": "annotation.gtf",
+  "class": null,
+  "tier": "failfast",
+  "xfail_reason": null,
+  "expected": {
+    "detect": {
+      "exit": 1,
+      "stderr_contains": "No valid annotation feature rows found (empty file?)"
+    },
+    "filter": null,
+    "seqid": {
+      "fasta_ids_sample": [
+        "chr1",
+        "chr2"
+      ],
+      "ann_ids_sample": [],
+      "expect_overlap": false
+    },
+    "e2e": {
+      "run": false
+    }
+  },
+  "reads": null
+}

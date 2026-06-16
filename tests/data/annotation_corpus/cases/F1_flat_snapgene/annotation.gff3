@@ -1,0 +1,9 @@
+##gff-version 3
+chr1	exported	gene	100	1200	.	+	.	Name="dnaA"
+chr1	exported	CDS	100	1200	.	+	0	Name="dnaA"
+chr1	exported	gene	1300	2400	.	+	.	Name="dnaN"
+chr1	exported	CDS	1300	2400	.	+	0	Name="dnaN"
+chr1	exported	gene	2500	3000	.	-	.	Name="recF"
+chr1	exported	CDS	2500	3000	.	-	0	Name="recF"
+chr2	exported	gene	100	900	.	+	.	Name="gyrA"
+chr2	exported	CDS	100	900	.	+	0	Name="gyrA"

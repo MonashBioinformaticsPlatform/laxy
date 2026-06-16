@@ -1,0 +1,36 @@
+{
+  "id": "F8_agat_converted",
+  "description": "AGAT-converted prok GFF3: synthetic mRNA/exon fools detector (doc \u00a76.1)",
+  "annotation": "annotation.gff3",
+  "class": "prok",
+  "tier": "xfail",
+  "xfail_reason": "doc ANNOTATION_REQUIREMENTS_AND_FILTERING.md \u00a76.1: AGAT-converted prokaryote GFF3 gains synthetic mRNA/exon rows, so _looks_prokaryotic returns False and the detector misclassifies it as generic_eukaryote. When the detector is fixed, this xpasses -> flip to a happy case.",
+  "expected": {
+    "detect": {
+      "exit": 0,
+      "env": {
+        "ANN_FORMAT": "gff3",
+        "ANN_FEATURE_TYPE": "CDS",
+        "ANN_PROKARYOTIC": "yes",
+        "ANN_PROFILE": "generic_prokaryote",
+        "ANN_BIOTYPE_ATTR": ""
+      },
+      "xfail_reason": "doc ANNOTATION_REQUIREMENTS_AND_FILTERING.md \u00a76.1: AGAT-converted prokaryote GFF3 gains synthetic mRNA/exon rows, so _looks_prokaryotic returns False and the detector misclassifies it as generic_eukaryote. When the detector is fixed, this xpasses -> flip to a happy case."
+    },
+    "filter": null,
+    "seqid": {
+      "fasta_ids_sample": [
+        "chr1",
+        "chr2"
+      ],
+      "ann_ids_sample": [
+        "chr1"
+      ],
+      "expect_overlap": true
+    },
+    "e2e": {
+      "run": false
+    }
+  },
+  "reads": null
+}

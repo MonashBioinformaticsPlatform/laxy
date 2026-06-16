@@ -1,0 +1,55 @@
+{
+  "id": "E4_eukaryote_no_biotype",
+  "description": "Eukaryote, exon GTF missing biotype -> skip_biotype_qc",
+  "annotation": "annotation.gtf",
+  "class": "euk",
+  "tier": "happy",
+  "xfail_reason": null,
+  "expected": {
+    "detect": {
+      "exit": 0,
+      "env": {
+        "ANN_FORMAT": "gtf",
+        "ANN_FEATURE_TYPE": "exon",
+        "ANN_GROUP_FEATURES": "gene_id",
+        "ANN_EXTRA_ATTRIBUTES": "gene_name",
+        "ANN_BIOTYPE_ATTR": "",
+        "ANN_PROKARYOTIC": "no",
+        "ANN_PROFILE": "generic_eukaryote",
+        "ANN_SKIP_FLAGS": "--skip_biotype_qc"
+      }
+    },
+    "filter": {
+      "exit": 0,
+      "counts": {
+        "input_rows_kept": 5,
+        "output_rows": 5,
+        "dropped": 0
+      }
+    },
+    "seqid": {
+      "fasta_ids_sample": [
+        "chr1",
+        "chr2"
+      ],
+      "ann_ids_sample": [
+        "chr1",
+        "chr2"
+      ],
+      "expect_overlap": true
+    },
+    "e2e": {
+      "run": true,
+      "aligner": "star_salmon",
+      "extra_flags": [],
+      "expect_success": true
+    }
+  },
+  "reads": {
+    "mode": "paired",
+    "count": 2000,
+    "read_length": 75,
+    "fragment_size": 200,
+    "seed": 42
+  }
+}

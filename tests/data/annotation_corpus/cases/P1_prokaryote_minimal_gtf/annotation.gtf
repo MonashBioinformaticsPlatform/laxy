@@ -1,0 +1,4 @@
+chr1	laxy_test	CDS	100	1200	.	+	0	gene_id "b0001"; transcript_id "b0001"; gene_name "dnaA"; gene_biotype "protein_coding";
+chr1	laxy_test	CDS	1300	2400	.	+	0	gene_id "b0002"; transcript_id "b0002"; gene_name "dnaN"; gene_biotype "protein_coding";
+chr1	laxy_test	CDS	2500	3000	.	-	0	gene_id "b0003"; transcript_id "b0003"; gene_name "recF"; gene_biotype "protein_coding";
+chr2	laxy_test	CDS	100	900	.	+	0	gene_id "b0004"; transcript_id "b0004"; gene_name "gyrA"; gene_biotype "protein_coding";

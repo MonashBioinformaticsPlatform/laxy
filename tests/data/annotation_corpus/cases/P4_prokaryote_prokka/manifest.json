@@ -1,0 +1,57 @@
+{
+  "id": "P4_prokaryote_prokka",
+  "description": "Prokaryote, Prokka GFF3 (flat CDS, eC_number)",
+  "annotation": "annotation.gff3",
+  "class": "prok",
+  "tier": "happy",
+  "xfail_reason": null,
+  "expected": {
+    "detect": {
+      "exit": 0,
+      "env": {
+        "ANN_FORMAT": "gff3",
+        "ANN_FEATURE_TYPE": "CDS",
+        "ANN_GROUP_FEATURES": "gene",
+        "ANN_EXTRA_ATTRIBUTES": "product",
+        "ANN_BIOTYPE_ATTR": "",
+        "ANN_PROKARYOTIC": "yes",
+        "ANN_PROFILE": "generic_prokaryote",
+        "ANN_SKIP_FLAGS": "--skip_dupradar --skip_rseqc --skip_qualimap --skip_bigwig --skip_biotype_qc"
+      }
+    },
+    "filter": {
+      "exit": 0,
+      "counts": {
+        "input_rows_kept": 4,
+        "output_rows": 12,
+        "dropped": 0
+      }
+    },
+    "seqid": {
+      "fasta_ids_sample": [
+        "chr1",
+        "chr2"
+      ],
+      "ann_ids_sample": [
+        "chr1",
+        "chr2"
+      ],
+      "expect_overlap": true
+    },
+    "e2e": {
+      "run": true,
+      "aligner": "star_salmon",
+      "extra_flags": [
+        "--skip_rsem"
+      ],
+      "expect_success": true
+    }
+  },
+  "reads": {
+    "mode": "paired",
+    "count": 2000,
+    "read_length": 75,
+    "fragment_size": 200,
+    "seed": 42
+  }
+}
