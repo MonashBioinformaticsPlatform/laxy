@@ -103,5 +103,5 @@ launch.json
 celerybeat.pid
 certs/
 nginx.conf
-# Annotation corpus: generated reads cache (regenerate via just test-annotation-corpus-reads)
-tests/data/annotation_corpus/cases/*/reads/
+# Annotation corpus: __pycache__ for the corpus test helpers
+tests/data/annotation_corpus/__pycache__/
