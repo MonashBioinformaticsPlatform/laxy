@@ -124,7 +124,8 @@ def parse_env_env_text(text: str) -> dict[str, str]:
 
 
 def run_filter(
-    ann: Path, fmt: str, feature_type: str, group_feature: str = ""
+    ann: Path, fmt: str, feature_type: str, group_feature: str = "",
+    prokaryotic: str = "no",
 ) -> dict:
     """Run filter_annotation_features.py; return rc + parsed log counters."""
     import tempfile
@@ -136,6 +137,7 @@ def run_filter(
          "--output", str(out_path),
          "--feature-type", feature_type,
          "--format", fmt,
+         "--prokaryotic", prokaryotic,
          "--group-feature", group_feature],
         capture_output=True, text=True,
     )

@@ -23,7 +23,7 @@
       "exit": 0,
       "counts": {
         "input_rows_kept": 4,
-        "output_rows": 4,
+        "output_rows": 12,
         "dropped": 0
       }
     },

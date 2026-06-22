@@ -156,6 +156,7 @@ function filter_annotation_features() {
         --output "${_out_gz}" \
         --feature-type "${ANN_FEATURE_TYPE}" \
         --format "${ANN_FORMAT}" \
+        --prokaryotic "${ANN_PROKARYOTIC}" \
         --group-feature "${ANN_GROUP_FEATURES:-}" \
         >>"${JOB_PATH}/output/annotation_filter.log" 2>&1 \
       || fail_job 'filter_annotation_features' 'feature-type filter failed' $?

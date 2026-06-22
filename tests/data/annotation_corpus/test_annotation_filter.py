@@ -22,6 +22,7 @@ def test_filter(case):
     result = cl.run_filter(
         ann, env["ANN_FORMAT"], env["ANN_FEATURE_TYPE"],
         env.get("ANN_GROUP_FEATURES", ""),
+        env.get("ANN_PROKARYOTIC", "no"),
     )
 
     expected = manifest["expected"]["filter"]

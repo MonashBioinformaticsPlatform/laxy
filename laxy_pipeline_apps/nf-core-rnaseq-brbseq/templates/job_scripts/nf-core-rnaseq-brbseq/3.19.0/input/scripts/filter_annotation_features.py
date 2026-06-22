@@ -14,15 +14,21 @@ Why GTF output even when the input is GFF3?
     here lets us pass ``--gtf`` instead and skip the lossy ``gffread``
     conversion entirely.
 
-For ``--format gtf`` we just filter rows by feature type and pass them
-through unchanged - the assumption is that the GTF already has
-self-contained ``gene_id``/``transcript_id`` on every row (Ensembl, GENCODE,
-RefSeq, etc.).
+``--format gff3`` input always goes through transcript+exon synthesis.
+``--format gtf`` input only goes through synthesis when ``--prokaryotic
+yes`` is passed (matching ``detect_annotation_style.py``'s
+``ANN_PROKARYOTIC``): a flat, CDS-only prokaryotic GTF (e.g. a minimal
+single-exon-per-gene annotation with no ``exon``/``transcript`` rows) hits
+exactly the same STAR/RSEM/featureCounts problem as a flat GFF3, so it
+can't be passed through unchanged. Otherwise GTF input is filtered by
+feature type and passed through as-is, on the assumption it's already
+self-contained (Ensembl/GENCODE/RefSeq).
 
 The filter is intended for prokaryotic / CDS-only inputs only; the bash
 caller (``filter_annotation_features`` in ``agat_normalize_annotation.sh``)
-gates it on ``ANN_PROKARYOTIC=yes`` because rewriting eukaryotic GFF3 like
-this would clobber the multi-exon ``Parent=`` grouping RSEM/gffread rely on.
+gates the whole call on ``ANN_PROKARYOTIC=yes`` because rewriting
+eukaryotic GFF3/GTF like this would clobber the multi-exon ``Parent=``/
+``transcript_id`` grouping RSEM/gffread rely on.
 """
 
 from __future__ import annotations
@@ -92,6 +98,18 @@ def parse_gff3_attrs(col9: str) -> Dict[str, str]:
     return out
 
 
+_GTF_ATTR_RE = re.compile(r'(\w+)\s+"([^"]*)"')
+
+
+def parse_gtf_attrs(col9: str) -> Dict[str, str]:
+    """Parse a GTF column-9 string (``key "value"; ...``) into a dict (first wins)."""
+    out: Dict[str, str] = {}
+    for k, v in _GTF_ATTR_RE.findall(col9):
+        if k not in out:
+            out[k] = v
+    return out
+
+
 _GTF_ESCAPE_RE = re.compile(r'(["\\])')
 
 
@@ -134,6 +152,30 @@ def pick_base_id(
     return f"{fallback_prefix}-{auto_counter[0]}", "auto"
 
 
+def pick_base_id_gtf(
+    attrs: Dict[str, str],
+    group_feature: str,
+    fallback_prefix: str,
+    auto_counter: List[int],
+) -> Tuple[str, str]:
+    """Choose a base ID for a GTF row.
+
+    GTF has no ``ID=`` attribute, so prefer the row's own
+    ``transcript_id``/``gene_id`` (already unique per CDS in a flat,
+    one-gene-one-ORF prokaryotic annotation) before falling back to
+    ``--group-feature`` or an auto-generated id.
+    """
+    existing = attrs.get("transcript_id") or attrs.get("gene_id")
+    if existing:
+        return existing, "id"
+    if group_feature:
+        candidate = attrs.get(group_feature)
+        if candidate:
+            return candidate, "group"
+    auto_counter[0] += 1
+    return f"{fallback_prefix}-{auto_counter[0]}", "auto"
+
+
 def dedupe(base_id: str, assigned: set, counter_hits: List[int]) -> str:
     """Return a unique id derived from ``base_id``, suffixing _2/_3/... if needed."""
     candidate = base_id
@@ -158,6 +200,14 @@ def main() -> int:
                    help="Value to match in column 3 (e.g. CDS, exon).")
     p.add_argument("--format", required=True, choices=("gtf", "gff3"),
                    help="Input format (matches detect_annotation_style.py ANN_FORMAT).")
+    p.add_argument("--prokaryotic", default="no", choices=("yes", "no"),
+                   help="Matches detect_annotation_style.py ANN_PROKARYOTIC. "
+                        "When 'yes', GTF input is also expanded into a "
+                        "transcript+exon+<feature_type> hierarchy (a flat, "
+                        "CDS-only prokaryotic GTF can't be assumed to "
+                        "already have exon/transcript rows). When 'no', GTF "
+                        "input is passed through unchanged on the assumption "
+                        "it's already self-contained (Ensembl/GENCODE/RefSeq).")
     p.add_argument("--group-feature", default="",
                    help="Attribute used to derive ID/gene_id when the row "
                         "has no ID= (e.g. 'gene', 'locus_tag').")
@@ -175,6 +225,7 @@ def main() -> int:
     args.output.parent.mkdir(parents=True, exist_ok=True)
 
     is_gff_in = args.format == "gff3"
+    synthesise = is_gff_in or args.prokaryotic == "yes"
     feature_type = args.feature_type
     feature_type_lc = feature_type.lower()
 
@@ -191,19 +242,20 @@ def main() -> int:
     with open_text_read(args.input) as fin, open_text_write(args.output) as fout:
         for raw in fin:
             if in_fasta:
-                # FASTA section: only keep for GTF passthrough; drop for
-                # synthesised-GTF output (RSEM/featureCounts don't want it).
-                if not is_gff_in:
+                # FASTA section: only keep for unsynthesised passthrough;
+                # drop for synthesised-GTF output (RSEM/featureCounts don't
+                # want it).
+                if not synthesise:
                     fout.write(raw)
                 continue
             if raw.startswith("##FASTA"):
                 in_fasta = True
                 continue
             if raw.startswith("#"):
-                # Pass comments through for GTF input; drop them for the
-                # synthesised GTF (cleaner, and avoids leaking GFF3 directives
-                # like ##gff-version 3 into a GTF file).
-                if not is_gff_in:
+                # Pass comments through for unsynthesised passthrough; drop
+                # them for the synthesised GTF (cleaner, and avoids leaking
+                # GFF3 directives like ##gff-version 3 into a GTF file).
+                if not synthesise:
                     fout.write(raw)
                 continue
             if not raw.strip():
@@ -218,16 +270,22 @@ def main() -> int:
                 dropped += 1
                 continue
 
-            if not is_gff_in:
+            if not synthesise:
                 fout.write("\t".join(parts) + "\n")
                 input_rows_kept += 1
                 output_rows_written += 1
                 continue
 
-            attrs = parse_gff3_attrs(parts[8])
-            base_id, source = pick_base_id(
-                attrs, args.group_feature, feature_type_lc, auto_counter
-            )
+            if is_gff_in:
+                attrs = parse_gff3_attrs(parts[8])
+                base_id, source = pick_base_id(
+                    attrs, args.group_feature, feature_type_lc, auto_counter
+                )
+            else:
+                attrs = parse_gtf_attrs(parts[8])
+                base_id, source = pick_base_id_gtf(
+                    attrs, args.group_feature, feature_type_lc, auto_counter
+                )
             if source == "id":
                 ids_kept_existing += 1
             elif source == "group":
