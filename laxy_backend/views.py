@@ -2153,7 +2153,13 @@ class JobCreate(JSONView):
                 job.save()
 
             if job.status == Job.STATUS_HOLD:
-                return Response(serializer.data, status=status.HTTP_200_OK)
+                # JobSerializerRequest.data can't be used here: its
+                # depth=1 plus the explicit input_files=FileSerializer(many=True)
+                # field both try to handle the input_files FK, raising
+                # "'FileSet' object is not iterable". Use the response
+                # serializer (matches the non-HOLD return below) instead.
+                response_serializer = self.get_response_serializer(instance=job)
+                return Response(response_serializer.data, status=status.HTTP_200_OK)
 
             job_id = job.id
             job = Job.objects.get(id=job_id)

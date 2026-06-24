@@ -613,6 +613,11 @@ class JobSerializerRequest(JobSerializerBase):
         # Output files can only be updated in a PATCH operation
         # output_files_data = validated_data.pop('output_files', [])
         compute_resource_id = validated_data.pop("compute_resource", None)
+        # The compute_resource field's source="compute_resource.id" makes DRF
+        # build a nested {"id": ...} dict in validated_data rather than a
+        # flat id - unwrap it.
+        if isinstance(compute_resource_id, dict):
+            compute_resource_id = compute_resource_id.get("id")
         job = models.Job.objects.create(**validated_data)
         job = self._set_owner(job)
 
