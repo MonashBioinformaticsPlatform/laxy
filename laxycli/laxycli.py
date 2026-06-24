@@ -1,7 +1,16 @@
 #!/usr/bin/env python3
 
-from typing import List, Mapping
+# /// script
+# requires-python = ">=3.8"
+# dependencies = [
+#   "requests",
+#   "pyjwt",
+# ]
+# ///
+
+from typing import List, Mapping, Optional, Tuple
 import os
+import re
 import sys
 import time
 import logging
@@ -23,15 +32,18 @@ def get_auth_headers(filepath=".private_request_headers") -> Mapping:
         ]
         headers = dict(headers)
     else:
-        token = os.environ.get("LAXY_API_TOKEN", None)
+        token = os.environ.get("LAXY_API_KEY", None) or os.environ.get(
+            "LAXY_API_TOKEN", None
+        )
         if token is None:
             raise Exception(
-                f"No authetication token in {filepath} or LAXY_API_TOKEN environment variable."
+                f"No authentication token in {filepath}, LAXY_API_KEY or LAXY_API_TOKEN environment variable."
             )
 
         headers = {"Authorization": f"Bearer {token}"}
 
     return headers
+
 
 
 def get_token_from_headers(headers: dict) -> str:
@@ -77,6 +89,11 @@ def decode_jwt(token: str) -> Mapping:
     return decoded
 
 
+def filename_from_url(url: str) -> str:
+    """Return the final path segment of a URL (the filename)."""
+    return urlparse(url).path.split("/")[-1]
+
+
 def parse_urls_file(file_path: str) -> list:
     """
     Parses a file containing URLs, one per line, and returns a list of dictionaries with filename and URL.
@@ -89,93 +106,222 @@ def parse_urls_file(file_path: str) -> list:
         for line in file:
             url = line.strip()
             if url:  # Only process non-empty lines
-                filename = urlparse(url).path.split("/")[-1]
-                urls_list.append({"name": filename, "location": url})
+                urls_list.append({"name": filename_from_url(url), "location": url})
     return urls_list
+
+
+# Patterns used to detect the read-pair member (R1/R2) from a FASTQ filename.
+# Tried in order; the first match wins. Covers the common Illumina-ish
+# conventions plus the synthetic naming used by our test fixtures
+# (``_R1``/``_R2``, ``_ss_1``/``_ss_2``, and a trailing ``_1``/``_2``).
+_READ_PAIR_RES = [
+    re.compile(r"_R([12])(?=[._])"),
+    re.compile(r"_ss_([12])(?=[._])"),
+    re.compile(r"_([12])(?=\.f(?:ast)?q(?:\.gz)?$)", re.IGNORECASE),
+]
+
+_FASTQ_EXTS = (".fastq.gz", ".fq.gz", ".fastq", ".fq", ".gz")
+
+
+def _strip_fastq_ext(name: str) -> str:
+    lower = name.lower()
+    for ext in _FASTQ_EXTS:
+        if lower.endswith(ext):
+            return name[: -len(ext)]
+    return name
+
+
+def classify_read(filename: str) -> Tuple[Optional[str], str]:
+    """Determine the read-pair member and sample base name for a FASTQ filename.
+
+    :return: ``(pair, sample_name)`` where ``pair`` is ``"R1"``/``"R2"`` (or
+        ``None`` when no pair token is found, i.e. single-end) and
+        ``sample_name`` is the filename with the pair token and FASTQ
+        extension removed.
+    """
+    for rx in _READ_PAIR_RES:
+        m = rx.search(filename)
+        if m:
+            without_token = filename[: m.start()] + filename[m.end():]
+            base = _strip_fastq_ext(without_token).rstrip("_.")
+            return f"R{m.group(1)}", (base or filename)
+    base = _strip_fastq_ext(filename).rstrip("_.")
+    return None, (base or filename)
 
 
 def create_samplecart(file_list: List[dict]) -> dict:
     """
-    Creates a SampleCart JSON structure based on the URLs provided in file_list.
+    Build a SampleCart structure from a list of read files, grouping R1/R2
+    members into samples by their shared base name.
+
+    Single-end files (no detectable R1/R2 token) become single-file samples.
 
     :param file_list: A list of dictionaries, each containing 'name' and 'location' keys for a file.
-    :return: A JSON string representing the SampleCart structure.
+    :return: A dict representing the SampleCart structure.
     """
-    # Initialize an empty list for the samples
+    grouped: "dict[str, dict]" = {}
+    order: List[str] = []
+    for f in file_list:
+        pair, sample_name = classify_read(f["name"])
+        if sample_name not in grouped:
+            grouped[sample_name] = {}
+            order.append(sample_name)
+        # Single-end reads with no pair token are treated as R1.
+        grouped[sample_name][pair or "R1"] = f
+
     samples = []
-
-    # Assume file_list is sorted such that R1 and R2 follow each other for each sample
-    for i in range(0, len(file_list), 2):
-        R1_file = file_list[i]
-        R2_file = file_list[i + 1] if i + 1 < len(file_list) else None
-
-        # Extract sample name by removing _ss_1.fastq.gz or _ss_2.fastq.gz from the R1 file name
-        sample_name = R1_file["name"].replace("_ss_1.fastq.gz", "")
-
-        # Construct the files structure for the sample
-        files = [{"R1": R1_file}]
-        if R2_file:
-            files[0]["R2"] = R2_file
-
-        # Append the sample structure to the samples list
+    for sample_name in order:
+        members = grouped[sample_name]
+        files_entry = {}
+        for pair in ("R1", "R2"):
+            if pair in members:
+                files_entry[pair] = members[pair]
         samples.append(
-            {"name": sample_name, "files": files, "metadata": {"condition": ""}}
+            {"name": sample_name, "files": [files_entry], "metadata": {"condition": ""}}
         )
 
-    samples = {"samples": samples}
-
-    return samples
+    return {"samples": samples}
 
 
-def create_job(args: Namespace) -> None:
-    file_list = parse_urls_file(args.urls_file)
+def build_fetch_files(
+    read_files: List[dict],
+    fasta_url: Optional[str] = None,
+    annotation_url: Optional[str] = None,
+) -> List[dict]:
+    """Build the ``fetch_files`` list the backend downloads as job input.
 
-    # We do this if we were getting a tarball with the input files
-    # file_list = (
-    #     [
-    #         {
-    #             "name": tar_filename,
-    #             "location": args.url,
-    #             "metadata": {},
-    #             "type_tags": ["tar", "archive"],
-    #         },
-    #     ]
-    #     if args.url
-    #     else []
-    # )
+    When a custom reference genome is supplied (``fasta_url`` + ``annotation_url``)
+    the genome and annotation are prepended with the type tags the pipeline
+    expects, mirroring the web frontend's ``generateFetchFilesList``. Read files
+    are tagged ``ngs_reads``/``fastq`` and annotated with their ``read_pair``.
+    """
+    fetch_files: List[dict] = []
+
+    if fasta_url and annotation_url:
+        if ".gff" in annotation_url.lower():
+            annot_type = "gff"
+        elif ".gtf" in annotation_url.lower():
+            annot_type = "gtf"
+        else:
+            annot_type = "unknown_annotation_type"
+
+        fetch_files.append(
+            {
+                "name": filename_from_url(fasta_url),
+                "location": fasta_url.strip(),
+                "type_tags": ["reference_genome", "genome_sequence", "fasta"],
+            }
+        )
+        fetch_files.append(
+            {
+                "name": filename_from_url(annotation_url),
+                "location": annotation_url.strip(),
+                "type_tags": ["reference_genome", "genome_annotation", annot_type],
+            }
+        )
+
+    for f in read_files:
+        pair, _ = classify_read(f["name"])
+        entry = {
+            "name": f["name"],
+            "location": f["location"],
+            "type_tags": ["ngs_reads", "fastq"],
+        }
+        if pair:
+            entry["metadata"] = {"read_pair": pair}
+        fetch_files.append(entry)
+
+    return fetch_files
+
+
+def load_json_arg(value: str) -> dict:
+    """Load JSON from an inline string or, if prefixed with ``@``, a file path."""
+    if value.startswith("@"):
+        with open(value[1:], "r") as fh:
+            return json.load(fh)
+    return json.loads(value)
+
+
+def poll_job(
+    api_base_url: str,
+    job_id: str,
+    headers: Mapping,
+    interval: int = 10,
+    timeout: int = 7200,
+) -> str:
+    """Poll a job until it reaches a terminal status (or times out)."""
+    deadline = time.time() + timeout
+    last = None
+    while time.time() < deadline:
+        try:
+            resp = requests.get(
+                f"{api_base_url}/job/{job_id}/", headers=headers, timeout=30
+            )
+            status = resp.json().get("status")
+        except requests.RequestException as e:
+            logger.warning(f"poll error for {job_id}: {e}")
+            time.sleep(interval)
+            continue
+        if status != last:
+            logger.info(f"job {job_id}: {status}")
+            last = status
+        if status in ("complete", "failed", "cancelled"):
+            return status
+        time.sleep(interval)
+    logger.warning(f"job {job_id}: timed out after {timeout}s (last status={last})")
+    return last or "unknown"
+
+
+def create_job(args: Namespace) -> Optional[str]:
+    read_files = parse_urls_file(args.urls_file)
     headers = get_auth_headers()
 
-    samplecart = create_samplecart(file_list)
-    # print(json.dumps(samplecart, indent=2))
+    use_custom_genome = bool(args.genome_fasta_url and args.genome_annotation_url)
+    if bool(args.genome_fasta_url) != bool(args.genome_annotation_url):
+        sys.exit(
+            "Both --genome_fasta_url and --genome_annotation_url must be given together "
+            "to use a custom reference genome."
+        )
+
+    samplecart = create_samplecart(read_files)
     response = requests.post(
         f"{args.api_base_url}/samplecart/", json=samplecart, headers=headers
     )
-
-    # Check if the request was successful
     response.raise_for_status()
-    response_json = response.json()
-    samplecart_id = response_json.get("id")
+    samplecart_id = response.json().get("id")
+
+    params = {
+        "pipeline_version": args.pipeline_version,
+        "description": args.job_description,
+        "fetch_files": build_fetch_files(
+            read_files,
+            args.genome_fasta_url if use_custom_genome else None,
+            args.genome_annotation_url if use_custom_genome else None,
+        ),
+    }
+    if use_custom_genome:
+        params["genome"] = None
+        params["user_genome"] = {
+            "fasta_url": args.genome_fasta_url.strip(),
+            "annotation_url": args.genome_annotation_url.strip(),
+        }
+    else:
+        params["genome"] = args.reference_genome_id
+
+    if args.pipeline_params_json:
+        params.update(load_json_arg(args.pipeline_params_json))
 
     pipeline_run_data = {
         "pipeline": args.pipeline_name,
         "sample_cart": samplecart_id,
-        "params": {
-            "pipeline_version": args.pipeline_version,
-            "description": args.job_description,
-            "genome": args.reference_genome_id,
-            "description": args.job_description,
-            "fetch_files": file_list,
-        },
+        "params": params,
     }
 
-    logger.debug(pipeline_run_data)
+    logger.debug(json.dumps(pipeline_run_data))
     pipeline_run_resp = requests.post(
         f"{args.api_base_url}/pipelinerun/", json=pipeline_run_data, headers=headers
     )
-
-    # print(pipeline_run_resp.json())
     pipeline_run_resp.raise_for_status()
-
     pipelinerun_id = pipeline_run_resp.json().get("id", None)
 
     if pipelinerun_id is None:
@@ -185,27 +331,45 @@ def create_job(args: Namespace) -> None:
     job_resp = requests.post(
         f"{args.api_base_url}/job/?pipeline_run_id={pipelinerun_id}", headers=headers
     )
-    job_resp_blob = job_resp.json()
+    try:
+        job_resp_blob = job_resp.json()
+    except ValueError:
+        job_resp_blob = {}
     logger.debug(job_resp_blob)
-    job_resp.raise_for_status()
 
     job_id = job_resp_blob.get("id", None)
+    if job_id is None:
+        # The job may have been created even when the response serialisation
+        # fails; surface the HTTP status so the caller can investigate.
+        logger.error(
+            f"Job creation response did not contain an id (HTTP {job_resp.status_code}): "
+            f"{str(job_resp.text)[:500]}"
+        )
+        sys.exit(1)
 
-    job = requests.get(f"{args.api_base_url}/job/{job_id}/", headers=headers)
-    job_blob = job.json()
-    status = job_blob.get("status", None)
+    # job_id is printed to stdout (everything else goes to the logger/stderr)
+    # so it can be captured by a calling script.
+    print(job_id)
 
-    # Poll job while running
-    print(f"Job {job_id} status:", status)
-    while status == "created" or status == "running":
-        job = requests.get(f"{args.api_base_url}/job/{job_id}/", headers=headers)
-        job_blob = job.json()
-        status = job_blob.get("status", None)
-        sys.stdout.write(".")
-        time.sleep(10)
+    if not args.wait:
+        return job_id
 
-    print("")
-    logger.info(job_blob)
+    status = poll_job(args.api_base_url, job_id, headers)
+    logger.info(f"job {job_id} final status: {status}")
+    return job_id
+
+
+def job_status(args: Namespace) -> None:
+    headers = get_auth_headers()
+    if args.watch:
+        status = poll_job(args.api_base_url, args.job_id, headers)
+        print(status)
+        return
+    resp = requests.get(
+        f"{args.api_base_url}/job/{args.job_id}/", headers=headers, timeout=30
+    )
+    resp.raise_for_status()
+    print(resp.json().get("status"))
 
 
 def download_job(api_base_url: str, job_id: str, headers: Mapping) -> None:
@@ -261,6 +425,9 @@ def main():
     default_api_base_url = os.environ.get("LAXY_API_URL", "https://api.laxy.io/api/v1")
 
     parser = ArgumentParser(description="Interact with the Laxy API.")
+    parser.add_argument(
+        "-v", "--verbose", action="store_true", help="Enable debug logging."
+    )
     subparsers = parser.add_subparsers(
         title="commands",
         dest="command",
@@ -308,15 +475,58 @@ def main():
         "--reference_genome_id",
         type=str,
         default="Homo_sapiens/Ensembl/GRCh38",
-        help="ID of the reference genome.",
+        help="ID of a built-in (iGenomes) reference genome. Ignored when "
+        "--genome_fasta_url/--genome_annotation_url are given.",
+    )
+    job_create_parser.add_argument(
+        "--genome_fasta_url",
+        type=str,
+        default=None,
+        help="URL of a custom reference genome FASTA. Use together with "
+        "--genome_annotation_url to run against a custom reference.",
+    )
+    job_create_parser.add_argument(
+        "--genome_annotation_url",
+        type=str,
+        default=None,
+        help="URL of a custom reference annotation (GTF/GFF3).",
+    )
+    job_create_parser.add_argument(
+        "--pipeline_params_json",
+        type=str,
+        default=None,
+        help="Extra pipeline params as a JSON object, merged into the "
+        "pipelinerun params (e.g. '{\"nf-core-rnaseq\": {...}}'). "
+        "Prefix with @ to read from a file.",
     )
     job_create_parser.add_argument(
         "--urls_file",
         type=str,
         required=True,
-        help="File containing URLs of input files, one per line.",
+        help="File containing URLs of input read files, one per line.",
     )
+    job_create_parser.add_argument(
+        "--no-wait",
+        dest="wait",
+        action="store_false",
+        help="Submit the job and print its id without polling to completion.",
+    )
+    job_create_parser.set_defaults(wait=True)
     job_create_parser.set_defaults(func=create_job)
+
+    # Subparser for the 'job status' command
+    job_status_parser = job_subparsers.add_parser(
+        "status", parents=[parent_parser], help="Get (or watch) a job's status"
+    )
+    job_status_parser.add_argument(
+        "job_id", type=str, help="The ID of the job to check."
+    )
+    job_status_parser.add_argument(
+        "--watch",
+        action="store_true",
+        help="Poll until the job reaches a terminal status.",
+    )
+    job_status_parser.set_defaults(func=job_status)
 
     job_download_parser = job_subparsers.add_parser(
         "download", parents=[parent_parser], help="Download a job tarball"
@@ -355,6 +565,12 @@ def main():
 
     # Parse the arguments
     args = parser.parse_args()
+
+    logging.basicConfig(
+        level=logging.DEBUG if getattr(args, "verbose", False) else logging.INFO,
+        format="%(asctime)s %(levelname)s %(message)s",
+        stream=sys.stderr,
+    )
 
     # Call the function associated with the chosen subcommand
     if hasattr(args, "func"):
