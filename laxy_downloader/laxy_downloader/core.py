@@ -131,10 +131,11 @@ def request_with_retries(*args, **kwargs):
 
     try:
         response = requests.request(*args, **kwargs)
-        # 502 Bad Gateway triggers retries - this is a common status
-        # code when a reverse proxied web app behind Nginx or Apache is
-        # temporarily restarting
-        if response.status_code == 502:
+        # Transient statuses trigger retries (via the backoff decorator):
+        # 429 Too Many Requests is what CDNs (e.g. jsDelivr) return under load,
+        # and 502/503/504 are common when a reverse-proxied web app behind
+        # Nginx/Apache is temporarily restarting or overloaded.
+        if response.status_code in (429, 500, 502, 503, 504):
             _raise_request_exception(response)
 
     except requests.exceptions.RequestException as e:

@@ -49,7 +49,13 @@ def download_urls(
         "always-resume": "true",
         "max-tries": "8",
         "retry-wait": "30",
-        "max-file-not-found": "1",
+        # Retry transient "file not found" responses (e.g. a CDN edge node
+        # still populating its cache, or a spurious 404 under load) up to
+        # max-tries, instead of failing on the very first one. With
+        # max-file-not-found=1 a single transient 404-class response from a
+        # CDN like jsDelivr aborted the whole download in ~1s, ignoring
+        # max-tries/retry-wait.
+        "max-file-not-found": "5",
         "optimize-concurrent-downloads": "true",
         "max-concurrent-downloads": concurrent_downloads,
         "file-allocation": "none",
