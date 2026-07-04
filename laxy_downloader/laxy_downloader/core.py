@@ -208,6 +208,13 @@ def download_url(
         auth = HTTPBasicAuth(username, password)
 
     headers = headers or {}
+    # requests/urllib3 transparently decompresses gzip/br transfer encoding,
+    # so the bytes written to disk would be the *decompressed* size while
+    # Content-Length reflects the *compressed* size on the wire - the two
+    # never match for any server that compresses its responses (eg jsDelivr).
+    # Requesting identity encoding keeps Content-Length comparable to what we
+    # actually write, so the size-verification below is meaningful.
+    headers.setdefault("Accept-Encoding", "identity")
     filepath = Path(filepath)
     directory = tmp_directory or str(filepath.parent)
     filename = filepath.name
@@ -337,6 +344,16 @@ def get_content_length(url, headers, auth, scheme):
         with closing(
             request_with_retries("HEAD", url, headers=headers, auth=auth)
         ) as head_request:
+            if not head_request.ok:
+                # Some dynamic endpoints (eg NCBI eutils efetch.fcgi) don't
+                # support HEAD and return a small error body (405, etc) with
+                # its own unrelated Content-Length - trusting that would make
+                # a perfectly good GET download look corrupt.
+                logger.warning(
+                    f"HEAD request to {url} returned {head_request.status_code}, "
+                    "cannot use its Content-Length to verify download size."
+                )
+                return None
             return head_request.headers.get("content-length", None)
 
 

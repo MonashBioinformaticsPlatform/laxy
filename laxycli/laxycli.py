@@ -16,7 +16,7 @@ import time
 import logging
 import json
 import requests
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 from argparse import ArgumentParser, Namespace
 
 logger = logging.getLogger(__name__)
@@ -92,6 +92,16 @@ def decode_jwt(token: str) -> Mapping:
 def filename_from_url(url: str) -> str:
     """Return the final path segment of a URL (the filename)."""
     return urlparse(url).path.split("/")[-1]
+
+
+def rettype_from_query(url: str) -> Optional[str]:
+    """Return the ``rettype``/``retmode`` query param (e.g. NCBI eutils ``efetch.fcgi?...&rettype=gff3``)."""
+    qs = parse_qs(urlparse(url).query)
+    for key in ("rettype", "retmode"):
+        values = qs.get(key)
+        if values:
+            return values[0].lower()
+    return None
 
 
 def parse_urls_file(file_path: str) -> list:
@@ -198,23 +208,38 @@ def build_fetch_files(
     fetch_files: List[dict] = []
 
     if fasta_url and annotation_url:
-        if ".gff" in annotation_url.lower():
+        annot_rettype = rettype_from_query(annotation_url)
+        if ".gff" in annotation_url.lower() or annot_rettype == "gff3":
             annot_type = "gff"
-        elif ".gtf" in annotation_url.lower():
+            annot_ext = "gff3"
+        elif ".gtf" in annotation_url.lower() or annot_rettype == "gtf":
             annot_type = "gtf"
+            annot_ext = "gtf"
         else:
             annot_type = "unknown_annotation_type"
+            annot_ext = "download"
+
+        fasta_name = filename_from_url(fasta_url)
+        annotation_name = filename_from_url(annotation_url)
+        if fasta_name == annotation_name:
+            # e.g. NCBI eutils efetch.fcgi?...&rettype=fasta vs ...&rettype=gff3 -
+            # both have the same URL basename, so the fetched files would collide
+            # once downloaded to the same local directory. Disambiguate using the
+            # detected type/extension instead.
+            fasta_rettype = rettype_from_query(fasta_url)
+            fasta_name = f"genome.{fasta_rettype or 'fasta'}"
+            annotation_name = f"annotation.{annot_ext}"
 
         fetch_files.append(
             {
-                "name": filename_from_url(fasta_url),
+                "name": fasta_name,
                 "location": fasta_url.strip(),
                 "type_tags": ["reference_genome", "genome_sequence", "fasta"],
             }
         )
         fetch_files.append(
             {
-                "name": filename_from_url(annotation_url),
+                "name": annotation_name,
                 "location": annotation_url.strip(),
                 "type_tags": ["reference_genome", "genome_annotation", annot_type],
             }
