@@ -37,6 +37,7 @@
         "dropped_ids": 0
       }
     },
+    "post_drop": null,
     "seqid": {
       "fasta_ids_sample": [
         "chr1",

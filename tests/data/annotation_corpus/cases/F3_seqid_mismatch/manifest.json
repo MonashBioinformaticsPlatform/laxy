@@ -22,6 +22,7 @@
     },
     "filter": null,
     "drop_biotype": null,
+    "post_drop": null,
     "seqid": {
       "fasta_ids_sample": [
         "chr1",

@@ -29,6 +29,7 @@ META: dict[str, tuple[str, str, str | None, list[str]]] = {
     "E3_eukaryote_refseq":       ("happy",      "Eukaryote, RefSeq GFF3 (gene/mRNA/exon/CDS hierarchy)", "euk", []),
     "E4_eukaryote_no_biotype":   ("happy",      "Eukaryote, exon GTF missing biotype -> skip_biotype_qc", "euk", []),
     "E5_eukaryote_ncrna_ids":    ("happy",      "Eukaryote, RefSeq GFF3 mixing protein-coding + tRNA/rRNA genes (NCBI ID=rna-*/gene-* convention)", "euk", []),
+    "E6_eukaryote_ncrna_cds_only": ("happy",    "Eukaryote, RefSeq GFF3 with CDS-only protein-coding genes (no mRNA/exon) mixed with exon-bearing tRNA/rRNA - real mitochondrial genome shape", "euk", []),
     "P1_prokaryote_minimal_gtf": ("happy",      "Prokaryote, minimal CDS-only GTF (self-contained gene_id)", "prok", ["--skip_rsem"]),
     "P2_prokaryote_ncbi":        ("happy",      "Prokaryote, NCBI GenBank GFF3 (gene+CDS, gbkey/Dbxref/locus_tag)", "prok", ["--skip_rsem"]),
     "P3_prokaryote_bakta":       ("happy",      "Prokaryote, Bakta GFF3 (flat CDS, ID=locus_tag)", "prok", ["--skip_rsem"]),
@@ -150,6 +151,23 @@ def build_manifest(case_dir: Path) -> dict:
         }
     else:
         manifest["expected"]["drop_biotype"] = None
+
+    # --- post-drop re-detect + filter chain (mirrors run_job.sh's
+    # drop_biotype_features calling detect_annotation_style.py a second time
+    # on the stripped annotation, then filter_annotation_features using
+    # that fresh env). Only meaningful when a drop would actually happen -
+    # e.g. real mitochondrial RefSeq annotations have CDS-only protein-coding
+    # genes, so stripping the exon-bearing tRNA/rRNA genes leaves zero exon
+    # rows, and the pipeline must reclassify the remainder as CDS-only /
+    # prokaryotic-shaped rather than handing STAR a GTF with no exon lines.
+    if det["rc"] == 0 and det["env"].get("ANN_DROP_BIOTYPES"):
+        chain = cl.run_post_drop_chain(ann, det["env"]["ANN_FORMAT"], det["env"]["ANN_DROP_BIOTYPES"])
+        manifest["expected"]["post_drop"] = {
+            "redetect_env": chain["redetect"]["env"] if chain["redetect"] else None,
+            "filter_counts": chain["filter"]["counts"] if chain["filter"] else None,
+        }
+    else:
+        manifest["expected"]["post_drop"] = None
 
     # --- seqid-overlap pre-flight (mirrors check_fasta_annotation_seqids) ---
     fa_ids, an_ids, overlap = cl.seqid_overlap(cl.GENOME, ann)

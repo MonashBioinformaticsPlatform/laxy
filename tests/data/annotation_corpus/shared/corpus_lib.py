@@ -163,8 +163,17 @@ def run_filter(
     return {"rc": proc.returncode, "counts": counts, "stderr": proc.stderr.strip()}
 
 
-def run_drop_biotype(ann: Path, fmt: str, drop_biotypes: str = "") -> dict:
-    """Run drop_biotype_features.py; return rc + parsed log counters."""
+def run_drop_biotype(
+    ann: Path, fmt: str, drop_biotypes: str = "", keep_output: bool = False,
+) -> dict:
+    """Run drop_biotype_features.py; return rc + parsed log counters.
+
+    When ``keep_output`` is set, the stripped annotation file is kept and
+    its path returned as ``"output_path"`` (caller is responsible for
+    cleanup) - used by :func:`run_post_drop_chain` to feed the stripped
+    file into a second detect_annotation_style.py pass, mirroring what
+    ``drop_biotype_features`` (the bash function) does in run_job.sh.
+    """
     import tempfile
     suffix = ".gff3" if fmt == "gff3" else ".gtf"
     with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tf:
@@ -192,8 +201,42 @@ def run_drop_biotype(ann: Path, fmt: str, drop_biotypes: str = "") -> dict:
                     break
             if num:
                 counts[key] = int(num)
-    out_path.unlink(missing_ok=True)
-    return {"rc": proc.returncode, "counts": counts, "stderr": proc.stderr.strip()}
+    result = {"rc": proc.returncode, "counts": counts, "stderr": proc.stderr.strip()}
+    if keep_output:
+        result["output_path"] = out_path
+    else:
+        out_path.unlink(missing_ok=True)
+    return result
+
+
+def run_post_drop_chain(ann: Path, fmt: str, drop_biotypes: str) -> dict:
+    """Run detect -> drop -> re-detect -> filter, mirroring run_job.sh's
+    drop_biotype_features + filter_annotation_features bash functions.
+
+    Only meaningful when ``drop_biotypes`` is non-empty (the caller should
+    check ``expected.detect.env.ANN_DROP_BIOTYPES`` first). Returns the
+    re-detected env and the final filter counts, or ``None`` for either if
+    the intermediate steps fail.
+    """
+    drop = run_drop_biotype(ann, fmt, drop_biotypes, keep_output=True)
+    stripped_path = drop.get("output_path")
+    try:
+        if drop["rc"] != 0 or stripped_path is None:
+            return {"drop": drop, "redetect": None, "filter": None}
+
+        redetect = run_detect(stripped_path)
+        if redetect["rc"] != 0:
+            return {"drop": drop, "redetect": redetect, "filter": None}
+
+        env = redetect["env"]
+        flt = run_filter(
+            stripped_path, env["ANN_FORMAT"], env["ANN_FEATURE_TYPE"],
+            env.get("ANN_GROUP_FEATURES", ""), env.get("ANN_PROKARYOTIC", "no"),
+        )
+        return {"drop": drop, "redetect": redetect, "filter": flt}
+    finally:
+        if stripped_path is not None:
+            stripped_path.unlink(missing_ok=True)
 
 
 def fasta_seqids(fasta: Path) -> set[str]:

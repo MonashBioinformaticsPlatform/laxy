@@ -158,6 +158,36 @@ _E5_LINES.append(_ncrna_gene("chr2", "+", "TRNL1", "tRNA", "tRNA", "tRNA-Leu", 2
 E5 = "".join(_E5_LINES)
 write(CASES / "E5_eukaryote_ncrna_ids" / "annotation.gff3", E5)
 
+
+# --- E6: like E5, but protein-coding genes are gene+CDS only (no mRNA/exon
+# rows at all) - the real shape of mitochondrial RefSeq annotations, where
+# only the tRNA/rRNA genes carry "exon" rows. Dropping those non-coding RNA
+# genes therefore leaves *zero* exon rows, which used to make STAR's sjdb
+# parsing die with "no exon lines in the GTF file" until
+# drop_biotype_features re-triggers detect_annotation_style.py on the
+# stripped annotation (see agat_normalize_annotation.sh's
+# drop_biotype_features and ANNOTATION_REQUIREMENTS_AND_FILTERING.md §6
+# item 7). Confirmed against real Laxy prod with the genuine NCBI human
+# (NC_012920.1) and mouse (NC_005089.1) mitochondrial RefSeq annotations.
+def _cds_only_gene(seqid: str, strand: str, gene: str, product: str,
+                    start: int, end: int) -> str:
+    return (
+        _gff_row(seqid, "gene", start, end, strand, ".",
+                 f"ID=gene-{gene};Name={gene};gbkey=Gene;gene={gene};gene_biotype=protein_coding")
+        + _gff_row(seqid, "CDS", start, end, strand, "0",
+                   f"ID=cds-{gene};Parent=gene-{gene};gbkey=CDS;gene={gene};product={product}")
+    )
+
+
+_E6_LINES = ["##gff-version 3\n"]
+_E6_LINES.append(_cds_only_gene("chr1", "+", "GENE1", "test protein 1", 40000, 40700))
+_E6_LINES.append(_cds_only_gene("chr2", "+", "GENE2", "test protein 2", 30000, 30500))
+_E6_LINES.append(_ncrna_gene("chr1", "+", "TRNF", "tRNA", "tRNA", "tRNA-Phe", 42000, 42070))
+_E6_LINES.append(_ncrna_gene("chr1", "+", "TRNV", "tRNA", "tRNA", "tRNA-Val", 43000, 43068))
+_E6_LINES.append(_ncrna_gene("chr1", "+", "RNR1", "rRNA", "rRNA", "12S ribosomal RNA", 45000, 45950))
+E6 = "".join(_E6_LINES)
+write(CASES / "E6_eukaryote_ncrna_cds_only" / "annotation.gff3", E6)
+
 # --- E4: eukaryotic exons with no biotype attr anywhere (skip biotype QC) ---
 E4 = (
     "chr1\tlaxy_test\texon\t1000\t2000\t.\t+\t.\tgene_id \"GENE_A\"; transcript_id \"GENE_A.t1\"; gene_name \"GENE_A\";\n"

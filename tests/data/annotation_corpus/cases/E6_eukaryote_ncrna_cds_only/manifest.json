@@ -1,0 +1,83 @@
+{
+  "id": "E6_eukaryote_ncrna_cds_only",
+  "description": "Eukaryote, RefSeq GFF3 with CDS-only protein-coding genes (no mRNA/exon) mixed with exon-bearing tRNA/rRNA - real mitochondrial genome shape",
+  "annotation": "annotation.gff3",
+  "class": "euk",
+  "tier": "happy",
+  "xfail_reason": null,
+  "expected": {
+    "detect": {
+      "exit": 0,
+      "env": {
+        "ANN_FORMAT": "gff3",
+        "ANN_FEATURE_TYPE": "CDS",
+        "ANN_GROUP_FEATURES": "Parent",
+        "ANN_EXTRA_ATTRIBUTES": "gene,Name,product",
+        "ANN_BIOTYPE_ATTR": "",
+        "ANN_PROKARYOTIC": "yes",
+        "ANN_PROFILE": "ncbi_genbank",
+        "ANN_SKIP_FLAGS": "--skip_dupradar --skip_biotype_qc",
+        "ANN_DROP_BIOTYPES": "rRNA,tRNA"
+      }
+    },
+    "filter": {
+      "exit": 0,
+      "counts": {
+        "input_rows_kept": 2,
+        "output_rows": 6,
+        "dropped": 11
+      }
+    },
+    "drop_biotype": {
+      "exit": 0,
+      "counts": {
+        "input_rows": 13,
+        "kept_rows": 4,
+        "dropped_rows": 9,
+        "dropped_ids": 9
+      }
+    },
+    "post_drop": {
+      "redetect_env": {
+        "ANN_FORMAT": "gff3",
+        "ANN_FEATURE_TYPE": "CDS",
+        "ANN_GROUP_FEATURES": "Parent",
+        "ANN_EXTRA_ATTRIBUTES": "gene,Name,product",
+        "ANN_BIOTYPE_ATTR": "",
+        "ANN_PROKARYOTIC": "yes",
+        "ANN_PROFILE": "ncbi_genbank",
+        "ANN_SKIP_FLAGS": "--skip_dupradar --skip_rseqc --skip_qualimap --skip_bigwig --skip_biotype_qc",
+        "ANN_DROP_BIOTYPES": ""
+      },
+      "filter_counts": {
+        "input_rows_kept": 2,
+        "output_rows": 6,
+        "dropped": 2
+      }
+    },
+    "seqid": {
+      "fasta_ids_sample": [
+        "chr1",
+        "chr2"
+      ],
+      "ann_ids_sample": [
+        "chr1",
+        "chr2"
+      ],
+      "expect_overlap": true
+    },
+    "e2e": {
+      "run": true,
+      "aligner": "star_salmon",
+      "extra_flags": [],
+      "expect_success": true
+    }
+  },
+  "reads": {
+    "mode": "paired",
+    "count": 2000,
+    "read_length": 75,
+    "fragment_size": 200,
+    "seed": 42
+  }
+}

@@ -1,0 +1,14 @@
+##gff-version 3
+chr1	RefSeq	gene	40000	40700	.	+	.	ID=gene-GENE1;Name=GENE1;gbkey=Gene;gene=GENE1;gene_biotype=protein_coding
+chr1	RefSeq	CDS	40000	40700	.	+	0	ID=cds-GENE1;Parent=gene-GENE1;gbkey=CDS;gene=GENE1;product=test protein 1
+chr2	RefSeq	gene	30000	30500	.	+	.	ID=gene-GENE2;Name=GENE2;gbkey=Gene;gene=GENE2;gene_biotype=protein_coding
+chr2	RefSeq	CDS	30000	30500	.	+	0	ID=cds-GENE2;Parent=gene-GENE2;gbkey=CDS;gene=GENE2;product=test protein 2
+chr1	RefSeq	gene	42000	42070	.	+	.	ID=gene-TRNF;Name=TRNF;gbkey=Gene;gene=TRNF;gene_biotype=tRNA
+chr1	RefSeq	tRNA	42000	42070	.	+	.	ID=rna-TRNF;Parent=gene-TRNF;gbkey=tRNA;gene=TRNF;product=tRNA-Phe
+chr1	RefSeq	exon	42000	42070	.	+	.	ID=exon-TRNF-1;Parent=rna-TRNF;gene=TRNF
+chr1	RefSeq	gene	43000	43068	.	+	.	ID=gene-TRNV;Name=TRNV;gbkey=Gene;gene=TRNV;gene_biotype=tRNA
+chr1	RefSeq	tRNA	43000	43068	.	+	.	ID=rna-TRNV;Parent=gene-TRNV;gbkey=tRNA;gene=TRNV;product=tRNA-Val
+chr1	RefSeq	exon	43000	43068	.	+	.	ID=exon-TRNV-1;Parent=rna-TRNV;gene=TRNV
+chr1	RefSeq	gene	45000	45950	.	+	.	ID=gene-RNR1;Name=RNR1;gbkey=Gene;gene=RNR1;gene_biotype=rRNA
+chr1	RefSeq	rRNA	45000	45950	.	+	.	ID=rna-RNR1;Parent=gene-RNR1;gbkey=rRNA;gene=RNR1;product=12S ribosomal RNA
+chr1	RefSeq	exon	45000	45950	.	+	.	ID=exon-RNR1-1;Parent=rna-RNR1;gene=RNR1

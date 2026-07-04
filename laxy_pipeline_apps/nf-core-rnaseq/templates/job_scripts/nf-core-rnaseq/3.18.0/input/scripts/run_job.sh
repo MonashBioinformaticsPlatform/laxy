@@ -347,8 +347,8 @@ function normalize_annotations() {
 
     source "${INPUT_CONFIG_PATH}/annotation_style.env"
 
-    filter_annotation_features
     drop_biotype_features
+    filter_annotation_features
 
     if [[ -n "${ANNOTATION_FILE:-}" ]] && [[ -f "${ANNOTATION_FILE}" ]]; then
         if [[ "${ANN_FORMAT}" == "gtf" ]]; then

@@ -181,10 +181,18 @@ function filter_annotation_features() {
 # the genuine NCBI human (NC_012920.1) and mouse (NC_005089.1) mitochondrial
 # RefSeq annotations. See ANNOTATION_REQUIREMENTS_AND_FILTERING.md §6 item 7.
 #
-# Runs AFTER filter_annotation_features (which only fires for prokaryotic
-# input) so ANNOTATION_FILE/ANN_FORMAT reflect whatever the pipeline will
-# actually hand to nf-core/rnaseq, whether that's the original GFF3
-# (eukaryotic) or the synthesised GTF (prokaryotic).
+# Runs BEFORE filter_annotation_features (which only fires for prokaryotic
+# input), on whatever the original detect_annotation_style.py saw - real
+# organelle genomes (e.g. mitochondrial RefSeq) can have protein-coding
+# genes that are gene+CDS only with no mRNA/exon at all, so once the
+# tRNA/rRNA exon rows are stripped there may be *no* exon rows left, which
+# would make STAR's GTF/sjdb parsing die with "no exon lines in the GTF
+# file". So after dropping, the detector is re-run on what's left and its
+# output adopted as authoritative - this naturally reclassifies a
+# CDS-only remainder as prokaryotic-shaped, and the subsequent
+# filter_annotation_features call synthesises the transcript+exon+CDS
+# hierarchy STAR/RSEM/featureCounts need, exactly as it already does for
+# real bacterial CDS-only annotations.
 function drop_biotype_features() {
     [[ "${USING_CUSTOM_REFERENCE}" == "yes" ]] || return 0
     [[ -n "${ANN_DROP_BIOTYPES:-}" ]] || return 0
@@ -209,4 +217,11 @@ function drop_biotype_features() {
       || fail_job 'drop_biotype_features' 'non-coding RNA biotype filter failed' $?
 
     export ANNOTATION_FILE="${_out_gz}"
+
+    python "${INPUT_SCRIPTS_PATH}/detect_annotation_style.py" \
+        "${ANNOTATION_FILE}" \
+        --output "${INPUT_CONFIG_PATH}/annotation_style.env" \
+      || fail_job 'detect_annotation_style_post_drop' '' $?
+
+    source "${INPUT_CONFIG_PATH}/annotation_style.env"
 }
