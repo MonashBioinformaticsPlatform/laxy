@@ -379,7 +379,11 @@ function normalize_annotations() {
 
     normalize_annotation_filename_for_nfcore
 
-    # TEMPORARY: AGAT normalisation off (testing with original annotation + detect_annotation_style only).
+    # AGAT normalisation disabled - superseded by detect_annotation_style.py +
+    # filter_annotation_features.py (and drop_biotype_features.py), which handle
+    # every corpus case (Ensembl, GENCODE, RefSeq, NCBI GenBank, Bakta, Prokka,
+    # SnapGene) without AGAT's prokaryote-misdetection bug (F8_agat_converted xfail).
+    # See ANNOTATION_REQUIREMENTS_AND_FILTERING.md §6 item 2.
     # agat_normalize_annotation
 
     check_fasta_annotation_seqids
