@@ -91,7 +91,9 @@ def test_download_url_with_auth(mock_request, temp_dir):
         assert f.read() == content
 
     # Check if the auth was passed correctly
-    mock_request.assert_called_with("GET", url, stream=True, headers={}, auth=mock.ANY)
+    mock_request.assert_called_with(
+        "GET", url, stream=True, headers={"Accept-Encoding": "identity"}, auth=mock.ANY
+    )
     assert isinstance(mock_request.call_args[1]["auth"], requests.auth.HTTPBasicAuth)
 
 
@@ -138,7 +140,9 @@ def test_download_url_existing_file(mock_request, temp_dir):
         assert f.read() == content
 
     # Ensure no GET request was made (only HEAD)
-    mock_request.assert_called_once_with("HEAD", url, headers={}, auth=None)
+    mock_request.assert_called_once_with(
+        "HEAD", url, headers={"Accept-Encoding": "identity"}, auth=None
+    )
 
 
 @mock.patch("laxy_downloader.core.request_with_retries")
