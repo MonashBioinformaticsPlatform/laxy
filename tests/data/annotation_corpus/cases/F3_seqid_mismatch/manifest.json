@@ -20,6 +20,7 @@
         "ANN_DROP_BIOTYPES": ""
       }
     },
+    "insert_transcript": null,
     "filter": null,
     "drop_biotype": null,
     "post_drop": null,

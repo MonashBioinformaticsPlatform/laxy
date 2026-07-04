@@ -188,6 +188,36 @@ _E6_LINES.append(_ncrna_gene("chr1", "+", "RNR1", "rRNA", "rRNA", "12S ribosomal
 E6 = "".join(_E6_LINES)
 write(CASES / "E6_eukaryote_ncrna_cds_only" / "annotation.gff3", E6)
 
+
+# --- E7: RefSeq GFF3 mixing normal mRNA genes with "flat" single/multi-exon
+# pseudogenes whose exon rows point Parent= directly at the gene, skipping
+# the usual transcript level entirely (real NCBI convention for "processed
+# pseudogenes" - no introns, so no felt need for an explicit transcript
+# row). nf-core/rnaseq's own GFF3->GTF conversion (used to build the
+# transcript FASTA via rsem-prepare-reference regardless of aligner choice)
+# can't resolve gene_id for these flat rows and dies with "Cannot find
+# gene_id!", aborting the whole run - see insert_missing_transcript.py and
+# ANNOTATION_REQUIREMENTS_AND_FILTERING.md §6 item 8. Confirmed against
+# real Laxy prod with the genuine NCBI human (chr21, gene RPL8P2) and
+# mouse (chr19, gene Gm36006) RefSeq annotations.
+def _flat_pseudogene(seqid: str, strand: str, gene: str, exons: list[tuple[int, int]]) -> str:
+    g_start, g_end = exons[0][0], exons[-1][1]
+    rows = _gff_row(seqid, "pseudogene", g_start, g_end, strand, ".",
+                     f"ID=gene-{gene};Name={gene};gbkey=Gene;gene={gene};gene_biotype=pseudogene;pseudo=true")
+    for i, (s, e) in enumerate(exons, start=1):
+        rows += _gff_row(seqid, "exon", s, e, strand, ".",
+                          f"ID=id-{gene}-{i};Parent=gene-{gene};gbkey=exon;gene={gene};pseudo=true")
+    return rows
+
+
+_E7_LINES = ["##gff-version 3\n"]
+_E7_LINES.append(_mrna_gene("chr1", "+", "GENE1", [(50000, 50700), (51000, 51500)]))
+_E7_LINES.append(_mrna_gene("chr2", "+", "GENE2", [(35000, 35400), (36200, 36600)]))
+_E7_LINES.append(_flat_pseudogene("chr1", "-", "PSEUDO1", [(60000, 60300)]))
+_E7_LINES.append(_flat_pseudogene("chr1", "-", "PSEUDO2", [(65000, 65200), (65500, 65700)]))
+E7 = "".join(_E7_LINES)
+write(CASES / "E7_eukaryote_flat_pseudogene" / "annotation.gff3", E7)
+
 # --- E4: eukaryotic exons with no biotype attr anywhere (skip biotype QC) ---
 E4 = (
     "chr1\tlaxy_test\texon\t1000\t2000\t.\t+\t.\tgene_id \"GENE_A\"; transcript_id \"GENE_A.t1\"; gene_name \"GENE_A\";\n"

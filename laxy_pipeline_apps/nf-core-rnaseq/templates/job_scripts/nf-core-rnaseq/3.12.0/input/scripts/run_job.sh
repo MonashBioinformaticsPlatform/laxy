@@ -387,6 +387,7 @@ function normalize_annotations() {
 
     source "${INPUT_CONFIG_PATH}/annotation_style.env"
 
+    insert_missing_transcript
     drop_biotype_features
     filter_annotation_features
 

@@ -133,6 +133,52 @@ function check_fasta_annotation_seqids() {
 #     GFF3 would destroy the shared-Parent grouping that RSEM/STAR rely on
 #     to reconstruct multi-exon transcripts.
 #
+# Repair GFF3 genes whose children (exon/CDS/...) point Parent= directly at
+# the gene, skipping the usual mRNA/tRNA/rRNA/ncRNA transcript level. Real
+# NCBI RefSeq annotations do this for single-exon "processed pseudogenes"
+# (no introns, so no felt need for an explicit transcript row) - nf-core/
+# rnaseq's own GFF3->GTF conversion (used to build the transcript FASTA via
+# rsem-prepare-reference regardless of aligner choice) then can't resolve
+# gene_id for these flat rows and dies with "Cannot find gene_id!",
+# aborting the whole run. Confirmed against real Laxy prod with genuine
+# NCBI human (chr21, gene RPL8P2) and mouse (chr19, gene Gm36006) RefSeq
+# annotations. See ANNOTATION_REQUIREMENTS_AND_FILTERING.md §6 item 8.
+#
+# Runs BEFORE drop_biotype_features/filter_annotation_features, right after
+# the first detect_annotation_style.py pass, then re-runs the detector so
+# ANN_* reflects the repaired annotation (the extra "transcript" rows can
+# shift exon/CDS counts, though not the classification in practice).
+function insert_missing_transcript() {
+    [[ "${USING_CUSTOM_REFERENCE}" == "yes" ]] || return 0
+    [[ -n "${ANNOTATION_FILE:-}" && -f "${ANNOTATION_FILE}" ]] || return 0
+    [[ "${ANN_FORMAT:-}" == "gff3" ]] || return 0
+    # GTF rows carry gene_id/transcript_id directly (no Parent= hierarchy to
+    # walk), so this is a GFF3-only concern.
+
+    local _in="${ANNOTATION_FILE}"
+    local _dir _out_gz
+    _dir="$(dirname "${_in}")"
+    _out_gz="${_dir}/annotation.transcript_fixed.gff.gz"
+
+    mkdir -p "${JOB_PATH}/output"
+
+    python "${INPUT_SCRIPTS_PATH}/insert_missing_transcript.py" \
+        --input "${_in}" \
+        --output "${_out_gz}" \
+        --format "${ANN_FORMAT}" \
+        >>"${JOB_PATH}/output/insert_missing_transcript.log" 2>&1 \
+      || fail_job 'insert_missing_transcript' 'failed to repair flat gene->feature rows' $?
+
+    export ANNOTATION_FILE="${_out_gz}"
+
+    python "${INPUT_SCRIPTS_PATH}/detect_annotation_style.py" \
+        "${ANNOTATION_FILE}" \
+        --output "${INPUT_CONFIG_PATH}/annotation_style.env" \
+      || fail_job 'detect_annotation_style_post_transcript_fix' '' $?
+
+    source "${INPUT_CONFIG_PATH}/annotation_style.env"
+}
+
 # The uploaded file is left in place; the filtered GTF is written alongside it
 # and ANNOTATION_FILE / ANN_FORMAT / ANN_GROUP_FEATURES / ANN_BIOTYPE_ATTR are
 # re-exported to point at the new GTF.

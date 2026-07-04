@@ -46,7 +46,7 @@ Each case has a `tier` in its `manifest.json` that decides which test layers run
 
 | tier         | detect | filter | seqid | e2e | examples                       |
 |--------------|:------:|:------:|:-----:|:---:|--------------------------------|
-| `happy`      | yes    | yes    | yes   | yes | E1-E5, P1-P4, P3gz, F9         |
+| `happy`      | yes    | yes    | yes   | yes | E1-E7, P1-P4, P3gz, F9         |
 | `repairable` | yes    | yes    | yes   | yes | F1, F2, F6, F7                 |
 | `detect_only`| yes    | yes    | yes   | no  | F4, F11                        |
 | `failfast`   | yes/no | no     | yes   | no  | F3 (seqid), F5 (8-col), F10 (empty) |
@@ -57,11 +57,15 @@ produce; the current bug makes it fail (xfailed). When the detector is fixed it
 xpasses, and the strict xfail turns that into a test failure — an explicit "the
 bug is gone, promote this to a happy case" alert.
 
-E5 is `happy` for detect/filter/seqid (those all behave correctly), but its
-`expected.e2e.expect_success` is `false` with a `known_failure_reason` -
-unlike the detector-only xfail mechanism above, nothing currently enforces
-this automatically; it documents a known nf-core/rnaseq bug (doc §6 item 7)
-that the real e2e runner (`run_corpus_via_laxycli.py`) will hit.
+E5's fix (`drop_biotype_features.py`) is verified end to end against real
+Laxy prod (genuine NCBI human/mouse mitochondrial jobs completed with real
+gene counts - doc §6 item 7), so its `expected.e2e.expect_success` is
+`true` again like every other happy case. E6 exercises the same fix for
+the case where the counted feature type disappears entirely after the
+drop (real mitochondrial genome shape). E7 exercises a related but
+separate fix (`insert_missing_transcript.py`, doc §6 item 8) for flat
+single/multi-exon pseudogenes with no transcript row - not yet
+re-verified against a real pipeline run.
 
 ## Running
 

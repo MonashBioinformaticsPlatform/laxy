@@ -10,6 +10,7 @@
       "exit": 1,
       "stderr_contains": "No valid annotation feature rows found (empty file?)"
     },
+    "insert_transcript": null,
     "filter": null,
     "drop_biotype": null,
     "post_drop": null,

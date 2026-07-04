@@ -30,6 +30,7 @@ META: dict[str, tuple[str, str, str | None, list[str]]] = {
     "E4_eukaryote_no_biotype":   ("happy",      "Eukaryote, exon GTF missing biotype -> skip_biotype_qc", "euk", []),
     "E5_eukaryote_ncrna_ids":    ("happy",      "Eukaryote, RefSeq GFF3 mixing protein-coding + tRNA/rRNA genes (NCBI ID=rna-*/gene-* convention)", "euk", []),
     "E6_eukaryote_ncrna_cds_only": ("happy",    "Eukaryote, RefSeq GFF3 with CDS-only protein-coding genes (no mRNA/exon) mixed with exon-bearing tRNA/rRNA - real mitochondrial genome shape", "euk", []),
+    "E7_eukaryote_flat_pseudogene": ("happy",   "Eukaryote, RefSeq GFF3 with flat single/multi-exon pseudogenes (exon Parent= points directly at gene, no transcript row)", "euk", []),
     "P1_prokaryote_minimal_gtf": ("happy",      "Prokaryote, minimal CDS-only GTF (self-contained gene_id)", "prok", ["--skip_rsem"]),
     "P2_prokaryote_ncbi":        ("happy",      "Prokaryote, NCBI GenBank GFF3 (gene+CDS, gbkey/Dbxref/locus_tag)", "prok", ["--skip_rsem"]),
     "P3_prokaryote_bakta":       ("happy",      "Prokaryote, Bakta GFF3 (flat CDS, ID=locus_tag)", "prok", ["--skip_rsem"]),
@@ -73,25 +74,26 @@ PROK_SKIP_FULL = "--skip_dupradar --skip_rseqc --skip_qualimap --skip_bigwig --s
 # in Laxy's own annotation pre-processing). Recorded here rather than folded
 # into the generic "happy" path so `expected.e2e` stays a snapshot of actual
 # behaviour, same as every other field build_manifest() writes.
+#
+# E5/E6 (non-coding RNA lacking transcript_id -> drop_biotype_features.py)
+# are NOT here: verified end to end against real Laxy prod (genuine NCBI
+# human/mouse mitochondrial jobs completed with real gene counts) - see
+# ANNOTATION_REQUIREMENTS_AND_FILTERING.md §6 item 7.
 E2E_KNOWN_FAILURES: dict[str, str] = {
-    "E5_eukaryote_ncrna_ids": (
-        "nf-core/rnaseq QUANTIFY_PSEUDO_ALIGNMENT:SE_* (aliased as "
-        "QUANTIFY_STAR_SALMON for --aligner star_salmon too - same "
-        "subworkflow) fails with \"No column contains all vector entries "
-        "...\" - Salmon quantifies a transcript for every "
-        "--gtf_group_features=Parent group (including tRNA/rRNA), but the "
-        "tximport/SummarizedExperiment metadata table has no column "
-        "containing those non-coding RNA ids. Confirmed against real Laxy "
-        "prod with genuine NCBI human (NC_012920.1) and mouse (NC_005089.1) "
-        "mitochondrial RefSeq annotations. A fix (drop_biotype_features.py, "
-        "wired into run_job.sh via ANN_DROP_BIOTYPES) now strips these gene "
-        "groups before nf-core/rnaseq sees them - verified at the "
-        "annotation-transformation level (this corpus's drop_biotype stage), "
-        "but NOT yet re-verified against a real pipeline run: the fix lives "
-        "in laxy_pipeline_apps templates and only takes effect once rebuilt "
-        "into the laxy Docker image and redeployed. Leaving expect_success "
-        "false until that redeploy + a real e2e rerun confirms it. See "
-        "ANNOTATION_REQUIREMENTS_AND_FILTERING.md §6 item 7."
+    "E7_eukaryote_flat_pseudogene": (
+        "nf-core/rnaseq's own GFF3->GTF conversion (used to build the "
+        "transcript FASTA via rsem-prepare-reference, regardless of "
+        "--aligner choice) can't resolve gene_id for flat single/multi-exon "
+        "pseudogenes whose exon rows point Parent= directly at the gene "
+        "(no transcript/mRNA row) - dies with \"Cannot find gene_id!\", "
+        "aborting the whole pipeline. Confirmed in both human (chr21, gene "
+        "RPL8P2) and mouse (chr19, gene Gm36006) RefSeq annotations. A fix "
+        "(insert_missing_transcript.py, wired into run_job.sh as the first "
+        "normalisation step) synthesises the missing transcript wrapper - "
+        "verified at the annotation-transformation level (this corpus's "
+        "insert_transcript stage), but NOT yet re-verified against a real "
+        "pipeline run pending redeploy. See "
+        "ANNOTATION_REQUIREMENTS_AND_FILTERING.md §6 item 8."
     ),
 }
 
@@ -124,6 +126,19 @@ def build_manifest(case_dir: Path) -> dict:
             "exit": det["rc"],
             "stderr_contains": det["stderr"].splitlines()[0] if det["stderr"] else "",
         }
+
+    # --- insert-missing-transcript stage (real annotation.gff3/gtf, before
+    # drop_biotype_features/filter_annotation_features - mirrors run_job.sh's
+    # insert_missing_transcript bash function, which runs first) ---
+    if det["rc"] == 0 and tier in {"happy", "repairable", "detect_only"}:
+        env = det["env"]
+        ins = cl.run_insert_transcript(ann, env["ANN_FORMAT"])
+        manifest["expected"]["insert_transcript"] = {
+            "exit": ins["rc"],
+            "counts": ins["counts"],
+        }
+    else:
+        manifest["expected"]["insert_transcript"] = None
 
     # --- filter stage (only when detect succeeds and tier exercises it) ---
     if det["rc"] == 0 and tier in {"happy", "repairable", "detect_only"}:

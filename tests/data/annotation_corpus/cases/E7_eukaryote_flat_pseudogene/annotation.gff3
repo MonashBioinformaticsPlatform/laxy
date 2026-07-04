@@ -1,0 +1,18 @@
+##gff-version 3
+chr1	RefSeq	gene	50000	51500	.	+	.	ID=gene-GENE1;Name=GENE1;gbkey=Gene;gene=GENE1;gene_biotype=protein_coding
+chr1	RefSeq	mRNA	50000	51500	.	+	.	ID=rna-GENE1;Parent=gene-GENE1;gbkey=mRNA;gene=GENE1;product=test protein
+chr1	RefSeq	exon	50000	50700	.	+	.	ID=exon-GENE1-1;Parent=rna-GENE1;gene=GENE1
+chr1	RefSeq	CDS	50000	50700	.	+	0	ID=cds-GENE1;Parent=rna-GENE1;gene=GENE1
+chr1	RefSeq	exon	51000	51500	.	+	.	ID=exon-GENE1-2;Parent=rna-GENE1;gene=GENE1
+chr1	RefSeq	CDS	51000	51500	.	+	0	ID=cds-GENE1;Parent=rna-GENE1;gene=GENE1
+chr2	RefSeq	gene	35000	36600	.	+	.	ID=gene-GENE2;Name=GENE2;gbkey=Gene;gene=GENE2;gene_biotype=protein_coding
+chr2	RefSeq	mRNA	35000	36600	.	+	.	ID=rna-GENE2;Parent=gene-GENE2;gbkey=mRNA;gene=GENE2;product=test protein
+chr2	RefSeq	exon	35000	35400	.	+	.	ID=exon-GENE2-1;Parent=rna-GENE2;gene=GENE2
+chr2	RefSeq	CDS	35000	35400	.	+	0	ID=cds-GENE2;Parent=rna-GENE2;gene=GENE2
+chr2	RefSeq	exon	36200	36600	.	+	.	ID=exon-GENE2-2;Parent=rna-GENE2;gene=GENE2
+chr2	RefSeq	CDS	36200	36600	.	+	0	ID=cds-GENE2;Parent=rna-GENE2;gene=GENE2
+chr1	RefSeq	pseudogene	60000	60300	.	-	.	ID=gene-PSEUDO1;Name=PSEUDO1;gbkey=Gene;gene=PSEUDO1;gene_biotype=pseudogene;pseudo=true
+chr1	RefSeq	exon	60000	60300	.	-	.	ID=id-PSEUDO1-1;Parent=gene-PSEUDO1;gbkey=exon;gene=PSEUDO1;pseudo=true
+chr1	RefSeq	pseudogene	65000	65700	.	-	.	ID=gene-PSEUDO2;Name=PSEUDO2;gbkey=Gene;gene=PSEUDO2;gene_biotype=pseudogene;pseudo=true
+chr1	RefSeq	exon	65000	65200	.	-	.	ID=id-PSEUDO2-1;Parent=gene-PSEUDO2;gbkey=exon;gene=PSEUDO2;pseudo=true
+chr1	RefSeq	exon	65500	65700	.	-	.	ID=id-PSEUDO2-2;Parent=gene-PSEUDO2;gbkey=exon;gene=PSEUDO2;pseudo=true

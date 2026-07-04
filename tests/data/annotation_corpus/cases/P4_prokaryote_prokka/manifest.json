@@ -20,6 +20,14 @@
         "ANN_DROP_BIOTYPES": ""
       }
     },
+    "insert_transcript": {
+      "exit": 0,
+      "counts": {
+        "genes_fixed": 0,
+        "synthetic_rows": 0,
+        "output_rows": 0
+      }
+    },
     "filter": {
       "exit": 0,
       "counts": {

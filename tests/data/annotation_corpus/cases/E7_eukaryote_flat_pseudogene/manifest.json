@@ -1,0 +1,75 @@
+{
+  "id": "E7_eukaryote_flat_pseudogene",
+  "description": "Eukaryote, RefSeq GFF3 with flat single/multi-exon pseudogenes (exon Parent= points directly at gene, no transcript row)",
+  "annotation": "annotation.gff3",
+  "class": "euk",
+  "tier": "happy",
+  "xfail_reason": null,
+  "expected": {
+    "detect": {
+      "exit": 0,
+      "env": {
+        "ANN_FORMAT": "gff3",
+        "ANN_FEATURE_TYPE": "exon",
+        "ANN_GROUP_FEATURES": "Parent",
+        "ANN_EXTRA_ATTRIBUTES": "gene",
+        "ANN_BIOTYPE_ATTR": "gene_biotype",
+        "ANN_PROKARYOTIC": "no",
+        "ANN_PROFILE": "generic_eukaryote",
+        "ANN_SKIP_FLAGS": "",
+        "ANN_DROP_BIOTYPES": ""
+      }
+    },
+    "insert_transcript": {
+      "exit": 0,
+      "counts": {
+        "genes_fixed": 2,
+        "synthetic_rows": 2,
+        "output_rows": 20
+      }
+    },
+    "filter": {
+      "exit": 0,
+      "counts": {
+        "input_rows_kept": 7,
+        "output_rows": 14,
+        "dropped": 10
+      }
+    },
+    "drop_biotype": {
+      "exit": 0,
+      "counts": {
+        "input_rows": 0,
+        "kept_rows": 0,
+        "dropped_rows": 0,
+        "dropped_ids": 0
+      }
+    },
+    "post_drop": null,
+    "seqid": {
+      "fasta_ids_sample": [
+        "chr1",
+        "chr2"
+      ],
+      "ann_ids_sample": [
+        "chr1",
+        "chr2"
+      ],
+      "expect_overlap": true
+    },
+    "e2e": {
+      "run": true,
+      "aligner": "star_salmon",
+      "extra_flags": [],
+      "expect_success": false,
+      "known_failure_reason": "nf-core/rnaseq's own GFF3->GTF conversion (used to build the transcript FASTA via rsem-prepare-reference, regardless of --aligner choice) can't resolve gene_id for flat single/multi-exon pseudogenes whose exon rows point Parent= directly at the gene (no transcript/mRNA row) - dies with \"Cannot find gene_id!\", aborting the whole pipeline. Confirmed in both human (chr21, gene RPL8P2) and mouse (chr19, gene Gm36006) RefSeq annotations. A fix (insert_missing_transcript.py, wired into run_job.sh as the first normalisation step) synthesises the missing transcript wrapper - verified at the annotation-transformation level (this corpus's insert_transcript stage), but NOT yet re-verified against a real pipeline run pending redeploy. See ANNOTATION_REQUIREMENTS_AND_FILTERING.md \u00a76 item 8."
+    }
+  },
+  "reads": {
+    "mode": "paired",
+    "count": 2000,
+    "read_length": 75,
+    "fragment_size": 200,
+    "seed": 42
+  }
+}

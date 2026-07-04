@@ -30,6 +30,7 @@ _SCRIPTS = (
 DETECT = _SCRIPTS / "detect_annotation_style.py"
 FILTER = _SCRIPTS / "filter_annotation_features.py"
 DROP_BIOTYPE = _SCRIPTS / "drop_biotype_features.py"
+INSERT_TRANSCRIPT = _SCRIPTS / "insert_missing_transcript.py"
 CASES = _CORPUS_ROOT / "cases"
 SHARED = _HERE
 GENOME = SHARED / "genome.fa"
@@ -187,6 +188,47 @@ def run_drop_biotype(
         capture_output=True, text=True,
     )
     counts = {"input_rows": 0, "kept_rows": 0, "dropped_rows": 0, "dropped_ids": 0}
+    log = proc.stderr + proc.stdout
+    for key in counts:
+        marker = key + "="
+        i = log.find(marker)
+        if i >= 0:
+            tail = log[i + len(marker):]
+            num = ""
+            for ch in tail:
+                if ch.isdigit():
+                    num += ch
+                else:
+                    break
+            if num:
+                counts[key] = int(num)
+    result = {"rc": proc.returncode, "counts": counts, "stderr": proc.stderr.strip()}
+    if keep_output:
+        result["output_path"] = out_path
+    else:
+        out_path.unlink(missing_ok=True)
+    return result
+
+
+def run_insert_transcript(ann: Path, fmt: str, keep_output: bool = False) -> dict:
+    """Run insert_missing_transcript.py; return rc + parsed log counters.
+
+    When ``keep_output`` is set, the repaired annotation file is kept and
+    its path returned as ``"output_path"`` (caller is responsible for
+    cleanup).
+    """
+    import tempfile
+    suffix = ".gff3" if fmt == "gff3" else ".gtf"
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tf:
+        out_path = Path(tf.name)
+    proc = subprocess.run(
+        [sys.executable, str(INSERT_TRANSCRIPT),
+         "--input", str(ann),
+         "--output", str(out_path),
+         "--format", fmt],
+        capture_output=True, text=True,
+    )
+    counts = {"genes_fixed": 0, "synthetic_rows": 0, "output_rows": 0}
     log = proc.stderr + proc.stdout
     for key in counts:
         marker = key + "="
