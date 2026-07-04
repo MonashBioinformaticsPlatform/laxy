@@ -150,7 +150,9 @@ docker compose exec db psql   # PostgreSQL shell
 - **Frontend**: http://localhost:8002
 - **Backend API**: http://localhost:8001/api/v1/
 - **Django Admin**: http://localhost:8001/admin
-- **API Docs**: http://localhost:8001/swagger/v1/
+- **API Docs (Swagger UI)**: http://localhost:8001/api/v1/schema/swagger-ui/
+- **API Docs (ReDoc)**: http://localhost:8001/api/v1/schema/redoc/
+- **OpenAPI schema**: http://localhost:8001/api/v1/schema/
 - **RabbitMQ**: http://localhost:15672 (guest/guest)
 
 ## 🆚 Why Just Instead of Make?
@@ -219,4 +221,4 @@ just ci              # Complete test suite for CI/CD
 - [Just Manual](https://just.systems/man/en/)
 - [Docker Compose Documentation](https://docs.docker.com/compose/)
 - [Django Testing](https://docs.djangoproject.com/en/stable/topics/testing/)
-- [Laxy API Documentation](http://localhost:8001/swagger/v1/) 
+- [Laxy API Documentation (Swagger UI)](http://localhost:8001/api/v1/schema/swagger-ui/) 

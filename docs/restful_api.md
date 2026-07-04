@@ -2,7 +2,11 @@
 
 These are some rough WIP docs describing ways you might use the REST API from the commandline.
 
-The 'definative' API docs are the OpenAPI/Swagger definition here: https://api.laxy.io/swagger/v1/
+The definitive API docs are the OpenAPI/Swagger definition:
+
+- Swagger UI: https://api.laxy.io/api/v1/schema/swagger-ui/
+- Raw OpenAPI schema: https://api.laxy.io/api/v1/schema/
+- ReDoc: https://api.laxy.io/api/v1/schema/redoc/
 
 ## Get authentication tokens
 
