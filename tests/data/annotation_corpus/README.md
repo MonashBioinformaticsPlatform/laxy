@@ -45,7 +45,7 @@ Each case has a `tier` in its `manifest.json` that decides which test layers run
 
 | tier         | detect | filter | seqid | e2e | examples                       |
 |--------------|:------:|:------:|:-----:|:---:|--------------------------------|
-| `happy`      | yes    | yes    | yes   | yes | E1-E4, P1-P4, P3gz, F9         |
+| `happy`      | yes    | yes    | yes   | yes | E1-E5, P1-P4, P3gz, F9         |
 | `repairable` | yes    | yes    | yes   | yes | F1, F2, F6, F7                 |
 | `detect_only`| yes    | yes    | yes   | no  | F4, F11                        |
 | `failfast`   | yes/no | no     | yes   | no  | F3 (seqid), F5 (8-col), F10 (empty) |
@@ -55,6 +55,12 @@ Each case has a `tier` in its `manifest.json` that decides which test layers run
 produce; the current bug makes it fail (xfailed). When the detector is fixed it
 xpasses, and the strict xfail turns that into a test failure — an explicit "the
 bug is gone, promote this to a happy case" alert.
+
+E5 is `happy` for detect/filter/seqid (those all behave correctly), but its
+`expected.e2e.expect_success` is `false` with a `known_failure_reason` -
+unlike the detector-only xfail mechanism above, nothing currently enforces
+this automatically; it documents a known nf-core/rnaseq bug (doc §6 item 7)
+that the real e2e runner (`run_corpus_via_laxycli.py`) will hit.
 
 ## Running
 
@@ -115,6 +121,7 @@ the seed fixed so committed reads stay valid.
 | E2_eukaryote_gencode        | GENCODE-style GTF (`gene_type`)                              |
 | E3_eukaryote_refseq         | RefSeq GFF3 gene/mRNA/exon/CDS hierarchy                     |
 | E4_eukaryote_no_biotype     | eukaryotic GTF missing biotype -> `--skip_biotype_qc`        |
+| E5_eukaryote_ncrna_ids      | RefSeq GFF3 mixing protein-coding + tRNA/rRNA (`ID=rna-*`); detect/filter/seqid pass but the real e2e run is a **known failure** (`expect_success: false`, see doc §6 item 7) |
 | P1_prokaryote_minimal_gtf   | minimal prokaryotic CDS-only GTF                             |
 | P2_prokaryote_ncbi          | NCBI GenBank GFF3 (gbkey/Dbxref/locus_tag)                   |
 | P3_prokaryote_bakta         | Bakta GFF3 (flat CDS, `ID=locus_tag`)                        |

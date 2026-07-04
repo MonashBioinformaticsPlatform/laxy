@@ -1,0 +1,25 @@
+##gff-version 3
+chr1	RefSeq	gene	30000	31500	.	+	.	ID=gene-GENE1;Name=GENE1;gbkey=Gene;gene=GENE1;gene_biotype=protein_coding
+chr1	RefSeq	mRNA	30000	31500	.	+	.	ID=rna-GENE1;Parent=gene-GENE1;gbkey=mRNA;gene=GENE1;product=test protein
+chr1	RefSeq	exon	30000	30700	.	+	.	ID=exon-GENE1-1;Parent=rna-GENE1;gene=GENE1
+chr1	RefSeq	CDS	30000	30700	.	+	0	ID=cds-GENE1;Parent=rna-GENE1;gene=GENE1
+chr1	RefSeq	exon	31000	31500	.	+	.	ID=exon-GENE1-2;Parent=rna-GENE1;gene=GENE1
+chr1	RefSeq	CDS	31000	31500	.	+	0	ID=cds-GENE1;Parent=rna-GENE1;gene=GENE1
+chr2	RefSeq	gene	20000	21600	.	+	.	ID=gene-GENE2;Name=GENE2;gbkey=Gene;gene=GENE2;gene_biotype=protein_coding
+chr2	RefSeq	mRNA	20000	21600	.	+	.	ID=rna-GENE2;Parent=gene-GENE2;gbkey=mRNA;gene=GENE2;product=test protein
+chr2	RefSeq	exon	20000	20400	.	+	.	ID=exon-GENE2-1;Parent=rna-GENE2;gene=GENE2
+chr2	RefSeq	CDS	20000	20400	.	+	0	ID=cds-GENE2;Parent=rna-GENE2;gene=GENE2
+chr2	RefSeq	exon	21200	21600	.	+	.	ID=exon-GENE2-2;Parent=rna-GENE2;gene=GENE2
+chr2	RefSeq	CDS	21200	21600	.	+	0	ID=cds-GENE2;Parent=rna-GENE2;gene=GENE2
+chr1	RefSeq	gene	33000	33070	.	+	.	ID=gene-TRNF;Name=TRNF;gbkey=Gene;gene=TRNF;gene_biotype=tRNA
+chr1	RefSeq	tRNA	33000	33070	.	+	.	ID=rna-TRNF;Parent=gene-TRNF;gbkey=tRNA;gene=TRNF;product=tRNA-Phe
+chr1	RefSeq	exon	33000	33070	.	+	.	ID=exon-TRNF-1;Parent=rna-TRNF;gene=TRNF
+chr1	RefSeq	gene	34000	34068	.	+	.	ID=gene-TRNV;Name=TRNV;gbkey=Gene;gene=TRNV;gene_biotype=tRNA
+chr1	RefSeq	tRNA	34000	34068	.	+	.	ID=rna-TRNV;Parent=gene-TRNV;gbkey=tRNA;gene=TRNV;product=tRNA-Val
+chr1	RefSeq	exon	34000	34068	.	+	.	ID=exon-TRNV-1;Parent=rna-TRNV;gene=TRNV
+chr1	RefSeq	gene	36000	36950	.	+	.	ID=gene-RNR1;Name=RNR1;gbkey=Gene;gene=RNR1;gene_biotype=rRNA
+chr1	RefSeq	rRNA	36000	36950	.	+	.	ID=rna-RNR1;Parent=gene-RNR1;gbkey=rRNA;gene=RNR1;product=12S ribosomal RNA
+chr1	RefSeq	exon	36000	36950	.	+	.	ID=exon-RNR1-1;Parent=rna-RNR1;gene=RNR1
+chr2	RefSeq	gene	23000	23075	.	+	.	ID=gene-TRNL1;Name=TRNL1;gbkey=Gene;gene=TRNL1;gene_biotype=tRNA
+chr2	RefSeq	tRNA	23000	23075	.	+	.	ID=rna-TRNL1;Parent=gene-TRNL1;gbkey=tRNA;gene=TRNL1;product=tRNA-Leu
+chr2	RefSeq	exon	23000	23075	.	+	.	ID=exon-TRNL1-1;Parent=rna-TRNL1;gene=TRNL1

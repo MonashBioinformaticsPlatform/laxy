@@ -107,6 +107,57 @@ for seqid, strand, gid, rna, name, exons in _E3_ROWS:
 E3 = "".join(_E3_LINES)
 write(CASES / "E3_eukaryote_refseq" / "annotation.gff3", E3)
 
+# --- E5: RefSeq GFF3 mixing protein-coding genes with non-coding RNA genes
+# (tRNA/rRNA) using real NCBI ID conventions (ID=rna-<NAME>/gene-<NAME>, no
+# transcript_id attribute). Reproduces a real nf-core/rnaseq failure: Salmon
+# quantifies transcripts for every --gtf_group_features=Parent group
+# (including tRNA/rRNA), but nf-core's tximport/SummarizedExperiment step
+# (QUANTIFY_PSEUDO_ALIGNMENT:SE_*) can't find a metadata column containing
+# those non-coding RNA ids and dies with "No column contains all vector
+# entries ..." - see ANNOTATION_REQUIREMENTS_AND_FILTERING.md §6 item 7.
+# Confirmed against real Laxy prod with the genuine NCBI human (NC_012920.1)
+# and mouse (NC_005089.1) mitochondrial RefSeq annotations; this fixture is a
+# small, deterministic stand-in so the corpus can track the issue locally.
+def _ncrna_gene(seqid: str, strand: str, gene: str, biotype: str, feat: str,
+                 product: str, start: int, end: int) -> str:
+    return (
+        _gff_row(seqid, "gene", start, end, strand, ".",
+                 f"ID=gene-{gene};Name={gene};gbkey=Gene;gene={gene};gene_biotype={biotype}")
+        + _gff_row(seqid, feat, start, end, strand, ".",
+                   f"ID=rna-{gene};Parent=gene-{gene};gbkey={feat};gene={gene};product={product}")
+        + _gff_row(seqid, "exon", start, end, strand, ".",
+                    f"ID=exon-{gene}-1;Parent=rna-{gene};gene={gene}")
+    )
+
+
+def _mrna_gene(seqid: str, strand: str, gene: str, exons: list[tuple[int, int]]) -> str:
+    g_start, g_end = exons[0][0], exons[-1][1]
+    rows = _gff_row(seqid, "gene", g_start, g_end, strand, ".",
+                     f"ID=gene-{gene};Name={gene};gbkey=Gene;gene={gene};gene_biotype=protein_coding")
+    rows += _gff_row(seqid, "mRNA", g_start, g_end, strand, ".",
+                      f"ID=rna-{gene};Parent=gene-{gene};gbkey=mRNA;gene={gene};product=test protein")
+    for i, (s, e) in enumerate(exons, start=1):
+        rows += _gff_row(seqid, "exon", s, e, strand, ".",
+                          f"ID=exon-{gene}-{i};Parent=rna-{gene};gene={gene}")
+        rows += _gff_row(seqid, "CDS", s, e, strand, "0",
+                          f"ID=cds-{gene};Parent=rna-{gene};gene={gene}")
+    return rows
+
+
+_E5_LINES = ["##gff-version 3\n"]
+# protein-coding (exons well above the 200bp default fragment size, so
+# generate_reads.py can actually draw reads from them)
+_E5_LINES.append(_mrna_gene("chr1", "+", "GENE1", [(30000, 30700), (31000, 31500)]))
+_E5_LINES.append(_mrna_gene("chr2", "+", "GENE2", [(20000, 20400), (21200, 21600)]))
+# non-coding RNA, real NCBI mitochondrial gene names/lengths (tRNAs ~70bp -
+# too short for reads, deliberately; rRNA ~950bp - long enough for reads)
+_E5_LINES.append(_ncrna_gene("chr1", "+", "TRNF", "tRNA", "tRNA", "tRNA-Phe", 33000, 33070))
+_E5_LINES.append(_ncrna_gene("chr1", "+", "TRNV", "tRNA", "tRNA", "tRNA-Val", 34000, 34068))
+_E5_LINES.append(_ncrna_gene("chr1", "+", "RNR1", "rRNA", "rRNA", "12S ribosomal RNA", 36000, 36950))
+_E5_LINES.append(_ncrna_gene("chr2", "+", "TRNL1", "tRNA", "tRNA", "tRNA-Leu", 23000, 23075))
+E5 = "".join(_E5_LINES)
+write(CASES / "E5_eukaryote_ncrna_ids" / "annotation.gff3", E5)
+
 # --- E4: eukaryotic exons with no biotype attr anywhere (skip biotype QC) ---
 E4 = (
     "chr1\tlaxy_test\texon\t1000\t2000\t.\t+\t.\tgene_id \"GENE_A\"; transcript_id \"GENE_A.t1\"; gene_name \"GENE_A\";\n"

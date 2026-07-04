@@ -28,6 +28,7 @@ META: dict[str, tuple[str, str, str | None, list[str]]] = {
     "E2_eukaryote_gencode":      ("happy",      "Eukaryote, GENCODE-style GTF (gene_type)", "euk", []),
     "E3_eukaryote_refseq":       ("happy",      "Eukaryote, RefSeq GFF3 (gene/mRNA/exon/CDS hierarchy)", "euk", []),
     "E4_eukaryote_no_biotype":   ("happy",      "Eukaryote, exon GTF missing biotype -> skip_biotype_qc", "euk", []),
+    "E5_eukaryote_ncrna_ids":    ("happy",      "Eukaryote, RefSeq GFF3 mixing protein-coding + tRNA/rRNA genes (NCBI ID=rna-*/gene-* convention)", "euk", []),
     "P1_prokaryote_minimal_gtf": ("happy",      "Prokaryote, minimal CDS-only GTF (self-contained gene_id)", "prok", ["--skip_rsem"]),
     "P2_prokaryote_ncbi":        ("happy",      "Prokaryote, NCBI GenBank GFF3 (gene+CDS, gbkey/Dbxref/locus_tag)", "prok", ["--skip_rsem"]),
     "P3_prokaryote_bakta":       ("happy",      "Prokaryote, Bakta GFF3 (flat CDS, ID=locus_tag)", "prok", ["--skip_rsem"]),
@@ -65,6 +66,24 @@ XFAIL_CORRECT_DETECT = {
 }
 
 PROK_SKIP_FULL = "--skip_dupradar --skip_rseqc --skip_qualimap --skip_bigwig --skip_biotype_qc"
+
+# Cases whose detect/filter/seqid stages are all correct ("happy"), but whose
+# real e2e run is a *known* failure downstream in nf-core/rnaseq itself (not
+# in Laxy's own annotation pre-processing). Recorded here rather than folded
+# into the generic "happy" path so `expected.e2e` stays a snapshot of actual
+# behaviour, same as every other field build_manifest() writes.
+E2E_KNOWN_FAILURES: dict[str, str] = {
+    "E5_eukaryote_ncrna_ids": (
+        "nf-core/rnaseq QUANTIFY_PSEUDO_ALIGNMENT:SE_* fails with "
+        "\"No column contains all vector entries ...\" - Salmon quantifies a "
+        "transcript for every --gtf_group_features=Parent group (including "
+        "tRNA/rRNA), but the tximport/SummarizedExperiment metadata table has "
+        "no column containing those non-coding RNA ids. Confirmed against "
+        "real Laxy prod with genuine NCBI human (NC_012920.1) and mouse "
+        "(NC_005089.1) mitochondrial RefSeq annotations. See "
+        "ANNOTATION_REQUIREMENTS_AND_FILTERING.md §6 item 7."
+    ),
+}
 
 
 def build_manifest(case_dir: Path) -> dict:
@@ -130,12 +149,15 @@ def build_manifest(case_dir: Path) -> dict:
             "fragment_size": 200,
             "seed": 42,
         }
+        known_failure = E2E_KNOWN_FAILURES.get(name)
         manifest["expected"]["e2e"] = {
             "run": True,
             "aligner": "star_salmon",
             "extra_flags": extra_flags,
-            "expect_success": True,
+            "expect_success": known_failure is None,
         }
+        if known_failure is not None:
+            manifest["expected"]["e2e"]["known_failure_reason"] = known_failure
     else:
         manifest["reads"] = None
         manifest["expected"]["e2e"] = {"run": False}
