@@ -1,0 +1,119 @@
+##gff-version 3
+#!gff-spec-version 1.21
+#!processor NCBI annotwriter
+##sequence-region NC_005089.1 1 16299
+##species https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=10090
+NC_005089.1	RefSeq	region	1	16299	.	+	.	ID=NC_005089.1:1..16299;Dbxref=taxon:10090;Is_circular=true;Name=MT;gbkey=Src;genome=mitochondrion;mol_type=genomic DNA;strain=C57BL/6J
+NC_005089.1	RefSeq	gene	1	68	.	+	.	ID=gene-TrnF;Dbxref=GeneID:17730,MGI:MGI:102487;Name=TrnF;gbkey=Gene;gene=TrnF;gene_biotype=tRNA
+NC_005089.1	RefSeq	tRNA	1	68	.	+	.	ID=rna-TrnF;Parent=gene-TrnF;Dbxref=GeneID:17730,MGI:MGI:102487;anticodon=(pos:33..35);gbkey=tRNA;gene=TrnF;product=tRNA-Phe
+NC_005089.1	RefSeq	exon	1	68	.	+	.	ID=exon-TrnF-1;Parent=rna-TrnF;Dbxref=GeneID:17730,MGI:MGI:102487;anticodon=(pos:33..35);gbkey=tRNA;gene=TrnF;product=tRNA-Phe
+NC_005089.1	RefSeq	gene	70	1024	.	+	.	ID=gene-mt-Rnr1;Dbxref=GeneID:17724,MGI:MGI:102493;Name=mt-Rnr1;Note=12S%3B 12SrRNA;gbkey=Gene;gene=mt-Rnr1;gene_biotype=rRNA
+NC_005089.1	RefSeq	rRNA	70	1024	.	+	.	ID=rna-mt-Rnr1;Parent=gene-mt-Rnr1;Dbxref=GeneID:17724,MGI:MGI:102493;Note=12S rRNA%2C mitochondrial;gbkey=rRNA;gene=mt-Rnr1;product=s-rRNA
+NC_005089.1	RefSeq	exon	70	1024	.	+	.	ID=exon-mt-Rnr1-1;Parent=rna-mt-Rnr1;Dbxref=GeneID:17724,MGI:MGI:102493;Note=12S rRNA%2C mitochondrial;gbkey=rRNA;gene=mt-Rnr1;product=s-rRNA
+NC_005089.1	RefSeq	gene	1025	1093	.	+	.	ID=gene-TrnV;Dbxref=GeneID:17745,MGI:MGI:102472;Name=TrnV;gbkey=Gene;gene=TrnV;gene_biotype=tRNA
+NC_005089.1	RefSeq	tRNA	1025	1093	.	+	.	ID=rna-TrnV;Parent=gene-TrnV;Dbxref=GeneID:17745,MGI:MGI:102472;anticodon=(pos:1057..1059);gbkey=tRNA;gene=TrnV;product=tRNA-Val
+NC_005089.1	RefSeq	exon	1025	1093	.	+	.	ID=exon-TrnV-1;Parent=rna-TrnV;Dbxref=GeneID:17745,MGI:MGI:102472;anticodon=(pos:1057..1059);gbkey=tRNA;gene=TrnV;product=tRNA-Val
+NC_005089.1	RefSeq	gene	1094	2675	.	+	.	ID=gene-mt-Rnr2;Dbxref=GeneID:17725,MGI:MGI:102492;Name=mt-Rnr2;Note=16S%3B 16S rRNA;gbkey=Gene;gene=mt-Rnr2;gene_biotype=rRNA
+NC_005089.1	RefSeq	rRNA	1094	2675	.	+	.	ID=rna-mt-Rnr2;Parent=gene-mt-Rnr2;Dbxref=GeneID:17725,MGI:MGI:102492;gbkey=rRNA;gene=mt-Rnr2;product=16S ribosomal RNA
+NC_005089.1	RefSeq	exon	1094	2675	.	+	.	ID=exon-mt-Rnr2-1;Parent=rna-mt-Rnr2;Dbxref=GeneID:17725,MGI:MGI:102492;gbkey=rRNA;gene=mt-Rnr2;product=16S ribosomal RNA
+NC_005089.1	RefSeq	sequence_alteration	2256	2256	.	+	.	ID=id-mt-Rnr2;Dbxref=GeneID:17725,MGI:MGI:102492;Note=compared to strains SAMP1 and SAMP8;gbkey=variation;gene=mt-Rnr2;replace=c
+NC_005089.1	RefSeq	gene	2676	2750	.	+	.	ID=gene-TrnL1;Dbxref=GeneID:17735,MGI:MGI:102482;Name=TrnL1;Note=tRNA-Leu_1;gbkey=Gene;gene=TrnL1;gene_biotype=tRNA
+NC_005089.1	RefSeq	tRNA	2676	2750	.	+	.	ID=rna-TrnL1;Parent=gene-TrnL1;Dbxref=GeneID:17735,MGI:MGI:102482;codons=UUR;gbkey=tRNA;gene=TrnL1;product=tRNA-Leu
+NC_005089.1	RefSeq	exon	2676	2750	.	+	.	ID=exon-TrnL1-1;Parent=rna-TrnL1;Dbxref=GeneID:17735,MGI:MGI:102482;codons=UUR;gbkey=tRNA;gene=TrnL1;product=tRNA-Leu
+NC_005089.1	RefSeq	gene	2751	3707	.	+	.	ID=gene-ND1;Dbxref=GeneID:17716,MGI:MGI:101787;Name=ND1;gbkey=Gene;gene=ND1;gene_biotype=protein_coding
+NC_005089.1	RefSeq	CDS	2751	3707	.	+	0	ID=cds-NP_904328.1;Parent=gene-ND1;Dbxref=GenBank:NP_904328.1,GeneID:17716,MGI:MGI:101787;Name=NP_904328.1;gbkey=CDS;gene=ND1;product=NADH dehydrogenase subunit 1;protein_id=NP_904328.1;transl_table=2
+NC_005089.1	RefSeq	gene	3706	3774	.	+	.	ID=gene-TrnI;Dbxref=GeneID:17733,MGI:MGI:102484;Name=TrnI;gbkey=Gene;gene=TrnI;gene_biotype=tRNA
+NC_005089.1	RefSeq	tRNA	3706	3774	.	+	.	ID=rna-TrnI;Parent=gene-TrnI;Dbxref=GeneID:17733,MGI:MGI:102484;anticodon=(pos:3735..3737);gbkey=tRNA;gene=TrnI;product=tRNA-Ile
+NC_005089.1	RefSeq	exon	3706	3774	.	+	.	ID=exon-TrnI-1;Parent=rna-TrnI;Dbxref=GeneID:17733,MGI:MGI:102484;anticodon=(pos:3735..3737);gbkey=tRNA;gene=TrnI;product=tRNA-Ile
+NC_005089.1	RefSeq	gene	3772	3842	.	-	.	ID=gene-TrnQ;Dbxref=GeneID:17740,MGI:MGI:102477;Name=TrnQ;gbkey=Gene;gene=TrnQ;gene_biotype=tRNA
+NC_005089.1	RefSeq	tRNA	3772	3842	.	-	.	ID=rna-TrnQ;Parent=gene-TrnQ;Dbxref=GeneID:17740,MGI:MGI:102477;gbkey=tRNA;gene=TrnQ;product=tRNA-Gln
+NC_005089.1	RefSeq	exon	3772	3842	.	-	.	ID=exon-TrnQ-1;Parent=rna-TrnQ;Dbxref=GeneID:17740,MGI:MGI:102477;gbkey=tRNA;gene=TrnQ;product=tRNA-Gln
+NC_005089.1	RefSeq	gene	3845	3913	.	+	.	ID=gene-TrnM;Dbxref=GeneID:17737,MGI:MGI:102480;Name=TrnM;gbkey=Gene;gene=TrnM;gene_biotype=tRNA
+NC_005089.1	RefSeq	tRNA	3845	3913	.	+	.	ID=rna-TrnM;Parent=gene-TrnM;Dbxref=GeneID:17737,MGI:MGI:102480;anticodon=(pos:3875..3877);gbkey=tRNA;gene=TrnM;product=tRNA-Met
+NC_005089.1	RefSeq	exon	3845	3913	.	+	.	ID=exon-TrnM-1;Parent=rna-TrnM;Dbxref=GeneID:17737,MGI:MGI:102480;anticodon=(pos:3875..3877);gbkey=tRNA;gene=TrnM;product=tRNA-Met
+NC_005089.1	RefSeq	gene	3914	4951	.	+	.	ID=gene-ND2;Dbxref=GeneID:17717,MGI:MGI:102500;Name=ND2;Note=URF2;gbkey=Gene;gene=ND2;gene_biotype=protein_coding
+NC_005089.1	RefSeq	CDS	3914	4951	.	+	0	ID=cds-NP_904329.1;Parent=gene-ND2;Dbxref=GenBank:NP_904329.1,GeneID:17717,MGI:MGI:102500;Name=NP_904329.1;gbkey=CDS;gene=ND2;product=NADH dehydrogenase subunit 2;protein_id=NP_904329.1;transl_table=2
+NC_005089.1	RefSeq	gene	4950	5016	.	+	.	ID=gene-TrnW;Dbxref=GeneID:17746,MGI:MGI:102471;Name=TrnW;gbkey=Gene;gene=TrnW;gene_biotype=tRNA
+NC_005089.1	RefSeq	tRNA	4950	5016	.	+	.	ID=rna-TrnW;Parent=gene-TrnW;Dbxref=GeneID:17746,MGI:MGI:102471;anticodon=(pos:4981..4983);gbkey=tRNA;gene=TrnW;product=tRNA-Trp
+NC_005089.1	RefSeq	exon	4950	5016	.	+	.	ID=exon-TrnW-1;Parent=rna-TrnW;Dbxref=GeneID:17746,MGI:MGI:102471;anticodon=(pos:4981..4983);gbkey=tRNA;gene=TrnW;product=tRNA-Trp
+NC_005089.1	RefSeq	gene	5018	5086	.	-	.	ID=gene-TrnA;Dbxref=GeneID:17726,MGI:MGI:102491;Name=TrnA;gbkey=Gene;gene=TrnA;gene_biotype=tRNA
+NC_005089.1	RefSeq	tRNA	5018	5086	.	-	.	ID=rna-TrnA;Parent=gene-TrnA;Dbxref=GeneID:17726,MGI:MGI:102491;gbkey=tRNA;gene=TrnA;product=tRNA-Ala
+NC_005089.1	RefSeq	exon	5018	5086	.	-	.	ID=exon-TrnA-1;Parent=rna-TrnA;Dbxref=GeneID:17726,MGI:MGI:102491;gbkey=tRNA;gene=TrnA;product=tRNA-Ala
+NC_005089.1	RefSeq	gene	5089	5159	.	-	.	ID=gene-TrnN;Dbxref=GeneID:17738,MGI:MGI:102479;Name=TrnN;gbkey=Gene;gene=TrnN;gene_biotype=tRNA
+NC_005089.1	RefSeq	tRNA	5089	5159	.	-	.	ID=rna-TrnN;Parent=gene-TrnN;Dbxref=GeneID:17738,MGI:MGI:102479;gbkey=tRNA;gene=TrnN;product=tRNA-Asn
+NC_005089.1	RefSeq	exon	5089	5159	.	-	.	ID=exon-TrnN-1;Parent=rna-TrnN;Dbxref=GeneID:17738,MGI:MGI:102479;gbkey=tRNA;gene=TrnN;product=tRNA-Asn
+NC_005089.1	RefSeq	origin_of_replication	5160	5191	.	+	.	ID=id-GeneID:17723;Dbxref=GeneID:17723,MGI:MGI:102494;Note=L-strand origin of replication%3B mt-Olr%3B OL%3B light strand origin of replication%2C mitochondrial;direction=right;gbkey=rep_origin
+NC_005089.1	RefSeq	gene	5192	5257	.	-	.	ID=gene-TrnC;Dbxref=GeneID:17727,MGI:MGI:102490;Name=TrnC;gbkey=Gene;gene=TrnC;gene_biotype=tRNA
+NC_005089.1	RefSeq	tRNA	5192	5257	.	-	.	ID=rna-TrnC;Parent=gene-TrnC;Dbxref=GeneID:17727,MGI:MGI:102490;gbkey=tRNA;gene=TrnC;product=tRNA-Cys
+NC_005089.1	RefSeq	exon	5192	5257	.	-	.	ID=exon-TrnC-1;Parent=rna-TrnC;Dbxref=GeneID:17727,MGI:MGI:102490;gbkey=tRNA;gene=TrnC;product=tRNA-Cys
+NC_005089.1	RefSeq	gene	5260	5326	.	-	.	ID=gene-TrnY;Dbxref=GeneID:17747,MGI:MGI:102470;Name=TrnY;gbkey=Gene;gene=TrnY;gene_biotype=tRNA
+NC_005089.1	RefSeq	tRNA	5260	5326	.	-	.	ID=rna-TrnY;Parent=gene-TrnY;Dbxref=GeneID:17747,MGI:MGI:102470;gbkey=tRNA;gene=TrnY;product=tRNA-Tyr
+NC_005089.1	RefSeq	exon	5260	5326	.	-	.	ID=exon-TrnY-1;Parent=rna-TrnY;Dbxref=GeneID:17747,MGI:MGI:102470;gbkey=tRNA;gene=TrnY;product=tRNA-Tyr
+NC_005089.1	RefSeq	gene	5328	6872	.	+	.	ID=gene-COX1;Dbxref=GeneID:17708,MGI:MGI:102504;Name=COX1;Note=COI%3B CCOI;gbkey=Gene;gene=COX1;gene_biotype=protein_coding;gene_synonym=CoxI
+NC_005089.1	RefSeq	CDS	5328	6872	.	+	0	ID=cds-NP_904330.1;Parent=gene-COX1;Dbxref=GenBank:NP_904330.1,GeneID:17708,MGI:MGI:102504;Name=NP_904330.1;Note=cytochrome oxidase subunit 1%3B cytochrome c oxidase polypeptide 1%3B cytochrome c oxidase subunit 1;gbkey=CDS;gene=COX1;product=cytochrome c oxidase subunit I;protein_id=NP_904330.1;transl_table=2
+NC_005089.1	RefSeq	gene	6870	6938	.	-	.	ID=gene-TrnS1;Dbxref=GeneID:17742,MGI:MGI:102475;Name=TrnS1;gbkey=Gene;gene=TrnS1;gene_biotype=tRNA
+NC_005089.1	RefSeq	tRNA	6870	6938	.	-	.	ID=rna-TrnS1;Parent=gene-TrnS1;Dbxref=GeneID:17742,MGI:MGI:102475;Note=tRNA-Ser_1;codons=UCN;gbkey=tRNA;gene=TrnS1;product=tRNA-Ser
+NC_005089.1	RefSeq	exon	6870	6938	.	-	.	ID=exon-TrnS1-1;Parent=rna-TrnS1;Dbxref=GeneID:17742,MGI:MGI:102475;Note=tRNA-Ser_1;codons=UCN;gbkey=tRNA;gene=TrnS1;product=tRNA-Ser
+NC_005089.1	RefSeq	gene	6942	7011	.	+	.	ID=gene-TrnD;Dbxref=GeneID:17728,MGI:MGI:102489;Name=TrnD;gbkey=Gene;gene=TrnD;gene_biotype=tRNA
+NC_005089.1	RefSeq	tRNA	6942	7011	.	+	.	ID=rna-TrnD;Parent=gene-TrnD;Dbxref=GeneID:17728,MGI:MGI:102489;anticodon=(pos:6973..6975);gbkey=tRNA;gene=TrnD;product=tRNA-Asp
+NC_005089.1	RefSeq	exon	6942	7011	.	+	.	ID=exon-TrnD-1;Parent=rna-TrnD;Dbxref=GeneID:17728,MGI:MGI:102489;anticodon=(pos:6973..6975);gbkey=tRNA;gene=TrnD;product=tRNA-Asp
+NC_005089.1	RefSeq	gene	7013	7696	.	+	.	ID=gene-COX2;Dbxref=GeneID:17709,MGI:MGI:102503;Name=COX2;Note=COII%3B COXII;gbkey=Gene;gene=COX2;gene_biotype=protein_coding
+NC_005089.1	RefSeq	CDS	7013	7696	.	+	0	ID=cds-NP_904331.1;Parent=gene-COX2;Dbxref=GenBank:NP_904331.1,GeneID:17709,MGI:MGI:102503;Name=NP_904331.1;gbkey=CDS;gene=COX2;product=cytochrome c oxidase subunit II;protein_id=NP_904331.1;transl_table=2
+NC_005089.1	RefSeq	gene	7700	7764	.	+	.	ID=gene-TrnK;Dbxref=GeneID:17734,MGI:MGI:102483;Name=TrnK;gbkey=Gene;gene=TrnK;gene_biotype=tRNA
+NC_005089.1	RefSeq	tRNA	7700	7764	.	+	.	ID=rna-TrnK;Parent=gene-TrnK;Dbxref=GeneID:17734,MGI:MGI:102483;anticodon=(pos:7726..7728);gbkey=tRNA;gene=TrnK;product=tRNA-Lys
+NC_005089.1	RefSeq	exon	7700	7764	.	+	.	ID=exon-TrnK-1;Parent=rna-TrnK;Dbxref=GeneID:17734,MGI:MGI:102483;anticodon=(pos:7726..7728);gbkey=tRNA;gene=TrnK;product=tRNA-Lys
+NC_005089.1	RefSeq	gene	7766	7969	.	+	.	ID=gene-ATP8;Dbxref=GeneID:17706,MGI:MGI:99926;Name=ATP8;gbkey=Gene;gene=ATP8;gene_biotype=protein_coding
+NC_005089.1	RefSeq	CDS	7766	7969	.	+	0	ID=cds-NP_904332.1;Parent=gene-ATP8;Dbxref=GenBank:NP_904332.1,GeneID:17706,MGI:MGI:99926;Name=NP_904332.1;gbkey=CDS;gene=ATP8;product=ATP synthase F0 subunit 8;protein_id=NP_904332.1;transl_table=2
+NC_005089.1	RefSeq	gene	7927	8607	.	+	.	ID=gene-ATP6;Dbxref=GeneID:17705,MGI:MGI:99927;Name=ATP6;gbkey=Gene;gene=ATP6;gene_biotype=protein_coding
+NC_005089.1	RefSeq	CDS	7927	8607	.	+	0	ID=cds-NP_904333.1;Parent=gene-ATP6;Dbxref=GenBank:NP_904333.1,GeneID:17705,MGI:MGI:99927;Name=NP_904333.1;gbkey=CDS;gene=ATP6;product=ATP synthase F0 subunit 6;protein_id=NP_904333.1;transl_table=2
+NC_005089.1	RefSeq	gene	8607	9390	.	+	.	ID=gene-COX3;Dbxref=GeneID:17710,MGI:MGI:102502;Name=COX3;Note=COIII;gbkey=Gene;gene=COX3;gene_biotype=protein_coding
+NC_005089.1	RefSeq	CDS	8607	9390	.	+	0	ID=cds-NP_904334.1;Parent=gene-COX3;Dbxref=GenBank:NP_904334.1,GeneID:17710,MGI:MGI:102502;Name=NP_904334.1;Note=TAA stop codon is completed by the addition of 3' A residues to the mRNA%3B cytochrome oxidase sununit 3;gbkey=CDS;gene=COX3;product=cytochrome c oxidase subunit III;protein_id=NP_904334.1;transl_except=(pos:9390%2Caa:TERM);transl_table=2
+NC_005089.1	RefSeq	sequence_alteration	9348	9348	.	+	.	ID=id-COX3;Dbxref=GeneID:17710,MGI:MGI:102502;Note=compared to strains C3H/He%2C Balb/cJ%2C A/J and NOD/LtJ;gbkey=variation;gene=COX3;replace=a
+NC_005089.1	RefSeq	gene	9391	9458	.	+	.	ID=gene-TrnG;Dbxref=GeneID:17731,MGI:MGI:102486;Name=TrnG;gbkey=Gene;gene=TrnG;gene_biotype=tRNA
+NC_005089.1	RefSeq	tRNA	9391	9458	.	+	.	ID=rna-TrnG;Parent=gene-TrnG;Dbxref=GeneID:17731,MGI:MGI:102486;anticodon=(pos:9421..9423);gbkey=tRNA;gene=TrnG;product=tRNA-Gly
+NC_005089.1	RefSeq	exon	9391	9458	.	+	.	ID=exon-TrnG-1;Parent=rna-TrnG;Dbxref=GeneID:17731,MGI:MGI:102486;anticodon=(pos:9421..9423);gbkey=tRNA;gene=TrnG;product=tRNA-Gly
+NC_005089.1	RefSeq	gene	9459	9806	.	+	.	ID=gene-ND3;Dbxref=GeneID:17718,MGI:MGI:102499;Name=ND3;Note=URF3;gbkey=Gene;gene=ND3;gene_biotype=protein_coding
+NC_005089.1	RefSeq	CDS	9459	9806	.	+	0	ID=cds-NP_904335.1;Parent=gene-ND3;Dbxref=GenBank:NP_904335.1,GeneID:17718,MGI:MGI:102499;Name=NP_904335.1;gbkey=CDS;gene=ND3;product=NADH dehydrogenase subunit 3;protein_id=NP_904335.1;transl_table=2
+NC_005089.1	RefSeq	sequence_alteration	9461	9461	.	+	.	ID=id-ND3;Dbxref=GeneID:17718,MGI:MGI:102499;Note=compared to other inbred strains;gbkey=variation;gene=ND3;replace=c
+NC_005089.1	RefSeq	gene	9808	9875	.	+	.	ID=gene-TrnR;Dbxref=GeneID:17741,MGI:MGI:102476;Name=TrnR;gbkey=Gene;gene=TrnR;gene_biotype=tRNA
+NC_005089.1	RefSeq	tRNA	9808	9875	.	+	.	ID=rna-TrnR;Parent=gene-TrnR;Dbxref=GeneID:17741,MGI:MGI:102476;anticodon=(pos:9838..9840);gbkey=tRNA;gene=TrnR;product=tRNA-Arg
+NC_005089.1	RefSeq	exon	9808	9875	.	+	.	ID=exon-TrnR-1;Parent=rna-TrnR;Dbxref=GeneID:17741,MGI:MGI:102476;anticodon=(pos:9838..9840);gbkey=tRNA;gene=TrnR;product=tRNA-Arg
+NC_005089.1	RefSeq	sequence_feature	9821	9830	.	+	.	ID=id-TrnR;Dbxref=GeneID:17741,MGI:MGI:102476;Note=polymorphic region;gbkey=misc_feature;gene=TrnR
+NC_005089.1	RefSeq	gene	9877	10173	.	+	.	ID=gene-ND4L;Dbxref=GeneID:17720,MGI:MGI:102497;Name=ND4L;Note=URF4L;gbkey=Gene;gene=ND4L;gene_biotype=protein_coding
+NC_005089.1	RefSeq	CDS	9877	10173	.	+	0	ID=cds-NP_904336.1;Parent=gene-ND4L;Dbxref=GenBank:NP_904336.1,GeneID:17720,MGI:MGI:102497;Name=NP_904336.1;gbkey=CDS;gene=ND4L;product=NADH dehydrogenase subunit 4L;protein_id=NP_904336.1;transl_table=2
+NC_005089.1	RefSeq	gene	10167	11544	.	+	.	ID=gene-ND4;Dbxref=GeneID:17719,MGI:MGI:102498;Name=ND4;Note=URF4;gbkey=Gene;gene=ND4;gene_biotype=protein_coding
+NC_005089.1	RefSeq	CDS	10167	11544	.	+	0	ID=cds-NP_904337.1;Parent=gene-ND4;Dbxref=GenBank:NP_904337.1,GeneID:17719,MGI:MGI:102498;Name=NP_904337.1;Note=TAA stop codon is completed by the addition of 3' A residues to the mRNA;gbkey=CDS;gene=ND4;product=NADH dehydrogenase subunit 4;protein_id=NP_904337.1;transl_except=(pos:11544%2Caa:TERM);transl_table=2
+NC_005089.1	RefSeq	sequence_alteration	10847	10847	.	+	.	ID=id-ND4;Dbxref=GeneID:17719,MGI:MGI:102498;Note=compared to strain SAMP8;gbkey=variation;gene=ND4;replace=a
+NC_005089.1	RefSeq	sequence_alteration	11181	11181	.	+	.	ID=id-ND4-2;Dbxref=GeneID:17719,MGI:MGI:102498;Note=compared to strains SAMP1 and SAMP8;gbkey=variation;gene=ND4;replace=g
+NC_005089.1	RefSeq	gene	11546	11612	.	+	.	ID=gene-TrnH;Dbxref=GeneID:17732,MGI:MGI:102485;Name=TrnH;gbkey=Gene;gene=TrnH;gene_biotype=tRNA
+NC_005089.1	RefSeq	tRNA	11546	11612	.	+	.	ID=rna-TrnH;Parent=gene-TrnH;Dbxref=GeneID:17732,MGI:MGI:102485;anticodon=(pos:11575..11577);gbkey=tRNA;gene=TrnH;product=tRNA-His
+NC_005089.1	RefSeq	exon	11546	11612	.	+	.	ID=exon-TrnH-1;Parent=rna-TrnH;Dbxref=GeneID:17732,MGI:MGI:102485;anticodon=(pos:11575..11577);gbkey=tRNA;gene=TrnH;product=tRNA-His
+NC_005089.1	RefSeq	gene	11613	11671	.	+	.	ID=gene-TrnS2;Dbxref=GeneID:17743,MGI:MGI:102474;Name=TrnS2;Note=tRNA-Ser_2;gbkey=Gene;gene=TrnS2;gene_biotype=tRNA
+NC_005089.1	RefSeq	tRNA	11613	11671	.	+	.	ID=rna-TrnS2;Parent=gene-TrnS2;Dbxref=GeneID:17743,MGI:MGI:102474;anticodon=(pos:11632..11634);codons=AGY;gbkey=tRNA;gene=TrnS2;product=tRNA-Ser
+NC_005089.1	RefSeq	exon	11613	11671	.	+	.	ID=exon-TrnS2-1;Parent=rna-TrnS2;Dbxref=GeneID:17743,MGI:MGI:102474;anticodon=(pos:11632..11634);codons=AGY;gbkey=tRNA;gene=TrnS2;product=tRNA-Ser
+NC_005089.1	RefSeq	gene	11671	11741	.	+	.	ID=gene-TrnL2;Dbxref=GeneID:17736,MGI:MGI:102481;Name=TrnL2;Note=tRNA-Leu_2;gbkey=Gene;gene=TrnL2;gene_biotype=tRNA
+NC_005089.1	RefSeq	tRNA	11671	11741	.	+	.	ID=rna-TrnL2;Parent=gene-TrnL2;Dbxref=GeneID:17736,MGI:MGI:102481;codons=CUN;gbkey=tRNA;gene=TrnL2;product=tRNA-Leu
+NC_005089.1	RefSeq	exon	11671	11741	.	+	.	ID=exon-TrnL2-1;Parent=rna-TrnL2;Dbxref=GeneID:17736,MGI:MGI:102481;codons=CUN;gbkey=tRNA;gene=TrnL2;product=tRNA-Leu
+NC_005089.1	RefSeq	gene	11742	13565	.	+	.	ID=gene-ND5;Dbxref=GeneID:17721,MGI:MGI:102496;Name=ND5;Note=URF5%3B 0610010I05Rik;gbkey=Gene;gene=ND5;gene_biotype=protein_coding
+NC_005089.1	RefSeq	CDS	11742	13565	.	+	0	ID=cds-NP_904338.1;Parent=gene-ND5;Dbxref=GenBank:NP_904338.1,GeneID:17721,MGI:MGI:102496;Name=NP_904338.1;Note=NADH dehydrogenase chain 5;gbkey=CDS;gene=ND5;product=NADH dehydrogenase subunit 5;protein_id=NP_904338.1;transl_table=2
+NC_005089.1	RefSeq	sequence_alteration	13052	13052	.	+	.	ID=id-ND5;Dbxref=GeneID:17721,MGI:MGI:102496;Note=compared to strains SAMR1%2C SAMP1 and SAMP8;gbkey=variation;gene=ND5;replace=c
+NC_005089.1	RefSeq	gene	13552	14070	.	-	.	ID=gene-ND6;Dbxref=GeneID:17722,MGI:MGI:102495;Name=ND6;Note=URF6;gbkey=Gene;gene=ND6;gene_biotype=protein_coding
+NC_005089.1	RefSeq	CDS	13552	14070	.	-	0	ID=cds-NP_904339.1;Parent=gene-ND6;Dbxref=GenBank:NP_904339.1,GeneID:17722,MGI:MGI:102495;Name=NP_904339.1;Note=EST AA435281;gbkey=CDS;gene=ND6;product=NADH dehydrogenase subunit 6;protein_id=NP_904339.1;transl_table=2
+NC_005089.1	RefSeq	gene	14071	14139	.	-	.	ID=gene-TrnE;Dbxref=GeneID:17729,MGI:MGI:102488;Name=TrnE;gbkey=Gene;gene=TrnE;gene_biotype=tRNA
+NC_005089.1	RefSeq	tRNA	14071	14139	.	-	.	ID=rna-TrnE;Parent=gene-TrnE;Dbxref=GeneID:17729,MGI:MGI:102488;gbkey=tRNA;gene=TrnE;product=tRNA-Glu
+NC_005089.1	RefSeq	exon	14071	14139	.	-	.	ID=exon-TrnE-1;Parent=rna-TrnE;Dbxref=GeneID:17729,MGI:MGI:102488;gbkey=tRNA;gene=TrnE;product=tRNA-Glu
+NC_005089.1	RefSeq	gene	14145	15288	.	+	.	ID=gene-CYTB;Dbxref=GeneID:17711,MGI:MGI:102501;Name=CYTB;gbkey=Gene;gene=CYTB;gene_biotype=protein_coding
+NC_005089.1	RefSeq	CDS	14145	15288	.	+	0	ID=cds-NP_904340.1;Parent=gene-CYTB;Dbxref=GenBank:NP_904340.1,GeneID:17711,MGI:MGI:102501;Name=NP_904340.1;Note=TAA stop codon is completed by the addition of 3' A residues to the mRNA;gbkey=CDS;gene=CYTB;product=cytochrome b;protein_id=NP_904340.1;transl_except=(pos:15288%2Caa:TERM);transl_table=2
+NC_005089.1	RefSeq	gene	15289	15355	.	+	.	ID=gene-TrnT;Dbxref=GeneID:17744,MGI:MGI:102473;Name=TrnT;gbkey=Gene;gene=TrnT;gene_biotype=tRNA
+NC_005089.1	RefSeq	tRNA	15289	15355	.	+	.	ID=rna-TrnT;Parent=gene-TrnT;Dbxref=GeneID:17744,MGI:MGI:102473;anticodon=(pos:15319..15321);gbkey=tRNA;gene=TrnT;product=tRNA-Thr
+NC_005089.1	RefSeq	exon	15289	15355	.	+	.	ID=exon-TrnT-1;Parent=rna-TrnT;Dbxref=GeneID:17744,MGI:MGI:102473;anticodon=(pos:15319..15321);gbkey=tRNA;gene=TrnT;product=tRNA-Thr
+NC_005089.1	RefSeq	gene	15356	15422	.	-	.	ID=gene-TrnP;Dbxref=GeneID:17739,MGI:MGI:102478;Name=TrnP;gbkey=Gene;gene=TrnP;gene_biotype=tRNA
+NC_005089.1	RefSeq	tRNA	15356	15422	.	-	.	ID=rna-TrnP;Parent=gene-TrnP;Dbxref=GeneID:17739,MGI:MGI:102478;gbkey=tRNA;gene=TrnP;product=tRNA-Pro
+NC_005089.1	RefSeq	exon	15356	15422	.	-	.	ID=exon-TrnP-1;Parent=rna-TrnP;Dbxref=GeneID:17739,MGI:MGI:102478;gbkey=tRNA;gene=TrnP;product=tRNA-Pro
+NC_005089.1	RefSeq	D_loop	15423	16299	.	+	.	ID=id-NC_005089.1:15423..16299;Dbxref=MGI:MGI:108422;Note=mt-Dcr%3B d-loop control region-mitochondrial;gbkey=D-loop
+NC_005089.1	RefSeq	sequence_feature	15451	15509	.	+	.	ID=id-NC_005089.1:15451..15509;Note=ETAS1%3B extended termination associated sequence 1%3B annotated according to Sbisa E.%2C et. al. (1997) Gene 205:125-140;gbkey=misc_feature
+NC_005089.1	RefSeq	sequence_feature	15515	15558	.	+	.	ID=id-NC_005089.1:15515..15558;Note=ETAS2%3B extended termination associated sequence 2%3B annotated according to Sbisa E.%2C et. al. (1997) Gene 205:125-140;gbkey=misc_feature
+NC_005089.1	RefSeq	sequence_feature	16035	16058	.	+	.	ID=id-NC_005089.1:16035..16058;Note=CSB1%3B conserved sequencing block 1%3B annotated according to Sbisa E.%2C et. al. (1997) Gene 205:125-140;gbkey=misc_feature
+NC_005089.1	RefSeq	sequence_feature	16089	16104	.	+	.	ID=id-NC_005089.1:16089..16104;Note=CSB2%3B conserved sequencing block 2%3B annotated according to Sbisa E.%2C et. al. (1997) Gene 205:125-140;gbkey=misc_feature
+NC_005089.1	RefSeq	sequence_feature	16114	16131	.	+	.	ID=id-NC_005089.1:16114..16131;Note=CSB3%3B conserved sequencing block 3%3B annotated according to Sbisa E.%2C et. al. (1997) Gene 205:125-140;gbkey=misc_feature
+
