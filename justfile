@@ -257,7 +257,7 @@ open:
         echo "   Frontend: http://localhost:8002"
         echo "   Admin:    http://localhost:8001/admin"
         echo "   API:      http://localhost:8001/api/v1/"
-        echo "   Swagger:  http://localhost:8001/swagger/v1/"
+        echo "   Swagger:  http://localhost:8001/api/v1/schema/swagger-ui/"
     fi
 
 # Execute shell in Django container
