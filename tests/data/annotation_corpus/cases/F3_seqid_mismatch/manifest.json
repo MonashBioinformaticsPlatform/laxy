@@ -16,10 +16,12 @@
         "ANN_BIOTYPE_ATTR": "",
         "ANN_PROKARYOTIC": "yes",
         "ANN_PROFILE": "ncbi_genbank",
-        "ANN_SKIP_FLAGS": "--skip_dupradar --skip_rseqc --skip_qualimap --skip_bigwig --skip_biotype_qc"
+        "ANN_SKIP_FLAGS": "--skip_dupradar --skip_rseqc --skip_qualimap --skip_bigwig --skip_biotype_qc",
+        "ANN_DROP_BIOTYPES": ""
       }
     },
     "filter": null,
+    "drop_biotype": null,
     "seqid": {
       "fasta_ids_sample": [
         "chr1",

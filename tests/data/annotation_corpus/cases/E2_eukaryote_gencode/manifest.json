@@ -16,7 +16,8 @@
         "ANN_BIOTYPE_ATTR": "gene_type",
         "ANN_PROKARYOTIC": "no",
         "ANN_PROFILE": "ensembl",
-        "ANN_SKIP_FLAGS": ""
+        "ANN_SKIP_FLAGS": "",
+        "ANN_DROP_BIOTYPES": ""
       }
     },
     "filter": {
@@ -25,6 +26,15 @@
         "input_rows_kept": 11,
         "output_rows": 11,
         "dropped": 0
+      }
+    },
+    "drop_biotype": {
+      "exit": 0,
+      "counts": {
+        "input_rows": 0,
+        "kept_rows": 0,
+        "dropped_rows": 0,
+        "dropped_ids": 0
       }
     },
     "seqid": {

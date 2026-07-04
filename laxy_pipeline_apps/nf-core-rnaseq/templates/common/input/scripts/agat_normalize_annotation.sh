@@ -168,3 +168,45 @@ function filter_annotation_features() {
     export ANN_GROUP_FEATURES="gene_id"
     export ANN_BIOTYPE_ATTR="gene_biotype"
 }
+
+# Remove whole gene groups whose biotype is in ANN_DROP_BIOTYPES (set by
+# detect_annotation_style.py when non-coding RNA biotypes like tRNA/rRNA are
+# found alongside protein-coding genes). Works around a real nf-core/rnaseq
+# bug: with --gtf_group_features Parent, Salmon quantifies a transcript for
+# every group regardless of biotype, but nf-core's tximport/
+# SummarizedExperiment step (QUANTIFY_STAR_SALMON / QUANTIFY_PSEUDO_ALIGNMENT
+# - the *same* subworkflow under two names) can't find a metadata column
+# containing non-coding RNA ids and the whole run dies with "No column
+# contains all vector entries ...". Confirmed against real Laxy prod with
+# the genuine NCBI human (NC_012920.1) and mouse (NC_005089.1) mitochondrial
+# RefSeq annotations. See ANNOTATION_REQUIREMENTS_AND_FILTERING.md §6 item 7.
+#
+# Runs AFTER filter_annotation_features (which only fires for prokaryotic
+# input) so ANNOTATION_FILE/ANN_FORMAT reflect whatever the pipeline will
+# actually hand to nf-core/rnaseq, whether that's the original GFF3
+# (eukaryotic) or the synthesised GTF (prokaryotic).
+function drop_biotype_features() {
+    [[ "${USING_CUSTOM_REFERENCE}" == "yes" ]] || return 0
+    [[ -n "${ANN_DROP_BIOTYPES:-}" ]] || return 0
+    [[ -n "${ANNOTATION_FILE:-}" && -f "${ANNOTATION_FILE}" ]] || return 0
+    [[ -n "${ANN_FORMAT:-}" ]] || return 0
+
+    local _in="${ANNOTATION_FILE}"
+    local _dir _ext _out_gz
+    _dir="$(dirname "${_in}")"
+    _ext="gtf"
+    [[ "${ANN_FORMAT}" == "gff3" ]] && _ext="gff"
+    _out_gz="${_dir}/annotation.biotype_filtered.${_ext}.gz"
+
+    mkdir -p "${JOB_PATH}/output"
+
+    python "${INPUT_SCRIPTS_PATH}/drop_biotype_features.py" \
+        --input "${_in}" \
+        --output "${_out_gz}" \
+        --format "${ANN_FORMAT}" \
+        --drop-biotypes "${ANN_DROP_BIOTYPES}" \
+        >>"${JOB_PATH}/output/annotation_drop_biotype.log" 2>&1 \
+      || fail_job 'drop_biotype_features' 'non-coding RNA biotype filter failed' $?
+
+    export ANNOTATION_FILE="${_out_gz}"
+}

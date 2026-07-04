@@ -11,6 +11,7 @@
       "stderr_contains": "No valid annotation feature rows found (empty file?)"
     },
     "filter": null,
+    "drop_biotype": null,
     "seqid": {
       "fasta_ids_sample": [
         "chr1",

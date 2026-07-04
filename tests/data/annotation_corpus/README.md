@@ -21,6 +21,7 @@ annotation_corpus/
   conftest.py                   auto-collects cases/* -> parametrized tests
   test_annotation_detect.py     tier 1: detect_annotation_style.py
   test_annotation_filter.py     tier 2: filter_annotation_features.py
+  test_annotation_drop_biotype.py tier 2b: drop_biotype_features.py
   test_annotation_seqid.py      tier 3: FASTA/annotation seqid overlap
   test_annotation_e2e.py        tier 4: nf-core/rnaseq (@e2e, slow)
   shared/
@@ -121,7 +122,7 @@ the seed fixed so committed reads stay valid.
 | E2_eukaryote_gencode        | GENCODE-style GTF (`gene_type`)                              |
 | E3_eukaryote_refseq         | RefSeq GFF3 gene/mRNA/exon/CDS hierarchy                     |
 | E4_eukaryote_no_biotype     | eukaryotic GTF missing biotype -> `--skip_biotype_qc`        |
-| E5_eukaryote_ncrna_ids      | RefSeq GFF3 mixing protein-coding + tRNA/rRNA (`ID=rna-*`); detect/filter/seqid pass but the real e2e run is a **known failure** (`expect_success: false`, see doc §6 item 7) |
+| E5_eukaryote_ncrna_ids      | RefSeq GFF3 mixing protein-coding + tRNA/rRNA (`ID=rna-*`); a fix (`drop_biotype_features.py`) exists and is unit-verified here, but `expect_success: false` until it's redeployed and reverified against a real e2e run - see doc §6 item 7 |
 | P1_prokaryote_minimal_gtf   | minimal prokaryotic CDS-only GTF                             |
 | P2_prokaryote_ncbi          | NCBI GenBank GFF3 (gbkey/Dbxref/locus_tag)                   |
 | P3_prokaryote_bakta         | Bakta GFF3 (flat CDS, `ID=locus_tag`)                        |

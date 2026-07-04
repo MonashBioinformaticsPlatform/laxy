@@ -29,6 +29,7 @@ _SCRIPTS = (
 )
 DETECT = _SCRIPTS / "detect_annotation_style.py"
 FILTER = _SCRIPTS / "filter_annotation_features.py"
+DROP_BIOTYPE = _SCRIPTS / "drop_biotype_features.py"
 CASES = _CORPUS_ROOT / "cases"
 SHARED = _HERE
 GENOME = SHARED / "genome.fa"
@@ -144,6 +145,39 @@ def run_filter(
     counts = {"input_rows_kept": 0, "output_rows": 0, "dropped": 0}
     for tok in ("input_rows_kept=", "output_rows=", "dropped="):
         pass
+    log = proc.stderr + proc.stdout
+    for key in counts:
+        marker = key + "="
+        i = log.find(marker)
+        if i >= 0:
+            tail = log[i + len(marker):]
+            num = ""
+            for ch in tail:
+                if ch.isdigit():
+                    num += ch
+                else:
+                    break
+            if num:
+                counts[key] = int(num)
+    out_path.unlink(missing_ok=True)
+    return {"rc": proc.returncode, "counts": counts, "stderr": proc.stderr.strip()}
+
+
+def run_drop_biotype(ann: Path, fmt: str, drop_biotypes: str = "") -> dict:
+    """Run drop_biotype_features.py; return rc + parsed log counters."""
+    import tempfile
+    suffix = ".gff3" if fmt == "gff3" else ".gtf"
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tf:
+        out_path = Path(tf.name)
+    proc = subprocess.run(
+        [sys.executable, str(DROP_BIOTYPE),
+         "--input", str(ann),
+         "--output", str(out_path),
+         "--format", fmt,
+         "--drop-biotypes", drop_biotypes],
+        capture_output=True, text=True,
+    )
+    counts = {"input_rows": 0, "kept_rows": 0, "dropped_rows": 0, "dropped_ids": 0}
     log = proc.stderr + proc.stdout
     for key in counts:
         marker = key + "="

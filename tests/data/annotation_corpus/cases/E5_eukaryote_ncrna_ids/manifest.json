@@ -16,7 +16,8 @@
         "ANN_BIOTYPE_ATTR": "gene_biotype",
         "ANN_PROKARYOTIC": "no",
         "ANN_PROFILE": "generic_eukaryote",
-        "ANN_SKIP_FLAGS": ""
+        "ANN_SKIP_FLAGS": "",
+        "ANN_DROP_BIOTYPES": "rRNA,tRNA"
       }
     },
     "filter": {
@@ -25,6 +26,15 @@
         "input_rows_kept": 8,
         "output_rows": 16,
         "dropped": 16
+      }
+    },
+    "drop_biotype": {
+      "exit": 0,
+      "counts": {
+        "input_rows": 24,
+        "kept_rows": 12,
+        "dropped_rows": 12,
+        "dropped_ids": 12
       }
     },
     "seqid": {
@@ -43,7 +53,7 @@
       "aligner": "star_salmon",
       "extra_flags": [],
       "expect_success": false,
-      "known_failure_reason": "nf-core/rnaseq QUANTIFY_PSEUDO_ALIGNMENT:SE_* fails with \"No column contains all vector entries ...\" - Salmon quantifies a transcript for every --gtf_group_features=Parent group (including tRNA/rRNA), but the tximport/SummarizedExperiment metadata table has no column containing those non-coding RNA ids. Confirmed against real Laxy prod with genuine NCBI human (NC_012920.1) and mouse (NC_005089.1) mitochondrial RefSeq annotations. See ANNOTATION_REQUIREMENTS_AND_FILTERING.md \u00a76 item 7."
+      "known_failure_reason": "nf-core/rnaseq QUANTIFY_PSEUDO_ALIGNMENT:SE_* (aliased as QUANTIFY_STAR_SALMON for --aligner star_salmon too - same subworkflow) fails with \"No column contains all vector entries ...\" - Salmon quantifies a transcript for every --gtf_group_features=Parent group (including tRNA/rRNA), but the tximport/SummarizedExperiment metadata table has no column containing those non-coding RNA ids. Confirmed against real Laxy prod with genuine NCBI human (NC_012920.1) and mouse (NC_005089.1) mitochondrial RefSeq annotations. A fix (drop_biotype_features.py, wired into run_job.sh via ANN_DROP_BIOTYPES) now strips these gene groups before nf-core/rnaseq sees them - verified at the annotation-transformation level (this corpus's drop_biotype stage), but NOT yet re-verified against a real pipeline run: the fix lives in laxy_pipeline_apps templates and only takes effect once rebuilt into the laxy Docker image and redeployed. Leaving expect_success false until that redeploy + a real e2e rerun confirms it. See ANNOTATION_REQUIREMENTS_AND_FILTERING.md \u00a76 item 7."
     }
   },
   "reads": {

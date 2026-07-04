@@ -18,6 +18,7 @@
       "xfail_reason": "doc ANNOTATION_REQUIREMENTS_AND_FILTERING.md \u00a76.1: AGAT-converted prokaryote GFF3 gains synthetic mRNA/exon rows, so _looks_prokaryotic returns False and the detector misclassifies it as generic_eukaryote. When the detector is fixed, this xpasses -> flip to a happy case."
     },
     "filter": null,
+    "drop_biotype": null,
     "seqid": {
       "fasta_ids_sample": [
         "chr1",

@@ -135,13 +135,34 @@ def first_present(keys: Set[str], candidates: Tuple[str, ...]) -> Optional[str]:
     return None
 
 
-def scan_annotation(path: Path) -> Tuple[Dict[str, int], Dict[str, Set[str]], FormatKind]:
+_BIOTYPE_ATTR_CANDIDATES: Tuple[str, ...] = ("gene_biotype", "gene_type", "biotype")
+
+
+def _biotype_value(attrs: Dict[str, str]) -> Optional[str]:
+    for cand in _BIOTYPE_ATTR_CANDIDATES:
+        v = attrs.get(cand)
+        if v:
+            return v
+    return None
+
+
+def scan_annotation(
+    path: Path,
+) -> Tuple[Dict[str, int], Dict[str, Set[str]], FormatKind, Set[str]]:
     ft_counts: Dict[str, int] = defaultdict(int)
     ft_keys: Dict[str, Set[str]] = defaultdict(set)
+    biotype_values: Set[str] = set()
 
     fmt_resolved: Optional[FormatKind] = None
     n_lines = 0
     pending_attrs: list[Tuple[str, str]] = []
+
+    def _record(ft: str, attrs: Dict[str, str]) -> None:
+        ft_counts[ft] += 1
+        ft_keys[ft].update(attrs.keys())
+        bt = _biotype_value(attrs)
+        if bt:
+            biotype_values.add(bt)
 
     with open_maybe_gzip(path) as raw:
         for line in iter_feature_lines(raw):
@@ -164,18 +185,14 @@ def scan_annotation(path: Path) -> Tuple[Dict[str, int], Dict[str, Set[str]], Fo
                         )
                     continue
                 for ft, ac in pending_attrs:
-                    a = parse_attributes(ac, fmt_resolved)
-                    ft_counts[ft] += 1
-                    ft_keys[ft].update(a.keys())
+                    _record(ft, parse_attributes(ac, fmt_resolved))
                 pending_attrs = []
-            attrs = parse_attributes(attr_col, fmt_resolved)
-            ft_counts[feature_type] += 1
-            ft_keys[feature_type].update(attrs.keys())
+            _record(feature_type, parse_attributes(attr_col, fmt_resolved))
 
     if fmt_resolved is None:
         raise ValueError("No valid annotation feature rows found (empty file?)")
 
-    return dict(ft_counts), {k: v for k, v in ft_keys.items()}, fmt_resolved
+    return dict(ft_counts), {k: v for k, v in ft_keys.items()}, fmt_resolved, biotype_values
 
 
 def build_extra_attributes(
@@ -364,6 +381,22 @@ def classify_profile(
     return "generic_eukaryote"
 
 
+# Non-coding RNA gene_biotype values that real annotations (NCBI RefSeq in
+# particular) commonly tag with an ID like ``rna-<NAME>`` and no
+# transcript_id-equivalent attribute. Salmon (via --aligner star_salmon's
+# internal QUANTIFY_STAR_SALMON, and via --pseudo_aligner salmon - both are
+# the *same* nf-core/rnaseq subworkflow) quantifies a transcript for every
+# --gtf_group_features=Parent group regardless of biotype, but nf-core's
+# tximport/SummarizedExperiment step then can't find a metadata column
+# containing those ids and the whole run dies. See
+# ANNOTATION_REQUIREMENTS_AND_FILTERING.md §6 item 7.
+NONCODING_RNA_BIOTYPES: frozenset[str] = frozenset((
+    "tRNA", "rRNA", "ncRNA", "misc_RNA", "snRNA", "snoRNA", "scRNA",
+    "guide_RNA", "RNase_P_RNA", "RNase_MRP_RNA", "SRP_RNA", "vault_RNA",
+    "Y_RNA", "antisense_RNA", "telomerase_RNA", "ribozyme",
+))
+
+
 def decide(
     path: Path,
 ) -> Tuple[
@@ -375,8 +408,9 @@ def decide(
     str,
     str,
     str,
+    str,
 ]:
-    ft_counts, ft_keys, fmt = scan_annotation(path)
+    ft_counts, ft_keys, fmt, biotype_values = scan_annotation(path)
 
     is_prokaryotic_hint = _looks_prokaryotic(ft_counts, ft_keys)
     feature_type = choose_counting_feature(ft_counts, ft_keys, is_prokaryotic_hint)
@@ -468,6 +502,14 @@ def decide(
 
     biotype_out = biotype_attr if biotype_attr else ""
 
+    # Only drop non-coding RNA biotypes when there's a real protein-coding
+    # (or other non-flagged) fallback to quantify - if the whole annotation
+    # is e.g. tRNA/rRNA genes there's nothing else to align against anyway,
+    # so leave it alone and let it fail as it does today.
+    noncoding_present = sorted(biotype_values & NONCODING_RNA_BIOTYPES)
+    other_biotypes_present = bool(biotype_values - NONCODING_RNA_BIOTYPES)
+    drop_biotypes = ",".join(noncoding_present) if (noncoding_present and other_biotypes_present) else ""
+
     return (
         fmt,
         feature_type,
@@ -477,6 +519,7 @@ def decide(
         prokaryotic,
         profile,
         skip_str,
+        drop_biotypes,
     )
 
 
@@ -494,6 +537,7 @@ def emit_env(
     prokaryotic: str,
     profile: str,
     skip_flags: str,
+    drop_biotypes: str,
 ) -> None:
     fp.write(f"ANN_FORMAT={shell_quote_single(fmt)}\n")
     fp.write(f"ANN_FEATURE_TYPE={shell_quote_single(feature_type)}\n")
@@ -503,6 +547,7 @@ def emit_env(
     fp.write(f"ANN_PROKARYOTIC={shell_quote_single(prokaryotic)}\n")
     fp.write(f"ANN_PROFILE={shell_quote_single(profile)}\n")
     fp.write(f"ANN_SKIP_FLAGS={shell_quote_single(skip_flags)}\n")
+    fp.write(f"ANN_DROP_BIOTYPES={shell_quote_single(drop_biotypes)}\n")
 
 
 def main() -> int:
@@ -538,6 +583,7 @@ def main() -> int:
             prokaryotic,
             profile,
             skip_str,
+            drop_biotypes,
         ) = decide(path)
     except ValueError as e:
         log.error("%s", e)
@@ -546,7 +592,8 @@ def main() -> int:
     summary = (
         f"annotation_style: profile={profile} format={fmt} "
         f"feature={feature_type} group_by={group_attr} extras={extras!r} "
-        f"biotype_attr={biotype_out!r} prokaryotic={prokaryotic} skip={skip_str!r}"
+        f"biotype_attr={biotype_out!r} prokaryotic={prokaryotic} skip={skip_str!r} "
+        f"drop_biotypes={drop_biotypes!r}"
     )
     log.info("%s", summary)
 
@@ -562,6 +609,7 @@ def main() -> int:
             prokaryotic,
             profile,
             skip_str,
+            drop_biotypes,
         )
     finally:
         if args.output:

@@ -74,13 +74,22 @@ PROK_SKIP_FULL = "--skip_dupradar --skip_rseqc --skip_qualimap --skip_bigwig --s
 # behaviour, same as every other field build_manifest() writes.
 E2E_KNOWN_FAILURES: dict[str, str] = {
     "E5_eukaryote_ncrna_ids": (
-        "nf-core/rnaseq QUANTIFY_PSEUDO_ALIGNMENT:SE_* fails with "
-        "\"No column contains all vector entries ...\" - Salmon quantifies a "
-        "transcript for every --gtf_group_features=Parent group (including "
-        "tRNA/rRNA), but the tximport/SummarizedExperiment metadata table has "
-        "no column containing those non-coding RNA ids. Confirmed against "
-        "real Laxy prod with genuine NCBI human (NC_012920.1) and mouse "
-        "(NC_005089.1) mitochondrial RefSeq annotations. See "
+        "nf-core/rnaseq QUANTIFY_PSEUDO_ALIGNMENT:SE_* (aliased as "
+        "QUANTIFY_STAR_SALMON for --aligner star_salmon too - same "
+        "subworkflow) fails with \"No column contains all vector entries "
+        "...\" - Salmon quantifies a transcript for every "
+        "--gtf_group_features=Parent group (including tRNA/rRNA), but the "
+        "tximport/SummarizedExperiment metadata table has no column "
+        "containing those non-coding RNA ids. Confirmed against real Laxy "
+        "prod with genuine NCBI human (NC_012920.1) and mouse (NC_005089.1) "
+        "mitochondrial RefSeq annotations. A fix (drop_biotype_features.py, "
+        "wired into run_job.sh via ANN_DROP_BIOTYPES) now strips these gene "
+        "groups before nf-core/rnaseq sees them - verified at the "
+        "annotation-transformation level (this corpus's drop_biotype stage), "
+        "but NOT yet re-verified against a real pipeline run: the fix lives "
+        "in laxy_pipeline_apps templates and only takes effect once rebuilt "
+        "into the laxy Docker image and redeployed. Leaving expect_success "
+        "false until that redeploy + a real e2e rerun confirms it. See "
         "ANNOTATION_REQUIREMENTS_AND_FILTERING.md §6 item 7."
     ),
 }
@@ -121,6 +130,7 @@ def build_manifest(case_dir: Path) -> dict:
         flt = cl.run_filter(
             ann, env["ANN_FORMAT"], env["ANN_FEATURE_TYPE"],
             env.get("ANN_GROUP_FEATURES", ""),
+            env.get("ANN_PROKARYOTIC", "no"),
         )
         manifest["expected"]["filter"] = {
             "exit": 0,
@@ -128,6 +138,18 @@ def build_manifest(case_dir: Path) -> dict:
         }
     else:
         manifest["expected"]["filter"] = None
+
+    # --- drop-biotype stage (real annotation.gff3/gtf, before any
+    # prokaryotic-only synthesis by filter_annotation_features) ---
+    if det["rc"] == 0 and tier in {"happy", "repairable", "detect_only"}:
+        env = det["env"]
+        drp = cl.run_drop_biotype(ann, env["ANN_FORMAT"], env.get("ANN_DROP_BIOTYPES", ""))
+        manifest["expected"]["drop_biotype"] = {
+            "exit": drp["rc"],
+            "counts": drp["counts"],
+        }
+    else:
+        manifest["expected"]["drop_biotype"] = None
 
     # --- seqid-overlap pre-flight (mirrors check_fasta_annotation_seqids) ---
     fa_ids, an_ids, overlap = cl.seqid_overlap(cl.GENOME, ann)

@@ -16,7 +16,8 @@
         "ANN_BIOTYPE_ATTR": "",
         "ANN_PROKARYOTIC": "yes",
         "ANN_PROFILE": "ncbi_genbank",
-        "ANN_SKIP_FLAGS": "--skip_dupradar --skip_rseqc --skip_qualimap --skip_bigwig --skip_biotype_qc"
+        "ANN_SKIP_FLAGS": "--skip_dupradar --skip_rseqc --skip_qualimap --skip_bigwig --skip_biotype_qc",
+        "ANN_DROP_BIOTYPES": ""
       }
     },
     "filter": {
@@ -25,6 +26,15 @@
         "input_rows_kept": 2,
         "output_rows": 6,
         "dropped": 2
+      }
+    },
+    "drop_biotype": {
+      "exit": 0,
+      "counts": {
+        "input_rows": 0,
+        "kept_rows": 0,
+        "dropped_rows": 0,
+        "dropped_ids": 0
       }
     },
     "seqid": {

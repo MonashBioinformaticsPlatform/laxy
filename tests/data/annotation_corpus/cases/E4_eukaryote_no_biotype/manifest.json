@@ -16,7 +16,8 @@
         "ANN_BIOTYPE_ATTR": "",
         "ANN_PROKARYOTIC": "no",
         "ANN_PROFILE": "generic_eukaryote",
-        "ANN_SKIP_FLAGS": "--skip_biotype_qc"
+        "ANN_SKIP_FLAGS": "--skip_biotype_qc",
+        "ANN_DROP_BIOTYPES": ""
       }
     },
     "filter": {
@@ -25,6 +26,15 @@
         "input_rows_kept": 5,
         "output_rows": 5,
         "dropped": 0
+      }
+    },
+    "drop_biotype": {
+      "exit": 0,
+      "counts": {
+        "input_rows": 0,
+        "kept_rows": 0,
+        "dropped_rows": 0,
+        "dropped_ids": 0
       }
     },
     "seqid": {
