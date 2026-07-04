@@ -396,6 +396,15 @@ NONCODING_RNA_BIOTYPES: frozenset[str] = frozenset((
     "Y_RNA", "antisense_RNA", "telomerase_RNA", "ribozyme",
 ))
 
+# Row (column-3) types that are structural/child rows rather than the
+# "transcript unit" row itself - excluded when checking for transcript_id
+# coverage, since gene_biotype lives on "gene" and transcript_id (when
+# present at all) lives on the mRNA/tRNA/rRNA/ncRNA/... row one level down.
+_STRUCTURAL_FEATURE_TYPES: frozenset[str] = frozenset((
+    "gene", "exon", "CDS", "region", "five_prime_UTR", "three_prime_UTR",
+    "start_codon", "stop_codon",
+))
+
 
 def decide(
     path: Path,
@@ -502,13 +511,28 @@ def decide(
 
     biotype_out = biotype_attr if biotype_attr else ""
 
-    # Only drop non-coding RNA biotypes when there's a real protein-coding
-    # (or other non-flagged) fallback to quantify - if the whole annotation
-    # is e.g. tRNA/rRNA genes there's nothing else to align against anyway,
-    # so leave it alone and let it fail as it does today.
+    # Only drop non-coding RNA biotypes when:
+    #  (a) there's a real protein-coding (or other non-flagged) fallback to
+    #      quantify - if the whole annotation is e.g. tRNA/rRNA genes there's
+    #      nothing else to align against anyway, so leave it alone; and
+    #  (b) transcript_id is genuinely missing from every transcript-level row
+    #      in this annotation. Real nuclear NCBI RefSeq annotations commonly
+    #      tag lncRNA/miRNA/snoRNA genes with gene_biotype values that are
+    #      also in NONCODING_RNA_BIOTYPES, but *do* carry a proper
+    #      transcript_id (e.g. ID=rna-XR_...;transcript_id=XR_...) - those
+    #      are perfectly fine for Salmon/tximport and must not be dropped.
+    #      It's specifically organelle genomes (mitochondrial tRNA/rRNA)
+    #      that carry no transcript_id-equivalent attribute at all.
     noncoding_present = sorted(biotype_values & NONCODING_RNA_BIOTYPES)
     other_biotypes_present = bool(biotype_values - NONCODING_RNA_BIOTYPES)
-    drop_biotypes = ",".join(noncoding_present) if (noncoding_present and other_biotypes_present) else ""
+    transcript_level_has_txid = any(
+        "transcript_id" in keys
+        for ft, keys in ft_keys.items()
+        if ft not in _STRUCTURAL_FEATURE_TYPES
+    )
+    drop_biotypes = ",".join(noncoding_present) if (
+        noncoding_present and other_biotypes_present and not transcript_level_has_txid
+    ) else ""
 
     return (
         fmt,
