@@ -122,7 +122,7 @@ def submit(case_id: str, ann_name: str) -> str:
         "--api_base_url", API,
         "--pipeline_name", "nf-core-rnaseq",
         "--pipeline_version", PIPELINE_VERSION,
-        "--job_description", f"corpus-laxycli-{case_id}",
+        "--job_description", f"E2E test: {case_id}",
         "--genome_fasta_url", urls["genome"],
         "--genome_annotation_url", urls["annotation"],
         "--urls_file", urls_file,
