@@ -353,8 +353,19 @@ def create_job(args: Namespace) -> Optional[str]:
         logger.error("Failed to create pipelinerun")
         sys.exit(1)
 
+    job_create_body = {}
+    if getattr(args, "compute_resource_id", None):
+        # Explicit compute_resource bypasses the backend's auto-selection
+        # (highest-priority online ComputeResource matching the owner's email
+        # domain rule), which on environments with multiple registered compute
+        # resources (e.g. real HPC clusters alongside a local fake-cluster for
+        # testing) could otherwise route a job somewhere unintended.
+        job_create_body["compute_resource"] = args.compute_resource_id
+
     job_resp = requests.post(
-        f"{args.api_base_url}/job/?pipeline_run_id={pipelinerun_id}", headers=headers
+        f"{args.api_base_url}/job/?pipeline_run_id={pipelinerun_id}",
+        json=job_create_body,
+        headers=headers,
     )
     try:
         job_resp_blob = job_resp.json()
@@ -529,6 +540,16 @@ def main():
         type=str,
         required=True,
         help="File containing URLs of input read files, one per line.",
+    )
+    job_create_parser.add_argument(
+        "--compute_resource_id",
+        type=str,
+        default=None,
+        help="Explicit ComputeResource id to run the job on, bypassing the "
+        "backend's auto-selection (highest-priority online resource "
+        "matching the owner's email domain rule). Use this on environments "
+        "with multiple registered compute resources to avoid accidentally "
+        "targeting a real HPC cluster instead of a local test resource.",
     )
     job_create_parser.add_argument(
         "--no-wait",
