@@ -105,3 +105,8 @@ certs/
 nginx.conf
 # Annotation corpus: __pycache__ for the corpus test helpers
 tests/data/annotation_corpus/__pycache__/
+
+
+# Local, host-specific supplement to AGENTS.md/CLAUDE.md (not for git)
+AGENTS.local.md
+docs/dev-prod-deployment.md
