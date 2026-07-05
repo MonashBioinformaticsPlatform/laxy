@@ -30,7 +30,7 @@ dependencies:
   # General run_job.sh dependencies. Many of these will already exist on a typical
   # Linux system but we pull them in explicitly to ensure they are available, even on
   # barebones systems (eg slimmed down Docker containers)
-  - python=3.9
+  - python=3.10
   - pip
   - conda-pack
   - aria2

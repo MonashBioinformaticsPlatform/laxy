@@ -270,14 +270,35 @@ function init_conda_env() {
     # https://github.com/conda/conda/issues/3200
     set +o nounset
 
+    # miniconda3's bin/activate script activates "$@" when sourced, and a
+    # sourced script inherits the calling function's positional params -
+    # without this, it picks up this function's own "${1}" "${2}" (eg
+    # "nf-core-rnaseq" "default") and fails with
+    # "ArgumentError: activate does not accept more than one argument".
+    set --
     source "${CONDA_BASE}/bin/activate"
-    
-    if [[ ! -d "${CONDA_BASE}/envs/${env_name}" ]]; then
+
+    # A directory existing isn't enough to know the env is usable - env creation can fail
+    # partway through (eg the pip step), leaving a broken directory behind that would
+    # otherwise be silently reused forever. Only a completion marker, written after the
+    # env is fully built, means we can skip rebuilding it.
+    local _env_ready_marker="${CONDA_BASE}/envs/${env_name}/.laxy_env_ready"
+    if [[ -d "${CONDA_BASE}/envs/${env_name}" ]] && [[ ! -f "${_env_ready_marker}" ]]; then
+        send_event "JOB_INFO" "Removing incomplete conda environment ${env_name} from a previous failed install"
+        rm -rf "${CONDA_BASE}/envs/${env_name}"
+    fi
+
+    if [[ ! -f "${_env_ready_marker}" ]]; then
         send_event "JOB_INFO" "Installing dependencies (conda environment ${env_name})"
 
-        # Accept the terms of service for the conda channels
-        conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main || return 1
-        conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r || return 1
+        # Accept the terms of service for the conda channels. CONDA_PLUGINS_AUTO_ACCEPT_TOS
+        # covers conda versions/plugins that enforce channel ToS without needing the `conda tos`
+        # subcommand at all: https://www.anaconda.com/docs/getting-started/tos-plugin#ci%2Fcd-environments
+        # The explicit `conda tos accept` calls are best-effort on top of that, since older conda
+        # installs (lacking the tos plugin) don't have this subcommand at all.
+        export CONDA_PLUGINS_AUTO_ACCEPT_TOS=true
+        conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main || true
+        conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r || true
 
         # First we update conda itself
         ${CONDA_BASE}/bin/conda update --yes -n base conda || return 1
@@ -313,6 +334,8 @@ function init_conda_env() {
             # Create from an environment (yml) file
             ${CONDA_INSTALL_BINARY} env create --name "${env_name}" --file "${INPUT_CONFIG_PATH}/conda_environment.yml" || return 1
         fi
+
+        touch "${_env_ready_marker}"
     fi
 
     # We shouldn't need to do this .. but it seems required for _some_ environments (ie M3)
