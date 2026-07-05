@@ -32,6 +32,7 @@ dependencies:
   # barebones systems (eg slimmed down Docker containers)
   - python=3.10
   - pip
+  - setuptools<81
   - conda-pack
   - aria2
   # older openssl and icu required to support aria2 on some systems
@@ -46,7 +47,7 @@ dependencies:
   - coreutils
   # Pipeline specific
   - nextflow=22.10.4
-  - nf-core=2.7.2
+  - nf-core=2.10
   - openjdk=17.0.3
   # For when we don't have singularity
   - subread=2.0.1

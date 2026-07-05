@@ -30,6 +30,7 @@ dependencies:
   # barebones systems (eg slimmed down Docker containers)
   - python=3.12
   - pip
+  - setuptools<81
   - conda-pack
   - aria2
   # older openssl and icu required to support aria2 on some systems
