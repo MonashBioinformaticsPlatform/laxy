@@ -425,10 +425,20 @@ function normalize_annotations() {
     local _nfcore_gtf_group_features="${ANN_GROUP_FEATURES}"
     [[ "${ANN_FORMAT}" == "gff3" ]] && _nfcore_gtf_group_features="gene_id"
 
+    # Same gffread-conversion problem as above, but for the biotype attribute used by
+    # SUBREAD_FEATURECOUNTS's biotype QC (--featurecounts_group_type): NCBI/RefSeq GFF3's
+    # "gene_biotype" attribute on gene rows does not survive nf-core's internal gffread
+    # GFF3->GTF conversion, while "gbkey" (the GenBank feature key, eg Gene/mRNA/ncRNA/CDS)
+    # does. Passing "gene_biotype" through unchanged makes featureCounts fail outright with
+    # "failed to find the gene identifier attribute in the 9th column". Confirmed against a
+    # real mouse chr19 whole-chromosome run. See ANNOTATION_REQUIREMENTS_AND_FILTERING.md §6 item 9.
+    local _nfcore_biotype_attr="${ANN_BIOTYPE_ATTR}"
+    [[ "${ANN_FORMAT}" == "gff3" ]] && [[ "${ANN_BIOTYPE_ATTR}" == "gene_biotype" ]] && _nfcore_biotype_attr="gbkey"
+
     ANNOTATION_FLAGS=" --featurecounts_feature_type ${ANN_FEATURE_TYPE}"
     ANNOTATION_FLAGS+=" --gtf_group_features ${_nfcore_gtf_group_features}"
     [[ -n "${ANN_EXTRA_ATTRIBUTES}" ]] &&         ANNOTATION_FLAGS+=" --gtf_extra_attributes ${ANN_EXTRA_ATTRIBUTES}"
-    [[ -n "${ANN_BIOTYPE_ATTR}" ]] &&         ANNOTATION_FLAGS+=" --featurecounts_group_type ${ANN_BIOTYPE_ATTR}"
+    [[ -n "${_nfcore_biotype_attr}" ]] &&         ANNOTATION_FLAGS+=" --featurecounts_group_type ${_nfcore_biotype_attr}"
     [[ -n "${ANN_SKIP_FLAGS}" ]] && ANNOTATION_FLAGS+=" ${ANN_SKIP_FLAGS}"
     export ANNOTATION_FLAGS
 }
@@ -555,7 +565,6 @@ function cache_pipeline() {
                         --container-cache-utilisation amend \
                         --parallel-downloads ${LAXYDL_PARALLEL_DOWNLOADS} \
                         --compress none \
-                        --download-configuration no \
                         --outdir "${CACHED_PIPELINE_PATH}"
     fi
 
