@@ -28,7 +28,10 @@ dependencies = [
     "toolz",
     "backoff",
     "attrdict @ git+https://github.com/caotians1/AttrDict.git@master",
-    "trio",
+    # asks pins anyio~=3.0, whose trio backend relies on trio.MultiError - removed in
+    # newer trio releases (AttributeError: module 'trio' has no attribute 'MultiError').
+    # Pin to the last version known to work with anyio 3.x's trio backend.
+    "trio==0.24.0",
     "psutil",
     "python-magic",
     "text-unidecode",
