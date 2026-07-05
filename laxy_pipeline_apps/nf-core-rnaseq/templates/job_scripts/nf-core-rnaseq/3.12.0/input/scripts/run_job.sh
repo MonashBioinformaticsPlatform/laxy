@@ -400,8 +400,27 @@ function normalize_annotations() {
         export GENOME_ARGS
     fi
 
+    # nf-core/rnaseq's own PREPARE_GENOME converts a --gff input to GTF via
+    # gffread internally, which always synthesises gene_id/transcript_id
+    # attributes from ID=/Parent= regardless of the original GFF3's
+    # hierarchy attribute name - "Parent" itself is consumed and does not
+    # survive into the GTF that CUSTOM_TX2GENE (and QUANTIFY_STAR_SALMON's
+    # own internal Salmon quantification) reads via --gtf_group_features.
+    # Passing the raw ANN_GROUP_FEATURES (e.g. "Parent", picked for OUR OWN
+    # filter_annotation_features.py/drop_biotype_features.py parsing of the
+    # ORIGINAL GFF3) straight through to nf-core here means every row's
+    # attribute lookup for that name fails, producing an empty tx2gene
+    # mapping and tximport dying with "No column contains all vector
+    # entries ...". Confirmed against a real human chr21 3Mb region.
+    # See ANNOTATION_REQUIREMENTS_AND_FILTERING.md §6 item 9.
+    # When --gtf is passed instead (ANN_FORMAT=gtf), nf-core uses the file
+    # unchanged with no internal conversion, so the detected grouping
+    # attribute genuinely is what's in the file and must be passed as-is.
+    local _nfcore_gtf_group_features="${ANN_GROUP_FEATURES}"
+    [[ "${ANN_FORMAT}" == "gff3" ]] && _nfcore_gtf_group_features="gene_id"
+
     ANNOTATION_FLAGS=" --featurecounts_feature_type ${ANN_FEATURE_TYPE}"
-    ANNOTATION_FLAGS+=" --gtf_group_features ${ANN_GROUP_FEATURES}"
+    ANNOTATION_FLAGS+=" --gtf_group_features ${_nfcore_gtf_group_features}"
     [[ -n "${ANN_EXTRA_ATTRIBUTES}" ]] &&         ANNOTATION_FLAGS+=" --gtf_extra_attributes ${ANN_EXTRA_ATTRIBUTES}"
     [[ -n "${ANN_BIOTYPE_ATTR}" ]] &&         ANNOTATION_FLAGS+=" --featurecounts_group_type ${ANN_BIOTYPE_ATTR}"
     [[ -n "${ANN_SKIP_FLAGS}" ]] && ANNOTATION_FLAGS+=" ${ANN_SKIP_FLAGS}"
