@@ -280,11 +280,16 @@ function init_conda_env() {
 
     # A directory existing isn't enough to know the env is usable - env creation can fail
     # partway through (eg the pip step), leaving a broken directory behind that would
-    # otherwise be silently reused forever. Only a completion marker, written after the
-    # env is fully built, means we can skip rebuilding it.
-    local _env_ready_marker="${CONDA_BASE}/envs/${env_name}/.laxy_env_ready"
+    # otherwise be silently reused forever. We key the completion marker on a hash of the
+    # environment spec file, so editing conda_environment(_explicit).yml/txt also triggers
+    # a rebuild rather than silently reusing a now-stale environment.
+    local _env_spec_file="${INPUT_CONFIG_PATH}/conda_environment.yml"
+    [[ -f "${INPUT_CONFIG_PATH}/conda_environment_explicit.txt" ]] && _env_spec_file="${INPUT_CONFIG_PATH}/conda_environment_explicit.txt"
+    local _env_spec_hash
+    _env_spec_hash=$(md5sum "${_env_spec_file}" | cut -d' ' -f1)
+    local _env_ready_marker="${CONDA_BASE}/envs/${env_name}/.laxy_env_ready-${_env_spec_hash}"
     if [[ -d "${CONDA_BASE}/envs/${env_name}" ]] && [[ ! -f "${_env_ready_marker}" ]]; then
-        send_event "JOB_INFO" "Removing incomplete conda environment ${env_name} from a previous failed install"
+        send_event "JOB_INFO" "Removing incomplete or outdated conda environment ${env_name} from a previous install"
         rm -rf "${CONDA_BASE}/envs/${env_name}"
     fi
 
