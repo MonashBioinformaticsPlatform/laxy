@@ -64,8 +64,9 @@ gene counts - doc §6 item 7), so its `expected.e2e.expect_success` is
 the case where the counted feature type disappears entirely after the
 drop (real mitochondrial genome shape). E7 exercises a related but
 separate fix (`insert_missing_transcript.py`, doc §6 item 8) for flat
-single/multi-exon pseudogenes with no transcript row - not yet
-re-verified against a real pipeline run.
+single/multi-exon pseudogenes with no transcript row - verified end to
+end via a real e2e run against laxy-dev, so its `expected.e2e.expect_success`
+is `true` too.
 
 ## Running
 

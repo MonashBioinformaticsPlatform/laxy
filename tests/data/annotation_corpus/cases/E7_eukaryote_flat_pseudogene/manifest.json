@@ -61,8 +61,7 @@
       "run": true,
       "aligner": "star_salmon",
       "extra_flags": [],
-      "expect_success": false,
-      "known_failure_reason": "nf-core/rnaseq's own GFF3->GTF conversion (used to build the transcript FASTA via rsem-prepare-reference, regardless of --aligner choice) can't resolve gene_id for flat single/multi-exon pseudogenes whose exon rows point Parent= directly at the gene (no transcript/mRNA row) - dies with \"Cannot find gene_id!\", aborting the whole pipeline. Confirmed in both human (chr21, gene RPL8P2) and mouse (chr19, gene Gm36006) RefSeq annotations. A fix (insert_missing_transcript.py, wired into run_job.sh as the first normalisation step) synthesises the missing transcript wrapper - verified at the annotation-transformation level (this corpus's insert_transcript stage), but NOT yet re-verified against a real pipeline run pending redeploy. See ANNOTATION_REQUIREMENTS_AND_FILTERING.md \u00a76 item 8."
+      "expect_success": true
     }
   },
   "reads": {
