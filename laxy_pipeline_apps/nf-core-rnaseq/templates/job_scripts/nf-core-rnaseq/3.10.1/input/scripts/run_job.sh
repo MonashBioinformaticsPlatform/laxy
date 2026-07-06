@@ -41,7 +41,12 @@ export SINGULARITY_TMPDIR="${TMPDIR}"
 export APPTAINER_TMPDIR="${TMPDIR}"
 export AUTH_HEADER_FILE="${JOB_PATH}/.private_request_headers"
 export IGNORE_SELF_SIGNED_CERTIFICATE="{{ IGNORE_SELF_SIGNED_CERTIFICATE }}"
-export LAXYDL_BRANCH="1bf87be" # ${LAXYDL_BRANCH:-master}
+export LAXYDL_BRANCH="1bf87be" # ${LAXYDL_BRANCH:-master} - pinned to avoid a conda dependency clash
+# Use the current laxydl container image (built from master) for actual downloads instead of the
+# conda-installed laxydl (which is stuck on the pinned LAXYDL_BRANCH commit above and lacks later
+# download-reliability fixes). Requires apptainer to be available on the compute resource.
+export LAXYDL_CONTAINER_IMAGE="ghcr.io/monashbioinformaticsplatform/laxy/laxy-downloader:547b119"
+export LAXYDL_APPTAINER_PREFIX="apptainer exec -B ${JOB_PATH} -B ${DOWNLOAD_CACHE_PATH} docker://${LAXYDL_CONTAINER_IMAGE}"
 export LAXYDL_USE_ARIA2C=${LAXYDL_USE_ARIA2C:-yes}
 export LAXYDL_PARALLEL_DOWNLOADS=${LAXYDL_PARALLEL_DOWNLOADS:-8}
 export AGAT_CONTAINER_IMAGE="quay.io/biocontainers/agat:1.6.1--pl5321hdfd78af_1"
