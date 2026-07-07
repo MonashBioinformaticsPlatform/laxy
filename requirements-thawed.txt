@@ -18,10 +18,10 @@ PyYAML>=5.4
 toolz
 xxhash
 lxml
+beautifulsoup4
 pandas
 enasearch
 attrdict
-robox
 python-magic
 urllib3
 Jinja2

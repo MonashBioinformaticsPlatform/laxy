@@ -106,7 +106,7 @@ default_env = PrefixedEnv(
     JOB_EXPIRY_TTL_FAILED=(int, 3 * 24 * 60 * 60),  # 3 days
     WEB_SCRAPER_BACKEND=(str, "simple"),
     WEB_SCRAPER_SPLASH_HOST=(str, "http://localhost:8050"),
-    DEGUST_URL=(str, "http://degust.erc.monash.edu"),
+    DEGUST_URL=(str, "https://degust.erc.monash.edu"),
     EMAIL_DOMAIN_ALLOWED_COMPUTE=(dictify_json_loads, {"*": ["*"]}),
     LINK_SCRAPER_MAPPINGS=(dictify_json_loads, {}),
 )
@@ -264,7 +264,7 @@ When running under docker-compose this might be 'http://splash:8050'.
 DEGUST_URL = env("DEGUST_URL")
 """
 The base URL to the Degust instance you'd like to use (eg, could be changed to 
-"http://degust-training.erc.monash.edu" or a dev instance of Degust)
+"https://degust-training.erc.monash.edu" or a dev instance of Degust)
 """
 
 EMAIL_DOMAIN_ALLOWED_COMPUTE = env("EMAIL_DOMAIN_ALLOWED_COMPUTE")

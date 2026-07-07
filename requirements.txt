@@ -20,10 +20,10 @@ PyYAML==6.0.3
 toolz==1.1.0
 xxhash==3.6.0
 lxml==6.0.2
+beautifulsoup4==4.15.0
 pandas==2.3.3
 enasearch==0.2.0
 attrdict==2.0.1
-robox==0.2.3
 python-magic==0.4.27
 urllib3==2.5.0
 Jinja2==3.1.6

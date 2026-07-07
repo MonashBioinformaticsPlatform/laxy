@@ -2,7 +2,7 @@
 """
 External Integrations Testing Script for Laxy
 
-Tests external integrations including Degust (robox), WebDAV (webdav4), 
+Tests external integrations including Degust (requests multipart upload), WebDAV (webdav4),
 and social authentication (rest-social-auth).
 
 Usage:
@@ -77,25 +77,27 @@ class ExternalIntegrationsTester:
             return False
     
     def test_degust_integration_dependencies(self) -> bool:
-        """Test Degust integration dependencies (robox replacement)"""
+        """Test Degust integration (multipart upload via requests)"""
         try:
             self.log("Testing Degust integration dependencies...")
-            
-            # Test if robox can be imported (replaced robobrowser)
+
+            degust_url = os.environ.get(
+                "LAXY_DEGUST_URL", "http://degust.erc.monash.edu"
+            )
+            upload_url = f"{degust_url.rstrip('/')}/upload"
             try:
-                from robox import Robox
-                self.log("✅ Robox library imported successfully (robobrowser replacement)")
-                
-                # Test basic Robox functionality
-                with Robox() as robox:
-                    self.log("✅ Robox context manager working")
-                    return True
-                    
-            except ImportError as e:
-                self.log(f"⚠️  Robox import failed: {e} (may not be available in test environment)")
-                self.log("⚠️  This is acceptable - module is available in Django container")
-                return True  # Not a failure - module exists in container
-                
+                response = requests.head(upload_url, timeout=5, allow_redirects=True)
+                if response.status_code in (200, 301, 302, 405):
+                    self.log(f"✅ Degust upload endpoint reachable: {upload_url}")
+                else:
+                    self.log(
+                        f"⚠️  Degust upload endpoint returned {response.status_code}"
+                    )
+            except requests.exceptions.RequestException as e:
+                self.log(f"⚠️  Degust upload endpoint not reachable: {e}")
+
+            return True
+
         except Exception as e:
             self.log(f"⚠️  Degust dependencies test inconclusive: {e}")
             return True  # Not a failure

@@ -24,9 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 - Removed `coreapi` and `coreschema` dependencies (replaced with native DRF OpenAPI parameter support via `get_schema_operation_parameters`)
+- `robox` package (Degust upload now uses `requests` multipart POST; no longer used elsewhere)
 - AGAT preprocessing is not applied inside `featurecounts_postnfcore.nf` (`PREPARE_ANNOTATION` decompresses/unlinks only); custom-reference AGAT rewriting lives in pipeline `run_job.sh` ahead of nf-core/rnaseq instead.
 
 ### Fixed
+- Added missing `beautifulsoup4` dependency required by `laxy_backend.scraping` and `laxy_backend.filesender`
+- **Send to Degust** - Fixed upload failure (`TypeError: 'Form' object does not support item assignment`, issue #295) by replacing Robox form scraping with direct multipart `requests` upload to the Degust API; upload and session settings are now sent in a single multipart POST (separate settings POST requires CSRF and caused 502 on first request while caching a partial session URL)
 - **laxydl** input downloads no longer fail instantly on a transient CDN error. The aria2c downloader used `max-file-not-found=1`, so a single spurious 404-class response (e.g. a jsDelivr edge node still populating its cache under concurrent load) aborted the whole download in ~1s, ignoring the configured `max-tries`/`retry-wait`; raised to `5` so such responses are retried. The non-aria2c (`requests`) path now also retries on 429/500/503/504 (previously only 502).
 - nf-core-rnaseq / nf-core-rnaseq-brbseq jobs: `laxy_nextflow.config` sets `params.igenomes_base` without a trailing slash so iGenomes S3 paths are not built as `igenomes//species/...` (invalid object keys / missing reference). Added `aws.client.anonymous` and `eu-west-1` for the public `ngi-igenomes` bucket; `run_job.sh` exports `AWS_EC2_METADATA_DISABLED=true` so the AWS SDK does not attempt EC2 instance metadata from inside Docker (noisy `NoRouteToHost` to `169.254.169.254`).
 - Added explicit `setuptools>=75,<82` dependency for Python 3.12+ compatibility (`fs`/PyFilesystem2 requires `pkg_resources`, which was removed in setuptools 82)

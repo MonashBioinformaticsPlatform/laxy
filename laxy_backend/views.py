@@ -51,7 +51,6 @@ from fs.errors import DirectoryExpected
 from io import BufferedReader, BytesIO, StringIO
 from pathlib import Path
 import paramiko
-from robox import Robox
 from rest_framework import generics
 from rest_framework import status
 from rest_framework.settings import api_settings
@@ -2977,57 +2976,12 @@ class SendFileToDegust(JSONView):
             if data.is_valid():
                 return Response(data=data.validated_data, status=status.HTTP_200_OK)
 
-        # TODO: Robox is still required since while Degust no longer requires a CSRF token upon upload,
-        #       an 'upload_token' per-user is required:
-        #       https://github.com/drpowell/degust/blob/master/FAQ.md#uploading-a-counts-file-from-the-command-line
-        #       We either need an application level API token for Degust (to create anonymous uploads), or a
-        #       trust relationship (eg proper OAuth2 provider or simple shared Google Account ID) that allows
-        #       Laxy to retrieve the upload token for a user programmatically
+        # Degust accepts anonymous multipart uploads via POST (no per-user API); see:
+        # https://github.com/drpowell/degust/blob/master/FAQ.md#uploading-a-counts-file-from-the-command-line
+        # Upload and settings must be sent in one multipart POST; a separate settings POST
+        # requires a CSRF token and fails for anonymous sessions.
         url = f"{degust_api_url}/upload"
 
-        # TODO: This is to deal with SFTPStorage backend timeouts etc
-        #       Ideally we would fork / subclass SFTPStorage and SFTPStorageFile
-        #       and add some built-in backoff / retry functionality
-        #       eg: https://github.com/MonashBioinformaticsPlatform/laxy/issues/52
-        @backoff.on_exception(
-            backoff.expo,
-            (
-                EOFError,
-                IOError,
-                OSError,
-                ssh_exception.SSHException,
-                ssh_exception.AuthenticationException,
-            ),
-            max_tries=3,
-            jitter=backoff.full_jitter,
-        )
-        def upload_file_to_degust(url, counts_file):
-            with Robox() as robox:
-                # Open the upload page and get the form
-                page = robox.open(url)
-                form = page.get_form()
-
-                # Attach the file to the form
-                form["filename"] = counts_file.file
-
-                # Submit the form and get the response page
-                response_page = page.submit_form(form)
-                return response_page
-
-        response_page = upload_file_to_degust(url, counts_file)
-
-        degust_config_url = response_page.url.replace(
-            "/compare.html?", "/config.html?", 1
-        )
-        degust_id = (
-            parse_qs(urlparse(degust_config_url).query).get("code", [None]).pop()
-        )
-
-        counts_file.metadata["degust_url"] = degust_config_url
-        counts_file.save()
-
-        # Now POST the settings to the Degust session, as per:
-        # https://github.com/drpowell/degust/blob/master/FAQ.md#uploading-a-counts-file-from-the-command-line
         description = job.params.get("params").get("description", "")
         replicates = list(degust_conditions.items())
         init_select = []
@@ -3064,8 +3018,11 @@ class SendFileToDegust(JSONView):
             "gene_name",
             "gene_biotype",
         ]
+        counts_file.file.seek(0)
         counts_header = _firstline(counts_file.file).split("\t")
         info_columns = list(set(counts_header).intersection(set(valid_info_columns)))
+
+        link_column = "gene_id" if "gene_id" in info_columns else "Gene.ID"
 
         degust_settings = {
             "csv_format": False,
@@ -3082,20 +3039,80 @@ class SendFileToDegust(JSONView):
             # 'primary_name': '',
             "init_select": init_select,
             # 'hidden_factor': [],
-            "link_column": "Gene.ID",
+            "link_column": link_column,
             "min_counts": 10,
             # "min_cpm": 10,
             # "min_cpm_samples": 2
         }
 
-        degust_settings_url = f"{degust_api_url}/degust/{degust_id}/settings"
-        resp = requests.post(
-            degust_settings_url, files={"settings": (None, json.dumps(degust_settings))}
+        # TODO: This is to deal with SFTPStorage backend timeouts etc
+        #       Ideally we would fork / subclass SFTPStorage and SFTPStorageFile
+        #       and add some built-in backoff / retry functionality
+        #       eg: https://github.com/MonashBioinformaticsPlatform/laxy/issues/52
+        @backoff.on_exception(
+            backoff.expo,
+            (
+                EOFError,
+                IOError,
+                OSError,
+                ssh_exception.SSHException,
+                ssh_exception.AuthenticationException,
+            ),
+            max_tries=3,
+            jitter=backoff.full_jitter,
         )
-        resp.raise_for_status()
+        def upload_file_to_degust(url, counts_file, degust_settings):
+            counts_file.file.seek(0)
+            upload_filename = counts_file.name or "counts.tsv"
+            files = {
+                "filename": (
+                    upload_filename,
+                    counts_file.file,
+                    "text/tab-separated-values",
+                ),
+                "settings": (None, json.dumps(degust_settings)),
+            }
+            resp = requests.post(url, files=files, allow_redirects=True)
+            resp.raise_for_status()
+            counts_file.file.seek(0)
+            return resp
+
+        try:
+            upload_response = upload_file_to_degust(url, counts_file, degust_settings)
+        except requests.exceptions.ConnectionError:
+            return Response(
+                {
+                    "status": status.HTTP_502_BAD_GATEWAY,
+                    "detail": f"Could not connect to Degust at {degust_api_url}.",
+                },
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        except requests.exceptions.Timeout:
+            return Response(
+                {
+                    "status": status.HTTP_504_GATEWAY_TIMEOUT,
+                    "detail": f"Timed out contacting Degust at {degust_api_url}.",
+                },
+                status=status.HTTP_504_GATEWAY_TIMEOUT,
+            )
+        except requests.exceptions.HTTPError as ex:
+            return Response(
+                {
+                    "status": ex.response.status_code,
+                    "detail": f"Degust returned HTTP {ex.response.status_code}.",
+                },
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        degust_config_url = upload_response.url.replace(
+            "/compare.html?", "/config.html?", 1
+        )
+
+        counts_file.metadata["degust_url"] = degust_config_url
+        counts_file.save()
 
         data = RedirectResponseSerializer(
-            data={"status": response_page.status_code, "redirect": degust_config_url}
+            data={"status": upload_response.status_code, "redirect": degust_config_url}
         )
         if data.is_valid():
             return Response(data=data.validated_data, status=status.HTTP_200_OK)
