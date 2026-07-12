@@ -397,7 +397,11 @@ function normalize_annotations() {
     # "failed to find the gene identifier attribute in the 9th column". Confirmed against a
     # real mouse chr19 whole-chromosome run. See ANNOTATION_REQUIREMENTS_AND_FILTERING.md §6 item 9.
     export NFCORE_BIOTYPE_ATTR="${ANN_BIOTYPE_ATTR}"
-    [[ "${ANN_FORMAT}" == "gff3" ]] && [[ "${ANN_BIOTYPE_ATTR}" == "gene_biotype" ]] && NFCORE_BIOTYPE_ATTR="gbkey"
+    local _biotype_attr_forced=no
+    if [[ "${ANN_FORMAT}" == "gff3" ]] && [[ "${ANN_BIOTYPE_ATTR}" == "gene_biotype" ]]; then
+        NFCORE_BIOTYPE_ATTR="gbkey"
+        _biotype_attr_forced=yes
+    fi
 
     ANNOTATION_FLAGS=" --featurecounts_feature_type ${ANN_FEATURE_TYPE}"
     ANNOTATION_FLAGS+=" --gtf_group_features ${NFCORE_GTF_GROUP_FEATURES}"
@@ -405,6 +409,14 @@ function normalize_annotations() {
         ANNOTATION_FLAGS+=" --gtf_extra_attributes ${ANN_EXTRA_ATTRIBUTES}"
     [[ -n "${NFCORE_BIOTYPE_ATTR}" ]] && \
         ANNOTATION_FLAGS+=" --featurecounts_group_type ${NFCORE_BIOTYPE_ATTR}"
+    # "gbkey" (forced above) only survives gffread's GFF3->GTF conversion on the
+    # transcript/mRNA row, never on the exon/CDS rows SUBREAD_FEATURECOUNTS actually
+    # counts - featureCounts then fails outright ("failed to find the gene identifier
+    # attribute in the 9th column") rather than degrading gracefully, killing the whole
+    # pipeline run. Skip nf-core's own internal biotype QC plot in this case; our own
+    # featurecounts_postnfcore.nf/merge_biotypes.py already computes real biotypes
+    # correctly and tolerates a missing attribute (empty column, not a crash).
+    [[ "${_biotype_attr_forced}" == "yes" ]] && ANNOTATION_FLAGS+=" --skip_biotype_qc"
     [[ -n "${ANN_SKIP_FLAGS}" ]] && ANNOTATION_FLAGS+=" ${ANN_SKIP_FLAGS}"
     export ANNOTATION_FLAGS
 }

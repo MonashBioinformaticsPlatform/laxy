@@ -133,23 +133,33 @@ prokaryotic input, `--skip_dupradar` alone for other prokaryotic input).
 **GFF3-specific flag forcing.** nf-core/rnaseq's own `PREPARE_GENOME`
 converts a `--gff` input to GTF via `gffread` internally. `gffread` always
 synthesises `gene_id`/`transcript_id` from `ID=`/`Parent=`, and does **not**
-preserve the original GFF3's `gene_biotype` attribute (though it does
-preserve `gbkey`, the GenBank feature key). Because of this:
+preserve the original GFF3's `gene_biotype` attribute anywhere (`gbkey`, the
+GenBank feature key, survives only on the `transcript`/`mRNA`-level row, not
+on the `exon`/`CDS` rows nf-core's own internal biotype-QC featureCounts run
+actually reads). Because of this:
 
 - `--gtf_group_features` is forced to `gene_id` whenever `ANN_FORMAT=gff3`,
   regardless of what `detect_annotation_style.py` picked for our own
   pre-processing (e.g. `Parent`). Passing the raw detected value straight to
   nf-core here breaks `CUSTOM_TX2GENE`/Salmon tximport outright.
 - `--featurecounts_group_type` is forced to `gbkey` whenever `ANN_FORMAT=gff3`
-  and the detected biotype attribute was `gene_biotype`. Otherwise nf-core's
-  own internal `SUBREAD_FEATURECOUNTS` biotype QC step fails with `failed to
-  find the gene identifier attribute in the 9th column`.
+  and the detected biotype attribute was `gene_biotype`, **and**
+  `--skip_biotype_qc` is added alongside it. Without the forcing, nf-core's
+  own internal `SUBREAD_FEATURECOUNTS` biotype QC step fails outright with
+  `failed to find the gene identifier attribute in the 9th column` (the raw
+  `gene_biotype` attribute name isn't in the gffread-converted GTF at all).
+  Forcing to `gbkey` alone isn't sufficient either, though: that step counts
+  at the `exon`/`CDS` level, and `gbkey` isn't present there (see above), so
+  it fails with the same error regardless - `--skip_biotype_qc` is required
+  to avoid a hard pipeline failure. Confirmed via a corpus e2e run
+  (`E3_eukaryote_refseq`) that failed with exactly this error before
+  `--skip_biotype_qc` was added.
 
 This means nf-core's *own* internal biotype QC plot (MultiQC "Biotype
-Counts") for GFF3 input is labelled with GenBank feature keys (`mRNA`,
-`ncRNA`, `tRNA`, `rRNA`, `misc_RNA`, `precursor_RNA`, `V_segment`, ...) - a
-coarser, structural classification, not true biotypes
-(`protein_coding`/`lncRNA`/`pseudogene`/...). For GTF input (Ensembl/GENCODE),
+Counts") is skipped entirely for GFF3 input - our own featureCounts
+post-processing (§3 below) computes real biotypes independently and
+tolerates a missing attribute gracefully (empty column, not a crash). For
+GTF input (Ensembl/GENCODE),
 `gene_biotype`/`gene_type` is repeated on every row including exon/CDS (GTF
 convention), so no forcing is needed and the QC plot shows real biotypes.
 
