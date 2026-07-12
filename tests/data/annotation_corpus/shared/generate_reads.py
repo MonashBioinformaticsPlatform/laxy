@@ -119,11 +119,20 @@ def main() -> None:
             if chrom is None or end - start + 1 < frag:
                 continue
             f_start = rng.randint(start - 1, end - frag)  # 0-based slice start
-            left = chrom[f_start:f_start + rl]
-            right = chrom[f_start + frag - rl:f_start + frag]
+            fwd_left = chrom[f_start:f_start + rl]
+            fwd_right = chrom[f_start + frag - rl:f_start + frag]
+            # R2 must be the reverse complement of the fragment's far end for
+            # STAR to see a standard inward-facing (FR) pair - previously only
+            # applied on the "-" branch (and applied to the wrong mate there),
+            # so R1/R2 were same-orientation forward reads with a gap between
+            # them. STAR couldn't form a valid paired alignment from that and
+            # reported 100% "unmapped: too short" for every corpus e2e case.
             if strand == "-":
-                # inward-oriented reverse-strand pair
-                left, right = rc(right), rc(left)
+                # transcript 5' end is at the genome's high-coordinate end
+                left, right = rc(fwd_right), fwd_left
+            else:
+                # transcript 5' end is at the genome's low-coordinate end
+                left, right = fwd_left, rc(fwd_right)
             if len(left) < rl or len(right) < rl:
                 continue
             emitted += 1

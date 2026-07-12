@@ -32,7 +32,7 @@ export LAXYDL_BRANCH="1bf87be"  # unused when using apptainer instead
 #export LAXYDL_USE_ARIA2C=${LAXYDL_USE_ARIA2C:-yes}
 export LAXYDL_USE_ARIA2C="no"
 export LAXYDL_PARALLEL_DOWNLOADS=${LAXYDL_PARALLEL_DOWNLOADS:-8}
-export LAXYDL_CONTAINER_IMAGE="ghcr.io/monashbioinformaticsplatform/laxy/laxy-downloader:0a88449"
+export LAXYDL_CONTAINER_IMAGE="ghcr.io/monashbioinformaticsplatform/laxy/laxy-downloader:547b119"
 export LAXYDL_APPTAINER_PREFIX="apptainer exec -B ${JOB_PATH} -B ${DOWNLOAD_CACHE_PATH} docker://${LAXYDL_CONTAINER_IMAGE}"
 export AGAT_CONTAINER_IMAGE="quay.io/biocontainers/agat:1.6.1--pl5321hdfd78af_1"
 

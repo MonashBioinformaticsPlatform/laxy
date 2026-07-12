@@ -52,6 +52,22 @@ PIPELINE_VERSION = os.environ.get("LAXY_CORPUS_PIPELINE_VERSION", "3.18.0")
 STAGGER_S = int(os.environ.get("LAXY_CORPUS_STAGGER_S", "90"))
 
 # Mirrors the proven-working corpus job params (and the web UI defaults).
+#
+# min_mapped_reads is deliberately left at the web UI default (5% of reads must
+# uniquely map). It exists precisely to catch genuinely broken/empty alignment
+# output before it reaches SALMON_QUANT (which cannot handle near-empty input
+# and crashes rather than failing gracefully) - generate_reads.py's synthetic
+# reads map at ~100% once correctly paired (see its FR-orientation fix), so
+# real corpus samples clear this threshold easily and it should NOT be
+# disabled; doing so previously just let a read-generation bug (see below)
+# through to crash the pipeline downstream instead of being caught here.
+#
+# min_trimmed_reads is a SEPARATE nf-core/rnaseq skip-gate (applied right after
+# trimming, before alignment, against the *absolute* trimmed-read count) that
+# isn't exposed as a Laxy pipeline param/UI option - nf-core's own default of
+# 10000 is fine for real data, but the corpus's ~2000 synthetic read pairs are
+# deliberately kept small for fast e2e runs and trim down to ~4000 reads, well
+# under that default. 0 disables this gate for e2e runs only.
 NFCORE_PARAMS = {
     "nf-core-rnaseq": {
         "has_umi": False,
@@ -61,6 +77,7 @@ NFCORE_PARAMS = {
         "skip_trimming": False,
         "skip_alignment": False,
         "min_mapped_reads": 5,
+        "min_trimmed_reads": 0,
         "save_genome_index": False,
         "save_reference_genome": True,
     }

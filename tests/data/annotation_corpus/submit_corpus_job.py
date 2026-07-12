@@ -109,7 +109,20 @@ def build_params(case_id: str) -> dict:
                 "strandedness": "auto",
                 "skip_trimming": False,
                 "skip_alignment": False,
+                # Left at the web UI default (5% of reads must uniquely map). This
+                # gate exists to catch broken/empty alignment output before it
+                # reaches SALMON_QUANT (which crashes on near-empty input rather
+                # than failing gracefully) - generate_reads.py's synthetic reads
+                # map at ~100% once correctly paired, so real corpus samples clear
+                # this easily and it should not be disabled.
                 "min_mapped_reads": 5,
+                # A SEPARATE nf-core/rnaseq skip-gate (applied right after trimming,
+                # before alignment, against the absolute trimmed-read count). Not
+                # exposed as a Laxy param/UI option - nf-core's own default of 10000
+                # is fine for real data - but the corpus's ~2000 synthetic read
+                # pairs are deliberately kept small for fast e2e runs and trim down
+                # to ~4000 reads, well under that default.
+                "min_trimmed_reads": 0,
                 "save_genome_index": False,
                 "save_reference_genome": True,
             },

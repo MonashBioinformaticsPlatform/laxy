@@ -20,7 +20,12 @@ export INPUT_SCRIPTS_PATH="${JOB_PATH}/input/scripts"
 source "${INPUT_SCRIPTS_PATH}/env.sh" || exit 1
 
 # export PIPELINE_NAME='nf-core-rnaseq'
-export NFCORE_PIPELINE_RELEASE="${PIPELINE_VERSION}"
+# Hardcoded rather than derived from PIPELINE_VERSION: this same file is also used
+# (via a symlink) as the "default" pipeline_version template, whose PIPELINE_VERSION
+# is the literal string "default" - not a real nf-core/rnaseq git revision. `nf-core
+# download`/`nextflow run` need the actual revision regardless of which laxy
+# pipeline_version string was used to select this template folder.
+export NFCORE_PIPELINE_RELEASE="3.18.0"
 export NFCORE_PIPELINE_NAME="rnaseq"
 export REFERENCE_GENOME_ID="{{ REFERENCE_GENOME }}"
 
@@ -325,6 +330,8 @@ function normalize_annotations() {
     export ANN_GROUP_FEATURES="gene_id"
     export ANN_EXTRA_ATTRIBUTES="gene_name"
     export ANN_BIOTYPE_ATTR="gene_biotype"
+    export NFCORE_GTF_GROUP_FEATURES="gene_id"
+    export NFCORE_BIOTYPE_ATTR="gene_biotype"
 
     [[ ${USING_CUSTOM_REFERENCE} == "yes" ]] || return 0
 
@@ -376,8 +383,11 @@ function normalize_annotations() {
     # When --gtf is passed instead (ANN_FORMAT=gtf), nf-core uses the file
     # unchanged with no internal conversion, so the detected grouping
     # attribute genuinely is what's in the file and must be passed as-is.
-    local _nfcore_gtf_group_features="${ANN_GROUP_FEATURES}"
-    [[ "${ANN_FORMAT}" == "gff3" ]] && _nfcore_gtf_group_features="gene_id"
+    # Exported (not local): post_nextflow_pipeline() reuses these later to keep its
+    # own separate featureCounts run's id namespace consistent with nf-core's own
+    # Salmon/tximport quantification. See the comment there for why that matters.
+    export NFCORE_GTF_GROUP_FEATURES="${ANN_GROUP_FEATURES}"
+    [[ "${ANN_FORMAT}" == "gff3" ]] && NFCORE_GTF_GROUP_FEATURES="gene_id"
 
     # Same gffread-conversion problem as above, but for the biotype attribute used by
     # SUBREAD_FEATURECOUNTS's biotype QC (--featurecounts_group_type): NCBI/RefSeq GFF3's
@@ -386,15 +396,15 @@ function normalize_annotations() {
     # does. Passing "gene_biotype" through unchanged makes featureCounts fail outright with
     # "failed to find the gene identifier attribute in the 9th column". Confirmed against a
     # real mouse chr19 whole-chromosome run. See ANNOTATION_REQUIREMENTS_AND_FILTERING.md §6 item 9.
-    local _nfcore_biotype_attr="${ANN_BIOTYPE_ATTR}"
-    [[ "${ANN_FORMAT}" == "gff3" ]] && [[ "${ANN_BIOTYPE_ATTR}" == "gene_biotype" ]] && _nfcore_biotype_attr="gbkey"
+    export NFCORE_BIOTYPE_ATTR="${ANN_BIOTYPE_ATTR}"
+    [[ "${ANN_FORMAT}" == "gff3" ]] && [[ "${ANN_BIOTYPE_ATTR}" == "gene_biotype" ]] && NFCORE_BIOTYPE_ATTR="gbkey"
 
     ANNOTATION_FLAGS=" --featurecounts_feature_type ${ANN_FEATURE_TYPE}"
-    ANNOTATION_FLAGS+=" --gtf_group_features ${_nfcore_gtf_group_features}"
+    ANNOTATION_FLAGS+=" --gtf_group_features ${NFCORE_GTF_GROUP_FEATURES}"
     [[ -n "${ANN_EXTRA_ATTRIBUTES}" ]] && \
         ANNOTATION_FLAGS+=" --gtf_extra_attributes ${ANN_EXTRA_ATTRIBUTES}"
-    [[ -n "${_nfcore_biotype_attr}" ]] && \
-        ANNOTATION_FLAGS+=" --featurecounts_group_type ${_nfcore_biotype_attr}"
+    [[ -n "${NFCORE_BIOTYPE_ATTR}" ]] && \
+        ANNOTATION_FLAGS+=" --featurecounts_group_type ${NFCORE_BIOTYPE_ATTR}"
     [[ -n "${ANN_SKIP_FLAGS}" ]] && ANNOTATION_FLAGS+=" ${ANN_SKIP_FLAGS}"
     export ANNOTATION_FLAGS
 }
@@ -426,6 +436,15 @@ function get_settings_from_pipeline_config() {
 
     local -i _min_mapped_reads=$(jq -e --raw-output '.params."nf-core-rnaseq".min_mapped_reads' "${PIPELINE_CONFIG}" || echo "5")
     export MIN_MAPPED_READS_ARG=" --min_mapped_reads ${_min_mapped_reads} "
+
+    # Not currently exposed as a UI option (unlike min_mapped_reads above): nf-core/rnaseq's
+    # own default of 10000 is sane for real user data, but it's a separate skip-gate (applied
+    # right after trimming, before alignment) that min_mapped_reads=0 does NOT disable. Left
+    # unset in pipeline_config.json, this falls through to nf-core's own default unchanged;
+    # e2e/corpus tests override it to 0 to exercise star_salmon/featureCounts on tiny
+    # synthetic read sets that would otherwise be filtered out here.
+    local -i _min_trimmed_reads=$(jq -e --raw-output '.params."nf-core-rnaseq".min_trimmed_reads' "${PIPELINE_CONFIG}" || echo "10000")
+    export MIN_TRIMMED_READS_ARG=" --min_trimmed_reads ${_min_trimmed_reads} "
     
     local _trimmer=$(jq -e --raw-output '.params."nf-core-rnaseq".trimmer' "${PIPELINE_CONFIG}" || echo "")
     TRIMMER_ARGS=()
@@ -618,6 +637,7 @@ function run_nextflow() {
        ${GENOME_ARGS} \
        ${UMI_FLAGS} \
        ${MIN_MAPPED_READS_ARG} \
+       ${MIN_TRIMMED_READS_ARG} \
        ${EXTRA_FLAGS} \
        ${ANNOTATION_FLAGS} \
        "${TRIMMER_ARGS[@]}" \
@@ -645,6 +665,7 @@ function run_nextflow() {
             ${GENOME_ARGS} \
             ${UMI_FLAGS} \
             ${MIN_MAPPED_READS_ARG} \
+            ${MIN_TRIMMED_READS_ARG} \
             ${EXTRA_FLAGS} \
             ${ANNOTATION_FLAGS} \
             "${TRIMMER_ARGS[@]}" \
@@ -723,9 +744,38 @@ function post_nextflow_pipeline() {
     # *.filtered.gtf under results/genome/ when save_reference is true, or
     # leaves a copy under output/work/.
     local _fc_annotation=""
-    if [[ -n "${ANNOTATION_FILE:-}" && -f "${ANNOTATION_FILE}" ]]; then
+    local _fc_group_features="${ANN_GROUP_FEATURES}"
+    local _fc_extra_attributes="${ANN_EXTRA_ATTRIBUTES}"
+    local _fc_biotype_attr="${ANN_BIOTYPE_ATTR}"
+
+    # For GFF3 input, prefer nf-core's own gffread-converted *.filtered.gtf over our
+    # own ANNOTATION_FILE (still in the original Parent=/ID= GFF3 hierarchy). This
+    # matters because Salmon's gene-level counts (which this step's output later
+    # gets merged into, see merge_biotypes.py) are keyed on gffread's synthesised
+    # gene_id, forced via NFCORE_GTF_GROUP_FEATURES/ANNOTATION_FLAGS in
+    # normalize_annotations(). Grouping our own separate featureCounts run by the
+    # originally-detected attribute (eg "Parent", giving transcript/rna-level ids
+    # like "rna-XR_...") instead produces a completely different id namespace that
+    # never matches Salmon's "gene-..." ids, so the later merge silently finds no
+    # matches and every biotype/chromosome column comes back empty - even though the
+    # counts themselves are fine. Confirmed against a real whole-genome NCBI RefSeq
+    # mouse run. See ANNOTATION_REQUIREMENTS_AND_FILTERING.md §6 item 9.
+    if [[ "${ANN_FORMAT:-}" == "gff3" ]]; then
+        _fc_annotation=$(find "${JOB_PATH}/output/results/genome" -type f \( -name '*.filtered.gtf' -o -name '*.filtered.gtf.gz' \) 2>/dev/null | head -n 1)
+        [[ -z "${_fc_annotation}" ]] && _fc_annotation=$(find "${JOB_PATH}/output/work" -type f \( -name '*.filtered.gtf' -o -name '*.filtered.gtf.gz' \) 2>/dev/null | head -n 1)
+        if [[ -n "${_fc_annotation}" && -f "${_fc_annotation}" ]]; then
+            _fc_group_features="${NFCORE_GTF_GROUP_FEATURES}"
+            # "Name" doesn't survive gffread's conversion; "gene_name" is always
+            # synthesised in its place (and "gene", when present, is preserved as-is).
+            _fc_extra_attributes="gene_name"
+            _fc_biotype_attr="${NFCORE_BIOTYPE_ATTR}"
+        fi
+    fi
+
+    if [[ -z "${_fc_annotation}" || ! -f "${_fc_annotation}" ]] && [[ -n "${ANNOTATION_FILE:-}" && -f "${ANNOTATION_FILE}" ]]; then
         _fc_annotation="${ANNOTATION_FILE}"
-    elif [[ -d "${JOB_PATH}/output/results/genome" ]]; then
+    fi
+    if [[ -z "${_fc_annotation}" || ! -f "${_fc_annotation}" ]]; then
         _fc_annotation=$(find "${JOB_PATH}/output/results/genome" -type f \( -name '*.filtered.gtf' -o -name '*.filtered.gtf.gz' \) 2>/dev/null | head -n 1)
     fi
     if [[ -z "${_fc_annotation}" || ! -f "${_fc_annotation}" ]]; then
@@ -741,9 +791,9 @@ function post_nextflow_pipeline() {
        --bams="${JOB_PATH}/output/results/star_salmon/"''"${bam_pattern}" \
        --annotation="${_fc_annotation}" \
        --feature_type="${ANN_FEATURE_TYPE}" \
-       --group_features="${ANN_GROUP_FEATURES}" \
-       --extra_attributes="${ANN_EXTRA_ATTRIBUTES}" \
-       --biotype_attr="${ANN_BIOTYPE_ATTR}" \
+       --group_features="${_fc_group_features}" \
+       --extra_attributes="${_fc_extra_attributes}" \
+       --biotype_attr="${_fc_biotype_attr}" \
        --meta_info="${JOB_PATH}/output/results/star_salmon/"'*/aux_info/meta_info.json' \
        ${paired_flag} \
        --outdir ${JOB_PATH}/output/results \
