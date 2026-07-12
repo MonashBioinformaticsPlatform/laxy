@@ -229,7 +229,7 @@ Confirmed against a real whole-genome NCBI RefSeq mouse run
   this is a non-issue since Ensembl/GENCODE GTF repeats `gene_biotype` on
   every row.)
 
-**Fix**: for GFF3 input, `post_nextflow_pipeline()` now runs
+**Fix (part 1 - id namespace)**: for GFF3 input, `post_nextflow_pipeline()` now runs
 `featurecounts_postnfcore.nf`'s featureCounts against nf-core's own
 gffread-converted `*.filtered.gtf` (published under `results/genome/`
 whenever `save_reference` is set, which is always the case) instead of the
@@ -240,12 +240,51 @@ Applied identically across `3.10.1`, `3.12.0`, `3.18.0`/`default` and
 `nf-core-rnaseq-brbseq/3.19.0`. GTF and prokaryotic paths are unaffected
 (unchanged pre-fix behaviour).
 
+This alone was **not sufficient** - confirmed via a live corpus e2e run
+(`E3_eukaryote_refseq`), which surfaced two further, previously-undiscovered
+bugs once the id-namespace fix let the pipeline actually reach this stage
+for the first time (it had always previously died earlier, on the read-pair
+orientation bug described in the testing-methodology caveat below):
+
+**Fix (part 2 - nf-core's own internal biotype QC crashes outright)**:
+nf-core's own `SUBREAD_FEATURECOUNTS` (its internal biotype-QC step, distinct
+from Laxy's `featurecounts_postnfcore.nf`) counts at the `exon`/`CDS` level,
+but `gbkey` (forced via `--featurecounts_group_type`, see §2) only survives
+gffread's conversion on the `transcript` row - never on `exon`/`CDS` rows.
+`featureCounts -g gbkey -t exon` then fails outright with `failed to find the
+gene identifier attribute in the 9th column`, killing the *entire* pipeline
+run (exit 255) rather than just producing an empty QC plot.
+`normalize_annotations()` now adds `--skip_biotype_qc` whenever the GFF3
+`gbkey` forcing applies (all four `run_job.sh` variants), which is why the
+"nf-core's own internal biotype QC" column below now reads "skipped" for
+GFF3 rather than a value.
+
+**Fix (part 3 - the biotype column itself was silently empty)**: even after
+part 2, `featurecounts_postnfcore.nf`'s *own* featureCounts run
+(`--extraAttributes gene_name,gbkey`) had the identical problem: it also
+counts at the `exon`/`CDS` level, so its `gbkey` column came back **empty**
+for every gene, not merely absent from a crash. Confirmed directly against
+`counts.star_featureCounts.tsv` from a completed GFF3 job. Two changes fix
+this:
+- A new script, `propagate_biotype_to_features.py` (in `templates/common`,
+  symlinked into every version's `input/scripts/`), copies the biotype
+  attribute value from each `transcript` row down onto its child rows before
+  featureCounts runs, whenever the GFF3 `gbkey` forcing applies. Produces
+  `genome.filtered.with_biotype.gtf` alongside the original.
+- `merge_biotypes.py` previously hardcoded the column name `"gene_biotype"`
+  when deciding whether to carry a biotype column through - for GFF3 the
+  actual column is named `gbkey`, so the check silently dropped it even once
+  populated. It now takes the real attribute name as an optional third
+  argument (`featurecounts_postnfcore.nf` passes `params.biotype_attr`) and
+  renames that column to `gene_biotype` in the merged output; GTF callers
+  (no third argument, defaults to `"gene_biotype"`) are unaffected.
+
 #### Summary: what's usable per input shape
 
 | Input shape | `salmon.merged.gene_counts.tsv` (Salmon/tximport) | `featureCounts/counts.star_featureCounts.tsv` (our own alignment-based counts) | `*.biotypes.tsv` (merged) | nf-core's own internal biotype QC (MultiQC) |
 |---|---|---|---|---|
 | Ensembl/GENCODE GTF | correct | correct | correct, real biotypes | correct, real biotypes |
-| RefSeq GFF3 (eukaryotic) | correct | correct (grouping now matches the Salmon table for GFF3, see fix above) | fixed | correct, but coarse `gbkey`-based categories, not true biotypes |
+| RefSeq GFF3 (eukaryotic) | correct | correct (grouping now matches the Salmon table for GFF3, see fix above) | fixed, confirmed via live corpus e2e run - real `gbkey` values populated, renamed to `gene_biotype` | skipped (`--skip_biotype_qc`) - forcing `gbkey` as the group attribute alone still crashed this step outright (see fix part 2) |
 | Prokaryotic (any source) | correct (only the single retained feature type) | correct | correct - `filter_annotation_features.py` synthesises `gene_id` consistently on both sides | correct |
 
 ### Testing methodology caveat

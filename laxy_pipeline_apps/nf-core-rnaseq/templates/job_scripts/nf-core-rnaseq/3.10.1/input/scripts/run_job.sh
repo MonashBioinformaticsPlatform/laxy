@@ -791,6 +791,21 @@ function post_nextflow_pipeline() {
             # synthesised in its place (and "gene", when present, is preserved as-is).
             _fc_extra_attributes="gene_name"
             _fc_biotype_attr="${NFCORE_BIOTYPE_ATTR}"
+
+            # gffread's GFF3->GTF conversion only carries ${_fc_biotype_attr} onto the
+            # transcript row, never onto the exon/CDS rows featureCounts actually reads
+            # attributes from - propagate it down first so --extraAttributes reports
+            # real values instead of coming back empty for every gene. Confirmed
+            # against a live corpus e2e run (E3_eukaryote_refseq): counts.star_
+            # featureCounts.tsv's gbkey column was entirely blank without this step,
+            # even though the id-namespace/grouping fix above was already correct.
+            local _fc_propagated="${JOB_PATH}/output/results/genome/genome.filtered.with_biotype.gtf"
+            if python3 "${INPUT_SCRIPTS_PATH}/propagate_biotype_to_features.py" \
+                --input "${_fc_annotation}" \
+                --output "${_fc_propagated}" \
+                --biotype-attr "${_fc_biotype_attr}"; then
+                _fc_annotation="${_fc_propagated}"
+            fi
         fi
     fi
 

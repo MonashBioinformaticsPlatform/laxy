@@ -177,9 +177,13 @@ process SALMON_COUNTS_ADD_BIOTYPES {
     script:
         """
         # Merge the biotypes from featureCounts into the Salmon counts tables.
+        # params.biotype_attr names the actual extraAttributes column featureCounts
+        # wrote (eg "gbkey" for GFF3-origin input); merge_biotypes.py looks for that
+        # column and renames it to "gene_biotype" in the merged output.
         ${params.scripts_path}/merge_biotypes.py \
             counts.star_featureCounts.tsv \
             ${salmon_counts} \
+            "${params.biotype_attr}" \
             >"${salmon_counts.getBaseName()}.biotypes.tsv"
         """
 }

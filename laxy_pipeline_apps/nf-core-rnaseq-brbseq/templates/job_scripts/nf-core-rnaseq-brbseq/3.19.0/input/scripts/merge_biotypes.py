@@ -5,8 +5,14 @@ table, output a new version of the Salmon counts with biotypes.
 
 Usage:
 
-./merge_biotypes.py featureCounts_counts.tsv salmon_counts.tsv >salmon_counts.biotypes.tsv
+./merge_biotypes.py featureCounts_counts.tsv salmon_counts.tsv [biotype_attr] >salmon_counts.biotypes.tsv
 
+``biotype_attr`` names the featureCounts extraAttributes column actually holding
+the biotype (eg "gbkey" for GFF3-origin input, where featureCounts is invoked
+with ``--biotype_attr gbkey`` rather than the GTF-convention "gene_biotype" -
+see run_job.sh's post_nextflow_pipeline()). Defaults to "gene_biotype" so
+existing GTF-input callers are unaffected. The output column is always named
+"gene_biotype" regardless of the source attribute name.
 """
 
 import sys
@@ -15,10 +21,13 @@ import pandas as pd
 
 featurecounts_fn = sys.argv[1]
 nfcore_counts_fn = sys.argv[2]
+biotype_attr = sys.argv[3] if len(sys.argv) > 3 and sys.argv[3] else "gene_biotype"
 
 featurecounts = pd.read_table(featurecounts_fn)
 base_cols = ["Geneid", "Chr"]
-if "gene_biotype" in featurecounts.columns:
+if biotype_attr in featurecounts.columns:
+    if biotype_attr != "gene_biotype":
+        featurecounts = featurecounts.rename(columns={biotype_attr: "gene_biotype"})
     base_cols.append("gene_biotype")
 featurecounts = featurecounts[base_cols]
 nfcore_counts = pd.read_table(nfcore_counts_fn)
