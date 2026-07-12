@@ -279,6 +279,19 @@ this:
   renames that column to `gene_biotype` in the merged output; GTF callers
   (no third argument, defaults to `"gene_biotype"`) are unaffected.
 
+Confirmed end-to-end against a completed corpus e2e job
+(`E3_eukaryote_refseq`, job `7mbz0c3OwY29msvjiMyhBW`):
+`salmon.merged.gene_counts.biotypes.tsv` now has a real, populated
+`gene_biotype` column (`mRNA`, from the source GFF3's `gbkey` value) for
+every gene, alongside the correct `chromosome` column from the part 1 fix.
+
+**Known follow-up gap (not addressed here):** the same job's `gene_name`
+column is empty. `post_nextflow_pipeline()`'s comment claims gffread
+synthesises a `gene_name` attribute in place of GFF3's `Name` - not observed
+in practice against this gffread version's `*.filtered.gtf`, which carries
+`Name` (uppercase), not `gene_name`. Cosmetic only (`gene_id` is always
+present and unique), left for a future session.
+
 #### Summary: what's usable per input shape
 
 | Input shape | `salmon.merged.gene_counts.tsv` (Salmon/tximport) | `featureCounts/counts.star_featureCounts.tsv` (our own alignment-based counts) | `*.biotypes.tsv` (merged) | nf-core's own internal biotype QC (MultiQC) |
@@ -325,5 +338,9 @@ runs and fall under nf-core's default of 10000 on that basis alone).
 The whole-chromosome/whole-genome real-data verification done separately
 (real human chr21, mouse chr19, whole mouse genome NCBI/Ensembl jobs) remains
 the stronger evidence for the biotype-preservation claims in this document,
-but the corpus e2e suite should now also exercise `star_salmon`/featureCounts
-properly rather than being a pre-processing-only smoke test.
+but the corpus e2e suite now also exercises `star_salmon`/featureCounts
+properly rather than being a pre-processing-only smoke test - confirmed with
+live jobs against `dev-api.laxy.io` for `E1_eukaryote_ensembl` (GTF),
+`P1_prokaryote_minimal_gtf` (prokaryotic) and `E3_eukaryote_refseq` (GFF3),
+all three completing successfully with correct counts and (for the GFF3
+case) populated biotypes, after the fixes described above.
