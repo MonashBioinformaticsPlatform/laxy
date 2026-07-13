@@ -93,6 +93,12 @@ def parse_gff3_attrs(col9: str) -> Dict[str, str]:
         k, _, v = part.partition("=")
         k = k.strip()
         v = v.strip()
+        # Some exporters (eg SnapGene) wrap GFF3 attribute values in literal
+        # double quotes, which isn't valid GFF3 - strip one matching layer so
+        # Name="dnaA" yields dnaA, not "dnaA" (which would otherwise get
+        # double-quoted again by gtf_quote() and corrupt gene_id/transcript_id).
+        if len(v) >= 2 and v[0] == '"' and v[-1] == '"':
+            v = v[1:-1]
         if k and k not in out:
             out[k] = v
     return out
