@@ -331,13 +331,26 @@ Applied identically across `3.10.1`, `3.12.0`, `3.18.0`/`default` and
 is already a single value there, eg `gene_name`, and no forcing applies when
 `ANN_FORMAT != gff3`).
 
+Confirmed end-to-end against a fresh `E3_eukaryote_refseq` job
+(`YwzmIhrPUtaDsQOlAEX16`): `salmon.merged.gene_counts.tsv`,
+`counts.star_featureCounts.tsv` and the merged `*.biotypes.tsv` all now show
+real names (`GENE_A`, `GENE_B`, ...) instead of `gene_id`-equivalent values.
+
+**Known follow-up gap (not addressed here, not a regression):** prokaryotic
+GFF3 (`P2_prokaryote_ncbi`, profile `generic_prokaryote`) still shows
+`gene_name` equal to `gene_id` (eg `cds-dnaA`) in `salmon.merged.gene_counts.tsv`
+- confirmed identical before and after this fix, so not something this
+session broke. Locus-tag-derived ids are already reasonably meaningful for
+bacterial genes, so this is lower priority than the eukaryotic case; left for
+a future session if a real gene symbol is wanted there too.
+
 #### Summary: what's usable per input shape
 
 | Input shape | `salmon.merged.gene_counts.tsv` (Salmon/tximport) | `featureCounts/counts.star_featureCounts.tsv` (our own alignment-based counts) | `*.biotypes.tsv` (merged) | nf-core's own internal biotype QC (MultiQC) |
 |---|---|---|---|---|
 | Ensembl/GENCODE GTF | correct | correct | correct, real biotypes | correct, real biotypes |
-| RefSeq GFF3 (eukaryotic) | correct, including real `gene_name` values (fix part 4) | correct, including real `gene_name` values (fix part 4) | fixed, confirmed via live corpus e2e run - real `gbkey` values populated, renamed to `gene_biotype` | skipped (`--skip_biotype_qc`) - forcing `gbkey` as the group attribute alone still crashed this step outright (see fix part 2) |
-| Prokaryotic (any source) | correct (only the single retained feature type) | correct | correct - `filter_annotation_features.py` synthesises `gene_id` consistently on both sides | correct |
+| RefSeq GFF3 (eukaryotic) | correct, including real `gene_name` values (fix part 4, confirmed live) | correct, including real `gene_name` values (fix part 4, confirmed live) | fixed, confirmed via live corpus e2e run - real `gbkey` values populated, renamed to `gene_biotype` | skipped (`--skip_biotype_qc`) - forcing `gbkey` as the group attribute alone still crashed this step outright (see fix part 2) |
+| Prokaryotic (any source) | correct ids, but `gene_name` still equals `gene_id` (known follow-up gap, not a regression) | correct | correct - `filter_annotation_features.py` synthesises `gene_id` consistently on both sides | correct |
 
 ### Testing methodology caveat
 
@@ -383,3 +396,23 @@ live jobs against `dev-api.laxy.io` for `E1_eukaryote_ensembl` (GTF),
 `P1_prokaryote_minimal_gtf` (prokaryotic) and `E3_eukaryote_refseq` (GFF3),
 all three completing successfully with correct counts and (for the GFF3
 case) populated biotypes, after the fixes described above.
+
+#### Full 17-case corpus e2e run (2026-07-13)
+
+All 17 e2e-enabled corpus cases were submitted as real jobs against
+`dev-api.laxy.io` (`run_corpus_via_laxycli.py`, branch
+`feature/auto-annotation-features2`). 14/17 completed successfully; the
+remaining 3 failures are pre-existing bugs unrelated to the `gene_id`/biotype
+fixes in this document:
+
+- `F1_flat_snapgene`, `F2_snapgene_variation`: `SALMON_QUANT` crashes with
+  `Transcript "\" appeared in the BAM header, but was not in the provided
+  FASTA file` - a malformed/empty transcript id (literally a single
+  backslash) somewhere in the SnapGene-exported GTF's transcript naming that
+  survives into the STAR BAM header but not into the Salmon-quantified
+  transcriptome FASTA.
+- `E5_eukaryote_ncrna_ids`: `UCSC_BEDGRAPHTOBIGWIG` crashes with
+  `needLargeMem: trying to allocate 0 bytes` - consistent with a zero-length
+  chromosome/contig entry in `genome.fa.sizes` for this case.
+
+Not investigated further in this session - flagged here for a future pass.
