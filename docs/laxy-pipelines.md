@@ -291,33 +291,45 @@ a follow-up bug, not the id/biotype issue above. Confirmed directly against
 (`7mbz0c3OwY29msvjiMyhBW`): its `gene_name` column held `gene_id`-equivalent
 values (`gene1`, `gene2`, ...) instead of the real GFF3 `Name` values
 (`GENE_A`, `GENE_B`, ...), and `counts.star_featureCounts.tsv`'s `gene_name`
-column was empty outright. Root cause (confirmed against nf-core/rnaseq's
-own `CUSTOM_TX2GENE`/`TXIMETA_TXIMPORT` source): gffread's GFF3->GTF
-conversion writes the gene-name-equivalent value as `Name` (uppercase) on
-the `transcript` row only - never `gene_name`, and never on child rows.
-`--gtf_extra_attributes gene_name` (the default, previously passed
-unchanged for GFF3 too) requested an attribute that never exists in the
-converted GTF, so tximport's R code silently fell back to the positional
-3rd `tx2gene.tsv` column instead - which happened to hold `gene_id` values.
+column was empty outright. Root cause has two layers:
+
+1. `detect_annotation_style.py`'s `ANN_EXTRA_ATTRIBUTES` is a priority-ordered
+   **comma list** built from the original GFF3's attribute names (eg
+   `Name,gene_id,gene` for the `refseq_gff3` profile) - correct for our own
+   featureCounts run (`--extraAttributes` genuinely supports multiple
+   comma-separated attributes, each becoming its own output column), but
+   nf-core/rnaseq 3.18.0's own tx2gene generator does **not** split
+   `--gtf_extra_attributes` on commas into separate columns - it treats the
+   whole string as one literal (nonexistent) attribute name. Confirmed
+   directly: passing `--gtf_extra_attributes Name,gene_id,gene` through
+   unchanged produced a `tx2gene.tsv` whose 3rd column header was literally
+   `Name,gene_id,gene` (one field, not three), with values falling back to
+   `gene_id`.
+2. Even once limited to a single attribute, gffread's GFF3->GTF conversion
+   only writes the gene-name-equivalent value (`Name` for RefSeq GFF3) onto
+   the `transcript` row - never onto child rows, and never as `gene_name`.
+
 Two changes fix this:
-- `normalize_annotations()` now forces `--gtf_extra_attributes Name` for
-  nf-core's own internal quantification whenever GFF3's `gbkey` forcing
-  applies (new `NFCORE_EXTRA_ATTRIBUTES`, mirroring `NFCORE_BIOTYPE_ATTR`).
-  `TXIMETA_TXIMPORT`'s output column is always hardcoded to `gene_name`
-  regardless of which attribute name was requested, so this only changes
-  which attribute's *values* populate that column - no downstream code needs
-  to change.
+- `normalize_annotations()` now forces nf-core's own `--gtf_extra_attributes`
+  to just the **first** (highest-priority) attribute from
+  `ANN_EXTRA_ATTRIBUTES`'s comma list whenever `ANN_FORMAT=gff3` (new
+  `NFCORE_EXTRA_ATTRIBUTES="${ANN_EXTRA_ATTRIBUTES%%,*}"`, mirroring
+  `NFCORE_BIOTYPE_ATTR`/`NFCORE_GTF_GROUP_FEATURES`). `TXIMETA_TXIMPORT`'s
+  output column is always hardcoded to `gene_name` regardless of which
+  attribute name was requested, so this only changes which attribute's
+  *values* populate that column - no downstream code needs to change.
 - `propagate_biotype_to_features.py` (used by `post_nextflow_pipeline()`'s
   own separate featureCounts run) was generalised from a single hardcoded
   biotype attribute to a repeatable `--attr SRC[:DST]` rule list, so a single
   pass can both propagate `gbkey` (unchanged name) and propagate+rename
-  `Name` -> `gene_name` from `transcript` rows down onto `exon`/`CDS` rows.
-  `_fc_extra_attributes` still requests `gene_name` from featureCounts, but
-  now that attribute genuinely exists in the propagated GTF for every row.
+  whatever `NFCORE_EXTRA_ATTRIBUTES` resolved to (eg `Name`) -> `gene_name`
+  from `transcript` rows down onto `exon`/`CDS` rows. `_fc_extra_attributes`
+  still requests `gene_name` from featureCounts, but now that attribute
+  genuinely exists in the propagated GTF for every row.
 Applied identically across `3.10.1`, `3.12.0`, `3.18.0`/`default` and
-`nf-core-rnaseq-brbseq/3.19.0`. GTF and prokaryotic paths pass their
-already-correct `ANN_EXTRA_ATTRIBUTES`/`gbkey` values straight through
-unchanged (no forcing applies when `ANN_FORMAT != gff3`).
+`nf-core-rnaseq-brbseq/3.19.0`. GTF paths are unaffected (`ANN_EXTRA_ATTRIBUTES`
+is already a single value there, eg `gene_name`, and no forcing applies when
+`ANN_FORMAT != gff3`).
 
 #### Summary: what's usable per input shape
 

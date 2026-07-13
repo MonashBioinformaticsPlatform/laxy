@@ -434,19 +434,22 @@ function normalize_annotations() {
 
     # Same gffread-conversion problem as above, but for the gene-name attribute used by
     # CUSTOM_TX2GENE/TXIMETA_TXIMPORT to populate salmon.merged.gene_counts.tsv's
-    # gene_name column: gffread writes the gene-name-equivalent value as "Name"
-    # (uppercase) on the transcript row, never as "gene_name". Requesting
-    # "gene_name" unchanged means tx2gene.tsv's 3rd column is never found by that
-    # name, so tximport falls back positionally - which happens to still work, but
-    # only becomes reliable once we ask for the attribute that's actually present.
-    # tximport's own hardcoded output column is always "gene_name" regardless of
-    # which attribute name was requested, so downstream code is unaffected.
-    # Confirmed against the synthetic annotation corpus's E3_eukaryote_refseq case:
-    # salmon.merged.gene_counts.tsv's gene_name column held gene_id-equivalent
-    # values (eg "gene1") instead of the real "GENE_A"-style names.
+    # gene_name column. detect_annotation_style.py's ANN_EXTRA_ATTRIBUTES is a
+    # priority-ordered comma list built from the ORIGINAL GFF3's attribute names
+    # (eg "Name,gene_id,gene" for RefSeq) - correct for our own featureCounts run
+    # (which supports multiple --extraAttributes), but nf-core's own tx2gene
+    # generator does NOT split multi-value --gtf_extra_attributes into separate
+    # columns; it treats the whole comma string as one literal (nonexistent)
+    # attribute name and silently falls back to gene_id. Passing only the first
+    # (highest-priority, and the one gffread actually preserves onto the
+    # transcript row) attribute fixes this. tximport's own output column is
+    # always hardcoded to "gene_name" regardless of which attribute name was
+    # requested, so downstream code is unaffected. Confirmed against the
+    # synthetic annotation corpus's E3_eukaryote_refseq case: passing the full
+    # "Name,gene_id,gene" list through unchanged left tx2gene.tsv's 3rd column
+    # header literally as "Name,gene_id,gene" with gene_id-equivalent values.
     export NFCORE_EXTRA_ATTRIBUTES="${ANN_EXTRA_ATTRIBUTES}"
-    [[ "${ANN_FORMAT}" == "gff3" ]] && [[ "${ANN_EXTRA_ATTRIBUTES}" == "gene_name" ]] && \
-        NFCORE_EXTRA_ATTRIBUTES="Name"
+    [[ "${ANN_FORMAT}" == "gff3" ]] && NFCORE_EXTRA_ATTRIBUTES="${ANN_EXTRA_ATTRIBUTES%%,*}"
 
     # Same gffread-conversion problem as above, but for the biotype attribute used by
     # SUBREAD_FEATURECOUNTS's biotype QC (--featurecounts_group_type): NCBI/RefSeq GFF3's
@@ -803,15 +806,18 @@ function post_nextflow_pipeline() {
         [[ -z "${_fc_annotation}" ]] && _fc_annotation=$(find "${JOB_PATH}/output/work" -type f \( -name '*.filtered.gtf' -o -name '*.filtered.gtf.gz' \) 2>/dev/null | head -n 1)
         if [[ -n "${_fc_annotation}" && -f "${_fc_annotation}" ]]; then
             _fc_group_features="${NFCORE_GTF_GROUP_FEATURES}"
-            # gffread writes the gene-name-equivalent value as "Name" (uppercase), never
-            # as "gene_name" - propagated/renamed below so --extraAttributes gene_name
-            # reports real values instead of coming back empty for every gene.
+            # gffread carries the gene-name-equivalent value (whichever attribute
+            # NFCORE_EXTRA_ATTRIBUTES resolved to, eg "Name" for RefSeq GFF3) onto the
+            # transcript row only, never as "gene_name" - propagated/renamed below so
+            # --extraAttributes gene_name reports real values instead of coming back
+            # empty for every gene.
             _fc_extra_attributes="gene_name"
             _fc_biotype_attr="${NFCORE_BIOTYPE_ATTR}"
+            _fc_name_attr="${NFCORE_EXTRA_ATTRIBUTES}"
 
             # gffread's GFF3->GTF conversion only carries the biotype/name attributes onto
             # the transcript row, never onto the exon/CDS rows featureCounts actually reads
-            # attributes from - propagate them down first (renaming Name -> gene_name) so
+            # attributes from - propagate them down first (renaming to gene_name) so
             # --extraAttributes reports real values instead of coming back empty for every
             # gene. Confirmed against a live corpus e2e run (E3_eukaryote_refseq):
             # counts.star_featureCounts.tsv's gbkey/gene_name columns were entirely blank
@@ -822,7 +828,7 @@ function post_nextflow_pipeline() {
                 --input "${_fc_annotation}" \
                 --output "${_fc_propagated}" \
                 --attr "${_fc_biotype_attr}" \
-                --attr "Name:gene_name"; then
+                --attr "${_fc_name_attr}:gene_name"; then
                 _fc_annotation="${_fc_propagated}"
             fi
         fi
