@@ -389,6 +389,22 @@ function normalize_annotations() {
     export NFCORE_GTF_GROUP_FEATURES="${ANN_GROUP_FEATURES}"
     [[ "${ANN_FORMAT}" == "gff3" ]] && NFCORE_GTF_GROUP_FEATURES="gene_id"
 
+    # Same gffread-conversion problem as above, but for the gene-name attribute used by
+    # CUSTOM_TX2GENE/TXIMETA_TXIMPORT to populate salmon.merged.gene_counts.tsv's
+    # gene_name column: gffread writes the gene-name-equivalent value as "Name"
+    # (uppercase) on the transcript row, never as "gene_name". Requesting
+    # "gene_name" unchanged means tx2gene.tsv's 3rd column is never found by that
+    # name, so tximport falls back positionally - which happens to still work, but
+    # only becomes reliable once we ask for the attribute that's actually present.
+    # tximport's own hardcoded output column is always "gene_name" regardless of
+    # which attribute name was requested, so downstream code is unaffected.
+    # Confirmed against the synthetic annotation corpus's E3_eukaryote_refseq case:
+    # salmon.merged.gene_counts.tsv's gene_name column held gene_id-equivalent
+    # values (eg "gene1") instead of the real "GENE_A"-style names.
+    export NFCORE_EXTRA_ATTRIBUTES="${ANN_EXTRA_ATTRIBUTES}"
+    [[ "${ANN_FORMAT}" == "gff3" ]] && [[ "${ANN_EXTRA_ATTRIBUTES}" == "gene_name" ]] && \
+        NFCORE_EXTRA_ATTRIBUTES="Name"
+
     # Same gffread-conversion problem as above, but for the biotype attribute used by
     # SUBREAD_FEATURECOUNTS's biotype QC (--featurecounts_group_type): NCBI/RefSeq GFF3's
     # "gene_biotype" attribute on gene rows does not survive nf-core's internal gffread
@@ -405,8 +421,8 @@ function normalize_annotations() {
 
     ANNOTATION_FLAGS=" --featurecounts_feature_type ${ANN_FEATURE_TYPE}"
     ANNOTATION_FLAGS+=" --gtf_group_features ${NFCORE_GTF_GROUP_FEATURES}"
-    [[ -n "${ANN_EXTRA_ATTRIBUTES}" ]] && \
-        ANNOTATION_FLAGS+=" --gtf_extra_attributes ${ANN_EXTRA_ATTRIBUTES}"
+    [[ -n "${NFCORE_EXTRA_ATTRIBUTES}" ]] && \
+        ANNOTATION_FLAGS+=" --gtf_extra_attributes ${NFCORE_EXTRA_ATTRIBUTES}"
     [[ -n "${NFCORE_BIOTYPE_ATTR}" ]] && \
         ANNOTATION_FLAGS+=" --featurecounts_group_type ${NFCORE_BIOTYPE_ATTR}"
     # "gbkey" (forced above) only survives gffread's GFF3->GTF conversion on the
@@ -777,23 +793,26 @@ function post_nextflow_pipeline() {
         [[ -z "${_fc_annotation}" ]] && _fc_annotation=$(find "${JOB_PATH}/output/work" -type f \( -name '*.filtered.gtf' -o -name '*.filtered.gtf.gz' \) 2>/dev/null | head -n 1)
         if [[ -n "${_fc_annotation}" && -f "${_fc_annotation}" ]]; then
             _fc_group_features="${NFCORE_GTF_GROUP_FEATURES}"
-            # "Name" doesn't survive gffread's conversion; "gene_name" is always
-            # synthesised in its place (and "gene", when present, is preserved as-is).
+            # gffread writes the gene-name-equivalent value as "Name" (uppercase), never
+            # as "gene_name" - propagated/renamed below so --extraAttributes gene_name
+            # reports real values instead of coming back empty for every gene.
             _fc_extra_attributes="gene_name"
             _fc_biotype_attr="${NFCORE_BIOTYPE_ATTR}"
 
-            # gffread's GFF3->GTF conversion only carries ${_fc_biotype_attr} onto the
-            # transcript row, never onto the exon/CDS rows featureCounts actually reads
-            # attributes from - propagate it down first so --extraAttributes reports
-            # real values instead of coming back empty for every gene. Confirmed
-            # against a live corpus e2e run (E3_eukaryote_refseq): counts.star_
-            # featureCounts.tsv's gbkey column was entirely blank without this step,
-            # even though the id-namespace/grouping fix above was already correct.
+            # gffread's GFF3->GTF conversion only carries the biotype/name attributes onto
+            # the transcript row, never onto the exon/CDS rows featureCounts actually reads
+            # attributes from - propagate them down first (renaming Name -> gene_name) so
+            # --extraAttributes reports real values instead of coming back empty for every
+            # gene. Confirmed against a live corpus e2e run (E3_eukaryote_refseq):
+            # counts.star_featureCounts.tsv's gbkey/gene_name columns were entirely blank
+            # without this step, even though the id-namespace/grouping fix above was
+            # already correct.
             local _fc_propagated="${JOB_PATH}/output/results/genome/genome.filtered.with_biotype.gtf"
             if python3 "${INPUT_SCRIPTS_PATH}/propagate_biotype_to_features.py" \
                 --input "${_fc_annotation}" \
                 --output "${_fc_propagated}" \
-                --biotype-attr "${_fc_biotype_attr}"; then
+                --attr "${_fc_biotype_attr}" \
+                --attr "Name:gene_name"; then
                 _fc_annotation="${_fc_propagated}"
             fi
         fi

@@ -285,19 +285,46 @@ Confirmed end-to-end against a completed corpus e2e job
 `gene_biotype` column (`mRNA`, from the source GFF3's `gbkey` value) for
 every gene, alongside the correct `chromosome` column from the part 1 fix.
 
-**Known follow-up gap (not addressed here):** the same job's `gene_name`
-column is empty. `post_nextflow_pipeline()`'s comment claims gffread
-synthesises a `gene_name` attribute in place of GFF3's `Name` - not observed
-in practice against this gffread version's `*.filtered.gtf`, which carries
-`Name` (uppercase), not `gene_name`. Cosmetic only (`gene_id` is always
-present and unique), left for a future session.
+**Fix (part 4 - `gene_name` was populated with `gene_id` values, not real names)**:
+a follow-up bug, not the id/biotype issue above. Confirmed directly against
+`salmon.merged.gene_counts.tsv` from the `E3_eukaryote_refseq` job
+(`7mbz0c3OwY29msvjiMyhBW`): its `gene_name` column held `gene_id`-equivalent
+values (`gene1`, `gene2`, ...) instead of the real GFF3 `Name` values
+(`GENE_A`, `GENE_B`, ...), and `counts.star_featureCounts.tsv`'s `gene_name`
+column was empty outright. Root cause (confirmed against nf-core/rnaseq's
+own `CUSTOM_TX2GENE`/`TXIMETA_TXIMPORT` source): gffread's GFF3->GTF
+conversion writes the gene-name-equivalent value as `Name` (uppercase) on
+the `transcript` row only - never `gene_name`, and never on child rows.
+`--gtf_extra_attributes gene_name` (the default, previously passed
+unchanged for GFF3 too) requested an attribute that never exists in the
+converted GTF, so tximport's R code silently fell back to the positional
+3rd `tx2gene.tsv` column instead - which happened to hold `gene_id` values.
+Two changes fix this:
+- `normalize_annotations()` now forces `--gtf_extra_attributes Name` for
+  nf-core's own internal quantification whenever GFF3's `gbkey` forcing
+  applies (new `NFCORE_EXTRA_ATTRIBUTES`, mirroring `NFCORE_BIOTYPE_ATTR`).
+  `TXIMETA_TXIMPORT`'s output column is always hardcoded to `gene_name`
+  regardless of which attribute name was requested, so this only changes
+  which attribute's *values* populate that column - no downstream code needs
+  to change.
+- `propagate_biotype_to_features.py` (used by `post_nextflow_pipeline()`'s
+  own separate featureCounts run) was generalised from a single hardcoded
+  biotype attribute to a repeatable `--attr SRC[:DST]` rule list, so a single
+  pass can both propagate `gbkey` (unchanged name) and propagate+rename
+  `Name` -> `gene_name` from `transcript` rows down onto `exon`/`CDS` rows.
+  `_fc_extra_attributes` still requests `gene_name` from featureCounts, but
+  now that attribute genuinely exists in the propagated GTF for every row.
+Applied identically across `3.10.1`, `3.12.0`, `3.18.0`/`default` and
+`nf-core-rnaseq-brbseq/3.19.0`. GTF and prokaryotic paths pass their
+already-correct `ANN_EXTRA_ATTRIBUTES`/`gbkey` values straight through
+unchanged (no forcing applies when `ANN_FORMAT != gff3`).
 
 #### Summary: what's usable per input shape
 
 | Input shape | `salmon.merged.gene_counts.tsv` (Salmon/tximport) | `featureCounts/counts.star_featureCounts.tsv` (our own alignment-based counts) | `*.biotypes.tsv` (merged) | nf-core's own internal biotype QC (MultiQC) |
 |---|---|---|---|---|
 | Ensembl/GENCODE GTF | correct | correct | correct, real biotypes | correct, real biotypes |
-| RefSeq GFF3 (eukaryotic) | correct | correct (grouping now matches the Salmon table for GFF3, see fix above) | fixed, confirmed via live corpus e2e run - real `gbkey` values populated, renamed to `gene_biotype` | skipped (`--skip_biotype_qc`) - forcing `gbkey` as the group attribute alone still crashed this step outright (see fix part 2) |
+| RefSeq GFF3 (eukaryotic) | correct, including real `gene_name` values (fix part 4) | correct, including real `gene_name` values (fix part 4) | fixed, confirmed via live corpus e2e run - real `gbkey` values populated, renamed to `gene_biotype` | skipped (`--skip_biotype_qc`) - forcing `gbkey` as the group attribute alone still crashed this step outright (see fix part 2) |
 | Prokaryotic (any source) | correct (only the single retained feature type) | correct | correct - `filter_annotation_features.py` synthesises `gene_id` consistently on both sides | correct |
 
 ### Testing methodology caveat
