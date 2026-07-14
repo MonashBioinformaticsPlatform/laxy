@@ -5,9 +5,9 @@
 # ///
 """Submit annotation-corpus cases as real Laxy jobs on a remote server.
 
-Reads from the raw-GitHub branch (feature/auto-annotation-features2) so no
-upload is needed. Default mode submits as HOLD first (no compute) so the params
-can be inspected; use --start to release a held job, or --run to submit+launch.
+Reads from the raw-GitHub branch (master) so no upload is needed. Default mode
+submits as HOLD first (no compute) so the params can be inspected; use
+--start to release a held job, or --run to submit+launch.
 
 Env: LAXY_API_KEY_DEV (JWT), optional LAXY_API_BASE_URL (default dev.laxy.io:8001).
 """
@@ -24,7 +24,7 @@ import urllib.request
 from pathlib import Path
 
 API = os.environ.get("LAXY_API_BASE_URL", "https://dev.laxy.io:8001").rstrip("/")
-BRANCH = "feature/auto-annotation-features2"
+BRANCH = "master"
 # File host: jsDelivr CDN mirrors GitHub content and is often reachable from
 # locked-down HPC nodes where raw.githubusercontent.com is blocked. Override
 # with LAXY_CORPUS_FILE_BASE to use raw.githubusercontent.com or another host.

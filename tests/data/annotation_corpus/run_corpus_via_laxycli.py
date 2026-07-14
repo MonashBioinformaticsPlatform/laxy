@@ -42,7 +42,7 @@ HERE = Path(__file__).resolve().parent
 LAXYCLI = HERE.parent.parent.parent / "laxycli" / "laxycli.py"
 
 API = os.environ.get("LAXY_API_URL", "https://dev-api.laxy.io:8001/api/v1").rstrip("/")
-BRANCH = os.environ.get("LAXY_CORPUS_BRANCH", "feature/auto-annotation-features2")
+BRANCH = os.environ.get("LAXY_CORPUS_BRANCH", "master")
 FILE_BASE = os.environ.get(
     "LAXY_CORPUS_FILE_BASE",
     f"https://cdn.jsdelivr.net/gh/MonashBioinformaticsPlatform/laxy@{BRANCH}"
