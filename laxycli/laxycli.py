@@ -340,6 +340,10 @@ def create_job(args: Namespace) -> Optional[str]:
         "pipeline": args.pipeline_name,
         "sample_cart": samplecart_id,
         "params": params,
+        # PipelineRun.description is a dedicated model field, distinct from
+        # params["description"] - the frontend job list reads it back via
+        # job.params.description (copied from here by _set_request_params_from_pipelinerun).
+        "description": args.job_description,
     }
 
     logger.debug(json.dumps(pipeline_run_data))
