@@ -23,3 +23,6 @@ chr1	RefSeq	exon	36000	36950	.	+	.	ID=exon-RNR1-1;Parent=rna-RNR1;gene=RNR1
 chr2	RefSeq	gene	23000	23075	.	+	.	ID=gene-TRNL1;Name=TRNL1;gbkey=Gene;gene=TRNL1;gene_biotype=tRNA
 chr2	RefSeq	tRNA	23000	23075	.	+	.	ID=rna-TRNL1;Parent=gene-TRNL1;gbkey=tRNA;gene=TRNL1;product=tRNA-Leu
 chr2	RefSeq	exon	23000	23075	.	+	.	ID=exon-TRNL1-1;Parent=rna-TRNL1;gene=TRNL1
+chr1	RefSeq	gene	40000	40950	.	-	.	ID=gene-RNR2;Name=RNR2;gbkey=Gene;gene=RNR2;gene_biotype=rRNA
+chr1	RefSeq	rRNA	40000	40950	.	-	.	ID=rna-RNR2;Parent=gene-RNR2;gbkey=rRNA;gene=RNR2;product=16S ribosomal RNA
+chr1	RefSeq	exon	40000	40950	.	-	.	ID=exon-RNR2-1;Parent=rna-RNR2;gene=RNR2

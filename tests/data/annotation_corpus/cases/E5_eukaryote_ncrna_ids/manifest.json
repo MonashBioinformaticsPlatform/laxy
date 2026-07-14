@@ -31,18 +31,18 @@
     "filter": {
       "exit": 0,
       "counts": {
-        "input_rows_kept": 8,
-        "output_rows": 16,
-        "dropped": 16
+        "input_rows_kept": 9,
+        "output_rows": 18,
+        "dropped": 18
       }
     },
     "drop_biotype": {
       "exit": 0,
       "counts": {
-        "input_rows": 24,
+        "input_rows": 27,
         "kept_rows": 12,
-        "dropped_rows": 12,
-        "dropped_ids": 12
+        "dropped_rows": 15,
+        "dropped_ids": 15
       }
     },
     "post_drop": {
