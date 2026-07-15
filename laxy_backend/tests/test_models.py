@@ -274,6 +274,58 @@ class FileModelTest(TestCase):
         self.assertListSameItems(f.type_tags, ["text/plain"])
 
 
+class FileAbsPathOnComputeTest(TestCase):
+    """
+    Phase 2a: File._abs_path_on_compute must not allow a location's path to
+    escape the ComputeResource's base_dir via '../' traversal.
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user("computeuser", "", "testpass")
+        self.base_dir = tempfile.mkdtemp()
+        self.compute = ComputeResource(
+            owner=self.user,
+            host="127.0.0.1",
+            disposable=False,
+            status=ComputeResource.STATUS_ONLINE,
+            name="default",
+            extra={"base_dir": self.base_dir},
+        )
+        self.compute.save()
+
+    def tearDown(self):
+        self.compute.delete()
+        self.user.delete()
+
+    def test_normal_path_resolves_under_base_dir(self):
+        job_id = "some_job_id"
+        f = File(
+            location=f"laxy+sftp://{self.compute.id}/{job_id}/output/aln.bam",
+            owner_id=self.user.id,
+        )
+        abs_path = f._abs_path_on_compute()
+        self.assertEqual(
+            abs_path, str(Path(self.base_dir) / job_id / "output" / "aln.bam")
+        )
+
+    def test_traversal_path_is_rejected(self):
+        f = File(
+            location=f"laxy+sftp://{self.compute.id}/../../../etc/passwd",
+            owner_id=self.user.id,
+        )
+        with self.assertRaises(models.SuspiciousFileOperation):
+            f._abs_path_on_compute()
+
+    def test_traversal_path_within_job_dir_is_rejected(self):
+        job_id = "some_job_id"
+        f = File(
+            location=f"laxy+sftp://{self.compute.id}/{job_id}/../../../../etc/passwd",
+            owner_id=self.user.id,
+        )
+        with self.assertRaises(models.SuspiciousFileOperation):
+            f._abs_path_on_compute()
+
+
 class FileSetModelTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user("testuser", "", "testpass")

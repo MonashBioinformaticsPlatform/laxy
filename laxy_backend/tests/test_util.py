@@ -8,6 +8,7 @@ from ..util import (
     truncate_fastq_to_pair_suffix,
     simplify_fastq_name,
     find_filename_and_size_from_url,
+    split_laxy_sftp_url,
 )
 import requests
 
@@ -199,6 +200,38 @@ class TestFindFilenameAndSizeFromUrl(TestCase):
         filename, size = find_filename_and_size_from_url(url)
         self.assertEqual(filename, "filename.txt")
         self.assertIsNone(size)
+
+
+class SplitLaxySftpUrlTest(TestCase):
+    """
+    Phase 2a: split_laxy_sftp_url must reject '..' path segments, so a
+    client-supplied File.location can't be used to escape the job directory.
+    """
+
+    def test_valid_url(self):
+        compute, job, path, filename = split_laxy_sftp_url(
+            "laxy+sftp://some_compute_id/some_job_id/output/aln.bam"
+        )
+        self.assertEqual(compute, "some_compute_id")
+        self.assertEqual(job, "some_job_id")
+        self.assertEqual(str(path), "output")
+        self.assertEqual(filename, "aln.bam")
+
+    def test_traversal_path_is_rejected(self):
+        with self.assertRaises(ValueError):
+            split_laxy_sftp_url(
+                "laxy+sftp://some_compute_id/some_job_id/../../../etc/passwd"
+            )
+
+    def test_traversal_within_relative_path_is_rejected(self):
+        with self.assertRaises(ValueError):
+            split_laxy_sftp_url(
+                "laxy+sftp://some_compute_id/some_job_id/output/../../secrets.txt"
+            )
+
+    def test_wrong_scheme_still_raises_value_error(self):
+        with self.assertRaises(ValueError):
+            split_laxy_sftp_url("sftp://some_compute_id/some_job_id/output/aln.bam")
 
 
 if __name__ == "__main__":

@@ -301,6 +301,16 @@ def split_laxy_sftp_url(
     # use netloc not hostname, since hostname forces lowercase
     compute = url.netloc
     _, job, path_file = url.path.split("/", 2)
+
+    # path_file is client-influenced (eg via serializers / job scripts), so
+    # reject '..' segments here rather than relying solely on the base_dir
+    # containment check in File._abs_path_on_compute.
+    if ".." in Path(path_file).parts:
+        raise ValueError(
+            f"{location} is not a valid {valid_scheme}:// URL. "
+            "Path cannot contain '..' segments."
+        )
+
     path = Path(path_file).parent
     filename = Path(path_file).name
 

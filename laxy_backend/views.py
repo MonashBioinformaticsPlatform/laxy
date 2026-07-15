@@ -74,7 +74,7 @@ from rest_framework.views import APIView
 from rest_framework_csv.renderers import PaginatedCSVRenderer
 from guardian.shortcuts import get_objects_for_user
 
-from typing import Dict, List, Union
+from typing import Dict, List, Tuple, Union
 import urllib
 from urllib.parse import urlparse, parse_qs, unquote
 from wsgiref.util import FileWrapper
@@ -167,6 +167,7 @@ from .util import (
     longest_common_prefix,
 )
 from .storage import http_remote
+from .http_range import parse_range_header, InvalidRange, RangeFileWrapper
 from .view_mixins import (
     JSONView,
     GetMixin,
@@ -458,8 +459,21 @@ class StreamingFileDownloadRenderer(BaseRenderer):
         max_tries=3,
         jitter=backoff.full_jitter,
     )
-    def render(self, filelike, media_type=None, renderer_context=None, blksize=8192):
-        iterable = FileWrapper(filelike, blksize=blksize)
+    def render(
+        self,
+        filelike,
+        media_type=None,
+        renderer_context=None,
+        blksize=8192,
+        offset=0,
+        length=None,
+    ):
+        if offset or length is not None:
+            iterable = RangeFileWrapper(
+                filelike, offset=offset, length=length, blksize=blksize
+            )
+        else:
+            iterable = FileWrapper(filelike, blksize=blksize)
         try:
             for chunk in iterable:
                 yield chunk
@@ -695,6 +709,22 @@ class StreamFileMixin(JSONView):
 
         return response
 
+    def _content_disposition_and_type(self, obj, download: bool) -> Tuple[str, str]:
+        """
+        Mirrors the pre-Range behaviour: downloads keep the renderer's
+        default octet-stream Content-Type, while inline 'view' guesses a
+        Content-Type from the filename extension so browsers can render
+        eg PDFs/images/text directly instead of downloading them.
+        """
+        if download:
+            disposition = f'attachment; filename="{obj.name}"'
+            content_type = StreamingFileDownloadRenderer.media_type
+        else:
+            disposition = "inline"
+            guessed_type, _ = mimetypes.guess_type(obj.name)
+            content_type = guessed_type or "application/octet-stream"
+        return disposition, content_type
+
     @backoff.on_exception(
         backoff.expo,
         (
@@ -724,12 +754,6 @@ class StreamFileMixin(JSONView):
                 reason=f"File data is unavailable (missing location) ({obj_ref})",
             )
 
-        renderer = StreamingFileDownloadRenderer()
-        # TODO: For local file:// URLs, django.http.response.FileResponse will probably preform better
-        response = StreamingHttpResponse(
-            renderer.render(obj.file), content_type=renderer.media_type
-        )
-
         # A filename can optionally be specified in the URL, so that
         # wget will 'just work' without requiring the --content-disposition
         # flag, eg:
@@ -741,24 +765,98 @@ class StreamFileMixin(JSONView):
             if filename != obj.name:
                 return Response(status=status.HTTP_404_NOT_FOUND)
 
-        if download:
-            response["Content-Disposition"] = f'attachment; filename="{obj.name}"'
-        else:
-            response["Content-Disposition"] = "inline"
-            # Set appropriate Content-Type based on file extension
-            content_type, _ = mimetypes.guess_type(obj.name)
-            if content_type:
-                response["Content-Type"] = content_type
-            else:
-                # Fallback to binary stream if we can't determine the type
-                response["Content-Type"] = "application/octet-stream"
+        disposition, content_type = self._content_disposition_and_type(obj, download)
+        accept_ranges = "bytes" if obj.supports_range else "none"
+        total_size = obj.size
 
-        size = obj.metadata.get("size", None)
-        if obj.file is not None and hasattr(obj.file, "size"):
-            if obj.file.size is not None:
-                response["Content-Length"] = int(obj.file.size)
-        elif size is not None:
-            response["Content-Length"] = int(size)
+        # We deliberately skip If-Range: BAM/job output files are immutable
+        # once written, so a well-formed Range is always honoured rather
+        # than validated against an Etag/Last-Modified first.
+        range_header = self.request.headers.get("Range")
+        if range_header and obj.supports_range and total_size is not None:
+            try:
+                byte_range = parse_range_header(range_header, total_size)
+            except InvalidRange:
+                response = HttpResponse(
+                    status=status.HTTP_416_REQUESTED_RANGE_NOT_SATISFIABLE
+                )
+                response["Content-Range"] = f"bytes */{total_size}"
+                response["Accept-Ranges"] = accept_ranges
+                return response
+
+            if byte_range is not None:
+                first, last = byte_range
+                length = last - first + 1
+
+                renderer = StreamingFileDownloadRenderer()
+                response = StreamingHttpResponse(
+                    renderer.render(obj.file, offset=first, length=length),
+                    status=status.HTTP_206_PARTIAL_CONTENT,
+                    content_type=content_type,
+                )
+                response["Content-Disposition"] = disposition
+                response["Content-Range"] = f"bytes {first}-{last}/{total_size}"
+                response["Content-Length"] = str(length)
+                response["Accept-Ranges"] = accept_ranges
+                self._add_metalink_headers(obj, response)
+                return response
+
+            # byte_range is None -> multi-range header (or otherwise no
+            # usable single range): fall through to a full 200 response,
+            # which is spec-compliant (a server MAY ignore Range).
+
+        renderer = StreamingFileDownloadRenderer()
+        # TODO: For local file:// URLs, django.http.response.FileResponse will probably preform better
+        response = StreamingHttpResponse(
+            renderer.render(obj.file), content_type=content_type
+        )
+        response["Content-Disposition"] = disposition
+        response["Accept-Ranges"] = accept_ranges
+
+        if total_size is not None:
+            response["Content-Length"] = str(total_size)
+
+        self._add_metalink_headers(obj, response)
+
+        return response
+
+    def _head_response(
+        self, obj_ref: Union[str, File], filename: str = None, download: bool = True
+    ) -> Union[HttpResponse, Response]:
+        """
+        HEAD counterpart of `_stream_response` - same headers, but never
+        opens the underlying file/SFTP stream. `Content-Length` relies on
+        `File.size`, which uses the cached `metadata['size']` where
+        available; it only falls back to opening the file if the size has
+        never been determined (unavoidable for backends that can't stat
+        without a file handle).
+        """
+        obj = self._as_file_obj(obj_ref)
+
+        if obj is None:
+            return HttpResponse(
+                status=status.HTTP_404_NOT_FOUND,
+                reason=f"File object does not exist ({obj_ref})",
+            )
+        if obj.location is None or str(obj.location).strip() == "":
+            return HttpResponse(
+                status=status.HTTP_404_NOT_FOUND,
+                reason=f"File data is unavailable (missing location) ({obj_ref})",
+            )
+
+        if filename is not None:
+            if filename != obj.name:
+                return Response(status=status.HTTP_404_NOT_FOUND)
+
+        disposition, content_type = self._content_disposition_and_type(obj, download)
+
+        response = HttpResponse(status=status.HTTP_200_OK, content_type=content_type)
+        response["Content-Disposition"] = disposition
+        response["Accept-Ranges"] = "bytes" if obj.supports_range else "none"
+
+        total_size = obj.size
+        if total_size is not None:
+            response["Content-Length"] = str(total_size)
 
         self._add_metalink_headers(obj, response)
 
@@ -769,6 +867,12 @@ class StreamFileMixin(JSONView):
 
     def view(self, obj_ref: Union[str, File], filename=None):
         return self._stream_response(obj_ref, filename, download=False)
+
+    def head_download(self, obj_ref: Union[str, File], filename=None):
+        return self._head_response(obj_ref, filename, download=True)
+
+    def head_view(self, obj_ref: Union[str, File], filename=None):
+        return self._head_response(obj_ref, filename, download=False)
 
 
 class FileContentDownload(StreamFileMixin, GetMixin, JSONView):
@@ -857,6 +961,18 @@ class FileContentDownload(StreamFileMixin, GetMixin, JSONView):
             return super().download(uuid, filename=filename)
         else:
             return super().view(uuid, filename=filename)
+
+    @extend_schema(responses=FileSerializer)
+    def head(self, request: Request, uuid=None, filename=None, version=None):
+        """
+        HEAD equivalent of `get` - returns the same headers (Content-Length,
+        Accept-Ranges, Content-Type, Content-Disposition, metalink headers)
+        without opening the underlying file/SFTP stream or a body.
+        """
+        if "download" in request.query_params:
+            return super().head_download(uuid, filename=filename)
+        else:
+            return super().head_view(uuid, filename=filename)
 
 
 class FileView(
@@ -969,6 +1085,44 @@ class FileView(
                     status=status.HTTP_503_SERVICE_UNAVAILABLE,
                     reason="Error accessing file via SFTP storage backend",
                 )
+
+    @extend_schema(responses=FileSerializer)
+    @etag_headers
+    def head(self, request: Request, uuid=None, filename=None, version=None):
+        """
+        HEAD equivalent of `get` - returns the same headers (Content-Length,
+        Accept-Ranges, Content-Type, Content-Disposition, metalink headers)
+        without opening the underlying file/SFTP stream or a body. (The
+        `Content-Type: application/json` metadata branch of `get` isn't
+        meaningful for HEAD, so this always returns the byte-content headers.)
+        """
+        try:
+            try:
+                f = File.objects.get(id=uuid)
+            except File.DoesNotExist:
+                return HttpResponse(
+                    status=status.HTTP_404_NOT_FOUND,
+                    reason="File with this ID does not exist.",
+                )
+            if not f.location:
+                return HttpResponse(
+                    status=status.HTTP_404_NOT_FOUND,
+                    reason="File has no default download location.",
+                )
+
+            if "download" in request.query_params:
+                return super().head_download(uuid, filename=filename)
+            else:
+                return super().head_view(uuid, filename=filename)
+        except (
+            ssh_exception.AuthenticationException,
+            ssh_exception.SSHException,
+            EOFError,
+        ) as ex:
+            return HttpResponse(
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                reason="Error accessing file via SFTP storage backend",
+            )
 
     @extend_schema(request=FileSerializer, responses=PatchSerializerResponse)
     def patch(self, request, uuid=None, version=None):
@@ -1115,6 +1269,39 @@ class JobFileView(StreamFileMixin, GetMixin, JSONView):
                 )
 
         # return super(FileView, self).get(request, file_obj.id)
+
+    @extend_schema(responses=FileSerializer)
+    @etag_headers
+    def head(self, request: Request, uuid: str, file_path: str, version=None):
+        """
+        HEAD equivalent of `get` for job files - this is the primary probe
+        IGV/htsjdk issue before a ranged GET, to learn size and
+        Accept-Ranges without opening an SFTP stream.
+        """
+        job = self.get_object()
+        if job is None:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        fname = Path(file_path).name
+        fpath = Path(file_path).parent
+        file_obj = job.get_files().filter(name=fname, path=fpath).first()
+        if file_obj is None:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            if "download" in request.query_params:
+                return super().head_download(file_obj, filename=fname)
+            else:
+                return super().head_view(file_obj, filename=fname)
+        except (
+            ssh_exception.AuthenticationException,
+            ssh_exception.SSHException,
+            EOFError,
+        ) as ex:
+            return HttpResponse(
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                reason="Error accessing file via SFTP storage backend",
+            )
 
     @transaction.atomic()
     @extend_schema(

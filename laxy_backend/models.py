@@ -34,7 +34,11 @@ from django.core.files.storage import Storage
 from django.utils.module_loading import import_string
 from django.core.serializers import serialize
 from django.core.validators import URLValidator
-from django.core.exceptions import ValidationError as DjangoValidationError, ValidationError
+from django.core.exceptions import (
+    ValidationError as DjangoValidationError,
+    ValidationError,
+    SuspiciousFileOperation,
+)
 from django.db.models import (
     Model,
     Manager,
@@ -1667,7 +1671,19 @@ class File(Timestamped, UUIDModel):
         base_dir = compute.extra.get(
             "base_dir", getattr(settings, "DEFAULT_JOB_BASE_PATH")
         )
-        file_path = str(Path(base_dir) / Path(url.path).relative_to("/"))
+
+        # File.location is client-settable (eg via PUT /job/<uuid>/files/<path>),
+        # and Path(url.path) isn't normalised, so a location containing '../'
+        # could otherwise escape base_dir. Normalise and check containment
+        # without touching the remote filesystem.
+        base = Path(base_dir).resolve()
+        rel = Path(url.path).relative_to("/")
+        candidate = base / rel
+        norm = os.path.normpath(str(candidate))
+        if norm != str(base) and not norm.startswith(str(base) + os.sep):
+            raise SuspiciousFileOperation(f"path escapes base_dir: {url.path}")
+
+        file_path = norm
 
         return file_path
 
@@ -1820,6 +1836,18 @@ class File(Timestamped, UUIDModel):
     @size.setter
     def size(self, value: int):
         self.metadata["size"] = int(value)
+
+    @property
+    def supports_range(self) -> bool:
+        """
+        True if the backing store can serve byte ranges by seeking.
+
+        Deliberately conservative - http/https/ftp/ftps/data locations are
+        served via requests' forward-only .raw stream (see File._file), so
+        HTTP Range requests can't be honoured against them in this phase.
+        """
+        scheme = urlparse(str(self.location)).scheme
+        return scheme in ("laxy+sftp", "sftp", "file")
 
     @property
     def deleted(self):
