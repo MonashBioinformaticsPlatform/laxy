@@ -71,16 +71,27 @@ class RangeFileWrapper:
         blksize: int = 8192,
     ):
         self.filelike = filelike
-        try:
-            self.filelike.seek(offset)
-        except Exception:
-            # Non-seekable backend: read-and-discard up to offset as a
-            # fallback (correct but slow). Callers should check
-            # File.supports_range before choosing to serve a range at all,
-            # so this path is only a safety net.
-            self._discard(offset)
         self.remaining = length
         self.blksize = blksize
+        self._seek_to(offset)
+
+    def _seek_to(self, offset: int):
+        # Some storage wrappers open their real backing file lazily on the
+        # first read() -- notably django-storages' SFTPStorageFile, which
+        # proxies an empty in-memory io.BytesIO() until then. A seek before
+        # that first read is silently applied to the placeholder buffer and
+        # lost, so every range would stream from byte 0. Force the lazy open
+        # with a zero-length read, then seek the now-real underlying file.
+        try:
+            if offset:
+                self.filelike.read(0)
+            self.filelike.seek(offset)
+        except (AttributeError, OSError, ValueError):
+            # Non-seekable backend (eg requests' raw HTTP response): fall back
+            # to reading and discarding up to the offset (correct but slow).
+            # Callers should check File.supports_range before serving a range,
+            # so this path is only a safety net.
+            self._discard(offset)
 
     def _discard(self, n: int):
         while n > 0:

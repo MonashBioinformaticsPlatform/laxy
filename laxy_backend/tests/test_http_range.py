@@ -105,5 +105,69 @@ class RangeFileWrapperTest(TestCase):
         self.assertTrue(f.closed)
 
 
+class _LazyOpenFile:
+    """
+    Mimics django-storages' SFTPStorageFile: the real backing data is only
+    opened on the first read(); until then it proxies an empty placeholder
+    buffer. A seek() before that first read therefore hits the placeholder
+    and is lost -- exactly the behaviour that made ranged SFTP downloads
+    stream from byte 0 in the wild. RangeFileWrapper must prime the lazy
+    open before seeking to work against this.
+    """
+
+    def __init__(self, data: bytes):
+        self._data = data
+        self._file = io.BytesIO()  # empty placeholder, like SFTPStorageFile
+        self._is_read = False
+
+    def read(self, num_bytes=-1):
+        if not self._is_read:
+            self._file = io.BytesIO(self._data)
+            self._is_read = True
+        return self._file.read(num_bytes)
+
+    def seek(self, *args, **kwargs):
+        return self._file.seek(*args, **kwargs)
+
+    def tell(self):
+        return self._file.tell()
+
+    def close(self):
+        self._file.close()
+
+
+class RangeFileWrapperLazyOpenTest(TestCase):
+    """
+    Regression test for the SFTPStorageFile lazy-open seek bug: a naive
+    seek()-before-read() streams from byte 0 for every range. Found via a
+    live ranged BAM download; the io.BytesIO-based tests above can't catch
+    it because BytesIO opens eagerly.
+    """
+
+    def setUp(self):
+        self.data = bytes(range(256)) * 400  # 102400 bytes
+
+    def test_mid_file_range_against_lazy_open_file(self):
+        wrapper = RangeFileWrapper(
+            _LazyOpenFile(self.data), offset=1000, length=256, blksize=64
+        )
+        result = b"".join(wrapper)
+        self.assertEqual(result, self.data[1000:1256])
+
+    def test_suffix_style_offset_against_lazy_open_file(self):
+        offset = len(self.data) - 100
+        wrapper = RangeFileWrapper(
+            _LazyOpenFile(self.data), offset=offset, length=100
+        )
+        result = b"".join(wrapper)
+        self.assertEqual(result, self.data[offset:])
+
+    def test_offset_zero_against_lazy_open_file(self):
+        wrapper = RangeFileWrapper(
+            _LazyOpenFile(self.data), offset=0, length=50
+        )
+        self.assertEqual(b"".join(wrapper), self.data[:50])
+
+
 if __name__ == "__main__":
     unittest.main()
