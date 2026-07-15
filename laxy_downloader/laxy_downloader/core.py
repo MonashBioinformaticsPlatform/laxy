@@ -268,30 +268,54 @@ def download_url(
                         if partial_size is not None and partial_size > 0:
                             request_headers["Range"] = f"bytes={partial_size}-"
 
-                        with closing(
-                            request_with_retries(
-                                "GET",
-                                url,
-                                stream=True,
-                                headers=request_headers,
-                                auth=auth,
-                            )
-                        ) as download:
-                            download.raise_for_status()
+                        try:
+                            with closing(
+                                request_with_retries(
+                                    "GET",
+                                    url,
+                                    stream=True,
+                                    headers=request_headers,
+                                    auth=auth,
+                                )
+                            ) as download:
+                                download.raise_for_status()
 
-                            # If server ignored our range request and sent full file
-                            if partial_size and download.status_code == 200:
-                                mode = "wb"  # Start fresh since we got the full file
-                            else:
-                                mode = "ab" if partial_size else "wb"
+                                # If server ignored our range request and sent full file
+                                if partial_size and download.status_code == 200:
+                                    mode = "wb"  # Start fresh since we got the full file
+                                else:
+                                    mode = "ab" if partial_size else "wb"
 
-                            with open(tmpfile.name, mode) as f:
-                                for chunk in download.iter_content(
-                                    chunk_size=chunk_size
-                                ):
-                                    f.write(chunk)
-                                f.flush()
-                                os.fsync(f.fileno())
+                                with open(tmpfile.name, mode) as f:
+                                    for chunk in download.iter_content(
+                                        chunk_size=chunk_size
+                                    ):
+                                        f.write(chunk)
+                                    f.flush()
+                                    os.fsync(f.fileno())
+                        except requests.exceptions.HTTPError as e:
+                            # A Range request can 416 if our local (complete or
+                            # partial) file is no longer a valid prefix of the
+                            # remote content, eg a CDN edge whose Range-serving
+                            # cache hasn't caught up with the current file size.
+                            # Discard it and retry with a full download rather
+                            # than aborting the whole job.
+                            if (
+                                "Range" in request_headers
+                                and e.response is not None
+                                and e.response.status_code == 416
+                                and attempt < max_retries - 1
+                            ):
+                                logger.warning(
+                                    f"Range request for {url} got 416 Range Not "
+                                    f"Satisfiable (local size {partial_size}); "
+                                    "discarding local file and retrying with a "
+                                    "full download."
+                                )
+                                if os.path.exists(filepath):
+                                    os.remove(filepath)
+                                continue
+                            raise
 
                     # Check if download is complete
                     file_size = os.path.getsize(tmpfile.name)

@@ -292,6 +292,68 @@ def test_download_url_server_ignores_range(mock_request, temp_dir):
 
 
 @mock.patch("laxy_downloader.core.request_with_retries")
+def test_download_url_range_416_falls_back_to_full_download(mock_request, temp_dir):
+    """A CDN with a stale Range-serving cache can 416 a resume request even
+    though full (non-Range) downloads succeed - eg jsDelivr serving a mutable
+    git branch ref where the byte-range cache hasn't caught up with a recent
+    push. The client should discard the local file and retry with a full
+    download rather than failing the whole job."""
+    url = "http://example.com/moved_goalposts.txt"
+    content = b"This is the current, correct, full content of the file."
+    file_path = os.path.join(temp_dir, "moved_goalposts.txt")
+
+    mock_head_response = mock.Mock()
+    mock_head_response.headers = {"content-length": str(len(content))}
+
+    # First attempt - gets a short, stale response (eg from a CDN edge whose
+    # full-object cache hasn't updated yet), which looks "partial" since it
+    # doesn't match Content-Length from the HEAD.
+    mock_stale_response = create_mock_response(
+        content[:10],
+        headers={"content-length": str(len(content))},
+    )
+
+    # Second attempt - resumes via Range from the stale partial file, but the
+    # CDN's Range-serving cache thinks the resource is only 10 bytes long, so
+    # any Range starting at/after that is invalid.
+    mock_416_response = mock.Mock()
+    mock_416_response.status_code = 416
+    mock_416_response.headers = {}
+    mock_416_response.raise_for_status.side_effect = requests.exceptions.HTTPError(
+        response=mock_416_response
+    )
+
+    # Third attempt - local file was discarded, so this is a fresh full
+    # download (no Range header) that succeeds with the correct content.
+    mock_full_response = create_mock_response(
+        content, headers={"content-length": str(len(content))}
+    )
+
+    mock_request.side_effect = [
+        mock_head_response,
+        mock_stale_response,
+        mock_416_response,
+        mock_full_response,
+    ]
+
+    result = download_url(url, file_path)
+
+    assert result == file_path
+    with open(file_path, "rb") as f:
+        assert f.read() == content
+
+    calls = mock_request.call_args_list
+    assert len(calls) == 4
+    assert calls[0][0] == ("HEAD", url)
+    assert calls[1][0] == ("GET", url)
+    assert "Range" not in calls[1][1]["headers"]
+    assert calls[2][0] == ("GET", url)
+    assert calls[2][1]["headers"]["Range"] == "bytes=10-"
+    assert calls[3][0] == ("GET", url)
+    assert "Range" not in calls[3][1]["headers"]  # discarded partial, fresh start
+
+
+@mock.patch("laxy_downloader.core.request_with_retries")
 def test_download_url_no_content_length(mock_request, temp_dir):
     url = "http://example.com/no_length.txt"
     content = b"This file has no Content-Length header."
