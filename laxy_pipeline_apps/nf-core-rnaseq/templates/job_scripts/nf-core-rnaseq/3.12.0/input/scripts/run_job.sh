@@ -477,25 +477,25 @@ function normalize_annotations() {
 
 function get_settings_from_pipeline_config() {
     # Extract the pipeline parameters we need from pipeline_config.json
-    local _debug_mode=$(jq -e --raw-output '.params."nf-core-rnaseq".debug_mode' "${PIPELINE_CONFIG}" || echo "false")
+    local _debug_mode=$(jq --raw-output '.params."nf-core-rnaseq".debug_mode // "false"' "${PIPELINE_CONFIG}")
     export USER_DEBUG_MODE="no"
     if [[ "${_debug_mode}" == "true" ]]; then
         export USER_DEBUG_MODE="yes"
     fi
 
-    local _has_umi=$(jq -e --raw-output '.params."nf-core-rnaseq".has_umi' "${PIPELINE_CONFIG}" || echo "false")
+    local _has_umi=$(jq --raw-output '.params."nf-core-rnaseq".has_umi // "false"' "${PIPELINE_CONFIG}")
     export UMI_FLAGS=""
     if [[ "${_has_umi}" == "true" ]]; then
         export UMI_FLAGS=" --with_umi --skip_umi_extract --umitools_umi_separator : "
     fi
 
-    local _skip_trimming=$(jq -e --raw-output '.params."nf-core-rnaseq".skip_trimming' "${PIPELINE_CONFIG}" || echo "false")
+    local _skip_trimming=$(jq --raw-output '.params."nf-core-rnaseq".skip_trimming // "false"' "${PIPELINE_CONFIG}")
     export EXTRA_FLAGS=""
     if [[ "${_skip_trimming}" == "true" ]]; then
         export EXTRA_FLAGS="${EXTRA_FLAGS} --skip_trimming "
     fi
 
-    local -i _min_mapped_reads=$(jq -e --raw-output '.params."nf-core-rnaseq".min_mapped_reads' "${PIPELINE_CONFIG}" || echo "5")
+    local -i _min_mapped_reads=$(jq --raw-output '.params."nf-core-rnaseq".min_mapped_reads // "5"' "${PIPELINE_CONFIG}")
     export MIN_MAPPED_READS_ARG=" --min_mapped_reads ${_min_mapped_reads} "
 
     # Not currently exposed as a UI option (unlike min_mapped_reads above): nf-core/rnaseq's
@@ -504,7 +504,7 @@ function get_settings_from_pipeline_config() {
     # unset in pipeline_config.json, this falls through to nf-core's own default unchanged;
     # e2e/corpus tests override it to 0 to exercise star_salmon/featureCounts on tiny
     # synthetic read sets that would otherwise be filtered out here.
-    local -i _min_trimmed_reads=$(jq -e --raw-output '.params."nf-core-rnaseq".min_trimmed_reads' "${PIPELINE_CONFIG}" || echo "10000")
+    local -i _min_trimmed_reads=$(jq --raw-output '.params."nf-core-rnaseq".min_trimmed_reads // "10000"' "${PIPELINE_CONFIG}")
     export MIN_TRIMMED_READS_ARG=" --min_trimmed_reads ${_min_trimmed_reads} "
 }
 
@@ -518,7 +518,7 @@ function remove_index_reads() {
 }
 
 function generate_samplesheet() {
-    export STRANDEDNESS=$(jq -e --raw-output '.params."nf-core-rnaseq".strandedness' "${PIPELINE_CONFIG}" || echo "auto")
+    export STRANDEDNESS=$(jq --raw-output '.params."nf-core-rnaseq".strandedness // "auto"' "${PIPELINE_CONFIG}")
 
     python ${INPUT_SCRIPTS_PATH}/laxy2nfcore_samplesheet.py  \
       ${INPUT_CONFIG_PATH}/pipeline_config.json ${INPUT_READS_PATH} ${STRANDEDNESS} \
@@ -540,12 +540,12 @@ function cleanup_nextflow_intermediates() {
 }
 
 function cleanup_nextflow_intermediates_keep_work_logs() {
-    local _save_genome_index=$(jq -e --raw-output '.params."nf-core-rnaseq".save_genome_index' "${PIPELINE_CONFIG}" || echo "false")
+    local _save_genome_index=$(jq --raw-output '.params."nf-core-rnaseq".save_genome_index // "false"' "${PIPELINE_CONFIG}")
     if [[ ${_save_genome_index} != 'true' ]]; then
         rm -rf "${JOB_PATH}/output/results/genome/index"
     fi
 
-    local _save_reference_genome=$(jq -e --raw-output '.params."nf-core-rnaseq".save_reference_genome' "${PIPELINE_CONFIG}" || echo "false")
+    local _save_reference_genome=$(jq --raw-output '.params."nf-core-rnaseq".save_reference_genome // "false"' "${PIPELINE_CONFIG}")
     if [[ ${_save_reference_genome} != 'true' ]]; then
         rm -rf "${JOB_PATH}/output/results/genome"
     fi
