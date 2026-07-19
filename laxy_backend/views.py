@@ -165,9 +165,11 @@ from .util import (
     find_filename_and_size_from_url,
     simplify_fastq_name,
     longest_common_prefix,
+    reverse_querystring,
 )
 from .storage import http_remote
 from .http_range import parse_range_header, InvalidRange, RangeFileWrapper
+from .igv_session import find_bam_index, laxy_genome_to_igv_id, build_session_xml
 from .view_mixins import (
     JSONView,
     GetMixin,
@@ -1418,6 +1420,116 @@ class JobFileView(StreamFileMixin, GetMixin, JSONView):
                 )
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class JobIgvSessionView(JSONView):
+    """
+    Emit an IGV desktop session XML for a Job's BAM files.
+
+    The session references each BAM (and its `.bai`/`.csi` index sibling) by an
+    absolute Laxy file URL carrying an `?access_token=` so IGV can fetch without
+    interactive auth. IGV issues Range requests against these URLs, which the
+    file-serving endpoints support.
+    """
+
+    queryset = Job.objects.all()
+    permission_classes = (IsOwner | IsSuperuser | HasReadonlyObjectAccessToken,)
+
+    def _resolve_access_token(self, request, job) -> Union[str, None]:
+        """
+        Determine the access token to embed in the session's file URLs.
+
+        Priority: a token the caller already supplied (shared link / frontend
+        that pre-fetched one) -> the job's existing non-expired token -> a newly
+        minted token (owner/superuser only). Readonly-token callers always match
+        the first branch, so they never mint anything.
+        """
+        token = request.query_params.get("access_token", None)
+        if token:
+            return token
+
+        job_ct = ContentType.objects.get(app_label="laxy_backend", model="job")
+        existing = (
+            AccessToken.objects.filter(object_id=job.id, content_type=job_ct)
+            .filter(Q(expiry_time__gt=timezone.now()) | Q(expiry_time=None))
+            .order_by("created_time")
+            .first()
+        )
+        if existing is not None:
+            return existing.token
+
+        user = request.user
+        if user.is_authenticated and (user.is_superuser or is_owner(user, job)):
+            new_token = AccessToken.objects.create(
+                obj=job, created_by=user, expiry_time=None
+            )
+            return new_token.token
+
+        return None
+
+    def _job_file_url(self, request, job, file_obj, query_kwargs) -> str:
+        path = reverse_querystring(
+            "laxy_backend:job_file",
+            args=[job.id, file_obj.full_path],
+            query_kwargs=query_kwargs,
+        )
+        return get_abs_backend_url(path, request)
+
+    def get(self, request: Request, uuid: str, version=None):
+        """
+        Return an IGV session XML listing this Job's BAM tracks.
+
+        Returns 404 if the job has no BAM files (with an indexed sibling, IGV
+        can stream them; un-indexed BAMs are still listed so IGV can offer to
+        index them locally, but remote indexing isn't possible).
+        """
+        job = self.get_object()
+        if job is None:
+            return Response(
+                {"detail": f"Unknown job ID: {uuid}"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        files = list(job.get_files())
+        bams = [
+            f
+            for f in files
+            if f.name.lower().endswith(".bam") or "bam" in (f.type_tags or [])
+        ]
+        # Guard against a file mis-tagged 'bam' that is actually an index.
+        bams = [b for b in bams if not b.name.lower().endswith((".bai", ".csi"))]
+
+        if not bams:
+            return Response(
+                {"detail": f"No BAM files found for job {uuid}"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        access_token = self._resolve_access_token(request, job)
+        query_kwargs = {"access_token": access_token} if access_token else None
+
+        resources = []
+        for bam in sorted(bams, key=lambda f: f.full_path):
+            index = find_bam_index(bam, files)
+            resource = {
+                "name": bam.name,
+                "path": self._job_file_url(request, job, bam, query_kwargs),
+            }
+            if index is not None:
+                resource["index"] = self._job_file_url(
+                    request, job, index, query_kwargs
+                )
+            resources.append(resource)
+
+        genome_id = pydash.get(job.params, "params.genome", None)
+        igv_genome = laxy_genome_to_igv_id(genome_id)
+
+        xml = build_session_xml(igv_genome, resources)
+
+        response = HttpResponse(xml, content_type="application/xml")
+        response["Content-Disposition"] = (
+            f'attachment; filename="laxy-job-{job.id}-igv-session.xml"'
+        )
+        return response
 
 
 # TODO: This endpoint should properly set owner, location etc

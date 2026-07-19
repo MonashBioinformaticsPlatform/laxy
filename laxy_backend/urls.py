@@ -40,6 +40,7 @@ from laxy_backend.views import (
     EventLogListView,
     JobEventLogCreate,
     JobFileView,
+    JobIgvSessionView,
     JobFileBulkRegistration,
     trigger_file_registration,
     SendFileToDegust,
@@ -152,6 +153,11 @@ api_urls = [
         r"job/(?P<uuid>[a-zA-Z0-9\-_]+)/files/$",
         JobFileBulkRegistration.as_view(),  # POST (csv, tsv)
         name="job_file_bulk",
+    ),
+    re_path(
+        r"job/(?P<uuid>[a-zA-Z0-9\-_]+)/igv-session\.xml$",
+        JobIgvSessionView.as_view(),  # GET
+        name="job_igv_session",
     ),
     re_path(
         r"job/(?P<uuid>[a-zA-Z0-9\-_]+)/files/(?P<file_path>.*)$",

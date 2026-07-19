@@ -463,7 +463,15 @@ Consider one integration test against the `docker/fake-cluster` SFTP host
 
 ---
 
-## Phase 5 — IGV link-out via session/config XML (after Range works)
+## Phase 5 — IGV link-out via session/config XML (after Range works) (DONE — backend)
+
+Implemented as `GET job/<uuid>/igv-session.xml` (`JobIgvSessionView`,
+`name="job_igv_session"`), with the pure helpers (index-sibling matching,
+Laxy→IGV genome-id mapping, session XML rendering) in
+`laxy_backend/igv_session.py`. Tests: `tests/test_igv_session.py` (unit) and
+`tests/test_igv_session_views.py` (view). The genome map is conservative
+(unknown assembly → no `genome` attr); extend `_IGV_GENOME_BY_TOKEN` as needed.
+Remaining: the frontend "Open in IGV" / "copy session URL" action is Phase 6.
 
 Once ranged `job/<uuid>/files/<path>` serving is verified with a real BAM +
 `.bai` in IGV desktop:
