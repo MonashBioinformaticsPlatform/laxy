@@ -101,14 +101,29 @@ class IgvSessionViewTest(TestCase):
         root = ET.fromstring(response.content)
         self.assertEqual(root.get("genome"), "hg38")
         resources = root.findall("./Resources/Resource")
-        self.assertEqual(len(resources), 1)
-        bam_res = resources[0]
+        # BAM resource is the one with type="bam".
+        bam_res = next(r for r in resources if r.get("type") == "bam")
         self.assertIn("job/", bam_res.get("path"))
         self.assertIn("output/aln/aln.bam", bam_res.get("path"))
         self.assertIn("output/aln/aln.bam.bai", bam_res.get("index"))
         # BAM + index both carry a token so IGV can fetch without a cookie.
         self.assertIn("access_token=", bam_res.get("path"))
         self.assertIn("access_token=", bam_res.get("index"))
+
+    def test_annotation_track_and_reference_note_present_for_known_genome(self):
+        # GRCh38.release-109 has fasta+gtf files in REFERENCE_GENOMES.
+        response = self.owner_client.get(self._url())
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        root = ET.fromstring(content)
+
+        gtf_res = [r for r in root.findall("./Resources/Resource") if r.get("type") == "gtf"]
+        self.assertEqual(len(gtf_res), 1)
+        self.assertTrue(gtf_res[0].get("path").endswith(".gtf.gz"))
+        # Reference source URLs documented as an XML comment.
+        self.assertIn("<!--", content)
+        self.assertIn("reference FASTA:", content)
+        self.assertIn("annotation GTF:", content)
 
     def test_owner_request_mints_a_reusable_job_token(self):
         self.assertEqual(AccessToken.objects.filter(object_id=self.job.id).count(), 0)

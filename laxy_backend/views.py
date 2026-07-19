@@ -171,7 +171,12 @@ from .util import (
 )
 from .storage import http_remote
 from .http_range import parse_range_header, InvalidRange, RangeFileWrapper
-from .igv_session import find_bam_index, laxy_genome_to_igv_id, build_session_xml
+from .igv_session import (
+    find_bam_index,
+    laxy_genome_to_igv_id,
+    build_session_xml,
+    reference_urls_from_genome,
+)
 from .view_mixins import (
     JSONView,
     GetMixin,
@@ -1539,9 +1544,13 @@ class JobIgvSessionView(JSONView):
         resources = []
         for bam in sorted(bams, key=lambda f: f.full_path):
             index = find_bam_index(bam, files)
+            # `type="bam"` makes IGV set the format explicitly rather than
+            # inferring it from the URL - inference fails on our
+            # `...bam?access_token=...` URLs and silently drops the track.
             resource = {
                 "name": bam.name,
                 "path": self._job_file_url(request, job, bam, query_kwargs),
+                "type": "bam",
             }
             if index is not None:
                 resource["index"] = self._job_file_url(
@@ -1550,9 +1559,37 @@ class JobIgvSessionView(JSONView):
             resources.append(resource)
 
         genome_id = pydash.get(job.params, "params.genome", None)
+        genome_meta = REFERENCE_GENOMES.get(genome_id) if genome_id else None
         igv_genome = laxy_genome_to_igv_id(genome_id)
+        fasta_url, annotation_url = reference_urls_from_genome(genome_meta)
 
-        xml = build_session_xml(igv_genome, resources)
+        # Link the actual annotation used (typically the original Ensembl GTF)
+        # as a feature track. IGV aliases Ensembl chromosome names (1, 2, ...)
+        # onto the loaded genome, so this displays even against IGV's hg38.
+        if annotation_url:
+            resources.append(
+                {
+                    "name": f"{genome_id} annotation",
+                    "path": annotation_url,
+                    "type": "gtf",
+                }
+            )
+
+        # Document the actual reference/annotation source (the sequence FASTA
+        # can't be loaded directly by IGV - Ensembl serves plain-gzip FASTA
+        # with no index - so IGV loads the equivalent hosted assembly).
+        note_parts = []
+        if genome_id:
+            note_parts.append(f"Reference genome: {genome_id}")
+        if fasta_url:
+            note_parts.append(f"reference FASTA: {fasta_url}")
+        if annotation_url:
+            note_parts.append(f"annotation GTF: {annotation_url}")
+        reference_note = "; ".join(note_parts) or None
+
+        xml = build_session_xml(
+            igv_genome, resources, reference_note=reference_note
+        )
 
         response = HttpResponse(xml, content_type="application/xml")
         response["Content-Disposition"] = (

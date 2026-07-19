@@ -52,6 +52,27 @@ def laxy_genome_to_igv_id(genome_id: Optional[str]) -> Optional[str]:
     return None
 
 
+def reference_urls_from_genome(genome_meta: Optional[dict]):
+    """
+    Pull the reference FASTA and annotation (GTF/GFF) source URLs out of a
+    `REFERENCE_GENOMES` entry's `files` list (matched by `type_tags`). Returns
+    `(fasta_url, annotation_url)`, either of which may be None. These are the
+    "actual reference / annotation used" links (typically the original Ensembl
+    FTP URLs).
+    """
+    fasta = annotation = None
+    for f in (genome_meta or {}).get("files", []) or []:
+        tags = [str(t).lower() for t in (f.get("type_tags") or [])]
+        location = f.get("location")
+        if not location:
+            continue
+        if fasta is None and "fasta" in tags:
+            fasta = location
+        if annotation is None and ("gtf" in tags or "gff" in tags or "annotation" in tags):
+            annotation = location
+    return fasta, annotation
+
+
 def _index_candidate_names(bam_name: str) -> List[str]:
     """
     Candidate index filenames for a BAM, in preference order. Covers both the
@@ -86,26 +107,39 @@ def find_bam_index(bam_file, files: Iterable):
 
 
 def build_session_xml(
-    genome_id: Optional[str],
+    genome: Optional[str],
     resources: List[dict],
     locus: str = "All",
+    reference_note: Optional[str] = None,
 ) -> str:
     """
-    Render an IGV session XML string.
+    Render an IGV desktop session XML string.
 
-    `resources` is a list of dicts with keys `name`, `path` (the BAM URL) and
-    optionally `index` (the index URL). Attribute values are XML-escaped by
-    ElementTree, so URLs carrying `?access_token=...&...` are safe.
+    `genome` is an IGV-hosted genome id (eg `hg38`) or a URL to a genome
+    definition; omitted if None. `resources` is a list of dicts with keys
+    `name`, `path`, and optionally `index` (index URL) and `type` (the IGV
+    format string, eg `bam`/`gtf`). The `type` attribute is important: it makes
+    IGV set the track format explicitly (`ResourceLocator.setFormat`) instead
+    of inferring it from the URL extension - inference fails when the URL
+    carries a `?access_token=...` query string, silently dropping the track.
+    `reference_note`, if given, is emitted as an XML comment (eg documenting
+    the actual reference/annotation source URLs). Attribute values are
+    XML-escaped by ElementTree, so URLs with `&` query separators are safe.
     """
     session = ET.Element("Session", {"version": "8", "locus": locus})
-    if genome_id:
-        session.set("genome", genome_id)
+    if genome:
+        session.set("genome", genome)
+
+    if reference_note:
+        session.append(ET.Comment(f" {reference_note} "))
 
     resources_el = ET.SubElement(session, "Resources")
     for resource in resources:
         attrs = {"name": resource["name"], "path": resource["path"]}
         if resource.get("index"):
             attrs["index"] = resource["index"]
+        if resource.get("type"):
+            attrs["type"] = resource["type"]
         ET.SubElement(resources_el, "Resource", attrs)
 
     ET.indent(session)

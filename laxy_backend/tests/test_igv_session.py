@@ -13,6 +13,7 @@ from ..igv_session import (
     laxy_genome_to_igv_id,
     find_bam_index,
     build_session_xml,
+    reference_urls_from_genome,
 )
 
 
@@ -74,6 +75,23 @@ class FindBamIndexTest(SimpleTestCase):
         self.assertIsNone(find_bam_index(bam, [bam, _f("aln.bam.md5")]))
 
 
+class ReferenceUrlsFromGenomeTest(SimpleTestCase):
+    def test_extracts_fasta_and_annotation_by_tags(self):
+        meta = {
+            "files": [
+                {"location": "https://ftp/x.fa.gz", "type_tags": ["fasta"]},
+                {"location": "https://ftp/x.gtf.gz", "type_tags": ["gtf", "annotation"]},
+            ]
+        }
+        fasta, annotation = reference_urls_from_genome(meta)
+        self.assertEqual(fasta, "https://ftp/x.fa.gz")
+        self.assertEqual(annotation, "https://ftp/x.gtf.gz")
+
+    def test_missing_files_returns_none(self):
+        self.assertEqual(reference_urls_from_genome(None), (None, None))
+        self.assertEqual(reference_urls_from_genome({"location": "x"}), (None, None))
+
+
 class BuildSessionXmlTest(SimpleTestCase):
     def test_includes_genome_and_resources_with_index(self):
         xml = build_session_xml(
@@ -106,6 +124,25 @@ class BuildSessionXmlTest(SimpleTestCase):
         xml = build_session_xml(None, [{"name": "aln.bam", "path": "https://x/aln.bam"}])
         resource = ET.fromstring(xml).find("./Resources/Resource")
         self.assertIsNone(resource.get("index"))
+
+    def test_type_attribute_is_emitted(self):
+        xml = build_session_xml(
+            "hg38",
+            [{"name": "aln.bam", "path": "https://x/aln.bam", "type": "bam"}],
+        )
+        resource = ET.fromstring(xml).find("./Resources/Resource")
+        self.assertEqual(resource.get("type"), "bam")
+
+    def test_reference_note_emitted_as_comment(self):
+        xml = build_session_xml(
+            "hg38",
+            [{"name": "aln.bam", "path": "https://x/aln.bam", "type": "bam"}],
+            reference_note="Reference genome: Homo_sapiens/Ensembl/GRCh38",
+        )
+        self.assertIn("<!--", xml)
+        self.assertIn("Homo_sapiens/Ensembl/GRCh38", xml)
+        # Comment must not break parsing.
+        self.assertIsNotNone(ET.fromstring(xml).find("./Resources/Resource"))
 
     def test_ampersands_in_urls_are_escaped_and_reparse(self):
         # URLs with multiple query params must produce valid XML.
