@@ -257,6 +257,23 @@ class RangeRequestJobFileViewTest(TestCase):
         content = b"".join(chunk for chunk in response.streaming_content)
         self.assertEqual(content, self.content[0:5])
 
+    def test_igv_restrictive_accept_header_still_serves_range(self):
+        # IGV/htsjdk sends an Accept header with neither */* nor
+        # application/json; DRF content negotiation must not 406 the byte
+        # request before the streaming handler runs.
+        token = AccessToken.objects.create(object_id=self.job.id).token
+        client = APIClient()
+
+        response = client.get(
+            f"{self._url()}?access_token={token}",
+            HTTP_RANGE="bytes=0-4",
+            HTTP_ACCEPT="application/octet-stream",
+        )
+
+        self.assertEqual(response.status_code, 206)
+        content = b"".join(chunk for chunk in response.streaming_content)
+        self.assertEqual(content, self.content[0:5])
+
     def test_head_via_access_token(self):
         self.file_obj.metadata["size"] = self.size
         self.file_obj.save(update_fields=["metadata"])

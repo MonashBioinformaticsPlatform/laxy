@@ -68,6 +68,8 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
 from rest_framework.renderers import JSONRenderer, BaseRenderer, TemplateHTMLRenderer
+from rest_framework.negotiation import DefaultContentNegotiation
+from rest_framework.exceptions import NotAcceptable
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -681,7 +683,33 @@ class JSONPatchRFC6902Parser(JSONParser):
     media_type = "application/json-patch+json"
 
 
+class IgnoreClientContentNegotiation(DefaultContentNegotiation):
+    """
+    Content negotiation that never returns 406 Not Acceptable: if the client's
+    `Accept` header matches none of the view's renderers, fall back to the
+    first (real) renderer instead of raising.
+
+    Byte-serving endpoints (file/job-file downloads, the IGV session XML)
+    stream via `StreamingHttpResponse`/`HttpResponse` and set `Content-Type`
+    explicitly, so the negotiated renderer is irrelevant for them - but DRF
+    still runs negotiation in `APIView.initial()` and would 406 before the
+    handler ever runs. IGV/htsjdk in particular sends a restrictive `Accept`
+    header for BAM requests that includes neither `*/*` nor `application/json`.
+    Falling back to the first renderer (`JSONRenderer`) keeps the JSON metadata
+    response path correct, since that path is chosen by the request body's
+    Content-Type, not by `Accept`.
+    """
+
+    def select_renderer(self, request, renderers, format_suffix=None):
+        try:
+            return super().select_renderer(request, renderers, format_suffix)
+        except NotAcceptable:
+            return (renderers[0], renderers[0].media_type)
+
+
 class StreamFileMixin(JSONView):
+    content_negotiation_class = IgnoreClientContentNegotiation
+
     def _as_file_obj(self, obj_ref: Union[str, File]):
         """
         Convert a File UUID string to a File instance, if required.
@@ -1434,6 +1462,7 @@ class JobIgvSessionView(JSONView):
 
     queryset = Job.objects.all()
     permission_classes = (IsOwner | IsSuperuser | HasReadonlyObjectAccessToken,)
+    content_negotiation_class = IgnoreClientContentNegotiation
 
     def _resolve_access_token(self, request, job) -> Union[str, None]:
         """

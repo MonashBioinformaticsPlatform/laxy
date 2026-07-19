@@ -173,3 +173,12 @@ class IgvSessionViewTest(TestCase):
         _, other_client = _create_user_and_login("igvintruder", "nope")
         response = other_client.get(self._url())
         self.assertIn(response.status_code, (403, 404))
+
+    def test_restrictive_accept_header_is_not_406(self):
+        # IGV/htsjdk sends an Accept header that includes neither */* nor
+        # application/json; content negotiation must not reject it with 406.
+        response = self.owner_client.get(
+            self._url(), HTTP_ACCEPT="application/octet-stream"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/xml")
