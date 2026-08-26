@@ -4,7 +4,7 @@
 
 ACME_SSL_DOMAINS="${ACME_SSL_DOMAINS-laxy.io api.laxy.io dev.laxy.io dev-api.laxy.io}"
 
-EMAIL_OPT=""
+EMAIL_OPT="--register-unsafely-without-email"
 if [[ ! -z ${LAXY_ADMIN_EMAIL} ]]; then
     EMAIL_OPT="--email ${LAXY_ADMIN_EMAIL}"
 fi
@@ -14,6 +14,7 @@ rm -rf /var/log/ssl-certs-cron.log
 touch /var/log/ssl-certs-cron.log
 
 DOMAIN_ARGS=$(echo ' '${ACME_SSL_DOMAINS} | sed "s/ / -d /g")
+PRIMARY_DOMAIN=$(echo ${ACME_SSL_DOMAINS} | awk '{print $1}')
 
 function generate_selfsigned() {
     if [[ ! -f /certs/key.pem ]] && [[ ! -f /certs/fullchain.pem ]]; then
@@ -26,17 +27,23 @@ function generate_selfsigned() {
 }
 
 cd /certs/
-/usr/local/bin/simp_le \
-    -f account_key.json \
-    -f account_reg.json \
-    -f key.pem \
-    -f cert.pem \
-    -f fullchain.pem \
-    -f chain.pem \
+certbot certonly \
+    --config-dir /certs/letsencrypt \
+    --work-dir /certs/letsencrypt-work \
+    --logs-dir /certs/letsencrypt-logs \
+    --webroot -w /usr/share/nginx/html \
     ${DOMAIN_ARGS} \
     ${EMAIL_OPT} \
-    --default_root /usr/share/nginx/html \
-    >>/var/log/ssl-certs-cron.log 2>&1 || generate_selfsigned
+    --agree-tos \
+    --non-interactive \
+    --cert-name ${PRIMARY_DOMAIN} \
+    --keep-until-expiring \
+    >>/var/log/ssl-certs-cron.log 2>&1 \
+&& cp /certs/letsencrypt/live/${PRIMARY_DOMAIN}/privkey.pem /certs/key.pem \
+&& cp /certs/letsencrypt/live/${PRIMARY_DOMAIN}/cert.pem /certs/cert.pem \
+&& cp /certs/letsencrypt/live/${PRIMARY_DOMAIN}/chain.pem /certs/chain.pem \
+&& cp /certs/letsencrypt/live/${PRIMARY_DOMAIN}/fullchain.pem /certs/fullchain.pem \
+|| generate_selfsigned
 
 # If there is no key and fullchain nginx won't start. This might happen if the ACME client fails for some reason.
 # In that case, so create a temporary self-signed one (generate_selfsigned)
