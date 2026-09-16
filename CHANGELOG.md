@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - AGAT preprocessing is not applied inside `featurecounts_postnfcore.nf` (`PREPARE_ANNOTATION` decompresses/unlinks only); custom-reference AGAT rewriting lives in pipeline `run_job.sh` ahead of nf-core/rnaseq instead.
 
 ### Fixed
+- `ssl-certs-cron` Docker image: moved off a pinned Debian bullseye Python base (apt security-mirror 404s) to `python:3.12-slim-bookworm`
 - Added missing `beautifulsoup4` dependency required by `laxy_backend.scraping` and `laxy_backend.filesender`
 - **Send to Degust** - Fixed upload failure (`TypeError: 'Form' object does not support item assignment`, issue #295) by replacing Robox form scraping with direct multipart `requests` upload to the Degust API; upload and session settings are now sent in a single multipart POST (separate settings POST requires CSRF and caused 502 on first request while caching a partial session URL)
 - **laxydl** input downloads no longer fail instantly on a transient CDN error. The aria2c downloader used `max-file-not-found=1`, so a single spurious 404-class response (e.g. a jsDelivr edge node still populating its cache under concurrent load) aborted the whole download in ~1s, ignoring the configured `max-tries`/`retry-wait`; raised to `5` so such responses are retried. The non-aria2c (`requests`) path now also retries on 429/500/503/504 (previously only 502).

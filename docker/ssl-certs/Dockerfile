@@ -1,18 +1,21 @@
-FROM python@sha256:a489206b7ab876ad948f577c498ed79af77b8f0f1f6f92a43af94304c529f793
-# FROM python:3.8
+FROM python:3.12-slim-bookworm
 
-RUN apt update && \
-    apt install --yes cron anacron && \
-    apt purge --yes exim4 exim4-base exim4-config exim4-daemon-light && \
-    apt autoremove --yes && \
+ENV DEBIAN_FRONTEND=noninteractive \
+    PIP_BREAK_SYSTEM_PACKAGES=1
+
+RUN apt-get update && \
+    apt-get install --yes --no-install-recommends cron anacron openssl ca-certificates && \
+    apt-get purge --yes exim4 exim4-base exim4-config exim4-daemon-light || true && \
+    apt-get autoremove --yes && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
 # This is required for anacron to run. Also remove cron jobs we don't really need
 RUN echo exit 0 > /usr/sbin/policy-rc.d && \
     rm -f /etc/cron.daily/apt-compat /etc/cron.daily/dpkg
 
-RUN python -m pip install --upgrade pip setuptools wheel && \
-    pip install certbot "cryptography<41" "pyopenssl<24"
+RUN pip3 install --no-cache-dir -U pip setuptools wheel && \
+    pip3 install --no-cache-dir certbot
 ADD update-ssl-cert.sh /etc/cron.daily/update-ssl-cert.sh
 RUN chmod +x /etc/cron.daily/update-ssl-cert.sh
 
