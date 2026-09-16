@@ -484,6 +484,25 @@ class JobSerializerResponse(JobSerializerBase):
 
     @transaction.atomic
     def update(self, instance, validated_data):
+        # The compute_resource field's source="compute_resource.id" makes DRF
+        # build a nested {"id": ...} dict in validated_data rather than a flat
+        # id (see JobSerializerRequest.create) - unwrap it to a ComputeResource
+        # instance so _update_attrs can setattr() it directly on the model.
+        compute_resource_data = validated_data.pop("compute_resource", None)
+        if isinstance(compute_resource_data, dict):
+            compute_resource_id = compute_resource_data.get("id")
+            if compute_resource_id:
+                try:
+                    validated_data["compute_resource"] = (
+                        models.ComputeResource.objects.get(id=compute_resource_id)
+                    )
+                except models.ComputeResource.DoesNotExist:
+                    raise serializers.ValidationError(
+                        f"ComputeResource does not exist: {compute_resource_id}"
+                    )
+            else:
+                validated_data["compute_resource"] = None
+
         instance = self._update_attrs(instance, validated_data)
         for field in getattr(self.Meta.model.ExtraMeta, "patchable_fields", []):
             if hasattr(instance, field):

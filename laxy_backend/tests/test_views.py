@@ -510,6 +510,47 @@ class JobViewTest(TestCase):
         self.assertNotEqual(j.expiry_time, None)
         self.assertGreater(j.expiry_time, timezone.now())
 
+    def test_patch_compute_resource(self):
+        other_compute = ComputeResource(
+            owner=self.admin_user,
+            host="127.0.0.2",
+            disposable=False,
+            status=ComputeResource.STATUS_ONLINE,
+            name="other",
+            extra={"base_dir": get_tmp_dir()},
+        )
+        other_compute.save()
+
+        response = self.admin_authenticated_client.patch(
+            reverse("laxy_backend:job", args=[self.job_with_compute.uuid()]),
+            data=json.dumps({"compute_resource": other_compute.id}),
+            content_type="application/json",
+        )
+
+        j = Job.objects.get(id=self.job_with_compute.id)
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(j.compute_resource_id, other_compute.id)
+
+        # clearing compute_resource via PATCH should also work
+        response = self.admin_authenticated_client.patch(
+            reverse("laxy_backend:job", args=[self.job_with_compute.uuid()]),
+            data=json.dumps({"compute_resource": None}),
+            content_type="application/json",
+        )
+
+        j = Job.objects.get(id=self.job_with_compute.id)
+        self.assertEqual(response.status_code, 204)
+        self.assertIsNone(j.compute_resource_id)
+
+        # a non-existent compute_resource id should be a clean validation
+        # error, not an unhandled exception
+        response = self.admin_authenticated_client.patch(
+            reverse("laxy_backend:job", args=[self.job_with_compute.uuid()]),
+            data=json.dumps({"compute_resource": "doesnotexist12345678910"}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+
     def test_verify_jwt_token(self):
         token = create_jwt_user_token("testuser")[0]
         client = APIClient(HTTP_CONTENT_TYPE="application/json")
