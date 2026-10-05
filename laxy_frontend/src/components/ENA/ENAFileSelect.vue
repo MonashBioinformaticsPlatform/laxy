@@ -276,16 +276,20 @@ export default class ENAFileSelect extends Vue {
         undefined
       );
       if (last_sample && last_sample_accession) {
-        const species_resp = await WebAPI.enaSpeciesInfo(last_sample_accession);
-        const organism = get(species_resp.data, "scientific_name");
-        const availableGenomes: ReferenceGenome[] =
-          this.$store.state.availableGenomes || [];
-        if (availableGenomes.length > 0) {
-          const matches = filter(availableGenomes, { organism: organism });
-          const ordered = sortReferenceGenomesByPreference(matches);
-          const genome_id =
-            ordered.length > 0 ? ordered[0].id : availableGenomes[0].id;
-          this.$store.commit(SET_PIPELINE_GENOME, genome_id);
+        try {
+          const species_resp = await WebAPI.enaSpeciesInfo(last_sample_accession);
+          const organism = get(species_resp.data, "scientific_name");
+          const availableGenomes: ReferenceGenome[] =
+            this.$store.state.availableGenomes || [];
+          if (availableGenomes.length > 0) {
+            const matches = filter(availableGenomes, { organism: organism });
+            const ordered = sortReferenceGenomesByPreference(matches);
+            const genome_id =
+              ordered.length > 0 ? ordered[0].id : availableGenomes[0].id;
+            this.$store.commit(SET_PIPELINE_GENOME, genome_id);
+          }
+        } catch {
+          // Sample metadata may not be available on ENA.
         }
       }
 
