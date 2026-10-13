@@ -150,6 +150,27 @@ export class WebAPI {
         }
     }
 
+    public static async listApiKeys(): Promise<AxiosResponse> {
+        return await this.fetcher.get(`/api/v1/user/api-keys/`);
+    }
+
+    public static async createApiKey(
+        name: string,
+        extras: { expires_in_days?: number | null; expires_at?: string | null } = {},
+    ): Promise<AxiosResponse> {
+        const body: Record<string, unknown> = { name };
+        if (extras.expires_at) {
+            body.expires_at = extras.expires_at;
+        } else if (extras.expires_in_days != null) {
+            body.expires_in_days = extras.expires_in_days;
+        }
+        return await this.fetcher.post(`/api/v1/user/api-keys/`, body);
+    }
+
+    public static async revokeApiKey(keyId: string): Promise<AxiosResponse> {
+        return await this.fetcher.delete(`/api/v1/user/api-keys/${keyId}/`);
+    }
+
     public static async isLoggedIn() {
         try {
             const result = await this.getUserProfile();

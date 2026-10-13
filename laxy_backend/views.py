@@ -122,7 +122,9 @@ from .models import (
     SampleCart,
     PipelineRun,
     EventLog,
+    ACCESS_TOKEN_MCP_DOWNLOAD_PREFIX,
     AccessToken,
+    UserApiKey,
     SystemStatus,
     get_primary_compute_location_for_files,
     job_path_on_compute,
@@ -133,6 +135,7 @@ from .serializers import (
     JobSerializerResponse,
     JobSerializerRequest,
     ComputeResourceSerializer,
+    ComputeResourceListSerializer,
     FileSerializer,
     FileSerializerPostRequest,
     FileSetSerializer,
@@ -150,6 +153,7 @@ from .serializers import (
     RedirectResponseSerializer,
     FileListing,
     AccessTokenSerializer,
+    UserApiKeySerializer,
     JobAccessTokenRequestSerializer,
     JobAccessTokenResponseSerializer,
     PingResponseSerializer,
@@ -774,8 +778,9 @@ class StreamFileMixin(JSONView):
 class FileContentDownload(StreamFileMixin, GetMixin, JSONView):
     queryset = File.objects.all()
     serializer_class = FileSerializer
-
-    # permission_classes = (DjangoObjectPermissions,)
+    permission_classes = (
+        IsOwner | IsSuperuser | HasReadonlyObjectAccessToken | FileHasAccessTokenForJob,
+    )
 
     @extend_schema(responses=FileSerializer)
     def get(self, request: Request, uuid=None, filename=None, version=None):
@@ -785,6 +790,9 @@ class FileContentDownload(StreamFileMixin, GetMixin, JSONView):
         When using a web browser, if the query parameter `download` is included
         the file will be downloaded rather than viewed in a new tab
         (via the `Content-Disposition: attachment` header).
+
+        Supports ``?access_token=`` for time-limited unauthenticated download
+        (file-scoped or job-scoped AccessToken).
 
         If file checksums (eg MD5) are present, these are included as a
         header:
@@ -852,11 +860,11 @@ class FileContentDownload(StreamFileMixin, GetMixin, JSONView):
         :rtype: rest_framework.response.Response
         -->
         """
-        # File view/download is the default when no Content-Type is specified
+        # Enforce ownership / access_token before streaming.
+        obj = self.get_object()
         if "download" in request.query_params:
-            return super().download(uuid, filename=filename)
-        else:
-            return super().view(uuid, filename=filename)
+            return super().download(obj, filename=filename)
+        return super().view(obj, filename=filename)
 
 
 class FileView(
@@ -1641,10 +1649,41 @@ class ComputeResourceView(GetMixin, DeleteMixin, JSONView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class ComputeResourcePagination(PageNumberPagination):
+    page_size = 50
+    page_query_param = "page"
+    page_size_query_param = "page_size"
+    max_page_size = 200
+
+
 class ComputeResourceCreate(PostMixin, JSONView):
     queryset = ComputeResource.objects.all()
     serializer_class = ComputeResourceSerializer
     permission_classes = (IsAdminUser,)
+    pagination_class = ComputeResourcePagination
+
+    def get_queryset(self):
+        return ComputeResource.objects.all().order_by("-priority", "name")
+
+    @extend_schema(responses=ComputeResourceListSerializer(many=True))
+    def get(self, request: Request, version=None):
+        """
+        List ComputeResources. Staff only (``is_staff``), the same permission
+        as the other ``/compute-resource/`` endpoints.
+
+        Ordered by priority (highest first), then name. Paginated
+        (``page``, ``page_size``; default 50, max 200).
+
+        ``extra`` (SSH private keys and other resource secrets) is omitted.
+        Fetch a single resource to read it.
+        """
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = ComputeResourceListSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = ComputeResourceListSerializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @extend_schema(
         request=ComputeResourceSerializer,
@@ -2686,6 +2725,45 @@ class AccessTokenCreate(JSONView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class UserApiKeyListCreate(JSONView):
+    queryset = UserApiKey.objects.all()
+    serializer_class = UserApiKeySerializer
+    permission_classes = (IsAuthenticated,)
+    pagination_class = None
+
+    def get_queryset(self):
+        return UserApiKey.objects.filter(user=self.request.user)
+
+    @extend_schema(responses=UserApiKeySerializer(many=True))
+    def get(self, request: Request, version=None):
+        serializer = self.get_serializer(self.get_queryset(), many=True)
+        return Response({"keys": serializer.data}, status=status.HTTP_200_OK)
+
+    @extend_schema(request=UserApiKeySerializer, responses=UserApiKeySerializer)
+    def post(self, request: Request, version=None):
+        serializer = self.get_serializer(
+            data=request.data, context={"request": request}
+        )
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserApiKeyRevoke(JSONView, DeleteMixin):
+    queryset = UserApiKey.objects.all()
+    serializer_class = UserApiKeySerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        return UserApiKey.objects.filter(user=self.request.user)
+
+    def delete(self, request: Request, uuid=None, version=None):
+        obj = self.get_object()
+        obj.revoke()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 class JobAccessTokenView(JSONView, GetMixin):
     """
     This view can be used if we want just one token link per job which can be updated with a new expiry or deleted.
@@ -2709,9 +2787,13 @@ class JobAccessTokenView(JSONView, GetMixin):
         job_id = self.kwargs.get(self.lookup_url_kwarg, None)
 
         if job_id is not None:
-            qs = self.queryset.filter(
-                Q(object_id=job_id) & Q(content_type=self._job_ct)
-            ).order_by("created_time")
+            qs = (
+                self.queryset.filter(
+                    Q(object_id=job_id) & Q(content_type=self._job_ct)
+                )
+                .exclude(token__startswith=ACCESS_TOKEN_MCP_DOWNLOAD_PREFIX)
+                .order_by("created_time")
+            )
 
             return qs
 
@@ -2720,7 +2802,8 @@ class JobAccessTokenView(JSONView, GetMixin):
     @extend_schema(responses=JobAccessTokenResponseSerializer)
     def get(self, request: Request, job_id: str, version=None):
         """
-        Returns the (first created, non-hidden) AccessToken for this job.
+        Returns the (first created) UI share AccessToken for this job.
+        MCP download tokens (``mcpdl.*``) are excluded.
 
         <!--
         :param request: The request object.
@@ -2744,8 +2827,9 @@ class JobAccessTokenView(JSONView, GetMixin):
     )
     def put(self, request: Request, job_id: str, version=None):
         """
-        Create or update the access token for this Job.
-        This always updates the first created, non-hidden token.
+        Create or update the UI share access token for this Job.
+        This always updates the first created share token (MCP ``mcpdl.*``
+        download tokens are excluded).
 
         (`content_type` and `object_id` will be ignored - these are always `'job'` and the value of `job_id` at
         this endpoint).

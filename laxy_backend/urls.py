@@ -48,6 +48,8 @@ from laxy_backend.views import (
     AccessTokenListView,
     AccessTokenView,
     JobAccessTokenView,
+    UserApiKeyListCreate,
+    UserApiKeyRevoke,
     PingView,
     JobDirectTarDownload,
     JobInputTarDownload,
@@ -129,6 +131,12 @@ api_urls = [
     re_path(r"^genomes/", include("laxy_genomes.urls")),
     # This seems to fail with 405 error if it is included too low in the list - some route pattern clash ?
     re_path(r"user/profile/$", UserProfileView.as_view(), name="user-profile"),
+    re_path(r"user/api-keys/$", UserApiKeyListCreate.as_view(), name="user-api-keys"),
+    re_path(
+        r"user/api-keys/(?P<uuid>[a-zA-Z0-9\-_]+)/$",
+        UserApiKeyRevoke.as_view(),
+        name="user-api-key",
+    ),
     re_path(r"auth/jwt/", include(jwt_urls)),
     re_path(r"auth/check-drf-token/$", check_drf_token),
     re_path("auth/csrftoken/$", CsrfCookieView.as_view()),

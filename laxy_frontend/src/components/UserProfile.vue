@@ -45,6 +45,11 @@
                 <md-icon style="color: #bdbdbd;">help</md-icon>
               </md-button>
             </md-layout>
+            <p>
+              For agents and long-lived scripts, create a named
+              <router-link :to="{ name: 'api-keys' }">API key</router-link>
+              instead. JWT access tokens expire after 14 days.
+            </p>
             <md-layout md-column>
               <textarea readonly rows="4" class="token-area" :class="{ 'blur-text': hideToken }"
                 v-model="masked_api_auth_token" style="resize: none; overflow: auto; word-break: break-all;">

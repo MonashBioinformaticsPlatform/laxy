@@ -5,7 +5,10 @@ from typing import List, Sequence, Tuple, Union, AnyStr, Iterable
 import collections
 from collections import OrderedDict
 from datetime import datetime, timedelta
+import hashlib
+import hmac
 import math
+import secrets
 import json
 import csv
 from pathlib import Path
@@ -63,7 +66,6 @@ from .util import (
     unique,
     has_method,
     generate_uuid,
-    generate_secret_key,
     find_filename_and_size_from_url,
     laxy_sftp_url,
     generate_cluster_stack_name,
@@ -2352,6 +2354,15 @@ def _generate_access_token_string():
     return str(uuid4())
 
 
+# Prefix for short-lived MCP/job file-download tokens. Not UI share links —
+# JobAccessTokenView and share helpers exclude these.
+ACCESS_TOKEN_MCP_DOWNLOAD_PREFIX = "mcpdl."
+
+
+def generate_mcp_download_access_token_string() -> str:
+    return f"{ACCESS_TOKEN_MCP_DOWNLOAD_PREFIX}{uuid4()}"
+
+
 @reversion.register()
 class AccessToken(Timestamped, UUIDModel):
     """
@@ -2390,6 +2401,110 @@ class AccessToken(Timestamped, UUIDModel):
         if isinstance(target_obj, UUIDModel):
             ct = ContentType.objects.get_for_model(target_obj)
             return self.object_id == target_obj.id and self.content_type == ct
+
+
+class UserApiKey(Timestamped, UUIDModel):
+    """Named, optionally expiring API key for a user (REST + MCP Bearer auth)."""
+
+    owner_field_name = "user"
+
+    KEY_SCHEME = "laxy"
+    PREFIX_LENGTH = 8
+    SECRET_LENGTH = 32
+    # Unambiguous with the ``laxy_<prefix>_<secret>`` split. ``secrets`` rather
+    # than ``random``: these strings are full user credentials.
+    KEY_ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+    user = ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="api_keys",
+    )
+    name = CharField(max_length=255)
+    prefix = CharField(max_length=16, unique=True, db_index=True)
+    key_hash = CharField(max_length=64)
+    expires_at = DateTimeField(blank=True, null=True)
+    revoked_at = DateTimeField(blank=True, null=True)
+    last_used_at = DateTimeField(blank=True, null=True)
+
+    class Meta:
+        ordering = ["-created_time"]
+
+    @staticmethod
+    def hash_key(plaintext: str) -> str:
+        return hashlib.sha256(plaintext.encode("utf-8")).hexdigest()
+
+    @property
+    def status(self) -> str:
+        if self.revoked_at is not None:
+            return "revoked"
+        if self.expires_at is not None and self.expires_at <= timezone.now():
+            return "expired"
+        return "active"
+
+    def is_active(self) -> bool:
+        return self.status == "active"
+
+    def matches(self, plaintext: str) -> bool:
+        return hmac.compare_digest(self.key_hash, self.hash_key(plaintext))
+
+    def mark_used(self) -> None:
+        now = timezone.now()
+        if self.last_used_at is not None and (now - self.last_used_at) < timedelta(
+            seconds=60
+        ):
+            return
+        self.last_used_at = now
+        self.save(update_fields=["last_used_at"])
+
+    def revoke(self) -> None:
+        if self.revoked_at is None:
+            self.revoked_at = timezone.now()
+            self.save(update_fields=["revoked_at"])
+
+    @classmethod
+    def _random_token_part(cls, length: int) -> str:
+        return "".join(secrets.choice(cls.KEY_ALPHABET) for _ in range(length))
+
+    @classmethod
+    def generate(
+        cls, user, name: str, expires_at: datetime | None = None
+    ) -> tuple[str, "UserApiKey"]:
+        for _ in range(8):
+            prefix = cls._random_token_part(cls.PREFIX_LENGTH)
+            if not cls.objects.filter(prefix=prefix).exists():
+                break
+        else:
+            raise RuntimeError("Could not allocate a unique API key prefix")
+        secret = cls._random_token_part(cls.SECRET_LENGTH)
+        plaintext = f"{cls.KEY_SCHEME}_{prefix}_{secret}"
+        instance = cls.objects.create(
+            user=user,
+            name=name,
+            prefix=prefix,
+            key_hash=cls.hash_key(plaintext),
+            expires_at=expires_at,
+        )
+        return plaintext, instance
+
+    @classmethod
+    def authenticate(cls, plaintext: str):
+        if not plaintext or not plaintext.startswith(f"{cls.KEY_SCHEME}_"):
+            return None
+        parts = plaintext.split("_", 2)
+        if len(parts) != 3:
+            return None
+        prefix = parts[1]
+        try:
+            key = cls.objects.select_related("user").get(prefix=prefix)
+        except cls.DoesNotExist:
+            return None
+        if not key.matches(plaintext) or not key.is_active():
+            return None
+        if not key.user.is_active:
+            return None
+        key.mark_used()
+        return key.user
 
 
 

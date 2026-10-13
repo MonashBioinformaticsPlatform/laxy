@@ -1,6 +1,8 @@
 import json
 from collections import OrderedDict
 
+from django.utils import timezone
+from datetime import timedelta
 from django.contrib.contenttypes.models import ContentType
 from pathlib import Path
 from urllib.parse import urlparse
@@ -410,6 +412,18 @@ class ComputeResourceSerializer(BaseModelSerializer):
         read_only_fields = ("id",)
         depth = 1
         error_status_codes = status_codes()
+
+
+class ComputeResourceListSerializer(serializers.ModelSerializer):
+    """Staff list and MCP listing. ``extra`` holds SSH private keys."""
+
+    queue_type = serializers.CharField(read_only=True, allow_null=True)
+
+    class Meta:
+        model = models.ComputeResource
+        exclude = ("extra",)
+        depth = 0
+        read_only_fields = ("id",)
 
 
 class PipelineSerializer(BaseModelSerializer):
@@ -885,6 +899,60 @@ class AccessTokenSerializer(BaseModelSerializer):
         obj.obj = target_obj
         obj.save()
         return obj
+
+
+class UserApiKeySerializer(serializers.Serializer):
+    id = serializers.CharField(read_only=True)
+    name = serializers.CharField(max_length=255)
+    prefix = serializers.CharField(read_only=True)
+    created_time = serializers.DateTimeField(read_only=True)
+    expires_at = serializers.DateTimeField(required=False, allow_null=True)
+    expires_in_days = serializers.IntegerField(
+        required=False, allow_null=True, min_value=1, write_only=True
+    )
+    last_used_at = serializers.DateTimeField(read_only=True)
+    status = serializers.CharField(read_only=True)
+    key = serializers.CharField(read_only=True)
+
+    def validate(self, attrs):
+        expires_at = attrs.get("expires_at")
+        expires_in_days = attrs.get("expires_in_days")
+        if expires_at is not None and expires_in_days is not None:
+            raise ValidationError("Provide expires_at or expires_in_days, not both.")
+        name = (attrs.get("name") or "").strip()
+        if not name:
+            raise ValidationError({"name": "This field may not be blank."})
+        attrs["name"] = name
+        return attrs
+
+    def create(self, validated_data):
+        request = self.context["request"]
+        expires_at = validated_data.get("expires_at")
+        expires_in_days = validated_data.get("expires_in_days")
+        if expires_at is None and expires_in_days is not None:
+            expires_at = timezone.now() + timedelta(days=int(expires_in_days))
+        plaintext, instance = models.UserApiKey.generate(
+            user=request.user,
+            name=validated_data["name"],
+            expires_at=expires_at,
+        )
+        instance._plaintext = plaintext
+        return instance
+
+    def to_representation(self, instance):
+        data = {
+            "id": instance.id,
+            "name": instance.name,
+            "prefix": instance.prefix,
+            "created_time": instance.created_time,
+            "expires_at": instance.expires_at,
+            "last_used_at": instance.last_used_at,
+            "status": instance.status,
+        }
+        plaintext = getattr(instance, "_plaintext", None)
+        if plaintext is not None:
+            data["key"] = plaintext
+        return data
 
 
 class JobAccessTokenRequestSerializer(AccessTokenSerializer):

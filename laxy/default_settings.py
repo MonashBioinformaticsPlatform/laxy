@@ -109,6 +109,9 @@ default_env = PrefixedEnv(
     DEGUST_URL=(str, "https://degust.erc.monash.edu"),
     EMAIL_DOMAIN_ALLOWED_COMPUTE=(dictify_json_loads, {"*": ["*"]}),
     LINK_SCRAPER_MAPPINGS=(dictify_json_loads, {}),
+    MCP_ENABLE_WRITE_TOOLS=(bool, False),
+    MCP_JOB_DOWNLOAD_TOKEN_HOURS=(int, 1),
+    MCP_JOB_DOWNLOAD_TOKEN_MAX_HOURS=(int, 3),
 )
 
 
@@ -261,9 +264,16 @@ The URL to a Splash scraping server (eg https://splash.readthedocs.io/en/stable/
 When running under docker-compose this might be 'http://splash:8050'.
 """
 
+# MCP write tools (submit/clone). Off by default; set LAXY_MCP_ENABLE_WRITE_TOOLS=yes to enable.
+MCP_ENABLE_WRITE_TOOLS = env("MCP_ENABLE_WRITE_TOOLS")
+
+# Lifetime (hours) for job-scoped AccessTokens in MCP file download_url query strings.
+MCP_JOB_DOWNLOAD_TOKEN_HOURS = env("MCP_JOB_DOWNLOAD_TOKEN_HOURS")
+MCP_JOB_DOWNLOAD_TOKEN_MAX_HOURS = env("MCP_JOB_DOWNLOAD_TOKEN_MAX_HOURS")
+
 DEGUST_URL = env("DEGUST_URL")
 """
-The base URL to the Degust instance you'd like to use (eg, could be changed to 
+The base URL to the Degust instance you'd like to use (eg, could be changed to
 "https://degust-training.erc.monash.edu" or a dev instance of Degust)
 """
 
@@ -276,7 +286,7 @@ Order of the ComputeResource names in the list doesn't matter - which one is cho
 ComputeResource.priority (and maybe other factors).
 
 Note that if you are using local Django accounts, you should use email address validation
-for this setting to be effective, otherwise users could easily change their email address 
+for this setting to be effective, otherwise users could easily change their email address
 to one the don't actually own and access compute resources you don't intend them to access.
 ```json
 {
@@ -447,6 +457,7 @@ INSTALLED_APPS = [
     "laxy_pipeline_apps.nf-core-rnaseq.apps.NfCoreRnaSeqLaxyPipelineAppConfig",  # a pipeline plugin for Laxy
     "laxy_pipeline_apps.nf-core-rnaseq-brbseq.apps.NfCoreRnaSeqBrbSeqLaxyPipelineAppConfig",  # a pipeline plugin for Laxy
     "laxy_pipeline_apps.openfold",  # a pipeline plugin for Laxy
+    "django_stateless_mcp",
 ]
 
 MIDDLEWARE = [
@@ -667,6 +678,7 @@ REST_FRAMEWORK = {
         # 'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly',
     ),
     "DEFAULT_AUTHENTICATION_CLASSES": (
+        "laxy_backend.authentication.UserApiKeyAuthentication",
         "rest_framework_simplejwt.authentication.JWTAuthentication",
         "rest_framework.authentication.TokenAuthentication",
         "rest_framework.authentication.SessionAuthentication",

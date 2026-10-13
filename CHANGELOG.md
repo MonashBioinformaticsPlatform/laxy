@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Admin-only `GET /api/v1/compute-resource/` lists compute resources (`is_staff`, paginated). Same permission as the existing get/create/update endpoints. The list omits `extra` (SSH private keys); the single-resource endpoint still returns it. `laxy_list_compute_resources` uses the same shape.
+- Named user API keys (create / list / revoke at `/api/v1/user/api-keys/`, **API Keys** page in the avatar menu) with optional expiry; secrets are shown once and stored hashed. Keys authenticate as the user on REST and MCP (`Authorization: Bearer laxy_…`).
+- MCP 2.0 (stateless `2026-07-28`) endpoint at `/api/v1/mcp/` via `django-stateless-mcp`, with bearer auth (named API key, JWT or DRF token), tools for jobs/files/pipelines/genomes/ENA/remote-browse/sharing/tarballs/Degust, and optional write tools gated by `LAXY_MCP_ENABLE_WRITE_TOOLS`. File list is metadata-only; `laxy_get_download_urls` mints short-lived job-scoped `mcpdl.*` download tokens.
 - Remote URL browse (`/api/v1/remote-browse/`): Zenodo record URLs such as `https://zenodo.org/records/{id}` are resolved via the Zenodo REST API to list depositor files with public `.../files/{name}?download=1` locations; site-specific handlers live in `laxy_backend.scraping.plugins` with optional extra plugins via `REMOTE_BROWSE_SITE_PLUGINS`. ownCloud/Nextcloud public folder shares (`/s/{token}`, optional `index.php/` prefix) are auto-detected via HTML markers or a PROPFIND probe on public WebDAV and listed before generic HTML scraping.
 - Integration test suite in `tests/integration/` for JWT auth, file operations, Celery tasks, and external integrations
 - `justfile` for common development commands (`just dev-up`, `just test`, etc.)
@@ -28,6 +31,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - AGAT preprocessing is not applied inside `featurecounts_postnfcore.nf` (`PREPARE_ANNOTATION` decompresses/unlinks only); custom-reference AGAT rewriting lives in pipeline `run_job.sh` ahead of nf-core/rnaseq instead.
 
 ### Fixed
+- MCP `laxy_clone_job`: return `pipelinerun_id` / `samplecart_id` successfully (clone does not create a Job). Added `laxy_start_job` plus get/update tools for pipeline runs and sample carts so agents can clone → edit → start.
+- MCP `laxy_cancel_job`: cancel a job via the same `PATCH status=cancelled` path as the web UI.
+- MCP: paginated `laxy_list_jobs` / `laxy_list_job_files` with richer filters; job share (`laxy_share_job` / get / revoke), tarball download URLs, ENA + remote-browse helpers, and `laxy_send_to_degust`.
+- MCP `laxy_list_job_files` is metadata only; `laxy_get_download_urls` mints one job-scoped `mcpdl.*` token (default 1h, max 3h). `laxy_clone_job` treats HTTP 2xx as success and can apply overrides then start. `laxy_list_jobs` uses `page`/`page_size` (default 10) and a status enum. `laxy_list_compute_resources` is staff-only and omitted from `tools/list` unless the MCP token is a Django staff user. Share links created via MCP always expire (default 7 days). File-content proxy read timeout is 1 hour.
+- MCP download tokens use `mcpdl.` prefix (max TTL 3h). `laxy_revoke_download_tokens` invalidates them; `laxy_revoke_job_share` only removes the UI share link.
+- MCP diagnose/read tools: `laxy_diagnose_job`, `tail_lines`/`grep` on `laxy_read_job_file`, event-log `offset` and `event` filter. `laxy_submit_job`, `laxy_start_job`, and `laxy_clone_job` accept `dry_run`. `laxy_samples_from_ena` builds submit samples. `laxy_send_to_degust` accepts `job_id`. Job responses include `job_url`. `laxy_list_jobs` status is a schema enum. `laxy_get_job_share` is read-only; `laxy_share_job` only writes.
 - `ssl-certs-cron` Docker image: moved off a pinned Debian bullseye Python base (apt security-mirror 404s) to `python:3.12-slim-bookworm`
 - Added missing `beautifulsoup4` dependency required by `laxy_backend.scraping` and `laxy_backend.filesender`
 - **Send to Degust** - Fixed upload failure (`TypeError: 'Form' object does not support item assignment`, issue #295) by replacing Robox form scraping with direct multipart `requests` upload to the Degust API; upload and session settings are now sent in a single multipart POST (separate settings POST requires CSRF and caused 502 on first request while caching a partial session URL)

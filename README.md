@@ -169,6 +169,31 @@ OpenAPI / Swagger API (via drf-spectacular):
 
 See `laxy_frontend/src/web-api.ts` for examples of frontend API usage.
 
+## MCP (Model Context Protocol)
+
+Laxy exposes an MCP 2.0 (stateless `2026-07-28`) endpoint at `/api/v1/mcp/` for AI agents.
+
+**Authentication:** create a named API key in the web UI (**API Keys** in the avatar menu). Send it as `Authorization: Bearer <key>` (or set `LAXY_API_TOKEN`). Prefer these over the profile JWT (14-day expiry) or the legacy DRF authtoken from `GET /api/v1/user/profile/`.
+
+Example client config:
+
+```json
+{
+  "mcpServers": {
+    "laxy": {
+      "url": "https://api.laxy.io/api/v1/mcp/",
+      "headers": { "Authorization": "Bearer ${LAXY_API_TOKEN}" }
+    }
+  }
+}
+```
+
+Local-dev (HTTP) / staging may use `http://localhost:8001/api/v1/mcp/` or HTTPS via nginx.
+
+Read tools cover jobs/files/pipelines/genomes/ENA/remote-browse/share lookup (see [docs/mcp.md](docs/mcp.md)). Write tools (submit/clone/start/cancel/share/tarball URLs/Degust/update cart & pipeline run) are disabled unless `LAXY_MCP_ENABLE_WRITE_TOOLS=yes`. Re-runs use `laxy_clone_job` then `laxy_start_job` (optional edits in between).
+
+See [docs/mcp.md](docs/mcp.md) for protocol details, production notes (gevent vs gthread), and the architecture decision.
+
 ## Customising
 
 ### Adding a new reference genome
@@ -190,4 +215,5 @@ Follow the existing pipeline configurations in `laxy_pipeline_apps` for examples
 - [Docker deployment notes](docs/docker.md) - database dumps, volume management, production deployment
 - [Non-Docker development](docs/non-docker-development.md) - running the frontend and backend without Docker
 - [Admin guide](docs/admin.md)
-- [REST API notes](docs/restful_api.md)
+- REST API notes: [docs/restful_api.md](docs/restful_api.md)
+- MCP 2.0 agent endpoint: [docs/mcp.md](docs/mcp.md)

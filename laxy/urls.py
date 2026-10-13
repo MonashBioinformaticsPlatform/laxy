@@ -23,6 +23,9 @@ admin.site.index_title = 'Laxy backend administration'
 
 from rest_framework.permissions import AllowAny
 
+from django_stateless_mcp import mcp_view
+from laxy_backend.mcp import server as mcp_server, token_verifier as mcp_token_verifier
+
 urlpatterns = [
     re_path(r'^admin/', admin.site.urls),
 
@@ -36,6 +39,17 @@ urlpatterns = [
     # Optional UI:
     path('api/v1/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema', permission_classes=[AllowAny]), name='swagger-ui'),
     path('api/v1/schema/redoc/', SpectacularRedocView.as_view(url_name='schema', permission_classes=[AllowAny]), name='redoc'),
+
+    # MCP 2.0 (stateless 2026-07-28) endpoint
+    path(
+        'api/v1/mcp/',
+        mcp_view(
+            mcp_server,
+            token_verifier=mcp_token_verifier,
+            user_resolver=mcp_token_verifier.resolve_user,
+        ),
+        name='mcp',
+    ),
 
     re_path(r'^', include('laxy_backend.urls')),
 ]

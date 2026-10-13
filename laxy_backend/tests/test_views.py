@@ -15,7 +15,7 @@ from pathlib import Path
 
 import jwt
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.test.client import Client
 from django.urls import reverse
@@ -1391,4 +1391,64 @@ class JobInputOutputTarballAccessTokenTest(TestCase):
             "laxy_backend:job_output_tarball_download", args=[self.job.uuid()]
         )
         response = client.get(f"{url}?access_token={token}")
+        self.assertEqual(response.status_code, 401)
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
+class ComputeResourceListTest(TestCase):
+    def setUp(self):
+        self.staff, self.staff_client = _create_user_and_login(
+            "staff", "staffpass", is_superuser=False
+        )
+        self.staff.is_staff = True
+        self.staff.save()
+
+        self.user, self.user_client = _create_user_and_login(
+            "plain", "plainpass", is_superuser=False
+        )
+        self.url = reverse("laxy_backend:compute_resource")
+
+        ComputeResource.objects.create(
+            name="low",
+            host="low.example",
+            priority=1,
+            status=ComputeResource.STATUS_OFFLINE,
+        )
+        ComputeResource.objects.create(
+            name="high",
+            host="high.example",
+            priority=10,
+            status=ComputeResource.STATUS_ONLINE,
+            extra={
+                "private_key": "SHOULD_NOT_LEAK",
+                "username": "laxy",
+                "queue_type": "slurm",
+            },
+        )
+
+    def test_staff_lists_ordered_by_priority(self):
+        response = self.staff_client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["count"], 2)
+        self.assertEqual([row["name"] for row in body["results"]], ["high", "low"])
+        self.assertEqual(body["results"][0]["host"], "high.example")
+        self.assertNotIn("extra", body["results"][0])
+        self.assertEqual(body["results"][0]["queue_type"], "slurm")
+        self.assertNotIn("SHOULD_NOT_LEAK", response.content.decode())
+
+    def test_page_size(self):
+        response = self.staff_client.get(self.url, {"page_size": 1})
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["count"], 2)
+        self.assertEqual(len(body["results"]), 1)
+        self.assertEqual(body["results"][0]["name"], "high")
+
+    def test_non_staff_is_hidden(self):
+        response = self.user_client.get(self.url)
+        self.assertEqual(response.status_code, 404)
+
+    def test_anonymous_is_unauthorized(self):
+        response = APIClient().get(self.url)
         self.assertEqual(response.status_code, 401)

@@ -12,3 +12,5 @@ Dockerfile
 docker-compose.*
 
 docs
+
+*.tar.gz

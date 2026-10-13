@@ -103,11 +103,11 @@ class FileSetHasAccessTokenForJob(permissions.BasePermission):
 class FileHasAccessTokenForJob(permissions.BasePermission):
     def has_object_permission(self, request, view, obj: File):
         token = request.query_params.get("access_token", None)
-        if token:
-            jobs = obj.fileset.jobs()
-            for job in jobs:
-                if token_is_valid(token, job.id):
-                    return True
+        if not token or obj.fileset_id is None:
+            return False
+        for job in obj.fileset.jobs():
+            if token_is_valid(token, job.id):
+                return True
         return False
 
 
