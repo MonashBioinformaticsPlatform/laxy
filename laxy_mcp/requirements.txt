@@ -1,4 +1,0 @@
-# MCP sidecar spike: FastMCP over Laxy REST API
-mcp==2.0.0
-httpx>=0.28.0
-uvicorn>=0.31.1

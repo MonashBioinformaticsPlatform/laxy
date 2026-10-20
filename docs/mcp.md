@@ -138,7 +138,7 @@ curl -sk -X POST 'https://localhost:8001/api/v1/mcp/' \
 Two designs were considered and tested:
 
 1. **In-Django** (`django-stateless-mcp`) — chosen. Direct ORM + guardian, one process, GA `mcp` 2.0.
-2. **Sidecar** (`laxy_mcp/`) — REST proxy over uvicorn. Works, but extra service, auth scheme translation, and N+1 REST calls for diagnostics. Kept only as an experimental spike (see `laxy_mcp/README.md`); not wired into Compose.
+2. **Sidecar** (`laxy_mcp/`) — REST proxy over uvicorn. Works, but extra service, auth scheme translation, and N+1 REST calls for diagnostics. Removed from the tree after the spike; the code remains in git history. It was never wired into Compose.
 
 `django-mcp-server` was ruled out: it targets handshake-era MCP (`mcp` 1.x), not `2026-07-28`.
 
