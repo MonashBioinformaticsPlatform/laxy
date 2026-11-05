@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - AGAT preprocessing is not applied inside `featurecounts_postnfcore.nf` (`PREPARE_ANNOTATION` decompresses/unlinks only); custom-reference AGAT rewriting lives in pipeline `run_job.sh` ahead of nf-core/rnaseq instead.
 
 ### Fixed
+- API keys page: the Create button is no longer clipped by a 10% flex column.
 - eMudhra / emSign CA compromise: images now build on Python 3.12.16 and Node.js 24.22.1, with `certifi>=2026.10.19`, `pip>=26.2.2`, and an upgraded OS CA bundle. Conda job setup upgrades base `conda` / `certifi` / `pip` when they are older than the patched releases.
 - MCP `laxy_clone_job`: return `pipelinerun_id` / `samplecart_id` successfully (clone does not create a Job). Added `laxy_start_job` plus get/update tools for pipeline runs and sample carts so agents can clone → edit → start.
 - MCP `laxy_cancel_job`: cancel a job via the same `PATCH status=cancelled` path as the web UI.

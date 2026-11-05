@@ -60,7 +60,7 @@
 
         <md-whiteframe md-elevation="1" class="pad-16" style="margin-top: 16px;">
           <h3>Create a new key</h3>
-          <md-layout md-gutter md-vertical-align="center">
+          <md-layout md-gutter md-vertical-align="center" class="create-key-row">
             <md-layout md-flex="40">
               <md-input-container>
                 <label>Key name</label>
@@ -85,9 +85,9 @@
                 <input type="datetime-local" v-model="customExpiry" class="datetime-input" />
               </md-input-container>
             </md-layout>
-            <md-layout md-flex="10">
+            <md-layout class="create-key-action">
               <md-button
-                class="md-raised md-primary"
+                class="md-raised md-primary create-key-button"
                 :disabled="creating || !newKeyName.trim()"
                 @click="createKey"
               >
@@ -407,6 +407,27 @@ export default class ApiKeysPage extends mixins(CopyToClipboard) {
 .datetime-input {
   margin-top: 18px;
   padding: 6px;
+}
+
+.create-key-row {
+  flex-wrap: wrap;
+}
+
+.create-key-action {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  max-width: none !important;
+  min-width: 148px;
+  overflow: visible;
+}
+
+.create-key-button.md-button {
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+  white-space: nowrap;
+  min-width: 132px;
+  overflow: visible;
 }
 
 .spin {
