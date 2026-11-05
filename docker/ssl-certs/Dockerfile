@@ -1,4 +1,4 @@
-FROM python:3.12-slim-bookworm
+FROM python:3.12.16-slim-bookworm
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PIP_BREAK_SYSTEM_PACKAGES=1
@@ -14,8 +14,11 @@ RUN apt-get update && \
 RUN echo exit 0 > /usr/sbin/policy-rc.d && \
     rm -f /etc/cron.daily/apt-compat /etc/cron.daily/dpkg
 
-RUN pip3 install --no-cache-dir -U pip setuptools wheel && \
-    pip3 install --no-cache-dir certbot
+# pip vendors its own certifi. certbot/requests also install certifi; keep the
+# floor at the Oct 2026 eMudhra removal.
+RUN pip3 install --no-cache-dir -U "pip>=26.2.2" "setuptools>=75,<82" wheel && \
+    pip3 install --no-cache-dir "certifi>=2026.10.19" certbot && \
+    pip3 install --no-cache-dir -U "certifi>=2026.10.19"
 ADD update-ssl-cert.sh /etc/cron.daily/update-ssl-cert.sh
 RUN chmod +x /etc/cron.daily/update-ssl-cert.sh
 

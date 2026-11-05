@@ -3,7 +3,7 @@
 # It also grabs the Django admin static files from a pre-build laxy:latest image.
 #
 
-FROM node:24 AS frontend_build
+FROM node:24.22.1 AS frontend_build
 ARG LAXY_STATIC_ROOT=/usr/share/nginx/html/backend_static
 ARG GIT_COMMIT=unspecified
 ARG LAXY_FRONTEND_URL=http://localhost:8002
@@ -28,6 +28,10 @@ RUN rm -rf node_modules && \
 
 FROM nginx:alpine
 LABEL git_commit=$GIT_COMMIT
+
+# Alpine ca-certificates before 20261020-r0 still trusts the compromised
+# eMudhra intermediates. Upgrade at build time so a stale base tag is not enough.
+RUN apk add --no-cache --upgrade ca-certificates
 
 ADD docker/laxy-static-nginx/nginx.conf.template /etc/nginx/nginx.conf.template
 

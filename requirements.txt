@@ -8,6 +8,9 @@ gevent==25.9.1
 greenlet==3.2.4
 redis==7.1.0
 requests==2.32.5
+# Floor for the Oct 2026 eMudhra / emSign CA removal. requests, sentry-sdk and
+# httpx (via webdav4) all load this bundle.
+certifi>=2026.10.19
 backoff==2.2.1
 boto3==1.41.4
 Fabric3==1.14.post1

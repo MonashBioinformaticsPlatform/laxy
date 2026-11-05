@@ -20,7 +20,8 @@ VOLUME /scratch
 
 RUN apt-get -y update && \
     apt-get -y install vim curl wget htop openssh-server slurm-wlm munge slurm-wlm-doc git build-essential \
-                       squashfs-tools uidmap libfuse3-3 libc6 libzstd1 libmagic1 jq && \
+                       squashfs-tools uidmap libfuse3-3 libc6 libzstd1 libmagic1 jq ca-certificates && \
+    update-ca-certificates && \
         apt-get install -y tzdata && \
         rm -f /etc/localtime && \
         cp /usr/share/zoneinfo/UTC /etc/localtime && \

@@ -226,6 +226,46 @@ function download_input_data() {
     fi
 }
 
+# True when $1 is a lower version than $2 (GNU sort -V).
+_ver_lt() {
+    local left="${1:-0}"
+    local right="${2:-0}"
+    [[ "${left}" != "${right}" && "$(printf '%s\n%s\n' "${left}" "${right}" | sort -V | head -n1)" == "${left}" ]]
+}
+
+# conda, pip and certifi each ship a CA bundle. pip < 26.2.2 keeps trusting the
+# compromised eMudhra intermediates even after the OS trust store is updated.
+function ensure_conda_trust_store() {
+    local conda_bin="${CONDA_BASE}/bin/conda"
+    local py="${CONDA_BASE}/bin/python"
+    [[ -x "${conda_bin}" && -x "${py}" ]] || return 0
+
+    local conda_ver certifi_ver pip_ver
+    conda_ver="$("${conda_bin}" --version 2>/dev/null | awk '{print $NF}')"
+    certifi_ver="$("${py}" -c 'import certifi; print(certifi.__version__)' 2>/dev/null || echo 0)"
+    pip_ver="$("${py}" -c 'import pip; print(pip.__version__)' 2>/dev/null || echo 0)"
+
+    if _ver_lt "${conda_ver}" "26.9.4" || _ver_lt "${certifi_ver}" "2026.10.19" || _ver_lt "${pip_ver}" "26.2.2"; then
+        send_event "JOB_INFO" "Updating conda base CA bundle (conda ${conda_ver}, certifi ${certifi_ver}, pip ${pip_ver})."
+        "${conda_bin}" install --yes -n base "conda>=26.9.4" "certifi>=2026.10.19" "pip>=26.2.2" ca-certificates || return 1
+    fi
+}
+
+function ensure_pip_trust_store() {
+    local py="$1"
+    [[ -x "${py}" ]] || return 0
+
+    local pip_ver certifi_ver
+    pip_ver="$("${py}" -c 'import pip; print(pip.__version__)' 2>/dev/null || true)"
+    if [[ -n "${pip_ver}" ]] && _ver_lt "${pip_ver}" "26.2.2"; then
+        "${py}" -m pip install --disable-pip-version-check -U "pip>=26.2.2" || return 1
+    fi
+    certifi_ver="$("${py}" -c 'import certifi; print(certifi.__version__)' 2>/dev/null || true)"
+    if [[ -n "${certifi_ver}" ]] && _ver_lt "${certifi_ver}" "2026.10.19"; then
+        "${py}" -m pip install --disable-pip-version-check -U "certifi>=2026.10.19" || return 1
+    fi
+}
+
 function install_miniconda() {
     send_event "JOB_INFO" "Installing/detecting local conda installation."
 
@@ -277,6 +317,8 @@ function init_conda_env() {
     # "ArgumentError: activate does not accept more than one argument".
     set --
     source "${CONDA_BASE}/bin/activate"
+
+    ensure_conda_trust_store || return 1
 
     # A directory existing isn't enough to know the env is usable - env creation can fail
     # partway through (eg the pip step), leaving a broken directory behind that would
@@ -349,6 +391,7 @@ function init_conda_env() {
     # shellcheck disable=SC1090
     # source "${CONDA_BASE}/bin/activate" "${CONDA_BASE}/envs/${env_name}"
     conda activate "${CONDA_BASE}/envs/${env_name}" || return 1
+    ensure_pip_trust_store "${CONDA_PREFIX}/bin/python" || return 1
 
     # Capture conda environment files
     conda env export >"${INPUT_CONFIG_PATH}/conda_environment.snapshot.yml" || true

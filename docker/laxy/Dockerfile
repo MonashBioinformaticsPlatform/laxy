@@ -1,5 +1,5 @@
 
-FROM python:3.12
+FROM python:3.12.16
 
 ARG LAXY_STATIC_ROOT=/usr/share/nginx/html/backend_static
 ARG GIT_COMMIT=""
@@ -15,8 +15,16 @@ RUN groupadd -r --gid 999 laxy && \
 
 ADD --chown=laxy:laxy . /app/
 
-ENV PIP_DISABLE_PIP_VERSION_CHECK=1
-RUN pip3 install --no-cache-dir -U pip "setuptools>=75,<82" && \
+# eMudhra / emSign CA compromise (Oct 2026): pip vendors its own certifi and
+# ignores the system trust store, and Debian's ca-certificates package in the
+# base image predates the removal. Both have to be upgraded explicitly.
+ENV DEBIAN_FRONTEND=noninteractive \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates && \
+    update-ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+RUN pip3 install --no-cache-dir -U "pip>=26.2.2" "setuptools>=75,<82" && \
     pip3 install --no-cache-dir -U -r requirements.txt
 
 # We collect Django admin staticfiles, to be shared with the nginx container

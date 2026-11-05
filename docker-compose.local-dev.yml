@@ -54,7 +54,7 @@ services:
   # If you prefer to run npm yourself outside a container, comment this out and run
   # "npm install && npm run server" manually.
   dev-frontend-server:
-    image: node:24
+    image: node:24.22.1
     working_dir: /app
     environment:
       - LAXY_DEBUG=yes

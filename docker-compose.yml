@@ -22,7 +22,9 @@ services:
       docker-compose.local-dev.yml)"
 
   db:
-    image: postgres:15-alpine
+    image: laxy-postgres:15-alpine
+    build:
+      context: ./docker/postgres
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres

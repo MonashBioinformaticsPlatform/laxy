@@ -24,6 +24,7 @@ classifiers = [
 ]
 dependencies = [
     "asks",
+    "certifi>=2026.10.19",
     "requests",
     "toolz",
     "backoff",

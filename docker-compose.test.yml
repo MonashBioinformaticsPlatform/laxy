@@ -1,6 +1,8 @@
 services:
   db-test:
-    image: postgres:15-alpine
+    image: laxy-postgres:15-alpine
+    build:
+      context: ./docker/postgres
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
