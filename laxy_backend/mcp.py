@@ -13,7 +13,7 @@ import os
 import re
 from datetime import timedelta
 from typing import Annotated, Any
-from urllib.parse import urlencode
+from urllib.parse import unquote, urlencode, urlparse
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
@@ -97,7 +97,8 @@ class SampleLane(BaseModel):
 
     ``R1`` and optional ``R2`` sit on the same object. A list of single-key
     dicts (``[{R1: url}, {R2: url}]``, the ENA fastq_ftp shape) is accepted
-    by the normaliser and merged into this shape before save.
+    by the normaliser and merged into this shape before save. URL strings are
+    stored as ``{name, location}`` file objects, which job creation requires.
     """
 
     model_config = ConfigDict(extra="allow")
@@ -291,10 +292,118 @@ def _attach_job_url(payload: dict[str, Any], job_id: str, ctx: Context | None) -
 _READ_KEYS = ("R1", "R2", "I1", "I2")
 
 
+def _filename_from_url(url: str) -> str:
+    name = unquote(urlparse(url).path.rstrip("/").rsplit("/", 1)[-1])
+    return name or "download"
+
+
+def _as_file_ref(value: Any, label: str) -> dict[str, Any]:
+    """Turn a read URL or file object into ``{name, location}``."""
+    if isinstance(value, str):
+        location = value.strip()
+        if not location:
+            raise ValueError(f"{label} is empty")
+        return {"name": _filename_from_url(location), "location": location}
+    if isinstance(value, dict):
+        location = value.get("location") or value.get("url")
+        if not isinstance(location, str) or not location.strip():
+            raise ValueError(f"{label} needs a location URL")
+        location = location.strip()
+        name = value.get("name") or _filename_from_url(location)
+        ref: dict[str, Any] = {"name": str(name), "location": location}
+        for key in ("checksum", "type_tags", "metadata"):
+            if value.get(key) is not None:
+                ref[key] = value[key]
+        return ref
+    raise ValueError(f"{label} must be a URL or a file object")
+
+
+def _store_lane(lane: dict[str, Any], sample_name: str) -> dict[str, Any]:
+    stored = dict(lane)
+    for key in list(stored):
+        if key in _READ_KEYS and stored[key] is not None:
+            stored[key] = _as_file_ref(stored[key], f"Sample {sample_name!r} {key}")
+    return stored
+
+
+def _annotation_type_tag(url: str) -> str:
+    lower = url.lower()
+    if ".gff" in lower:
+        return "gff"
+    if ".gtf" in lower:
+        return "gtf"
+    return "unknown_annotation_type"
+
+
+def _build_fetch_files(
+    samples: list[dict[str, Any]],
+    genome_fasta_url: str | None = None,
+    genome_annotation_url: str | None = None,
+) -> list[dict[str, Any]]:
+    """Input list laxydl reads from ``params.fetch_files``."""
+    fetch_files: list[dict[str, Any]] = []
+    if genome_fasta_url and genome_annotation_url:
+        fasta_url = genome_fasta_url.strip()
+        annot_url = genome_annotation_url.strip()
+        ann_type = _annotation_type_tag(annot_url)
+        fasta_name = _filename_from_url(fasta_url)
+        annot_name = _filename_from_url(annot_url)
+        if fasta_name == annot_name:
+            fasta_name = "genome.fa"
+            annot_name = {
+                "gtf": "annotation.gtf",
+                "gff": "annotation.gff",
+            }.get(ann_type, "annotation.download")
+        fetch_files.append(
+            {
+                "name": fasta_name,
+                "location": fasta_url,
+                "type_tags": ["reference_genome", "genome_sequence", "fasta"],
+            }
+        )
+        fetch_files.append(
+            {
+                "name": annot_name,
+                "location": annot_url,
+                "type_tags": ["reference_genome", "genome_annotation", ann_type],
+            }
+        )
+
+    for sample in samples:
+        for lane in sample.get("files") or []:
+            present = {
+                pair: lane[pair]
+                for pair in _READ_KEYS
+                if isinstance(lane.get(pair), dict) and lane[pair].get("location")
+            }
+            for pair, ref in present.items():
+                metadata = dict(ref.get("metadata") or {})
+                metadata["read_pair"] = pair
+                mate = {"R1": "R2", "R2": "R1"}.get(pair)
+                if mate and mate in present and present[mate].get("name"):
+                    metadata["paired_file"] = present[mate]["name"]
+                tags = list(ref.get("type_tags") or [])
+                if "ngs_reads" not in tags:
+                    tags.append("ngs_reads")
+                if "fastq" not in tags:
+                    tags.append("fastq")
+                entry: dict[str, Any] = {
+                    "name": ref.get("name") or _filename_from_url(ref["location"]),
+                    "location": ref["location"],
+                    "type_tags": tags,
+                    "metadata": metadata,
+                }
+                if ref.get("checksum"):
+                    entry["checksum"] = ref["checksum"]
+                fetch_files.append(entry)
+    return fetch_files
+
+
 def _normalize_samples(samples: list[Any]) -> list[dict[str, Any]]:
     """Coerce samples to ``{name, files: [{R1, R2?}]}``.
 
     Merges a lane written as ``[{R1: url}, {R2: url}]`` into one object.
+    Read values are stored as ``{name, location}`` file objects.
     """
     normalised: list[dict[str, Any]] = []
     for sample in samples or []:
@@ -326,23 +435,23 @@ def _normalize_samples(samples: list[Any]) -> list[dict[str, Any]]:
                 raise ValueError(f"Sample {name!r} lane needs R1 (and optional R2)")
             if "R1" in lane and "R2" in lane:
                 if pending:
-                    lanes.append(pending)
+                    lanes.append(_store_lane(pending, name))
                     pending = None
-                lanes.append(lane)
+                lanes.append(_store_lane(lane, name))
                 continue
             if "R1" in lane:
                 if pending:
-                    lanes.append(pending)
+                    lanes.append(_store_lane(pending, name))
                 pending = lane
                 continue
             if pending and "R1" in pending:
                 pending.update(lane)
-                lanes.append(pending)
+                lanes.append(_store_lane(pending, name))
                 pending = None
                 continue
             raise ValueError(f"Sample {name!r} has an R2 lane without an R1")
         if pending:
-            lanes.append(pending)
+            lanes.append(_store_lane(pending, name))
         extra = {k: v for k, v in sample.items() if k not in ("name", "files")}
         normalised.append({"name": name, "files": lanes, **extra})
     if not normalised:
@@ -1659,6 +1768,9 @@ def laxy_update_sample_cart(
         "R1 and R2 belong on the same lane object. Call laxy_list_pipelines "
         "for valid pipeline_version values and params_schema. "
         "pipeline_params is merged into the pipeline params object. "
+        "Read URLs are stored as {name, location} file objects, and "
+        "params.fetch_files is filled from those reads and any custom genome "
+        "URLs when the caller did not set fetch_files. "
         "dry_run=true validates and returns the payload without creating "
         "anything (no write-tool gate). Otherwise requires "
         "LAXY_MCP_ENABLE_WRITE_TOOLS=yes. Returns job_url."
@@ -1735,6 +1847,12 @@ def laxy_submit_job(
         params["genome"] = reference_genome_id
     if pipeline_params:
         params.update(pipeline_params)
+    if not params.get("fetch_files"):
+        params["fetch_files"] = _build_fetch_files(
+            normalised,
+            genome_fasta_url,
+            genome_annotation_url,
+        )
 
     preview = {
         "dry_run": True,

@@ -756,6 +756,29 @@ class JobViewTest(TestCase):
             "Im_an_ugly_2_L002_1_sample-NAME__r1",
         )
 
+    def test_add_sanitized_filenames_accepts_url_strings(self):
+        cart = {
+            "samples": [
+                {
+                    "name": "sample",
+                    "files": [
+                        {
+                            "R1": "ftp://example.com/reads/sample_R1.fastq.gz",
+                            "R2": "ftp://example.com/reads/sample_R2.fastq.gz",
+                        }
+                    ],
+                }
+            ]
+        }
+        with_sane_names = add_sanitized_names_to_samplecart_json(cart)
+        r1 = with_sane_names["samples"][0]["files"][0]["R1"]
+        self.assertEqual(r1["location"], "ftp://example.com/reads/sample_R1.fastq.gz")
+        self.assertEqual(r1["sanitized_filename"], "sample_R1.fastq.gz")
+        self.assertEqual(
+            with_sane_names["samples"][0]["files"][0]["R2"]["sanitized_filename"],
+            "sample_R2.fastq.gz",
+        )
+
 
 class SampleCartViewTest(TestCase):
     def setUp(self):

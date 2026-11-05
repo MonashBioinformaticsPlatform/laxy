@@ -617,7 +617,15 @@ class McpDownloadTokenTest(TransactionTestCase):
                 }
             ]
         )
-        self.assertEqual(samples[0]["files"], [{"R1": "http://r1", "R2": "http://r2"}])
+        self.assertEqual(
+            samples[0]["files"],
+            [
+                {
+                    "R1": {"name": "r1", "location": "http://r1"},
+                    "R2": {"name": "r2", "location": "http://r2"},
+                }
+            ],
+        )
         built = _samples_from_ena_runs(
             {
                 "SRR1": {
@@ -628,6 +636,60 @@ class McpDownloadTokenTest(TransactionTestCase):
         )
         self.assertEqual(built[0]["name"], "wt")
         self.assertEqual(built[0]["files"][0]["R1"], "http://a")
+
+    def test_submit_dry_run_builds_file_objects_and_fetch_files(self):
+        from unittest.mock import MagicMock, patch
+
+        from laxy_backend.mcp import laxy_submit_job
+
+        samples = [
+            {
+                "name": "sample",
+                "files": [
+                    {
+                        "R1": "https://example.test/sample_R1.fastq.gz",
+                        "R2": "https://example.test/sample_R2.fastq.gz",
+                    }
+                ],
+            }
+        ]
+        with patch("laxy_backend.mcp._current_user", return_value=self.user):
+            result = laxy_submit_job(
+                ctx=MagicMock(),
+                pipeline_name="not-a-pipeline",
+                pipeline_version="0",
+                samples=samples,
+                genome_fasta_url="https://example.test/genome.fa",
+                genome_annotation_url="https://example.test/annotation.gtf",
+                pipeline_params={"nf-core-rnaseq": {"min_trimmed_reads": 0}},
+                dry_run=True,
+            )
+        lane = result["samples"][0]["files"][0]
+        self.assertEqual(lane["R1"]["location"], "https://example.test/sample_R1.fastq.gz")
+        self.assertEqual(lane["R1"]["name"], "sample_R1.fastq.gz")
+        fetched = {item["name"]: item for item in result["params"]["fetch_files"]}
+        self.assertEqual(fetched["genome.fa"]["type_tags"][-1], "fasta")
+        self.assertEqual(fetched["annotation.gtf"]["type_tags"][-1], "gtf")
+        self.assertEqual(fetched["sample_R1.fastq.gz"]["metadata"]["read_pair"], "R1")
+        self.assertEqual(
+            fetched["sample_R1.fastq.gz"]["metadata"]["paired_file"],
+            "sample_R2.fastq.gz",
+        )
+        self.assertEqual(result["params"]["nf-core-rnaseq"]["min_trimmed_reads"], 0)
+
+        with patch("laxy_backend.mcp._current_user", return_value=self.user):
+            kept = laxy_submit_job(
+                ctx=MagicMock(),
+                pipeline_name="not-a-pipeline",
+                pipeline_version="0",
+                samples=samples,
+                pipeline_params={"fetch_files": [{"name": "keep", "location": "http://keep"}]},
+                dry_run=True,
+            )
+        self.assertEqual(
+            kept["params"]["fetch_files"],
+            [{"name": "keep", "location": "http://keep"}],
+        )
 
     def test_diagnose_job_includes_log_tail(self):
         from unittest.mock import MagicMock, patch

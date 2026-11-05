@@ -2064,10 +2064,24 @@ def add_sanitized_names_to_samplecart_json(cart_json):
     for s in samples:
         sane_prefixes = []
         for f in s.get("files", []):
-            for paircode in f.keys():
-                url = f[paircode]["location"]
+            for paircode in list(f.keys()):
+                slot = f.get(paircode)
+                # MCP and some clients store a bare URL. Job creation expects
+                # {location, name}; indexing a string as ["location"] raises
+                # TypeError and aborts the submit.
+                if isinstance(slot, str):
+                    slot = {
+                        "location": slot,
+                        "name": os.path.basename(urlparse(slot).path) or paircode,
+                    }
+                    f[paircode] = slot
+                if not isinstance(slot, dict):
+                    continue
+                url = slot.get("location")
+                if not url:
+                    continue
                 fn, _ = find_filename_and_size_from_url(url, sanitize_name=True)
-                f[paircode]["sanitized_filename"] = fn
+                slot["sanitized_filename"] = fn
                 sane_prefixes.append(simplify_fastq_name(fn))
 
         # If the sample has a non-empty `name` add a sanitized version
