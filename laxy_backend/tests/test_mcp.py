@@ -613,7 +613,10 @@ class McpDownloadTokenTest(TransactionTestCase):
             [
                 {
                     "name": "wt",
-                    "files": [{"R1": "http://r1"}, {"R2": "http://r2"}],
+                    "files": [
+                        {"R1": "https://example.test/r1"},
+                        {"R2": "https://example.test/r2"},
+                    ],
                 }
             ]
         )
@@ -621,8 +624,8 @@ class McpDownloadTokenTest(TransactionTestCase):
             samples[0]["files"],
             [
                 {
-                    "R1": {"name": "r1", "location": "http://r1"},
-                    "R2": {"name": "r2", "location": "http://r2"},
+                    "R1": {"name": "r1", "location": "https://example.test/r1"},
+                    "R2": {"name": "r2", "location": "https://example.test/r2"},
                 }
             ],
         )
