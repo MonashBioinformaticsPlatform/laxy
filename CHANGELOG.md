@@ -62,6 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `JobSerializerResponse.update()`: `PATCH /job/{id}/` with a `compute_resource` field now works instead of returning an unhandled 500. Same root cause as the `JobSerializerRequest.create()` fix above (`source="compute_resource.id"` makes DRF build a nested `{"id": ...}` dict in `validated_data`), but on the update path `_update_attrs()` passed that dict straight to `setattr()`, and Django refuses to assign a dict to a `ForeignKey` (`ValueError: Cannot assign "{'id': ...}"`). The dict is now unwrapped and resolved to a `ComputeResource` instance (or `None` to clear it) before `_update_attrs()` runs; an unknown id now raises a 400 validation error rather than a 500.
 
 ### Changed
+- Rearrange laxy Dockerfile to improve build speed via caching 
 - Conda trust-store upgrade on a compute node logs `Updating conda environment.` instead of the conda, certifi and pip versions.
 - Job conda setup uses the OS CA bundle for the shared base install instead of solving an upgrade of the `conda` package. Pipeline envs still get a pip/certifi upgrade after activation, and TLS env vars are pointed back at the OS bundle because `conda activate` resets them to that env's own `ca-certificates` file.
 - Job `send_event` curl when `DEBUG=yes`: use `-v` instead of `-vvv` so logs stay at HTTP header level without per-byte transfer trace noise from recent curl.
