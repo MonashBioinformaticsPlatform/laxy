@@ -233,20 +233,68 @@ _ver_lt() {
     [[ "${left}" != "${right}" && "$(printf '%s\n%s\n' "${left}" "${right}" | sort -V | head -n1)" == "${left}" ]]
 }
 
-# conda, pip and certifi each ship a CA bundle. pip < 26.2.2 keeps trusting the
-# compromised eMudhra intermediates even after the OS trust store is updated.
-function ensure_conda_trust_store() {
-    local conda_bin="${CONDA_BASE}/bin/conda"
-    local py="${CONDA_BASE}/bin/python"
-    [[ -x "${conda_bin}" && -x "${py}" ]] || return 0
+# First readable OS CA bundle. Empty when this host has none of the usual paths.
+function _system_ca_bundle() {
+    local candidate
+    for candidate in \
+        /etc/ssl/certs/ca-certificates.crt \
+        /etc/pki/tls/certs/ca-bundle.crt \
+        /etc/ssl/ca-bundle.pem \
+        /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
+    do
+        if [[ -s "${candidate}" ]]; then
+            echo "${candidate}"
+            return 0
+        fi
+    done
+    return 1
+}
 
+# conda, pip and certifi each ship a CA bundle. An old conda (the base env on
+# existing compute hosts is often 22.x) vendors its own copy and will not see
+# an updated OS trust store. Upgrading the conda package itself is a solve of
+# Python plus conda and blocks every job. Point conda at the OS bundle instead.
+# Returns 1 when no OS bundle was found.
+function _use_system_ca_bundle() {
+    local ca_bundle conda_bin
+    ca_bundle="$(_system_ca_bundle)" || return 1
+    export CONDA_SSL_VERIFY="${ca_bundle}"
+    export SSL_CERT_FILE="${ca_bundle}"
+    export REQUESTS_CA_BUNDLE="${ca_bundle}"
+    export CURL_CA_BUNDLE="${ca_bundle}"
+
+    conda_bin="${CONDA_BASE}/bin/conda"
+    [[ -x "${conda_bin}" ]] || return 0
+    "${conda_bin}" config --system --set ssl_verify "${ca_bundle}" \
+        || "${conda_bin}" config --file "${CONDA_BASE}/.condarc" --set ssl_verify "${ca_bundle}" \
+        || true
+    return 0
+}
+
+function ensure_conda_trust_store() {
+    local py="${CONDA_BASE}/bin/python"
+    [[ -x "${CONDA_BASE}/bin/conda" && -x "${py}" ]] || return 0
+
+    if _use_system_ca_bundle; then
+        # Base pip/certifi are only used before the pipeline env is activated.
+        # pip 26 needs Python >= 3.9; older base installs keep using the OS bundle.
+        local py_ver
+        py_ver="$("${py}" -c 'import sys; print("%d.%d" % sys.version_info[:2])' 2>/dev/null || echo 0)"
+        if ! _ver_lt "${py_ver}" "3.9"; then
+            ensure_pip_trust_store "${py}" || true
+        fi
+        return 0
+    fi
+
+    # No OS bundle on this host. Fall back to replacing the bundles conda ships.
+    local conda_bin="${CONDA_BASE}/bin/conda"
     local conda_ver certifi_ver pip_ver
     conda_ver="$("${conda_bin}" --version 2>/dev/null | awk '{print $NF}')"
     certifi_ver="$("${py}" -c 'import certifi; print(certifi.__version__)' 2>/dev/null || echo 0)"
     pip_ver="$("${py}" -c 'import pip; print(pip.__version__)' 2>/dev/null || echo 0)"
 
     if _ver_lt "${conda_ver}" "26.9.4" || _ver_lt "${certifi_ver}" "2026.10.19" || _ver_lt "${pip_ver}" "26.2.2"; then
-        send_event "JOB_INFO" "Updating conda base CA bundle (conda ${conda_ver}, certifi ${certifi_ver}, pip ${pip_ver})."
+        send_event "JOB_INFO" "Updating conda environment."
         "${conda_bin}" install --yes -n base "conda>=26.9.4" "certifi>=2026.10.19" "pip>=26.2.2" ca-certificates || return 1
     fi
 }
@@ -391,6 +439,9 @@ function init_conda_env() {
     # shellcheck disable=SC1090
     # source "${CONDA_BASE}/bin/activate" "${CONDA_BASE}/envs/${env_name}"
     conda activate "${CONDA_BASE}/envs/${env_name}" || return 1
+    # Activation points SSL_CERT_FILE at this env's own ca-certificates file,
+    # which is not updated when base changes. Put the OS bundle back.
+    _use_system_ca_bundle || true
     ensure_pip_trust_store "${CONDA_PREFIX}/bin/python" || return 1
 
     # Capture conda environment files
