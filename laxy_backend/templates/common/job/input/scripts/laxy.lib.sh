@@ -181,6 +181,36 @@ function download_somehow() {
     fi
 }
 
+# Apptainer forwards SSL_CERT_FILE / REQUESTS_CA_BUNDLE / CURL_CA_BUNDLE.
+# _use_system_ca_bundle sets those to the compute node's trust store (on RHEL,
+# /etc/pki/tls/certs/ca-bundle.crt). That path is not in the Debian downloader
+# image, and requests aborts before downloading. Copy the bundle onto JOB_PATH,
+# which is already bind-mounted at the same path, and point the vars at the copy
+# for this process only. Host curl/conda keep the original paths.
+function _laxydl_exec() {
+    if [[ -z "${LAXYDL_APPTAINER_PREFIX:-}" ]]; then
+        command "$@"
+        return $?
+    fi
+
+    local host_ca=""
+    host_ca="$(_system_ca_bundle)" || true
+    if [[ -n "${host_ca}" && -n "${JOB_PATH:-}" ]]; then
+        local container_ca="${JOB_PATH}/.host-ca-bundle.crt"
+        if cp -f "${host_ca}" "${container_ca}"; then
+            env \
+                "SSL_CERT_FILE=${container_ca}" \
+                "REQUESTS_CA_BUNDLE=${container_ca}" \
+                "CURL_CA_BUNDLE=${container_ca}" \
+                ${LAXYDL_APPTAINER_PREFIX} "$@"
+            return $?
+        fi
+    fi
+
+    env -u SSL_CERT_FILE -u REQUESTS_CA_BUNDLE -u CURL_CA_BUNDLE \
+        ${LAXYDL_APPTAINER_PREFIX} "$@"
+}
+
 function download_input_data() {
     if [[ "${JOB_INPUT_STAGED}" == "no" ]]; then
         local DESTINATION_PATH="$1"
@@ -200,7 +230,7 @@ function download_input_data() {
             LAXYDL_EXTRA_ARGS=" ${LAXYDL_EXTRA_ARGS} --no-aria2c "
         fi
 
-        ${LAXYDL_APPTAINER_PREFIX} laxydl download \
+        _laxydl_exec laxydl download \
             ${LAXYDL_INSECURE} \
             -vvv \
             ${LAXYDL_EXTRA_ARGS} \

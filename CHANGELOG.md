@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - AGAT preprocessing is not applied inside `featurecounts_postnfcore.nf` (`PREPARE_ANNOTATION` decompresses/unlinks only); custom-reference AGAT rewriting lives in pipeline `run_job.sh` ahead of nf-core/rnaseq instead.
 
 ### Fixed
+- Job input downloads via Apptainer no longer die with `Could not find a suitable TLS CA certificate bundle` when the compute node trust store is a RHEL path (`/etc/pki/tls/certs/ca-bundle.crt`) that the Debian downloader image does not have. The host bundle is copied onto the bind-mounted job directory and the container TLS env vars point at that copy.
 - API keys page: the Create button is no longer clipped by a 10% flex column.
 - MCP `laxy_submit_job` stores read URLs as `{name, location}` file objects and fills `params.fetch_files` from those reads and any custom genome URLs, so job creation no longer crashes on a bare URL string. Job creation also accepts a sample cart that still has bare URL strings.
 - eMudhra / emSign CA compromise: images now build on Python 3.12.16 and Node.js 24.22.1, with `certifi>=2026.10.19`, `pip>=26.2.2`, and an upgraded OS CA bundle. Conda job setup upgrades base `conda` / `certifi` / `pip` when they are older than the patched releases.
