@@ -1,7 +1,6 @@
 <template>
-  <md-layout md-column md-gutter>
-    <md-layout style="margin: 24px" md-vertical-align="stretch" :md-column-medium="true" :md-row-large="true">
-      <md-whiteframe md-elevation="2" class="pad-32">
+  <div class="api-keys-page">
+      <md-whiteframe md-elevation="2" class="pad-32 api-keys-panel">
         <h1 class="md-title">API keys</h1>
         <p>
           Named keys authenticate as you on the REST API and MCP.
@@ -60,14 +59,14 @@
 
         <md-whiteframe md-elevation="1" class="pad-16" style="margin-top: 16px;">
           <h3>Create a new key</h3>
-          <md-layout md-gutter md-vertical-align="center" class="create-key-row">
-            <md-layout md-flex="40">
+          <div class="create-key-row">
+            <div class="create-key-field">
               <md-input-container>
                 <label>Key name</label>
                 <md-input v-model="newKeyName" @keyup.enter.native="createKey"></md-input>
               </md-input-container>
-            </md-layout>
-            <md-layout md-flex="25">
+            </div>
+            <div class="create-key-field create-key-field-narrow">
               <md-input-container>
                 <label>Expiry</label>
                 <md-select v-model="expiryPreset" name="expiry" id="expiry">
@@ -78,14 +77,14 @@
                   <md-option value="custom">Custom datetime</md-option>
                 </md-select>
               </md-input-container>
-            </md-layout>
-            <md-layout v-if="expiryPreset === 'custom'" md-flex="25">
+            </div>
+            <div v-if="expiryPreset === 'custom'" class="create-key-field create-key-field-narrow">
               <md-input-container>
                 <label>Expires at</label>
                 <input type="datetime-local" v-model="customExpiry" class="datetime-input" />
               </md-input-container>
-            </md-layout>
-            <md-layout class="create-key-action">
+            </div>
+            <div class="create-key-action">
               <md-button
                 class="md-raised md-primary create-key-button"
                 :disabled="creating || !newKeyName.trim()"
@@ -94,12 +93,12 @@
                 <md-icon>add</md-icon>
                 <span class="pad-8-sides">Create</span>
               </md-button>
-            </md-layout>
-          </md-layout>
+            </div>
+          </div>
           <p v-if="createError" class="error-text">{{ createError }}</p>
         </md-whiteframe>
 
-        <md-table-card style="width: 100%; margin-top: 16px;">
+        <md-table-card class="keys-table">
           <md-toolbar>
             <h2 class="md-title">Your API keys</h2>
             <md-button class="md-icon-button" @click="loadKeys">
@@ -116,7 +115,7 @@
                 <md-table-head>Last used</md-table-head>
                 <md-table-head>Expires</md-table-head>
                 <md-table-head>Status</md-table-head>
-                <md-table-head>Actions</md-table-head>
+                <md-table-head class="actions-cell">Actions</md-table-head>
               </md-table-row>
             </md-table-header>
             <md-table-body>
@@ -130,10 +129,10 @@
                 <md-table-cell>{{ formatDate(key.last_used_at) }}</md-table-cell>
                 <md-table-cell>{{ key.expires_at ? formatDate(key.expires_at) : 'Never' }}</md-table-cell>
                 <md-table-cell>{{ key.status }}</md-table-cell>
-                <md-table-cell>
+                <md-table-cell class="actions-cell">
                   <md-button
                     v-if="key.status === 'active'"
-                    class="md-dense md-accent"
+                    class="md-dense md-accent revoke-button"
                     :disabled="revokingId === key.id"
                     @click="confirmRevoke(key)"
                   >
@@ -145,8 +144,7 @@
           </md-table>
         </md-table-card>
       </md-whiteframe>
-    </md-layout>
-  </md-layout>
+  </div>
 </template>
 
 <script lang="ts">
@@ -363,9 +361,22 @@ export default class ApiKeysPage extends mixins(CopyToClipboard) {
 }
 </script>
 
-<style lang="scss" scoped>
-.md-whiteframe {
+<style scoped>
+.api-keys-page {
+  align-self: stretch;
+  box-sizing: border-box;
   width: 100%;
+  max-width: 100%;
+  margin: 24px auto;
+  padding: 0 24px;
+}
+
+.api-keys-panel {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
 }
 
 .issued-panel {
@@ -410,24 +421,62 @@ export default class ApiKeysPage extends mixins(CopyToClipboard) {
 }
 
 .create-key-row {
+  display: flex;
   flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 24px;
+  width: 100%;
+}
+
+.create-key-field {
+  flex: 1 1 280px;
+  min-width: 160px;
+  max-width: 100%;
+}
+
+.create-key-field-narrow {
+  flex: 1 1 220px;
+  min-width: 160px;
+  max-width: 100%;
+}
+
+.create-key-field ::v-deep .md-input-container {
+  width: 100%;
+  margin-bottom: 0;
 }
 
 .create-key-action {
-  flex: 0 0 auto !important;
-  width: auto !important;
-  max-width: none !important;
-  min-width: 148px;
-  overflow: visible;
+  flex: 0 0 auto;
 }
 
 .create-key-button.md-button {
   display: inline-flex;
   align-items: center;
   width: auto;
+  min-width: max-content;
   white-space: nowrap;
-  min-width: 132px;
-  overflow: visible;
+}
+
+.keys-table {
+  width: 100%;
+  margin-top: 16px;
+  overflow-x: auto;
+}
+
+.keys-table ::v-deep .md-table,
+.keys-table ::v-deep table {
+  width: 100% !important;
+}
+
+.keys-table ::v-deep .actions-cell {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.keys-table ::v-deep .md-table-cell .revoke-button.md-button {
+  width: auto !important;
+  min-width: max-content !important;
+  padding: 0 16px;
 }
 
 .spin {
