@@ -173,7 +173,7 @@ See `laxy_frontend/src/web-api.ts` for examples of frontend API usage.
 
 Laxy exposes an MCP 2.0 (stateless `2026-07-28`) endpoint at `/api/v1/mcp/` for AI agents.
 
-**Authentication:** create a named API key in the web UI (**API Keys** in the avatar menu). Send it as `Authorization: Bearer <key>` (or set `LAXY_API_TOKEN`). Prefer these over the profile JWT (14-day expiry) or the legacy DRF authtoken from `GET /api/v1/user/profile/`.
+**Authentication:** create a named API key in the web UI (**API Keys** in the avatar menu). Send it as `Authorization: Bearer <key>` (or set `LAXY_API_TOKEN`). Prefer these over the 14-day JWT (`token`) or the legacy DRF authtoken (`drf_authtoken`) returned by `GET /api/v1/user/profile/`. The profile page does not show either secret.
 
 Example client config:
 

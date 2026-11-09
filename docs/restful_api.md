@@ -10,15 +10,10 @@ The definitive API docs are the OpenAPI/Swagger definition:
 
 ## Get authentication tokens
 
-Login and go to: https://api.laxy.io/api/v1/user/profile/ and copy the "Secret API token" to use in the authentication header.
+Create a named API key in the web UI (avatar menu → **API Keys**). The secret is shown once. Send it as:
 
 ```bash
-
-```bash
-AUTH_HEADER="Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoid1VIMnRUbGw2bnR6TGp4RmdhVFQ2IiwidXNlcm5hbWUiOiJhbmRyZXcucGVycnkiLCJleHAiOjE1OTQ0MjgwMzQsImVtYWlsIjoiYW5kcmV3LnBlcnJ5QG1vbmFzaC5lZHUiLCJvcmlnX2lhdCI6MTU5NDA4MjQzNH0.aqAfo4d1ovMwP6dwU558QXCxydIKTHi9PgxNJXEhrlA"
-
-# .. or, if you have a DRF token via the /admin interface
-# AUTH_HEADER="Authorization: Token d63af460ffb42548871aa60985c9862b21be633a"
+AUTH_HEADER="Authorization: Bearer laxy_…"
 ```
 
 Add `-H "${AUTH_HEADER}"` to `curl` command line to use your credentials (can then exclude any `access_token` in query params or cookies).

@@ -2,10 +2,10 @@
 
 This is a experimental commandline client for submitting, downloading Laxy jobs etc.
 
-You need to set the environment variable `LAXY_API_KEY` (or `LAXY_API_TOKEN`) with the JWT token provided on the user profile page in the web UI.
+You need to set the environment variable `LAXY_API_KEY` (or `LAXY_API_TOKEN`) to a named API key from the web UI (avatar menu → **API Keys**). The secret is shown only once, when you create the key.
 
 ```bash
-export LAXY_API_KEY=eySDfmklw3nfl3k4fknd.dlkfj3lfj34.drklgjlgejkl4
+export LAXY_API_KEY=laxy_…
 ```
 
 Examples:

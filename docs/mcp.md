@@ -24,7 +24,7 @@ claude mcp add --transport http --scope user laxy \
   https://api.laxy.io/api/v1/mcp/ \
   --header "Authorization: Bearer ${LAXY_API_TOKEN}"
 ```
-The `LAXY_API_TOKEN` should be a **named API key** created in the Laxy web UI (**API Keys** in the avatar menu). Paste it into the JSON config, or export `LAXY_API_TOKEN` in `.bashrc` / `.zshrc`. The profile JWT expires after 14 days; the legacy DRF authtoken from `GET /api/v1/user/profile/` still works but is not recommended for new agent configs.
+The `LAXY_API_TOKEN` should be a **named API key** created in the Laxy web UI (**API Keys** in the avatar menu). Paste it into the JSON config, or export `LAXY_API_TOKEN` in `.bashrc` / `.zshrc`. `GET /api/v1/user/profile/` still returns a 14-day JWT (`token`) and a legacy DRF authtoken (`drf_authtoken`); neither is shown on the profile page, and neither is recommended for new agent configs.
 
 ## Details
 

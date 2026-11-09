@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Synthetic annotation corpus under `tests/data/annotation_corpus/`: a deterministic, bacterial-scale (two-chromosome, ~150 kb) FASTA + GTF/GFF3 + generated FASTQ fixture set for real end-to-end testing of annotation detection, filtering, and the FASTA/annotation seqid pre-flight. Twenty cases span Ensembl/GENCODE/RefSeq eukaryotes, NCBI/Bakta/Prokka/SnapGene prokaryotes, and failure modes (seqid mismatch, 8-column rows, empty files, CRLF/BOM, AGAT-converted inputs). Adding a new example is a three-step operation (drop the annotation file, add one line to the `META` table in `make_manifests.py`, regenerate manifests); reads auto-generate from each annotation's feature coordinates so no manual read authoring is required. Run with `just test-annotation-corpus` (fast tiers, no Django/containers) or `just test-annotation-corpus-e2e` (full nf-core/rnaseq).
 
 ### Removed
+- User profile no longer displays the 14-day JWT. Use a named API key from the API Keys page for scripts, curl, and agents.
 - Removed `coreapi` and `coreschema` dependencies (replaced with native DRF OpenAPI parameter support via `get_schema_operation_parameters`)
 - `robox` package (Degust upload now uses `requests` multipart POST; no longer used elsewhere)
 - AGAT preprocessing is not applied inside `featurecounts_postnfcore.nf` (`PREPARE_ANNOTATION` decompresses/unlinks only); custom-reference AGAT rewriting lives in pipeline `run_job.sh` ahead of nf-core/rnaseq instead.

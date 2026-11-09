@@ -312,7 +312,7 @@ const actions: any = {
         try {
             const response = await WebAPI.getUserProfile();
             const profile_info = pick(response.data,
-                ['id', 'full_name', 'username', 'email', 'profile_pic', 'token']);
+                ['id', 'full_name', 'username', 'email', 'profile_pic']);
             commit(SET_USER_PROFILE, profile_info);
         } catch (error) {
             throw error;

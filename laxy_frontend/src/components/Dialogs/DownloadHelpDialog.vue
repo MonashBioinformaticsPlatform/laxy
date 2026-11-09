@@ -14,7 +14,9 @@
         <code>curl -H "Authorization: Bearer ${api_key}" "{{ tarballUrl }}" >{{ filename }}</code>
         <br><br>
         <p>
-          Your <code>${api_key}</code> is available under <a href="/#/profile">User Profile</a>.
+          Your <code>${api_key}</code> is a named key from
+          <a href="/#/api-keys">API Keys</a>.
+          The secret is shown only once, when you create the key.
         </p>
       </template>
     </md-dialog-content>
