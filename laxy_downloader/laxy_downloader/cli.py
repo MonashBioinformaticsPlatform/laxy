@@ -13,6 +13,8 @@ import platform
 import trio
 
 from .secrets import get_secret_key
+from urllib.parse import urlparse
+
 from .core import (
     get_default_cache_path,
     sanitize_filename,
@@ -37,6 +39,13 @@ from .core import (
     untar_from_url_fragment,
     notify_event,
     async_notify_event,
+    get_content_length,
+    parse_optional_int,
+    inspect_existing_download,
+    apply_existing_download_decision,
+    classify_aria_round,
+    retry_wait_seconds,
+    ARIA_MAX_ROUNDS,
 )
 
 from . import aria
@@ -307,13 +316,12 @@ def _run_download_cli(args, rpc_secret=None):
         if args.cache_path:
             init_cache(args.cache_path)
 
-        # Find filenames for each URL, optionally skip any existing files
+        skip_urls = set()
         if args.destination_path is not None:
             if args.create_missing_directories:
                 os.makedirs(args.destination_path, exist_ok=True)
 
-            skip_urls = set()
-            for url in urls:
+            for url in list(urls):
                 filename = url_filenames.get(url, None)
                 if not filename:
                     filename, _ = find_filename_and_size_from_url(
@@ -322,13 +330,64 @@ def _run_download_cli(args, rpc_secret=None):
                     url_filenames[url] = filename
 
                 filepath = os.path.join(args.destination_path, filename)
+                cached = get_url_cached_path(url, args.cache_path)
+                content_length = None
+                try:
+                    content_length = parse_optional_int(
+                        get_content_length(
+                            url, {}, None, urlparse(url).scheme.lower()
+                        )
+                    )
+                except Exception as ex:
+                    logger.warning(
+                        f"Could not determine Content-Length for {url}: {ex}"
+                    )
 
-                if args.skip_existing and os.path.isfile(filepath):
+                decision = inspect_existing_download(
+                    skip_existing=args.skip_existing,
+                    destination_path=filepath,
+                    cache_file=cached,
+                    content_length=content_length,
+                )
+                if decision == "skip":
                     logger.info(f"{filename} exists, skipping download.")
                     skip_urls.add(url)
                     continue
+                if decision != "download":
+                    logger.info(
+                        f"{filename} is incomplete or has leftover aria2 state "
+                        f"({decision}); will resume."
+                    )
+                apply_existing_download_decision(
+                    decision, destination_path=filepath, cache_file=cached
+                )
 
             urls.difference_update(skip_urls)
+        elif args.cache_path:
+            for url in list(urls):
+                cached = get_url_cached_path(url, args.cache_path)
+                content_length = None
+                try:
+                    content_length = parse_optional_int(
+                        get_content_length(
+                            url, {}, None, urlparse(url).scheme.lower()
+                        )
+                    )
+                except Exception:
+                    pass
+                decision = inspect_existing_download(
+                    skip_existing=False,
+                    destination_path=None,
+                    cache_file=cached,
+                    content_length=content_length,
+                )
+                if decision == "replace_cache":
+                    apply_existing_download_decision(
+                        decision, destination_path=None, cache_file=cached
+                    )
+
+        succeeded_urls = set()
+        failed_url_errors = {}
 
         if urls and args.use_aria:
             daemon = aria.get_daemon(secret=rpc_secret)
@@ -346,28 +405,146 @@ def _run_download_cli(args, rpc_secret=None):
                     verify_ssl_certificate=verify_ssl_certificate,
                 )
 
-                gids = aria.download_urls(
-                    urls,
-                    cache_path=args.cache_path,
-                    proxy=args.proxy,
-                    concurrent_downloads=args.parallel_downloads,
-                )
+                remaining = set(urls)
+                last_errors = {}
 
-                if args.queue_then_exit:
-                    logger.info(f"Download GIDs: {', '.join(gids)}")
-                    logger.info("Queued downloads, exiting.")
-                    sys.exit()
+                for round_index in range(ARIA_MAX_ROUNDS):
+                    if round_index > 0:
+                        delay = retry_wait_seconds(round_index - 1)
+                        logger.info(
+                            f"Waiting {delay:.1f}s before aria2 retry round "
+                            f"{round_index + 1}/{ARIA_MAX_ROUNDS} "
+                            f"({len(remaining)} URL(s))."
+                        )
+                        await trio.sleep(delay)
+                        aria.purge_results()
 
-                logging.debug("Waiting a moment for downloaded to become queued.")
-                await trio_wait_with_progress(
-                    _initial_queued_wait_delay, 1, quiet=args.quiet or args.no_progress
-                )
-
-                aria.log_status()
-                while not aria.downloads_finished(gids):
-                    await trio_wait_with_progress(
-                        _polling_delay, 1, quiet=args.quiet or args.no_progress
+                    gids = aria.download_urls(
+                        remaining,
+                        cache_path=args.cache_path,
+                        proxy=args.proxy,
+                        concurrent_downloads=args.parallel_downloads,
                     )
+
+                    if args.queue_then_exit:
+                        logger.info(f"Download GIDs: {', '.join(gids)}")
+                        logger.info("Queued downloads, exiting.")
+                        sys.exit()
+
+                    logging.debug("Waiting a moment for downloaded to become queued.")
+                    await trio_wait_with_progress(
+                        _initial_queued_wait_delay,
+                        1,
+                        quiet=args.quiet or args.no_progress,
+                    )
+
+                    aria.log_status()
+                    while not aria.downloads_finished(gids):
+                        await trio_wait_with_progress(
+                            _polling_delay, 1, quiet=args.quiet or args.no_progress
+                        )
+
+                    statuses = aria.get_download_statuses(gids)
+                    round_items = []
+                    for status in statuses:
+                        url = aria.url_from_aria_status(status)
+                        if not url:
+                            continue
+                        cached = get_url_cached_path(url, args.cache_path)
+                        cache_size = (
+                            os.path.getsize(cached) if os.path.isfile(cached) else None
+                        )
+                        content_length = None
+                        try:
+                            content_length = parse_optional_int(
+                                get_content_length(
+                                    url, {}, None, urlparse(url).scheme.lower()
+                                )
+                            )
+                        except Exception:
+                            content_length = parse_optional_int(
+                                status.get("totalLength")
+                            )
+                        if (
+                            content_length is not None
+                            and cache_size is not None
+                            and cache_size > content_length
+                        ):
+                            logger.warning(
+                                f"Cached file for {url} is larger than "
+                                f"Content-Length ({cache_size} > {content_length}); "
+                                "discarding and re-downloading."
+                            )
+                            apply_existing_download_decision(
+                                "replace_cache",
+                                destination_path=None,
+                                cache_file=cached,
+                            )
+                            cache_size = None
+                        error_message = status.get("errorMessage") or ""
+                        last_errors[url] = (
+                            f"status={status.get('status')} "
+                            f"errorCode={status.get('errorCode')} "
+                            f"{error_message}".strip()
+                        )
+                        round_items.append(
+                            {
+                                "url": url,
+                                "status": status.get("status"),
+                                "errorCode": status.get("errorCode"),
+                                "cache_size": cache_size,
+                                "content_length": content_length,
+                            }
+                        )
+
+                    classified = classify_aria_round(
+                        round_items, round_index, max_rounds=ARIA_MAX_ROUNDS
+                    )
+                    for url in classified["ok"]:
+                        remaining.discard(url)
+                        succeeded_urls.add(url)
+                        last_errors.pop(url, None)
+                    for url in classified["failed"]:
+                        remaining.discard(url)
+                        failed_url_errors[url] = last_errors.get(
+                            url, "download failed"
+                        )
+                    classified_urls = (
+                        set(classified["ok"])
+                        | set(classified["failed"])
+                        | set(classified["requeue"])
+                    )
+                    remaining = set(classified["requeue"]) | (
+                        remaining - classified_urls
+                    )
+
+                    if not remaining:
+                        break
+
+                aria.purge_results()
+
+                if remaining:
+                    for url in remaining:
+                        failed_url_errors[url] = last_errors.get(
+                            url, "still incomplete after retries"
+                        )
+
+                if failed_url_errors:
+                    fail_lines = "; ".join(
+                        f"{url} ({err})" for url, err in failed_url_errors.items()
+                    )
+                    logger.error(
+                        f"Download failed after {ARIA_MAX_ROUNDS} aria2 round(s): "
+                        f"{fail_lines}"
+                    )
+                    await async_notify_event(
+                        api_url,
+                        "INPUT_DATA_DOWNLOAD_FAILED",
+                        message=f"Input data download failed{_type_tag_txt}: {fail_lines}",
+                        auth_headers=api_auth_headers,
+                        verify_ssl_certificate=verify_ssl_certificate,
+                    )
+                    return
 
                 await async_notify_event(
                     api_url,
@@ -377,11 +554,8 @@ def _run_download_cli(args, rpc_secret=None):
                     verify_ssl_certificate=verify_ssl_certificate,
                 )
 
-                aria.purge_results()
-
             trio.run(aria_dl_and_poll)
         elif urls:
-            # trio.run(download, urls)
             notify_event(
                 api_url,
                 "INPUT_DATA_DOWNLOAD_STARTED",
@@ -390,9 +564,21 @@ def _run_download_cli(args, rpc_secret=None):
                 verify_ssl_certificate=verify_ssl_certificate,
             )
 
-            download_concurrent(
-                urls, args.cache_path, concurrent_downloads=args.parallel_downloads
-            )
+            try:
+                download_concurrent(
+                    urls, args.cache_path, concurrent_downloads=args.parallel_downloads
+                )
+                succeeded_urls.update(urls)
+            except Exception as ex:
+                logger.error(f"Download failed: {ex}")
+                notify_event(
+                    api_url,
+                    "INPUT_DATA_DOWNLOAD_FAILED",
+                    message=f"Input data download failed: {ex}",
+                    auth_headers=api_auth_headers,
+                    verify_ssl_certificate=verify_ssl_certificate,
+                )
+                raise
 
             notify_event(
                 api_url,
@@ -405,7 +591,7 @@ def _run_download_cli(args, rpc_secret=None):
             logger.info(f"All files are already downloaded.")
 
         if args.destination_path is not None:
-            for url in urls:
+            for url in succeeded_urls:
                 cached = get_url_cached_path(url, args.cache_path)
 
                 filename = url_filenames.get(url, None)
@@ -459,6 +645,9 @@ def _run_download_cli(args, rpc_secret=None):
                         filename=filename,
                         sanitize_name=sanitize_names,
                     )
+
+        if failed_url_errors:
+            sys.exit(1)
 
 
 def main():

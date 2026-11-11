@@ -7,7 +7,14 @@ from pathlib import Path
 import pytest
 import requests
 
-from ..core import download_url, get_content_length
+from ..core import (
+    HTTP_TIMEOUT,
+    apply_existing_download_decision,
+    classify_aria_round,
+    decide_existing_download,
+    download_url,
+    get_content_length,
+)
 
 
 # Helper function to create a mock response with custom content
@@ -35,6 +42,11 @@ def calculate_md5(file_path):
 def temp_dir():
     with tempfile.TemporaryDirectory() as tmpdirname:
         yield tmpdirname
+
+
+@pytest.fixture(autouse=True)
+def _fast_retries(monkeypatch):
+    monkeypatch.setattr("laxy_downloader.core.time.sleep", lambda seconds: None)
 
 
 @mock.patch("laxy_downloader.core.request_with_retries")
@@ -92,7 +104,12 @@ def test_download_url_with_auth(mock_request, temp_dir):
 
     # Check if the auth was passed correctly
     mock_request.assert_called_with(
-        "GET", url, stream=True, headers={"Accept-Encoding": "identity"}, auth=mock.ANY
+        "GET",
+        url,
+        stream=True,
+        headers={"Accept-Encoding": "identity"},
+        auth=mock.ANY,
+        timeout=HTTP_TIMEOUT,
     )
     assert isinstance(mock_request.call_args[1]["auth"], requests.auth.HTTPBasicAuth)
 
@@ -108,13 +125,13 @@ def test_download_url_incomplete_file(mock_request, temp_dir):
 
     file_path = os.path.join(temp_dir, "incomplete_file.txt")
 
-    # The test should expect the original exception message, not the cleanup error
     with pytest.raises(Exception) as exc_info:
-        download_url(url, file_path)
-    
-    # Check that the exception message contains the expected content
+        download_url(url, file_path, max_retries=3)
+
     assert "Downloaded file size" in str(exc_info.value)
     assert "does not match Content-Length" in str(exc_info.value)
+    assert os.path.exists(file_path)
+    assert os.path.getsize(file_path) == 15
 
 
 @mock.patch("laxy_downloader.core.request_with_retries")
@@ -233,6 +250,17 @@ def test_download_url_multiple_resume_attempts(mock_request, temp_dir):
     ]
 
     mock_request.side_effect = responses
+
+    result = download_url(url, file_path)
+
+    assert result == file_path
+    with open(file_path, "rb") as f:
+        assert f.read() == content
+
+    calls = mock_request.call_args_list
+    assert calls[0][0] == ("HEAD", url)
+    assert calls[2][1]["headers"]["Range"] == "bytes=10-"
+    assert calls[3][1]["headers"]["Range"] == "bytes=25-"
 
 
 @mock.patch("laxy_downloader.core.request_with_retries")
@@ -414,6 +442,415 @@ def test_download_url_lock_file_cleanup(mock_request, temp_dir):
         download_url(url, file_path)
     
     assert not os.path.exists(lock_path), "Lock file should be removed after keyboard interrupt"
+
+
+def _head_response(content_length=None, ok=True):
+    mock_head = mock.Mock()
+    mock_head.ok = ok
+    mock_head.status_code = 200 if ok else 405
+    headers = {}
+    if content_length is not None:
+        headers["content-length"] = str(content_length)
+    mock_head.headers = headers
+    mock_head.raise_for_status = mock.Mock()
+    return mock_head
+
+
+def _http_error_response(status_code):
+    mock_response = mock.Mock()
+    mock_response.status_code = status_code
+    mock_response.headers = {}
+    error = requests.exceptions.HTTPError(response=mock_response)
+    mock_response.raise_for_status.side_effect = error
+    return mock_response
+
+
+def _iter_then_error(data, error):
+    def _iter(chunk_size=1024):
+        yield data
+        raise error
+
+    return _iter
+
+
+@mock.patch("laxy_downloader.core.request_with_retries")
+def test_download_url_resumes_existing_short_file(mock_request, temp_dir):
+    url = "http://example.com/resume_existing.txt"
+    content = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    file_path = os.path.join(temp_dir, "resume_existing.txt")
+    with open(file_path, "wb") as f:
+        f.write(content[:10])
+
+    mock_request.side_effect = [
+        _head_response(len(content)),
+        create_mock_response(
+            content[10:],
+            status_code=206,
+            headers={
+                "content-length": str(len(content[10:])),
+                "content-range": f"bytes 10-{len(content) - 1}/{len(content)}",
+            },
+        ),
+    ]
+
+    result = download_url(url, file_path)
+
+    assert result == file_path
+    with open(file_path, "rb") as f:
+        assert f.read() == content
+    calls = mock_request.call_args_list
+    assert calls[1][1]["headers"]["Range"] == "bytes=10-"
+    assert calls[1][1]["timeout"] == HTTP_TIMEOUT
+
+
+@mock.patch("laxy_downloader.core.request_with_retries")
+def test_download_url_replaces_oversized_file(mock_request, temp_dir):
+    url = "http://example.com/oversized.txt"
+    content = b"short"
+    file_path = os.path.join(temp_dir, "oversized.txt")
+    with open(file_path, "wb") as f:
+        f.write(content + b"EXTRA")
+
+    mock_request.side_effect = [
+        _head_response(len(content)),
+        create_mock_response(content, headers={"content-length": str(len(content))}),
+    ]
+
+    result = download_url(url, file_path)
+
+    assert result == file_path
+    with open(file_path, "rb") as f:
+        assert f.read() == content
+    assert "Range" not in mock_request.call_args_list[1][1]["headers"]
+
+
+@mock.patch("laxy_downloader.core.request_with_retries")
+def test_download_url_midstream_chunked_encoding_error(mock_request, temp_dir):
+    url = "http://example.com/dropped.txt"
+    content = b"0123456789abcdefghij"
+    file_path = os.path.join(temp_dir, "dropped.txt")
+
+    dropped = create_mock_response(
+        content[:8], headers={"content-length": str(len(content))}
+    )
+    dropped.iter_content.side_effect = _iter_then_error(
+        content[:8], requests.exceptions.ChunkedEncodingError("cut off")
+    )
+
+    remaining = create_mock_response(
+        content[8:],
+        status_code=206,
+        headers={
+            "content-length": str(len(content[8:])),
+            "content-range": f"bytes 8-{len(content) - 1}/{len(content)}",
+        },
+    )
+
+    mock_request.side_effect = [_head_response(len(content)), dropped, remaining]
+
+    result = download_url(url, file_path)
+
+    assert result == file_path
+    with open(file_path, "rb") as f:
+        assert f.read() == content
+    assert mock_request.call_args_list[2][1]["headers"]["Range"] == "bytes=8-"
+
+
+@mock.patch("laxy_downloader.core.request_with_retries")
+def test_download_url_midstream_read_timeout(mock_request, temp_dir):
+    url = "http://example.com/timeout.txt"
+    content = b"timeout-resume-content!"
+    file_path = os.path.join(temp_dir, "timeout.txt")
+
+    timed_out = create_mock_response(
+        content[:6], headers={"content-length": str(len(content))}
+    )
+    timed_out.iter_content.side_effect = _iter_then_error(
+        content[:6], requests.exceptions.ReadTimeout("stalled")
+    )
+
+    remaining = create_mock_response(
+        content[6:],
+        status_code=206,
+        headers={
+            "content-length": str(len(content[6:])),
+            "content-range": f"bytes 6-{len(content) - 1}/{len(content)}",
+        },
+    )
+
+    mock_request.side_effect = [_head_response(len(content)), timed_out, remaining]
+
+    result = download_url(url, file_path)
+
+    assert result == file_path
+    with open(file_path, "rb") as f:
+        assert f.read() == content
+
+
+@mock.patch("laxy_downloader.core.request_with_retries")
+def test_download_url_permanent_404_does_not_retry(mock_request, temp_dir):
+    url = "http://example.com/missing.txt"
+    file_path = os.path.join(temp_dir, "missing.txt")
+    mock_request.side_effect = [_head_response(12), _http_error_response(404)]
+
+    with pytest.raises(requests.exceptions.HTTPError):
+        download_url(url, file_path, max_retries=5)
+
+    get_calls = [c for c in mock_request.call_args_list if c[0][0] == "GET"]
+    assert len(get_calls) == 1
+
+
+@mock.patch("laxy_downloader.core.request_with_retries")
+def test_download_url_retries_503(mock_request, temp_dir):
+    url = "http://example.com/flaky.txt"
+    content = b"recovered after 503"
+    file_path = os.path.join(temp_dir, "flaky.txt")
+    mock_request.side_effect = [
+        _head_response(len(content)),
+        _http_error_response(503),
+        create_mock_response(
+            content, headers={"content-length": str(len(content))}
+        ),
+    ]
+
+    result = download_url(url, file_path)
+
+    assert result == file_path
+    with open(file_path, "rb") as f:
+        assert f.read() == content
+    get_calls = [c for c in mock_request.call_args_list if c[0][0] == "GET"]
+    assert len(get_calls) == 2
+
+
+@mock.patch("laxy_downloader.core.request_with_retries")
+def test_download_url_no_progress_stops(mock_request, temp_dir):
+    url = "http://example.com/stuck.txt"
+    content = b"0123456789"
+    file_path = os.path.join(temp_dir, "stuck.txt")
+    short = create_mock_response(
+        content[:3], headers={"content-length": str(len(content))}
+    )
+    mock_request.side_effect = [_head_response(len(content))] + [short] * 10
+
+    with pytest.raises(Exception) as exc_info:
+        download_url(url, file_path, max_retries=20, no_progress_max=3)
+
+    assert "no progress" in str(exc_info.value)
+    get_calls = [c for c in mock_request.call_args_list if c[0][0] == "GET"]
+    # first attempt writes 3 bytes (progress), then 3 consecutive no-progress
+    assert len(get_calls) == 4
+    assert os.path.exists(file_path)
+
+
+@mock.patch("laxy_downloader.core.request_with_retries")
+def test_download_url_uses_get_content_length_when_head_omits_it(
+    mock_request, temp_dir
+):
+    url = "http://example.com/no_head_length.txt"
+    content = b"size comes from GET"
+    file_path = os.path.join(temp_dir, "no_head_length.txt")
+
+    short = create_mock_response(
+        content[:5],
+        headers={"content-length": str(len(content))},
+    )
+    rest = create_mock_response(
+        content[5:],
+        status_code=206,
+        headers={
+            "content-length": str(len(content[5:])),
+            "content-range": f"bytes 5-{len(content) - 1}/{len(content)}",
+        },
+    )
+    mock_request.side_effect = [_head_response(None), short, rest]
+
+    result = download_url(url, file_path)
+
+    assert result == file_path
+    with open(file_path, "rb") as f:
+        assert f.read() == content
+
+
+def test_decide_existing_download_skip_when_sizes_match():
+    assert (
+        decide_existing_download(
+            skip_existing=True,
+            destination_exists=True,
+            destination_is_symlink=True,
+            destination_size=100,
+            cache_exists=True,
+            cache_size=100,
+            aria2_control_exists=False,
+            content_length=100,
+        )
+        == "skip"
+    )
+
+
+def test_decide_existing_download_resume_when_cache_short():
+    assert (
+        decide_existing_download(
+            skip_existing=True,
+            destination_exists=True,
+            destination_is_symlink=True,
+            destination_size=40,
+            cache_exists=True,
+            cache_size=40,
+            aria2_control_exists=False,
+            content_length=100,
+        )
+        == "resume"
+    )
+
+
+def test_decide_existing_download_resume_when_aria2_control_present():
+    assert (
+        decide_existing_download(
+            skip_existing=True,
+            destination_exists=True,
+            destination_is_symlink=True,
+            destination_size=100,
+            cache_exists=True,
+            cache_size=100,
+            aria2_control_exists=True,
+            content_length=100,
+        )
+        == "resume"
+    )
+
+
+def test_decide_existing_download_replace_oversized_cache():
+    assert (
+        decide_existing_download(
+            skip_existing=True,
+            destination_exists=True,
+            destination_is_symlink=False,
+            destination_size=150,
+            cache_exists=True,
+            cache_size=150,
+            aria2_control_exists=False,
+            content_length=100,
+        )
+        == "replace_cache"
+    )
+
+
+def test_decide_existing_download_copy_short_destination_to_cache():
+    assert (
+        decide_existing_download(
+            skip_existing=True,
+            destination_exists=True,
+            destination_is_symlink=False,
+            destination_size=40,
+            cache_exists=False,
+            cache_size=None,
+            aria2_control_exists=False,
+            content_length=100,
+        )
+        == "copy_dest_to_cache"
+    )
+
+
+def test_apply_existing_download_decision_keeps_short_cache(temp_dir):
+    cache_file = os.path.join(temp_dir, "cached")
+    dest = os.path.join(temp_dir, "sample.fastq.gz")
+    with open(cache_file, "wb") as f:
+        f.write(b"partial")
+    os.symlink(cache_file, dest)
+
+    apply_existing_download_decision(
+        "resume", destination_path=dest, cache_file=cache_file
+    )
+
+    assert os.path.exists(cache_file)
+    assert os.path.getsize(cache_file) == 7
+    assert not os.path.lexists(dest)
+
+
+def test_apply_existing_download_decision_copies_dest_to_cache(temp_dir):
+    cache_file = os.path.join(temp_dir, "cached")
+    dest = os.path.join(temp_dir, "sample.fastq.gz")
+    with open(dest, "wb") as f:
+        f.write(b"partial-bytes")
+
+    apply_existing_download_decision(
+        "copy_dest_to_cache", destination_path=dest, cache_file=cache_file
+    )
+
+    assert os.path.exists(cache_file)
+    with open(cache_file, "rb") as f:
+        assert f.read() == b"partial-bytes"
+    assert not os.path.lexists(dest)
+
+
+def test_classify_aria_round_requeues_transient_error():
+    result = classify_aria_round(
+        [
+            {
+                "url": "http://example.com/a",
+                "status": "error",
+                "errorCode": "1",
+                "cache_size": 10,
+                "content_length": 100,
+            }
+        ],
+        round_index=0,
+        max_rounds=6,
+    )
+    assert result["requeue"] == ["http://example.com/a"]
+    assert result["failed"] == []
+    assert result["ok"] == []
+
+
+def test_classify_aria_round_fails_permanent_error():
+    result = classify_aria_round(
+        [
+            {
+                "url": "http://example.com/missing",
+                "status": "error",
+                "errorCode": "3",
+                "cache_size": None,
+                "content_length": 100,
+            }
+        ],
+        round_index=0,
+        max_rounds=6,
+    )
+    assert result["failed"] == ["http://example.com/missing"]
+    assert result["requeue"] == []
+
+
+def test_classify_aria_round_requeues_complete_but_short():
+    result = classify_aria_round(
+        [
+            {
+                "url": "http://example.com/short",
+                "status": "complete",
+                "errorCode": "0",
+                "cache_size": 50,
+                "content_length": 100,
+            }
+        ],
+        round_index=0,
+        max_rounds=6,
+    )
+    assert result["requeue"] == ["http://example.com/short"]
+
+
+def test_classify_aria_round_fails_after_six_rounds():
+    items = [
+        {
+            "url": "http://example.com/still-short",
+            "status": "complete",
+            "errorCode": "0",
+            "cache_size": 50,
+            "content_length": 100,
+        }
+    ]
+    last = classify_aria_round(items, round_index=5, max_rounds=6)
+    assert last["failed"] == ["http://example.com/still-short"]
+    assert last["requeue"] == []
+    assert last["exhausted"] is True
 
 
 if __name__ == "__main__":

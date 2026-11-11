@@ -1,4 +1,4 @@
-from typing import List, Collection
+from typing import List, Collection, Dict, Any
 import backoff
 
 import xmlrpc
@@ -47,8 +47,11 @@ def download_urls(
         "continue": "true",
         "allow-overwrite": "true",
         "always-resume": "true",
-        "max-tries": "8",
+        "max-tries": "10",
         "retry-wait": "30",
+        "connect-timeout": "30",
+        "timeout": "120",
+        "lowest-speed-limit": "1K",
         # Retry transient "file not found" responses (e.g. a CDN edge node
         # still populating its cache, or a spurious 404 under load) up to
         # max-tries, instead of failing on the very first one. With
@@ -79,7 +82,7 @@ def download_urls(
     return download_ids
 
 
-def downloads_finished(download_ids):
+def get_download_statuses(download_ids) -> List[Dict[str, Any]]:
     aria = get_daemon()
     statuses = []
     for gid in download_ids:
@@ -87,6 +90,11 @@ def downloads_finished(download_ids):
             statuses.append(aria.tellStatus(gid))
         except xmlrpc.client.Fault as ex:
             logger.error(ex.faultString)
+    return statuses
+
+
+def downloads_finished(download_ids):
+    statuses = get_download_statuses(download_ids)
 
     if not statuses:
         return False
@@ -100,6 +108,13 @@ def downloads_finished(download_ids):
         ]
     )
     return done
+
+
+def url_from_aria_status(status: Dict[str, Any]) -> str:
+    try:
+        return status["files"][0]["uris"][0]["uri"]
+    except (KeyError, IndexError, TypeError):
+        return ""
 
 
 def stop_all():

@@ -54,10 +54,38 @@ from attrdict import AttrDict
 from filelock import FileLock
 from contextlib import contextmanager
 
+try:
+    from urllib3.exceptions import ProtocolError as Urllib3ProtocolError
+except ImportError:  # pragma: no cover
+    Urllib3ProtocolError = ()  # type: ignore
+
 logger = logging.getLogger(__name__)
 # logging.basicConfig(format='%(levelname)s: %(asctime)s -- %(message)s', level=logging.INFO)
 
 asks.init(trio)
+
+HTTP_TIMEOUT = (30, 120)  # connect, read between chunks
+RETRY_WAIT_INITIAL = 15.0
+RETRY_WAIT_CAP = 300.0  # 5 minutes
+DEFAULT_MAX_ATTEMPTS = 50
+DEFAULT_NO_PROGRESS_ATTEMPTS = 10
+ARIA_MAX_ROUNDS = 6
+ARIA_PERMANENT_ERROR_CODES = frozenset({"3", "9", "24"})
+# 408/416/429 are retried; every other 4xx is permanent.
+TRANSIENT_HTTP_CLIENT_ERRORS = frozenset({408, 416, 429})
+
+_TRANSIENT_STREAM_ERRORS = (
+    requests.exceptions.ConnectionError,
+    requests.exceptions.ChunkedEncodingError,
+    requests.exceptions.Timeout,
+)
+if Urllib3ProtocolError:
+    _TRANSIENT_STREAM_ERRORS = _TRANSIENT_STREAM_ERRORS + (Urllib3ProtocolError,)
+
+_CONTENT_RANGE_RE = re.compile(
+    r"bytes\s+(?P<start>\d+)-(?P<end>\d+)/(?P<total>\d+|\*)",
+    re.IGNORECASE,
+)
 
 
 def get_tmpdir():
@@ -164,6 +192,257 @@ def temporary_file(mode="wb", dir=None, prefix=None, suffix=None):
         tmp.close()
 
 
+def parse_optional_int(value) -> Optional[int]:
+    if value is None or value == "":
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def parse_content_range(
+    header: Optional[str],
+) -> Optional[Tuple[int, int, Optional[int]]]:
+    if not header:
+        return None
+    match = _CONTENT_RANGE_RE.search(header)
+    if not match:
+        return None
+    total_raw = match.group("total")
+    total = None if total_raw == "*" else int(total_raw)
+    return int(match.group("start")), int(match.group("end")), total
+
+
+def expected_size_from_http_response(response) -> Optional[int]:
+    headers = getattr(response, "headers", {}) or {}
+    status = getattr(response, "status_code", None)
+    if status == 206:
+        parsed = parse_content_range(
+            headers.get("Content-Range") or headers.get("content-range")
+        )
+        if parsed is not None:
+            return parsed[2]
+        return None
+    return parse_optional_int(
+        headers.get("Content-Length") or headers.get("content-length")
+    )
+
+
+def content_range_start(response) -> Optional[int]:
+    headers = getattr(response, "headers", {}) or {}
+    parsed = parse_content_range(
+        headers.get("Content-Range") or headers.get("content-range")
+    )
+    if parsed is None:
+        return None
+    return parsed[0]
+
+
+def is_permanent_http_status(status_code: Optional[int]) -> bool:
+    if status_code is None:
+        return False
+    return 400 <= status_code < 500 and status_code not in TRANSIENT_HTTP_CLIENT_ERRORS
+
+
+def is_transient_http_status(status_code: Optional[int]) -> bool:
+    if status_code is None:
+        return False
+    if status_code in TRANSIENT_HTTP_CLIENT_ERRORS:
+        return True
+    return status_code >= 500
+
+
+def retry_wait_seconds(
+    attempt: int,
+    initial: float = RETRY_WAIT_INITIAL,
+    cap: float = RETRY_WAIT_CAP,
+) -> float:
+    expo = initial * (2 ** attempt)
+    return backoff.full_jitter(min(cap, expo))
+
+
+def sleep_before_retry(attempt: int) -> None:
+    delay = retry_wait_seconds(attempt)
+    logger.info(f"Waiting {delay:.1f}s before retry (attempt {attempt + 1})")
+    time.sleep(delay)
+
+
+def decide_existing_download(
+    *,
+    skip_existing: bool,
+    destination_exists: bool,
+    destination_is_symlink: bool,
+    destination_size: Optional[int],
+    cache_exists: bool,
+    cache_size: Optional[int],
+    aria2_control_exists: bool,
+    content_length: Optional[int],
+) -> str:
+    """
+    Decide what to do with an existing destination / cache file.
+
+    Returns one of: skip, resume, copy_dest_to_cache, replace_cache, download.
+    """
+    oversized_cache = (
+        cache_exists
+        and content_length is not None
+        and cache_size is not None
+        and cache_size > content_length
+    )
+    if oversized_cache:
+        return "replace_cache"
+
+    unfinished_cache = aria2_control_exists or (
+        cache_exists
+        and content_length is not None
+        and cache_size is not None
+        and cache_size < content_length
+    )
+    if unfinished_cache:
+        return "resume"
+
+    if skip_existing and destination_exists:
+        if cache_exists:
+            return "skip"
+        if content_length is None:
+            return "skip"
+        if destination_size == content_length:
+            return "skip"
+        if destination_size is not None and destination_size < content_length:
+            if destination_is_symlink:
+                return "resume"
+            return "copy_dest_to_cache"
+        if destination_size is not None and destination_size > content_length:
+            return "replace_cache"
+        return "skip"
+
+    return "download"
+
+
+def inspect_existing_download(
+    *,
+    skip_existing: bool,
+    destination_path: Optional[str],
+    cache_file: Optional[str],
+    content_length: Optional[int],
+) -> str:
+    dest_exists = bool(
+        destination_path
+        and os.path.lexists(destination_path)
+        and (os.path.isfile(destination_path) or os.path.islink(destination_path))
+    )
+    dest_is_symlink = bool(destination_path and os.path.islink(destination_path))
+    dest_size = None
+    if dest_exists and destination_path and os.path.isfile(destination_path):
+        dest_size = os.path.getsize(destination_path)
+    cache_exists = bool(cache_file and os.path.isfile(cache_file))
+    cache_size = os.path.getsize(cache_file) if cache_exists else None
+    aria2_control = bool(cache_file and os.path.isfile(f"{cache_file}.aria2"))
+    return decide_existing_download(
+        skip_existing=skip_existing,
+        destination_exists=dest_exists,
+        destination_is_symlink=dest_is_symlink,
+        destination_size=dest_size,
+        cache_exists=cache_exists,
+        cache_size=cache_size,
+        aria2_control_exists=aria2_control,
+        content_length=content_length,
+    )
+
+
+def apply_existing_download_decision(
+    decision: str,
+    *,
+    destination_path: Optional[str],
+    cache_file: Optional[str],
+) -> None:
+    def _remove(path: Optional[str]) -> None:
+        if path and os.path.lexists(path):
+            os.remove(path)
+
+    if decision == "skip":
+        return
+    if decision == "copy_dest_to_cache":
+        if not destination_path or not cache_file:
+            return
+        os.makedirs(os.path.dirname(cache_file) or ".", exist_ok=True)
+        shutil.copy2(destination_path, cache_file)
+        _remove(destination_path)
+        return
+    if decision == "replace_cache":
+        _remove(cache_file)
+        if cache_file:
+            _remove(f"{cache_file}.aria2")
+        _remove(destination_path)
+        return
+    if decision == "resume":
+        _remove(destination_path)
+        return
+
+
+def classify_aria_round(
+    items: Sequence[Mapping],
+    round_index: int,
+    max_rounds: int = ARIA_MAX_ROUNDS,
+) -> Dict[str, Union[List[str], bool]]:
+    """
+    Classify aria2 statuses after a round.
+
+    Each item is a mapping with keys:
+      url, status, errorCode, cache_size, content_length
+    """
+    ok: List[str] = []
+    requeue: List[str] = []
+    failed: List[str] = []
+    last_round = round_index >= max_rounds - 1
+
+    for item in items:
+        url = str(item.get("url", ""))
+        status = item.get("status")
+        error_code = str(item.get("errorCode") or "")
+        cache_size = parse_optional_int(item.get("cache_size"))
+        content_length = parse_optional_int(item.get("content_length"))
+
+        if status == "complete":
+            if (
+                content_length is not None
+                and cache_size is not None
+                and cache_size != content_length
+            ):
+                decision = "requeue"
+            else:
+                decision = "ok"
+        elif status in ("error", "removed"):
+            if error_code in ARIA_PERMANENT_ERROR_CODES:
+                decision = "failed"
+            else:
+                decision = "requeue"
+        else:
+            decision = "requeue"
+
+        if decision == "requeue" and last_round:
+            decision = "failed"
+
+        if decision == "ok":
+            ok.append(url)
+        elif decision == "failed":
+            failed.append(url)
+        else:
+            requeue.append(url)
+
+    return {
+        "ok": ok,
+        "requeue": requeue,
+        "failed": failed,
+        "exhausted": last_round and bool(failed or requeue),
+    }
+
+
+class _RetryDownload(Exception):
+    """Internal signal to discard a partial and retry the current download."""
+
+
 def download_url(
     url: str,
     filepath: Union[str, Path],
@@ -175,7 +454,8 @@ def download_url(
     check_existing_size: bool = True,
     remove_existing: bool = True,
     chunk_size: int = 1024 * 1024,  # 1Mb chunk size
-    max_retries: int = 3,
+    max_retries: int = DEFAULT_MAX_ATTEMPTS,
+    no_progress_max: int = DEFAULT_NO_PROGRESS_ATTEMPTS,
 ) -> str:
     """
     Download a file from a given URL to a specified filepath, with support for both HTTP(S) and FTP protocols.
@@ -193,9 +473,10 @@ def download_url(
         tmp_directory (Optional[str]): Directory to use for temporary files. If None, uses the parent directory of filepath.
         cleanup_on_exception (bool): Whether to remove temporary files if an exception occurs during download.
         check_existing_size (bool): Whether to check the size of an existing file before downloading.
-        remove_existing (bool): Whether to remove an existing file if its size doesn't match the expected size.
+        remove_existing (bool): Whether to remove an existing file if it is larger than the expected size.
         chunk_size (int): The size of chunks to use when streaming the download.
-        max_retries (int): The maximum number of retry attempts for the download.
+        max_retries (int): Hard cap on the number of download attempts.
+        no_progress_max (int): Consecutive attempts that add no bytes before giving up.
 
     Returns:
         str: The path to the downloaded file.
@@ -225,50 +506,73 @@ def download_url(
     lock = FileLock(lock_path, timeout=60 * 60 * 12)  # 12 hours timeout
     tmpfile_path = None
 
+    def _save_partial(src: Optional[str]) -> None:
+        if src and os.path.exists(src):
+            shutil.move(src, filepath)
+
+    def _discard_partial() -> None:
+        if os.path.exists(filepath):
+            os.remove(filepath)
+
     try:
         with lock:
-            content_length = get_content_length(url, headers, auth, scheme)
+            content_length = parse_optional_int(
+                get_content_length(url, headers, auth, scheme)
+            )
 
             if check_existing_size and os.path.exists(filepath):
-                if content_length is not None and os.path.getsize(filepath) == int(
-                    content_length
-                ):
+                existing_size = os.path.getsize(filepath)
+                if content_length is not None and existing_size == content_length:
                     logger.info(
                         f"File of correct size {filepath} ({content_length} bytes) already exists, skipping download"
                     )
                     return filepath
-                elif remove_existing:
+                elif (
+                    remove_existing
+                    and content_length is not None
+                    and existing_size > content_length
+                ):
                     logger.info(
-                        f"File exists {filepath} but is incorrect size ({content_length} bytes). Deleting existing file."
+                        f"File exists {filepath} but is larger than Content-Length "
+                        f"({existing_size} > {content_length} bytes). Deleting existing file."
                     )
                     os.remove(filepath)
+                elif content_length is not None and existing_size < content_length:
+                    logger.info(
+                        f"File exists {filepath} but is shorter than Content-Length "
+                        f"({existing_size} < {content_length} bytes). Will resume."
+                    )
+
+            no_progress_count = 0
+            last_error: Optional[BaseException] = None
 
             for attempt in range(max_retries):
                 logger.info(
                     f"Starting download (attempt {attempt + 1}/{max_retries}): {url} ({url_to_cache_key(url)})"
                 )
 
-                # Get size of partial download if it exists
-                partial_size = (
-                    os.path.getsize(filepath) if os.path.exists(filepath) else None
+                size_before = (
+                    os.path.getsize(filepath) if os.path.exists(filepath) else 0
                 )
+                partial_size = size_before if size_before > 0 else None
+                expected_size = content_length
+                retry_now = False
 
                 with temporary_file(
                     mode="wb", dir=directory, prefix=f"{filename}.", suffix=".tmp"
                 ) as tmpfile:
                     tmpfile_path = tmpfile.name
                     if partial_size is not None:
-                        # Copy existing partial download
                         shutil.copy2(filepath, tmpfile.name)
 
-                    if scheme == "ftp":
-                        urllib.request.urlretrieve(url, filename=tmpfile.name)
-                    else:
-                        request_headers = headers.copy()
-                        if partial_size is not None and partial_size > 0:
-                            request_headers["Range"] = f"bytes={partial_size}-"
+                    try:
+                        if scheme == "ftp":
+                            urllib.request.urlretrieve(url, filename=tmpfile.name)
+                        else:
+                            request_headers = headers.copy()
+                            if partial_size is not None and partial_size > 0:
+                                request_headers["Range"] = f"bytes={partial_size}-"
 
-                        try:
                             with closing(
                                 request_with_retries(
                                     "GET",
@@ -276,71 +580,192 @@ def download_url(
                                     stream=True,
                                     headers=request_headers,
                                     auth=auth,
+                                    timeout=HTTP_TIMEOUT,
                                 )
                             ) as download:
                                 download.raise_for_status()
 
-                                # If server ignored our range request and sent full file
+                                if expected_size is None:
+                                    expected_size = expected_size_from_http_response(
+                                        download
+                                    )
+
+                                if (
+                                    partial_size
+                                    and download.status_code == 206
+                                    and content_range_start(download) is not None
+                                    and content_range_start(download) != partial_size
+                                ):
+                                    logger.warning(
+                                        f"Content-Range start for {url} is "
+                                        f"{content_range_start(download)}, expected "
+                                        f"{partial_size}; discarding local file and retrying."
+                                    )
+                                    raise _RetryDownload()
+
                                 if partial_size and download.status_code == 200:
-                                    mode = "wb"  # Start fresh since we got the full file
+                                    mode = "wb"
                                 else:
                                     mode = "ab" if partial_size else "wb"
 
                                 with open(tmpfile.name, mode) as f:
-                                    for chunk in download.iter_content(
-                                        chunk_size=chunk_size
-                                    ):
-                                        f.write(chunk)
-                                    f.flush()
-                                    os.fsync(f.fileno())
-                        except requests.exceptions.HTTPError as e:
-                            # A Range request can 416 if our local (complete or
-                            # partial) file is no longer a valid prefix of the
-                            # remote content, eg a CDN edge whose Range-serving
-                            # cache hasn't caught up with the current file size.
-                            # Discard it and retry with a full download rather
-                            # than aborting the whole job.
-                            if (
-                                "Range" in request_headers
-                                and e.response is not None
-                                and e.response.status_code == 416
-                                and attempt < max_retries - 1
-                            ):
-                                logger.warning(
-                                    f"Range request for {url} got 416 Range Not "
-                                    f"Satisfiable (local size {partial_size}); "
-                                    "discarding local file and retrying with a "
-                                    "full download."
-                                )
-                                if os.path.exists(filepath):
-                                    os.remove(filepath)
-                                continue
-                            raise
-
-                    # Check if download is complete
-                    file_size = os.path.getsize(tmpfile.name)
-                    if content_length is None or file_size == int(content_length):
-                        shutil.move(tmpfile.name, filepath)
-                        return filepath
-                    else:
-                        # Save partial download for next attempt
-                        shutil.move(tmpfile.name, filepath)
-                        if attempt < max_retries - 1:
+                                    try:
+                                        for chunk in download.iter_content(
+                                            chunk_size=chunk_size
+                                        ):
+                                            f.write(chunk)
+                                        f.flush()
+                                        os.fsync(f.fileno())
+                                    except _TRANSIENT_STREAM_ERRORS:
+                                        f.flush()
+                                        os.fsync(f.fileno())
+                                        raise
+                    except requests.exceptions.HTTPError as e:
+                        status_code = (
+                            e.response.status_code
+                            if e.response is not None
+                            else None
+                        )
+                        if (
+                            status_code == 416
+                            and partial_size
+                            and attempt < max_retries - 1
+                        ):
                             logger.warning(
-                                f"Downloaded file size ({file_size}) does not match Content-Length ({content_length}). Retrying..."
+                                f"Range request for {url} got 416 Range Not "
+                                f"Satisfiable (local size {partial_size}); "
+                                "discarding local file and retrying with a "
+                                "full download."
                             )
+                            _discard_partial()
+                            if tmpfile_path and os.path.exists(tmpfile_path):
+                                os.remove(tmpfile_path)
+                            tmpfile_path = None
+                            last_error = e
+                            sleep_before_retry(attempt)
+                            continue
+                        if is_permanent_http_status(status_code):
+                            raise
+                        if is_transient_http_status(status_code):
+                            logger.warning(
+                                f"Transient HTTP {status_code} downloading {url}; "
+                                "keeping partial and retrying."
+                            )
+                            _save_partial(tmpfile_path)
+                            tmpfile_path = None
+                            last_error = e
+                            retry_now = True
                         else:
+                            raise
+                    except _TRANSIENT_STREAM_ERRORS as e:
+                        logger.warning(
+                            f"Connection dropped while downloading {url}: {e}. "
+                            "Keeping partial and retrying."
+                        )
+                        _save_partial(tmpfile_path)
+                        tmpfile_path = None
+                        last_error = e
+                        retry_now = True
+                    except urllib.error.URLError as e:
+                        logger.warning(
+                            f"URL error while downloading {url}: {e}. "
+                            "Keeping partial and retrying."
+                        )
+                        _save_partial(tmpfile_path)
+                        tmpfile_path = None
+                        last_error = e
+                        retry_now = True
+                    except requests.exceptions.RequestException as e:
+                        status_code = (
+                            e.response.status_code
+                            if getattr(e, "response", None) is not None
+                            else None
+                        )
+                        if is_permanent_http_status(status_code):
+                            raise
+                        logger.warning(
+                            f"Request failed while downloading {url}: {e}. "
+                            "Keeping partial and retrying."
+                        )
+                        _save_partial(tmpfile_path)
+                        tmpfile_path = None
+                        last_error = e
+                        retry_now = True
+                    except _RetryDownload:
+                        _discard_partial()
+                        if tmpfile_path and os.path.exists(tmpfile_path):
+                            os.remove(tmpfile_path)
+                        tmpfile_path = None
+                        last_error = None
+                        retry_now = True
+
+                    if retry_now:
+                        size_after = (
+                            os.path.getsize(filepath)
+                            if os.path.exists(filepath)
+                            else 0
+                        )
+                        if size_after > size_before:
+                            no_progress_count = 0
+                        else:
+                            no_progress_count += 1
+                        if no_progress_count >= no_progress_max:
                             raise Exception(
-                                f"Downloaded file size ({file_size}) does not match Content-Length ({content_length}) after {max_retries} attempts."
+                                f"Download of {url} made no progress in "
+                                f"{no_progress_count} consecutive attempts."
                             )
+                        if attempt < max_retries - 1:
+                            sleep_before_retry(attempt)
+                            continue
+                        if last_error:
+                            raise last_error
+                        raise Exception(
+                            f"Download of {url} failed after {max_retries} attempts."
+                        )
+
+                    if not os.path.exists(tmpfile_path):
+                        continue
+
+                    file_size = os.path.getsize(tmpfile_path)
+                    if expected_size is None or file_size == expected_size:
+                        shutil.move(tmpfile_path, filepath)
+                        tmpfile_path = None
+                        return filepath
+
+                    shutil.move(tmpfile_path, filepath)
+                    tmpfile_path = None
+                    logger.warning(
+                        f"Downloaded file size ({file_size}) does not match "
+                        f"Content-Length ({expected_size}). Retrying..."
+                    )
+                    if file_size > size_before:
+                        no_progress_count = 0
+                    else:
+                        no_progress_count += 1
+                    if no_progress_count >= no_progress_max:
+                        raise Exception(
+                            f"Downloaded file size ({file_size}) does not match "
+                            f"Content-Length ({expected_size}) after "
+                            f"{no_progress_count} consecutive attempts with no progress."
+                        )
+                    if attempt < max_retries - 1:
+                        sleep_before_retry(attempt)
+                    else:
+                        raise Exception(
+                            f"Downloaded file size ({file_size}) does not match "
+                            f"Content-Length ({expected_size}) after {max_retries} attempts."
+                        )
+
+            raise Exception(
+                f"Download of {url} failed after {max_retries} attempts."
+            )
 
     except Exception as e:
         handle_download_exception(
             e, getattr(e, "status_code", None), url, cleanup_on_exception, tmpfile_path
         )
-        raise  # Re-raise the exception after cleanup
+        raise
     finally:
-        # Clean up the lock file if it exists
         try:
             if os.path.exists(lock_path):
                 os.unlink(lock_path)

@@ -42,7 +42,7 @@ export LAXYDL_BRANCH="1bf87be" # ${LAXYDL_BRANCH:-master} - pinned to avoid a co
 # Use the current laxydl container image (built from master) for actual downloads instead of the
 # conda-installed laxydl (which is stuck on the pinned LAXYDL_BRANCH commit above and lacks later
 # download-reliability fixes). Requires apptainer to be available on the compute resource.
-export LAXYDL_CONTAINER_IMAGE="ghcr.io/monashbioinformaticsplatform/laxy/laxy-downloader:547b119"
+export LAXYDL_CONTAINER_IMAGE="ghcr.io/monashbioinformaticsplatform/laxy/laxy-downloader:latest"
 export LAXYDL_APPTAINER_PREFIX="apptainer exec -B ${JOB_PATH} -B ${DOWNLOAD_CACHE_PATH} docker://${LAXYDL_CONTAINER_IMAGE}"
 export LAXYDL_USE_ARIA2C=${LAXYDL_USE_ARIA2C:-yes}
 export LAXYDL_PARALLEL_DOWNLOADS=${LAXYDL_PARALLEL_DOWNLOADS:-8}
